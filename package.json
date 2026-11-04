@@ -1,0 +1,19 @@
+{
+  "name": "arcade",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline game collection, as a website, installable web app and native app",
+  "scripts": {
+    "build": "node tools/build.js",
+    "build:app": "node tools/build.js --www",
+    "android": "node tools/build.js --www && npx cap sync android && npx cap open android",
+    "ios": "node tools/build.js --www && npx cap sync ios && npx cap open ios",
+    "serve": "npx --yes http-server -c-1 -p 8080 ."
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2"
+  }
+}
