@@ -47,8 +47,12 @@
     </header>
     <main class="stage">
         <div class="opts">
-            <span class="small muted">Opponents:</span>
-            <div class="seg" id="botSeg"><button class="btn sm" data-v="0">Solo</button><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
+            <span class="small muted">Bots</span>
+            <div class="seg" id="botSeg"><button class="btn sm" data-v="0">0</button><button class="btn sm" data-v="1">1</button><button class="btn sm" data-v="2">2</button><button class="btn sm" data-v="3">3</button></div>
+            <span class="small muted">Friends</span>
+            <div class="seg" id="friendSeg"><button class="btn sm" data-v="0">0</button><button class="btn sm" data-v="1">1</button><button class="btn sm" data-v="2">2</button><button class="btn sm" data-v="3">3</button></div>
+            <span class="small muted">Bot level</span>
+            <div class="seg" id="lvlSeg"><button class="btn sm" data-v="easy">Easy</button><button class="btn sm" data-v="normal">Normal</button><button class="btn sm" data-v="hard">Hard</button></div>
             <button class="btn sm" id="newBtn">New game</button>
         </div>
         <div class="table">
@@ -85,6 +89,8 @@
         const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
         const stats = Object.assign({ wins: 0, played: 0, yahtzees: 0 }, Arcade.load('arcade.dice.stats', {}));
         let bots = Arcade.load('arcade.dice.bots', 1);
+        let friends = Arcade.load('arcade.dice.friends', 0);
+        let level = Arcade.load('arcade.dice.level', 'normal');
         let players, turn, dice, held, rollsLeft, busy, lastCell = null, round;
 
         function score(cat, d) {
@@ -118,15 +124,16 @@
         const total = (p) => CATS.reduce((a, [k]) => a + (p.sheet[k] || 0), 0) + bonus(p) + p.ybonus;
 
         function newGame() {
-            players = [{ name: 'You', bot: false, sheet: {}, ybonus: 0 }];
-            for (let i = 0; i < bots; i++) players.push({ name: ['Ada', 'Rex', 'Moe'][i] + ' 🤖', bot: true, sheet: {}, ybonus: 0 });
+            players = [{ name: friends ? 'Player 1' : 'You', bot: false, me: true, sheet: {}, ybonus: 0 }];
+            for (let i = 0; i < friends; i++) players.push({ name: 'Player ' + (i + 2), bot: false, sheet: {}, ybonus: 0 });
+            for (let i = 0; i < bots; i++) players.push({ name: ['Ada', 'Rex', 'Moe'][i] + ' (bot)', bot: true, sheet: {}, ybonus: 0 });
             turn = 0; round = 1; Arcade.hide('endOv');
             startTurn();
         }
         function startTurn() {
             dice = [1, 2, 3, 4, 5]; held = [false, false, false, false, false]; rollsLeft = 3; busy = false; lastCell = lastCell;
             const p = players[turn];
-            $('info').textContent = p.bot ? p.name + ' is playing…' : 'Your turn, roll the dice!';
+            $('info').textContent = p.bot ? p.name + ' is playing...' : friends ? p.name + ', roll the dice!' : 'Your turn, roll the dice!';
             render();
             if (p.bot) botTurn();
         }
@@ -138,8 +145,8 @@
             render(animate);
             const p = players[turn];
             if (isYahtzee(dice)) {
-                $('info').textContent = (p.bot ? p.name + ' rolled' : 'You rolled') + ' FIVE OF A KIND! 🎉';
-                if (!p.bot) { Arcade.sfx('win'); stats.yahtzees++; Arcade.save('arcade.dice.stats', stats); Arcade.count('yahtzee'); }
+                $('info').textContent = (p.bot || friends ? p.name + ' rolled' : 'You rolled') + ' five of a kind!';
+                if (p.me) { Arcade.sfx('win'); stats.yahtzees++; Arcade.save('arcade.dice.stats', stats); Arcade.count('yahtzee'); }
             } else if (!p.bot) $('info').textContent = rollsLeft ? `${rollsLeft} roll${rollsLeft > 1 ? 's' : ''} left, hold dice or pick a box` : 'Pick a box to score';
             return true;
         }
@@ -162,19 +169,21 @@
             render();
             const me = players[0], my = total(me);
             const ranking = players.slice().sort((a, b) => total(b) - total(a));
-            const won = bots > 0 && ranking[0] === me && total(ranking[1]) < my;
+            const won = bots + friends > 0 && ranking[0] === me && total(ranking[1]) < my;
             const r = Arcade.best('arcade.dice.best', my);
             stats.played++; if (won) stats.wins++;
             Arcade.save('arcade.dice.stats', stats);
             Arcade.report('score', my);
-            if (won) Arcade.count('win');
+            if (won && bots) Arcade.count('win');
+            if (friends) Arcade.count('round');
             Arcade.addXP(Math.min(50, Math.floor(my / 8)), true);
-            Arcade.sfx(won || !bots ? 'win' : 'die');
-            $('endTitle').textContent = !bots ? 'Final score' : won ? '🏆 You win!' : ranking[0].name + ' wins';
-            $('endTitle').className = !bots || won ? 'good' : 'bad';
+            const others = bots + friends;
+            Arcade.sfx(won || !others || friends ? 'win' : 'die');
+            $('endTitle').textContent = !others ? 'Final score' : friends ? ranking[0].name + ' wins!' : won ? 'You win!' : ranking[0].name + ' wins';
+            $('endTitle').className = !others || won || friends ? 'good' : 'bad';
             $('endScore').textContent = my;
             $('newBest').hidden = !r.isNew;
-            $('endText').textContent = bots ? ranking.map((p, i) => `${i + 1}. ${p.name} ${total(p)}`).join(' · ') : (my >= 250 ? 'Superb!' : my >= 200 ? 'Great game!' : 'Can you break 200?');
+            $('endText').textContent = others ? ranking.map((p, i) => `${i + 1}. ${p.name} ${total(p)}`).join(' · ') : (my >= 250 ? 'Superb!' : my >= 200 ? 'Great game!' : 'Can you break 200?');
             Arcade.show('endOv');
             hud();
         }
@@ -226,12 +235,21 @@
                 busy = false; roll(); busy = true;
                 if (rollsLeft > 0) {
                     const [, now] = bestCat(p, dice);
-                    const mask = chooseHold(p, dice, rollsLeft);
+                    // easy keeps its most common face, normal sometimes does, hard always simulates
+                    const quick = level === 'easy' || (level === 'normal' && Math.random() < 0.3);
+                    const mask = quick ? chooseQuick(p, dice) : chooseHold(p, dice, rollsLeft);
                     if (mask === 31) return setTimeout(pickBox, stepT);
                     setTimeout(() => { held = [0, 1, 2, 3, 4].map(i => !!(mask >> i & 1)); render(false); setTimeout(doRoll, stepT); }, stepT);
                 } else setTimeout(pickBox, stepT);
             };
-            const pickBox = () => { const [cat] = bestCat(p, dice); busy = false; choose(cat); };
+            const pickBox = () => {
+                let [cat] = bestCat(p, dice);
+                if (level === 'easy') {
+                    const open = CATS.filter(([k]) => p.sheet[k] == null).map(([k]) => [k, catValue(p, k, dice)]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    cat = Arcade.pick(open)[0];
+                }
+                busy = false; choose(cat);
+            };
             setTimeout(doRoll, 500);
         }
 
@@ -248,7 +266,7 @@
                 dh.appendChild(b);
             });
             $('rollBtn').disabled = !myTurn || rollsLeft === 0 || busy;
-            $('rollBtn').textContent = rollsLeft ? `🎲 Roll (${rollsLeft} left)` : 'Pick a box →';
+            $('rollBtn').textContent = rollsLeft ? `Roll (${rollsLeft} left)` : 'Pick a box';
             const sh = $('sheet');
             let html = '<tr><th>Box</th>' + players.map((q, i) => `<th class="${i === turn ? 'cur' : ''}">${q.name}</th>`).join('') + '</tr>';
             const row = (k, label) => '<tr><td>' + label + '</td>' + players.map((q, i) => {
@@ -270,7 +288,9 @@
         function hud() {
             Arcade.text('best', Arcade.load('arcade.dice.best', 0) || 0);
             Arcade.text('wins', stats.wins); Arcade.text('yz', stats.yahtzees);
-            document.querySelectorAll('#botSeg [data-v]').forEach(b => b.classList.toggle('active', +b.dataset.v === bots));
+            document.querySelectorAll('#botSeg [data-v]').forEach(b => { b.classList.toggle('active', +b.dataset.v === bots); b.disabled = +b.dataset.v + friends > 3; });
+            document.querySelectorAll('#friendSeg [data-v]').forEach(b => { b.classList.toggle('active', +b.dataset.v === friends); b.disabled = +b.dataset.v + bots > 3; });
+            document.querySelectorAll('#lvlSeg [data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === level));
         }
         $('rollBtn').onclick = () => roll();
         window.addEventListener('keydown', (e) => {
@@ -284,6 +304,11 @@
             if (players.some(p => Object.keys(p.sheet).length) && !confirm('Start a new game?')) return;
             bots = +b.dataset.v; Arcade.save('arcade.dice.bots', bots); newGame();
         });
+        document.querySelectorAll('#friendSeg [data-v]').forEach(b => b.onclick = () => {
+            if (players.some(p => Object.keys(p.sheet).length) && !confirm('Start a new game?')) return;
+            friends = +b.dataset.v; Arcade.save('arcade.dice.friends', friends); newGame();
+        });
+        document.querySelectorAll('#lvlSeg [data-v]').forEach(b => b.onclick = () => { level = b.dataset.v; Arcade.save('arcade.dice.level', level); hud(); });
         $('newBtn').onclick = () => { if (players.some(p => Object.keys(p.sheet).length) && !confirm('Start a new game?')) return; newGame(); };
         $('againBtn').onclick = newGame;
         newGame();
