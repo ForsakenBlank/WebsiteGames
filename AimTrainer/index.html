@@ -22,10 +22,10 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Aim Trainer</h1>
         <div class="stats">
-            <span class="chip accent">Reaction best <b id="react">—</b></span>
-            <span class="chip" id="liveChip"><span id="liveL">Mode</span> <b id="live">—</b></span>
+            <span class="chip accent">Reaction best <b id="react">-</b></span>
+            <span class="chip" id="liveChip"><span id="liveL">Mode</span> <b id="live">-</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="menuBtn">☰ Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="menuBtn">Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="canvas-box" id="box">
@@ -41,7 +41,7 @@
                 <div class="modal">
                     <h2 id="resTitle">Results</h2>
                     <div class="big-num" id="resBig">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid" id="resStats"></div>
                     <div class="actions"><button class="btn primary lg" id="againBtn">Again</button><button class="btn" id="resMenu">Modes</button></div>
                 </div>
@@ -68,7 +68,7 @@
         let mode = null, G = null, mouse = { x: W / 2, y: H / 2, in: false, down: false };
         const fx = new Arcade.Particles(300);
         const bestKey = (m) => 'arcade.aim.best.' + m;
-        function fmtBest(m) { const b = Arcade.load(bestKey(m), 0); return b ? b + ' ' + MODES[m].unit : '—'; }
+        function fmtBest(m) { const b = Arcade.load(bestKey(m), 0); return b ? b + ' ' + MODES[m].unit : '-'; }
         function buildMenu() {
             const host = $('modes'); host.innerHTML = '';
             for (const [k, M] of Object.entries(MODES)) {
@@ -191,7 +191,7 @@
                 const msg = st === 'go' ? 'CLICK!' : st === 'wait' ? 'Wait for green…' : st === 'early' ? 'Too soon!' : st === 'result' ? G.last + ' ms' : '⏱️ Reaction test';
                 c.fillText(msg, W / 2, H / 2 - 10);
                 c.font = '600 18px system-ui';
-                c.fillText(st === 'early' ? 'Click to try again' : st === 'result' ? (G.round < 5 ? `Try ${G.round}/5 — click to keep going` : 'Done!') : st === 'idle' ? 'Click anywhere to start · 5 tries' : '', W / 2, H / 2 + 40);
+                c.fillText(st === 'early' ? 'Click to try again' : st === 'result' ? (G.round < 5 ? `Try ${G.round}/5, click to keep going` : 'Done!') : st === 'idle' ? 'Click anywhere to start · 5 tries' : '', W / 2, H / 2 + 40);
                 if (G.results.length) { c.font = '600 14px system-ui'; c.fillText(G.results.map(v => v + 'ms').join('   '), W / 2, H - 40); }
                 return;
             }
@@ -203,7 +203,7 @@
             for (const t of G.targets) drawTarget(t, mode === 'tracking' && t.on);
             fx.draw(c);
             c.fillStyle = '#e2e8f0'; c.font = '800 18px system-ui'; c.textAlign = 'left'; c.textBaseline = 'top';
-            const acc = G.shots ? Math.round(G.hits / G.shots * 100) + '%' : '—';
+            const acc = G.shots ? Math.round(G.hits / G.shots * 100) + '%' : '-';
             const line = mode === 'gridshot' ? `Score ${G.score} · Accuracy ${acc}` : mode === 'flick' ? `${G.left} left · ${G.times.length ? Math.round(G.times.reduce((a, b) => a + b, 0) / G.times.length) + ' ms avg' : ''}` : mode === 'tracking' ? `On target ${G.t ? Math.round(G.onT / G.t * 100) : 0}%` : `Score ${G.score} · Accuracy ${acc}`;
             c.fillText(line, 14, 10);
             if (G.dur) { c.textAlign = 'right'; c.fillText(Math.max(0, G.dur - G.t).toFixed(1) + 's', W - 14, 10); c.fillStyle = '#ef4444'; c.fillRect(0, H - 4, W * (1 - G.t / G.dur), 4); }
@@ -211,9 +211,9 @@
         }
         function hud() {
             const r = Arcade.load('arcade.aim.reaction', 0);
-            Arcade.text('react', r ? r + ' ms' : '—');
+            Arcade.text('react', r ? r + ' ms' : '-');
             Arcade.text('liveL', mode ? MODES[mode].name : 'Mode');
-            Arcade.text('live', mode ? 'best ' + fmtBest(mode) : '—');
+            Arcade.text('live', mode ? 'best ' + fmtBest(mode) : '-');
         }
         cv.addEventListener('pointerdown', (e) => { const p = Arcade.pointer(cv, e, W, H); mouse.x = p.x; mouse.y = p.y; shoot(p.x, p.y); });
         cv.addEventListener('pointermove', (e) => { const p = Arcade.pointer(cv, e, W, H); mouse.x = p.x; mouse.y = p.y; mouse.in = true; });

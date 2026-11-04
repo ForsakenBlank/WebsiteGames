@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — simulation.
+   SINGULARITY, simulation.
    window.Eng holds the state (S), derived effects (FX) and every
    action the UI can call. No DOM in here except toasts.
    ========================================================== */
@@ -188,7 +188,7 @@
         for (const it in c.items) S.inv[it] -= c.items[it];
     }
 
-    // income per second, smoothed — used to scale contracts, events and desk jobs to your stage of the game
+    // income per second, smoothed, used to scale contracts, events and desk jobs to your stage of the game
     let incRate = 0, incAcc = 0, incT = 0, rpRate = 0, rpAcc = 0, computeRate = 0, compAcc = 0;
     const incUnit = () => Math.max(incRate, TASK_PAY[S.site] / 4);
     const rpUnit = () => Math.max(rpRate, 0.15 * Math.pow(20, S.site));
@@ -796,7 +796,7 @@
         if (c.kind === 'hack' && has('rival')) S.rival.set += 1800;
         S.con.active = S.con.active.filter(x => x !== c);
         S.con.done++; S.stats.contracts++;
-        note(`${auto ? '🤖 Your agents delivered' : '✅ Contract done'}: ${c.title} — +${money(c.reward.cash)} +${fmt(rg)} ⭐`, 'good');
+        note(`${auto ? '🤖 Your agents delivered' : '✅ Contract done'}: ${c.title}, +${money(c.reward.cash)} +${fmt(rg)} ⭐`, 'good');
         Arcade.count('contract');
         return true;
     }

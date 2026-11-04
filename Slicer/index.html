@@ -22,9 +22,9 @@
         <div class="stats">
             <span class="chip accent">Score <b id="score">0</b></span>
             <span class="chip gold">Best <b id="best">0</b></span>
-            <span class="chip" id="modeChip">Mode <b id="modeName">—</b></span>
+            <span class="chip" id="modeChip">Mode <b id="modeName">-</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="menuBtn">☰ Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="menuBtn">Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="canvas-box" id="box">
@@ -44,7 +44,7 @@
                 <div class="modal">
                     <h2 id="endTitle">Game over</h2>
                     <div class="big-num" id="endScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid" id="endStats"></div>
                     <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button><button class="btn" id="modesBtn">Modes</button></div>
                 </div>
@@ -101,7 +101,7 @@
         function hud() {
             Arcade.text('score', score);
             Arcade.text('best', mode ? (Arcade.load(bestKey(mode), 0) || 0) : (Arcade.load('arcade.slicer.best', 0) || 0));
-            Arcade.text('modeName', mode ? mode[0].toUpperCase() + mode.slice(1) : '—');
+            Arcade.text('modeName', mode ? mode[0].toUpperCase() + mode.slice(1) : '-');
         }
         function throwOne(kind, fromSide) {
             const def = kind === 'bomb' ? BOMB : BANANAS[kind] || Arcade.pick(FRUITS);
@@ -179,7 +179,7 @@
             $('endTitle').textContent = title; $('endTitle').className = title === 'Boom!' || title === 'Game over' ? 'bad' : 'good';
             $('endScore').textContent = score;
             $('newBest').hidden = !r.isNew;
-            $('endStats').innerHTML = [['Sliced', sliced], ['Best combo', maxCombo || '—'], ['Missed', mode === 'classic' ? missed : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            $('endStats').innerHTML = [['Sliced', sliced], ['Best combo', maxCombo || '-'], ['Missed', mode === 'classic' ? missed : '-']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
             Arcade.show('endOv');
             hud();
         }

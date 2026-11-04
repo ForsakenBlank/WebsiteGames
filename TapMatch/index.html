@@ -78,7 +78,7 @@
         <div class="stats">
             <span class="chip accent">Left <b id="left">0</b></span>
             <span class="chip">Time <b id="time">0:00</b></span>
-            <span class="chip gold"><b id="diffName">Easy</b> · <b id="layName">—</b></span>
+            <span class="chip gold"><b id="diffName">Easy</b> · <b id="layName">-</b></span>
         </div>
         <div class="actions">
             <button class="btn sm" id="menuTop">Boards</button>
@@ -123,7 +123,7 @@
             <button class="btn sm" id="undoBtn">↶ Undo <b id="undoN">2</b></button>
             <button class="btn sm" id="shuffleBtn">🔀 Shuffle <b id="shuffleN">1</b></button>
             <button class="btn sm" id="magicBtn">✨ Magic <b id="magicN">1</b></button>
-            <button class="btn sm ghost" id="restartBtn">⟲ Restart</button>
+            <button class="btn sm ghost" id="restartBtn">Restart</button>
         </div>
     </main>
 
@@ -144,7 +144,7 @@
 
         /* ---------- Board layouts ----------
            Compact base shapes that grow tall: upper layers sit on the corner of four tiles (pyramid),
-           between two tiles (brick), straight on top (stack — hides the tile below completely),
+           between two tiles (brick), straight on top (stack, hides the tile below completely),
            or alternate (mixed). Small footprints + deep stacks mean most tiles are buried. */
         const ART = [
             ['heart', 'Heart', 'pyramid', [
@@ -451,7 +451,7 @@
             }
             // Deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
             // late as the tray allows (never more than 6 loose tiles), so matching tiles end up far apart and
-            // usually buried — but following this order always clears the board.
+            // usually buried, but following this order always clears the board.
             const kinds = Arcade.shuffle(EMOJI.slice()).slice(0, Math.min(cfg.types, order.length / 3));
             const spread = cfg.spread || 0.5;
             let open = [], held = 0, need = 0, ki = 0;
@@ -547,7 +547,7 @@
         function hud() {
             Arcade.text('left', tiles.filter(t => !t.gone).length);
             Arcade.text('diffName', DIFFS[diff].name);
-            Arcade.text('layName', layout ? layout.name : '—');
+            Arcade.text('layName', layout ? layout.name : '-');
             Arcade.text('undoN', powers.undo); Arcade.text('shuffleN', powers.shuffle); Arcade.text('magicN', powers.magic);
             document.getElementById('undoBtn').disabled = over || !powers.undo || !history.length;
             document.getElementById('shuffleBtn').disabled = over || !powers.shuffle;

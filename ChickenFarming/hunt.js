@@ -1,5 +1,5 @@
 /* ==========================================================
-   Egg Hunt — a fully manual, minesweeper-style side game.
+   Egg Hunt, a fully manual, minesweeper-style side game.
 
    Dig up the field: every safe tile pays clovers, hidden golden eggs pay a lot
    more, and numbers tell you how many foxes touch a tile. Hitting a fox costs a

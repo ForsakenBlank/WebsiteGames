@@ -102,7 +102,7 @@
             <span class="chip accent">⏱ <b id="rate">0</b>/s</span>
             <span class="chip hide-sm" style="--gold:#67e8f9">💎 <b id="sc">0</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="boostBtn">⚡ Rush ×2</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="boostBtn">Rush ×2</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="mine" id="mineBox">
@@ -187,7 +187,7 @@
             Arcade.sfx('coin');
             const at = stationPos(kind, i);
             pops.push({ x: at.x, y: at.y, t: 0, text: `Lv ${st.lvl}`, col: '#fde68a' });
-            if (milestone(st.lvl) > before) { Arcade.toast(`⭐ Level ${st.lvl} milestone — ×2 boost!`, 'gold'); Arcade.sfx('level'); sparks(at.x, at.y, '#fde047', 26); }
+            if (milestone(st.lvl) > before) { Arcade.toast(`⭐ Level ${st.lvl} milestone, ×2 boost!`, 'gold'); Arcade.sfx('level'); sparks(at.x, at.y, '#fde047', 26); }
             render();
         }
         function hire(kind, i) {
@@ -220,7 +220,7 @@
             Object.assign(G, def(), keep);
             anims = freshAnims();
             sel = { kind: 'shaft', i: 0 };
-            Arcade.sfx('win'); Arcade.toast(`+${g} 💎 super cash — income now ×${(1 + G.sc * 0.1).toFixed(1)}`, 'gold', 3500);
+            Arcade.sfx('win'); Arcade.toast(`+${g} 💎 super cash, income now ×${(1 + G.sc * 0.1).toFixed(1)}`, 'gold', 3500);
             resizeCanvas(); render(); scrollToY(0);
         }
 
@@ -677,7 +677,7 @@
             c.fillStyle = can ? 'rgba(253,224,71,0.06)' : 'rgba(0,0,0,0.12)'; rr(TX0, y, TX1 - TX0, TH, 14); c.fill();
             const cxm = (TX0 + TX1) / 2;
             c.font = '800 14px system-ui'; c.textAlign = 'center'; c.fillStyle = can ? '#fde68a' : 'rgba(255,240,220,0.55)';
-            c.fillText(`⛏️ Dig shaft ${i + 1} — ${ORES[i % ORES.length][0]}`, cxm, y + TH / 2 - 4);
+            c.fillText(`⛏️ Dig shaft ${i + 1}, ${ORES[i % ORES.length][0]}`, cxm, y + TH / 2 - 4);
             const s = can ? 1 + Math.sin(t * 4) * 0.04 : 1;
             c.save(); c.translate(cxm, y + TH / 2 + 18); c.scale(s, s);
             pill(0, 0, '💰 ' + fmt(newShaftCost(i)), { align: 'center', bg: can ? '#fbbf24' : 'rgba(0,0,0,0.4)', col: can ? '#1c1003' : '#a8a29e', weight: 800 });
@@ -776,7 +776,7 @@
             const tips = { Mining: 'upgrade or hire managers for your shafts', Elevator: 'upgrade the elevator', Market: 'upgrade the market' };
             return rows.map(([ic, nm, v, auto]) => `<div class="flow-row ${v === min ? 'bottle' : ''}"><span>${ic}</span><span>${nm}${auto ? '' : ' <span class="dim tiny">· manual</span>'}</span><span class="val">${fmt(v)}/s</span>
                 <div class="bar"><i style="width:${Math.max(3, v / max * 100)}%"></i></div></div>`).join('')
-                + `<div class="flow-tip">Bottleneck: <b>${slow[1]}</b> — ${tips[slow[1]]}.</div>`;
+                + `<div class="flow-tip">Bottleneck: <b>${slow[1]}</b>, ${tips[slow[1]]}.</div>`;
         }
         function listCard() {
             const rows = [

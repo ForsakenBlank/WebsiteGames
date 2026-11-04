@@ -43,7 +43,7 @@
                 <div class="modal">
                     <h2 class="bad">No moves left</h2>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Lines cleared</small><b id="finalLines">0</b></div>
                         <div><small>Best combo</small><b id="finalCombo">0</b></div>
@@ -397,7 +397,7 @@
                 ctx.globalAlpha = 1;
                 ctx.font = 'bold 11px "Segoe UI", sans-serif';
                 ctx.textAlign = 'left';
-                const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED — CLEAR AGAIN!';
+                const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED, CLEAR AGAIN!';
                 ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,16,33,0.9)'; ctx.lineJoin = 'round';
                 ctx.strokeText(label, mx + 10, METER_Y + 12);
                 ctx.fillStyle = '#fff7e6';

@@ -40,10 +40,10 @@
     </header>
     <main class="stage">
         <div class="tbar">
-            <div class="seg" id="modeSeg"><button class="btn sm" data-v="test">⌨️ Speed test</button><button class="btn sm" data-v="shooter">☄️ Typing Shooter</button></div>
+            <div class="seg" id="modeSeg"><button class="btn sm" data-v="test">Speed test</button><button class="btn sm" data-v="shooter">Typing Shooter</button></div>
             <div class="seg" id="timeSeg"><button class="btn sm" data-v="15">15s</button><button class="btn sm" data-v="30">30s</button><button class="btn sm" data-v="60">60s</button></div>
             <div class="seg" id="setSeg"><button class="btn sm" data-v="common">Common words</button><button class="btn sm" data-v="hard">Harder words</button><button class="btn sm" data-v="punct">+ Punctuation</button></div>
-            <button class="btn sm" id="restartBtn" title="Tab">⟲ Restart</button>
+            <button class="btn sm" id="restartBtn" title="Tab">Restart</button>
         </div>
         <div class="test" id="testView">
             <div class="live" id="live"></div>
@@ -56,7 +56,7 @@
             <div class="modal wide">
                 <h2 id="resTitle">Results</h2>
                 <div class="big-num" id="resWpm">0</div>
-                <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                <div class="new-best" id="newBest" hidden>New best!</div>
                 <div class="stat-grid" id="resStats"></div>
                 <canvas class="chart" id="chart" width="760" height="160"></canvas>
                 <div class="actions"><button class="btn primary lg" id="againBtn">Again (Tab)</button></div>
@@ -291,10 +291,10 @@
             const wpm = S.t > 5 ? Math.round(S.typedOk / 5 / (S.t / 60)) : 0;
             Arcade.addXP(Math.min(40, S.wave * 3), true);
             Arcade.sfx('die');
-            $('resTitle').textContent = '☄️ The city fell — wave ' + S.wave;
+            $('resTitle').textContent = '☄️ The city fell, wave ' + S.wave;
             $('resWpm').textContent = S.score;
             $('newBest').hidden = !r.isNew;
-            $('resStats').innerHTML = [['Wave', S.wave], ['Typing speed', wpm + ' wpm'], ['Accuracy', S.typedAll ? Math.round(S.typedOk / S.typedAll * 100) + '%' : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            $('resStats').innerHTML = [['Wave', S.wave], ['Typing speed', wpm + ' wpm'], ['Accuracy', S.typedAll ? Math.round(S.typedOk / S.typedAll * 100) + '%' : '-']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
             $('chart').getContext('2d').clearRect(0, 0, 760, 160);
             Arcade.show('resOv');
             hud();

@@ -57,7 +57,7 @@
                     <p class="small muted ship-info" id="shipInfo"></p>
                     <div style="text-align:left;margin-top:10px"><b class="small">Weapon</b></div>
                     <div class="weapons" id="weapons"></div>
-                    <div class="actions"><button class="btn primary lg" id="launchBtn">Launch — waves</button><button class="btn lg" id="rushBtn">👾 Boss Rush</button></div>
+                    <div class="actions"><button class="btn primary lg" id="launchBtn">Launch, waves</button><button class="btn lg" id="rushBtn">Boss Rush</button></div>
                     <p class="small muted" id="rushInfo" style="margin-top:6px"></p>
                     <p class="tiny dim"><span class="desktop-only">Move with mouse or <kbd>WASD</kbd> · auto-fire · <kbd>Space</kbd> bomb · <kbd>E</kbd>/<kbd>Shift</kbd> ship ability · <kbd>P</kbd> pause</span><span class="touch-only">Drag to fly · auto-fire · tap 💣 for a bomb and ✨ for your ship's ability</span></p>
                 </div>
@@ -73,7 +73,7 @@
                 </div>
             </div>
         </div>
-        <div class="row center touch-only"><button class="btn" id="bombBtn">💣 Bomb <b id="bombN">1</b></button><button class="btn" id="abilBtn">✨ Ability</button></div>
+        <div class="row center touch-only"><button class="btn" id="bombBtn">💣 Bomb <b id="bombN">1</b></button><button class="btn" id="abilBtn">Ability</button></div>
     </main>
 
     <script src="../_shared/arcade.js"></script>
@@ -175,7 +175,7 @@
                 sh.appendChild(b);
             }
             const S = shipDef();
-            Arcade.text('shipInfo', `${S.name}: ${S.info} Ability — ${S.ability}: ${S.abDesc} (every ${S.cd}s).`);
+            Arcade.text('shipInfo', `${S.name}: ${S.info} Ability, ${S.ability}: ${S.abDesc} (every ${S.cd}s).`);
             Arcade.text('rushInfo', `Boss Rush: one boss after another, each stronger than the last. Best: ${save.bestRush || 0} bosses.`);
             const wh = document.getElementById('weapons');
             wh.innerHTML = '';

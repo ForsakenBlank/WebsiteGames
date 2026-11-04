@@ -99,8 +99,8 @@
             <span class="chip gold" id="shareChip" hidden>📈 <b id="hShares">0</b></span>
         </div>
         <div class="actions">
-            <button class="btn sm" id="selBtn" title="Box-select programs to save a blueprint (or hold Shift)">⬚ Select</button>
-            <button class="btn sm" id="helpBtn">❔ Help</button>
+            <button class="btn sm" id="selBtn" title="Box-select programs to save a blueprint (or hold Shift)">Select</button>
+            <button class="btn sm" id="helpBtn">Help</button>
             <button class="btn sm danger" id="resetBtn">Reset</button>
             <button class="btn sm icon" data-mute>🔊</button>
         </div>
@@ -124,7 +124,7 @@
         </aside>
         <div class="panel float legend" id="legend"></div>
         <div id="selBox" hidden></div>
-        <div class="panel float bar-float selbar" id="selBar" hidden><b id="selN">0</b> selected <button class="btn sm primary" id="bpSave">📐 Save as blueprint</button><button class="btn sm ghost" id="selClear">Clear</button></div>
+        <div class="panel float bar-float selbar" id="selBar" hidden><b id="selN">0</b> selected <button class="btn sm primary" id="bpSave">Save as blueprint</button><button class="btn sm ghost" id="selClear">Clear</button></div>
         <div class="panel float bar-float hackbar" id="hackBar" hidden></div>
         <div class="panel float bar-float chalbar" id="chalBar" hidden></div>
         <div class="overlay" id="chalOv" hidden><div class="modal"><h2 id="chalTitle"></h2><p id="chalText"></p><div class="actions"><button class="btn primary lg" id="chalDone">Back to my lab</button><button class="btn" id="chalRetry">Retry</button></div></div></div>
@@ -137,12 +137,12 @@
                     <li>Start by hand: press <b>Download</b> and <b>Upload</b> on your Terminal. Buy a <b>Downloader</b> and an <b>Uploader</b> to automate it.</li>
                     <li><b>Drag</b> from an output port (right) to another program to connect a wire. <b>Click a wire</b> to cut it. Drag programs by their title bar, drag the background to pan, scroll to zoom.</li>
                     <li>Files have sizes. Downloaders and uploaders move <b>MB/s</b>, so a video takes much longer than a text file. Processed files are worth far more per MB.</li>
-                    <li>Some downloads are <b>infected 🦠</b> — uploading them gets you fined. Use a <b>Sorter</b> or <b>Antivirus</b>.</li>
+                    <li>Some downloads are <b>infected 🦠</b>, uploading them gets you fined. Use a <b>Sorter</b> or <b>Antivirus</b>.</li>
                     <li>A wire jams when the program at the end can't use the file at the front. Sort files with a <b>Sorter</b>, or send leftovers to the <b>Trash</b>.</li>
-                    <li>Every program uses <b>power ⚡</b>. Go over capacity and everything slows down — build <b>Generators</b>.</li>
+                    <li>Every program uses <b>power ⚡</b>. Go over capacity and everything slows down, build <b>Generators</b>.</li>
                     <li><b>Hackers</b> attack once you start earning. Research Network security for <b>Firewalls</b>, or hammer <b>Counter-hack</b> before the timer runs out.</li>
                     <li><b>Blueprints</b>: hold <kbd>Shift</kbd> and drag (or use ⬚ Select) to pick programs, save them, then paste the whole setup from the 📐 tab.</li>
-                    <li><b>Challenges</b> (🏆 tab) are timed scenarios with their own lab — clearing one earns shares for your main company.</li>
+                    <li><b>Challenges</b> (🏆 tab) are timed scenarios with their own lab, clearing one earns shares for your main company.</li>
                 </ul>
                 <div class="actions"><button class="btn primary lg" id="helpClose">Boot up</button></div>
             </div>
@@ -268,7 +268,7 @@
             { d: 'Ship 250 games', k: 'made', item: 'game', n: 250, cash: 2e6 },
             { d: 'Train 250 AI models', k: 'made', item: 'model', n: 250, cash: 5e6 },
             { d: 'Earn $100M', k: 'earned', n: 1e8, cash: 2e7 },
-            { d: 'Earn $10B — data empire!', k: 'earned', n: 1e10, cash: 1e9 },
+            { d: 'Earn $10B, data empire!', k: 'earned', n: 1e10, cash: 1e9 },
         ];
         const SAVE = 'arcade.uploadlabs.save';
         const IPO_MIN = 1e6;
@@ -295,9 +295,9 @@
                 for (const w of S.wires) { w.packets = w.packets || []; w.port = w.port || 0; }
                 return;
             }
-            // saves from the old version (no file sizes, free starter machines) start over — it's a new game
+            // saves from the old version (no file sizes, free starter machines) start over, it's a new game
             S = Object.assign(fresh(), saved && saved.v === 2 ? saved : {});
-            if (saved && saved.v !== 2) Arcade.toast('Upload Labs got a big update — your lab starts fresh!', 'gold', 4000);
+            if (saved && saved.v !== 2) Arcade.toast('Upload Labs got a big update, your lab starts fresh!', 'gold', 4000);
             S.stats = Object.assign(fresh().stats, S.stats);
             delete S.challenge;
             for (const n of S.nodes) Object.assign(n, { buf: n.buf || [], out: n.out || [], acc: n.acc || 0, lvl: n.lvl || 1 });
@@ -384,7 +384,7 @@
                 const v = f.v * (f.v > 0 ? valueMult() : 1);
                 earn(v);
                 S.stats.uploaded++;
-                if (f.t === 'virus') { S.stats.fines++; if (n.type !== 'terminal' || Math.random() < 0.5) Arcade.toast('🦠 You uploaded an infected file — fined $' + Math.abs(v).toFixed(0), 'bad', 1500); }
+                if (f.t === 'virus') { S.stats.fines++; if (n.type !== 'terminal' || Math.random() < 0.5) Arcade.toast('🦠 You uploaded an infected file, fined $' + Math.abs(v).toFixed(0), 'bad', 1500); }
                 earnedWindow.push([performance.now(), v]);
             } else if (P[n.type].sink === 'rp') {
                 const r = f.rp * (f.t === 'sample' && has('av2') ? 2 : 1) * shareBonus();
@@ -550,19 +550,19 @@
             if (!S.hack) return;
             const t = byId(S.hack.target), need = Math.round(S.hack.str * (1 - S.hack.traced / 6)), fw = Math.round(firewallPower());
             const html = `🏴‍☠️ <b>Attack on ${t ? P[t.type].ic + ' ' + P[t.type].n : 'your lab'}</b> · strength <b>${need}</b> vs firewall <b class="${fw >= need ? 'good' : 'bad'}">${fw}</b> · <b>${Math.ceil(S.hack.left)}s</b>
-                <button class="btn sm danger" id="traceBtn">🔎 Counter-hack ${S.hack.traced}/6</button>`;
+                <button class="btn sm danger" id="traceBtn">Counter-hack ${S.hack.traced}/6</button>`;
             if (bar.dataset.k !== html) { bar.dataset.k = html; bar.innerHTML = html; $('traceBtn').onclick = counterHack; }
         }
 
         function manualDownload(n, quiet) {
-            if (n.store.length >= 20) { if (!quiet) Arcade.toast('Terminal storage full — upload some files', 'bad', 1200); return; }
+            if (n.store.length >= 20) { if (!quiet) Arcade.toast('Terminal storage full, upload some files', 'bad', 1200); return; }
             const f = rollFile('forum');
             n.store.push(f);
             S.stats.downloaded++;
             if (!quiet) Arcade.sfx('click');
         }
         function manualUpload(n, quiet) {
-            if (!n.store.length) { if (!quiet) Arcade.toast('Nothing to upload — download a file first', null, 1000); return; }
+            if (!n.store.length) { if (!quiet) Arcade.toast('Nothing to upload, download a file first', null, 1000); return; }
             // upload the most valuable file first
             n.store.sort((a, b) => b.v - a.v);
             const f = n.store.shift();
@@ -625,7 +625,7 @@
             // static controls built once per node
             const body = el.querySelector('.nbody');
             if (n.type === 'terminal') {
-                body.innerHTML = `<div class="row2"><button class="btn sm primary" data-a="dl">⬇ Download</button><button class="btn sm" data-a="ul">⬆ Upload</button></div><div class="tinfo"></div>`;
+                body.innerHTML = `<div class="row2"><button class="btn sm primary" data-a="dl">Download</button><button class="btn sm" data-a="ul">Upload</button></div><div class="tinfo"></div>`;
                 body.querySelector('[data-a=dl]').onclick = (e) => { e.stopPropagation(); manualDownload(n); refreshNode(n); };
                 body.querySelector('[data-a=ul]').onclick = (e) => { e.stopPropagation(); manualUpload(n); refreshNode(n); };
             } else if (d.kind === 'source') {
@@ -712,9 +712,9 @@
             }
             if (d.power > 0 && eff < 1) html += `<span class="warn">⚡ Low power: ${Math.round(eff * 100)}% speed</span>`;
             if (n.jam) html += `<span class="warn">Jammed: can't use ${n.jam}</span>`;
-            if (n.hacked > 0) html += `<span class="warn">🔒 Hacked — back in ${Math.ceil(n.hacked)}s</span>`;
+            if (n.hacked > 0) html += `<span class="warn">🔒 Hacked, back in ${Math.ceil(n.hacked)}s</span>`;
             const outQ = n.type === 'filter' ? (n.o0 || []).length + (n.o1 || []).length : n.out.length;
-            if (outPorts(n.type) && outQ >= 5 && !S.wires.some(w => w.from === n.id)) html += '<span class="warn">Output full — connect a wire</span>';
+            if (outPorts(n.type) && outQ >= 5 && !S.wires.some(w => w.from === n.id)) html += '<span class="warn">Output full, connect a wire</span>';
             const info = el.querySelector('.info');
             if (info.innerHTML !== html) info.innerHTML = html;
         }
@@ -839,7 +839,7 @@
             } else if (drag.kind === 'pan' && !drag.moved) {
                 const w = toWorld(p.x, p.y);
                 const wire = nearestWire(w);
-                if (wire) { S.wires = S.wires.filter(x => x !== wire); Arcade.sfx('pop'); Arcade.toast('Wire cut — files on it were lost', null, 1100); }
+                if (wire) { S.wires = S.wires.filter(x => x !== wire); Arcade.sfx('pop'); Arcade.toast('Wire cut, files on it were lost', null, 1100); }
             }
             desk.classList.remove('panning');
             drag = null;
@@ -1018,7 +1018,7 @@
                 });
             } else if (tab === 'chal') {
                 const rec = Arcade.load('arcade.uploadlabs.challenges', {}) || {};
-                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:2px">Timed scenarios in a separate lab — your company is saved and waiting. First clear of each gives <b>+3 shares</b>.</p>`);
+                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:2px">Timed scenarios in a separate lab, your company is saved and waiting. First clear of each gives <b>+3 shares</b>.</p>`);
                 for (const c of CHALLENGES) {
                     const d = document.createElement('div');
                     d.className = 'chal' + (rec[c.id] ? ' done' : '');
@@ -1209,7 +1209,7 @@
             load();
             applyCam();
             for (const n of S.nodes) refreshNode(n);
-            if (quit) { Arcade.toast('Challenge abandoned — welcome back to your lab', null, 2000); renderShop(); renderSide(); return; }
+            if (quit) { Arcade.toast('Challenge abandoned, welcome back to your lab', null, 2000); renderShop(); renderSide(); return; }
             const rec = Arcade.load('arcade.uploadlabs.challenges', {}) || {};
             let text = '';
             if (won) {
@@ -1220,7 +1220,7 @@
                 Arcade.report('challenges', Object.keys(rec).length);
                 text = `Cleared in ${Arcade.time(time)}.` + (first ? ' Your company earned <b>+3 shares</b>!' : ' Best: ' + Arcade.time(rec[c.id]));
                 Arcade.sfx('win');
-            } else { text = 'Out of time — or a fail condition hit. Try a different layout!'; Arcade.sfx('die'); }
+            } else { text = 'Out of time, or a fail condition hit. Try a different layout!'; Arcade.sfx('die'); }
             $('chalTitle').textContent = (won ? '🏆 ' : '') + c.n + (won ? ' cleared!' : ' failed');
             $('chalTitle').className = won ? 'good' : 'bad';
             $('chalText').innerHTML = text;

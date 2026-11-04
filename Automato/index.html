@@ -85,8 +85,8 @@
             <span class="chip">Machines <b id="hCount">0</b></span>
         </div>
         <div class="actions">
-            <button class="btn sm" id="guideBtn" title="Show or hide the step-by-step guide">🧭 Guide</button>
-            <button class="btn sm" id="helpBtn">❔ Help</button>
+            <button class="btn sm" id="guideBtn" title="Show or hide the step-by-step guide">Guide</button>
+            <button class="btn sm" id="helpBtn">Help</button>
             <button class="btn sm danger" id="resetBtn">Reset</button>
             <button class="btn sm icon" data-mute>🔊</button>
         </div>
@@ -104,8 +104,8 @@
 
         <aside class="panel float side">
             <div class="tabs">
-                <button class="btn sm active" data-tab="goals">📋 Contracts</button>
-                <button class="btn sm" data-tab="tech">🔬 Research</button>
+                <button class="btn sm active" data-tab="goals">Contracts</button>
+                <button class="btn sm" data-tab="tech">Research</button>
             </div>
             <div class="body" id="sideBody"></div>
         </aside>
@@ -120,7 +120,7 @@
         <div class="overlay" id="treeOv" hidden>
             <div class="modal wide" style="width:min(1100px,100%)">
                 <h2>🌳 Research tree</h2>
-                <p class="small">Early research costs cash. Later research costs <b class="good">research points (RP)</b> — feed any items into a <b>Research Lab</b> to earn them. Click an available node to research it.</p>
+                <p class="small">Early research costs cash. Later research costs <b class="good">research points (RP)</b>, feed any items into a <b>Research Lab</b> to earn them. Click an available node to research it.</p>
                 <div class="tree-wrap"><div class="tree" id="tree"></div></div>
                 <div class="actions"><button class="btn primary" id="treeClose">Close</button></div>
             </div>
@@ -129,7 +129,7 @@
         <div class="overlay" id="helpOv" hidden>
             <div class="modal wide">
                 <h2>Automato</h2>
-                <p>Build an automated factory. Mine resources by hand, then let drills and belts do the work. Follow the <b>contracts</b> — the 🧭 guide shows exactly what to do next.</p>
+                <p>Build an automated factory. Mine resources by hand, then let drills and belts do the work. Follow the <b>contracts</b>, the 🧭 guide shows exactly what to do next.</p>
                 <div class="help-grid">
                     <kbd>Hold click</kbd><span>on wood, stone or ore to mine it by hand (✋ tool)</span>
                     <kbd>1–9, 0</kbd><span>pick a building from the hotbar · click to place · <b>drag</b> to lay belts in a line</span>
@@ -263,26 +263,26 @@
             { id: 'pow2', d: 'Run an electric machine on power', k: 'powered', n: 1, cash: 2500 },
             { id: 'g13', d: 'Produce 5 robots', k: 'made', item: 'robot', n: 5, cash: 6000 },
             { id: 'ai1', d: 'Produce 25 AI cores', k: 'made', item: 'ai_core', n: 25, cash: 15000 },
-            { id: 'g14', d: 'Produce 100 robots — factory tycoon!', k: 'made', item: 'robot', n: 100, cash: 50000 },
+            { id: 'g14', d: 'Produce 100 robots, factory tycoon!', k: 'made', item: 'robot', n: 100, cash: 50000 },
             { id: 'and1', d: 'Produce 10 androids', k: 'made', item: 'android', n: 10, cash: 60000 },
-            { id: 'and2', d: 'Produce 250 androids — the machines are alive', k: 'made', item: 'android', n: 250, cash: 500000 },
+            { id: 'and2', d: 'Produce 250 androids, the machines are alive', k: 'made', item: 'android', n: 250, cash: 500000 },
         ];
         const OLD_GOAL_ORDER = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12', 'g13', 'g14'];
         // step-by-step help for each contract; `hl` picks something on the map to point at
         const GUIDE = {
             g1: { t: 'Hold the mouse (or your finger) on a <b>tree</b> to chop wood. The glowing tree is a good start.', hl: () => nearestRes('tree') },
             g2: { t: 'Now hold on a grey <b>stone</b> deposit to mine stone.', hl: () => nearestRes('stone') },
-            g3: { t: 'Press <kbd>2</kbd> (Drill) and click a <b>tree tile</b>. Drills mine by themselves — the white arrow shows where the wood comes out. <kbd>R</kbd> rotates.', hl: () => nearestRes('tree', true), slot: 'drill' },
+            g3: { t: 'Press <kbd>2</kbd> (Drill) and click a <b>tree tile</b>. Drills mine by themselves, the white arrow shows where the wood comes out. <kbd>R</kbd> rotates.', hl: () => nearestRes('tree', true), slot: 'drill' },
             g4: { t: 'Press <kbd>4</kbd> to place a <b>Storage</b> a few tiles away, then press <kbd>1</kbd> and <b>drag</b> a line of belts from the drill\'s arrow into the storage.', hl: () => nearestBuilding('drill'), slot: 'storage' },
-            g5: { t: 'Place an <b>Export Hub</b> (<kbd>5</kbd>) and belt items into it — every item it receives is sold for cash.', slot: 'seller' },
+            g5: { t: 'Place an <b>Export Hub</b> (<kbd>5</kbd>) and belt items into it, every item it receives is sold for cash.', slot: 'seller' },
             g6: { t: 'Drill <b>iron ore</b> and belt it into a <b>Smelter</b> (<kbd>3</kbd>). Belt the smelter\'s output (arrow) to storage or the export hub.', hl: () => nearestRes('iron', true), slot: 'smelter' },
             g7: { t: 'Stone into a smelter makes <b>bricks</b> (2 stone each). Drill stone and feed a second smelter.', hl: () => nearestRes('stone', true), slot: 'smelter' },
-            lab1: { t: 'Open <b>🔬 Research</b> and buy <b>Laboratory</b>. Place a Research Lab (<kbd>0</kbd>) and belt any items into it — every item turns into research points.', slot: 'lab', tab: 'tech' },
+            lab1: { t: 'Open <b>🔬 Research</b> and buy <b>Laboratory</b>. Place a Research Lab (<kbd>0</kbd>) and belt any items into it, every item turns into research points.', slot: 'lab', tab: 'tech' },
             g8: { t: 'Research <b>Assembly</b>, then place an Assembler (<kbd>7</kbd>). Click it to choose a recipe.', slot: 'assembler', tab: 'tech' },
             g9: { t: 'Set an assembler to <b>Gear</b> and feed it iron plates (2 per gear).', hl: () => nearestBuilding('assembler') },
             g10: { t: 'Copper ore → smelter → copper plates → an assembler set to <b>Wire</b>.', hl: () => nearestRes('copper', true) },
             exp1: { t: 'Research <b>Land survey I</b> in the tree (press <kbd>T</kbd>). The map grows and <b>coal</b> appears out there.', tab: 'tech' },
-            g11: { t: 'Research Circuitry. A circuit needs 1 iron plate + 3 wire in one assembler — use a splitter or two belts.', tab: 'tech' },
+            g11: { t: 'Research Circuitry. A circuit needs 1 iron plate + 3 wire in one assembler, use a splitter or two belts.', tab: 'tech' },
             pow1: { t: 'Research Electricity, place a <b>Generator</b> and belt wood or coal into it.', slot: 'generator', tab: 'tech' },
             st1: { t: 'Research Steelmaking. A smelter fed <b>iron plates</b> (3 each) makes steel.', tab: 'tech' },
             g12: { t: 'Research Structures. Frames need 2 gears + 2 bricks.', tab: 'tech' },
@@ -378,7 +378,7 @@
             const saved = Arcade.load(SAVE, {}) || {};
             S = Object.assign(fresh(), saved);
             S.stats = Object.assign(fresh().stats, S.stats);
-            // older saves tracked contracts by position — convert to ids
+            // older saves tracked contracts by position, convert to ids
             if (!Array.isArray(saved.goalsDone) && typeof saved.goal === 'number') S.goalsDone = OLD_GOAL_ORDER.slice(0, saved.goal);
             delete S.goal;
             if (S.tech.survey1 && !S.expand) S.expand = (S.tech.survey3 ? 3 : S.tech.survey2 ? 2 : 1);
@@ -673,7 +673,7 @@
 
         function canPlace(type, x, y) {
             const b = bounds();
-            if (x < b.min || y < b.min || x > b.max || y > b.max) return 'Out of bounds — research a land survey';
+            if (x < b.min || y < b.min || x > b.max || y > b.max) return 'Out of bounds, research a land survey';
             if (get(x, y)) return 'Occupied';
             if (isDrill(type) && !resAt(x, y)) return 'Drills go on resources';
             if (!afford(BUILD[type].cost)) return 'Need ' + costText(BUILD[type].cost);
@@ -853,7 +853,7 @@
                 const locked = !unlocked(id);
                 // hide far-future machines until their research is at least available
                 if (locked && d.tech && !techReady(TECH.find(t => t.id === d.tech))) return;
-                const el = mk(id, d.ic, d.n, HOTKEYS[i], locked ? 'locked' : !afford(d.cost) ? 'poor' : '', `${d.n} — ${d.desc}\nCost: ${costText(d.cost)}` + (locked ? '\n🔒 needs research' : ''));
+                const el = mk(id, d.ic, d.n, HOTKEYS[i], locked ? 'locked' : !afford(d.cost) ? 'poor' : '', `${d.n}, ${d.desc}\nCost: ${costText(d.cost)}` + (locked ? '\n🔒 needs research' : ''));
                 el.dataset.build = id;
             });
         }
@@ -874,7 +874,7 @@
             const sig = keysShown.join('|');
             if (host.dataset.sig !== sig) {
                 host.dataset.sig = sig;
-                host.innerHTML = keysShown.map(k => `<div title="${ITEMS[k].n}"><i style="background:${ITEMS[k].c}"></i>${ITEMS[k].n}<b data-i="${k}"></b></div>`).join('') || '<span class="tiny dim">Empty — mine something!</span>';
+                host.innerHTML = keysShown.map(k => `<div title="${ITEMS[k].n}"><i style="background:${ITEMS[k].c}"></i>${ITEMS[k].n}<b data-i="${k}"></b></div>`).join('') || '<span class="tiny dim">Empty, mine something!</span>';
             }
             host.querySelectorAll('[data-i]').forEach(el => { el.textContent = Arcade.fmt(S.inv[el.dataset.i] || 0); });
         }
@@ -923,7 +923,7 @@
                     b.onclick = () => buyTech(t);
                     host.appendChild(d);
                 }
-                if (!has('lab')) host.insertAdjacentHTML('beforeend', '<p class="tiny dim" style="margin:4px 2px 0">Tip: research <b>Laboratory</b> early — most research after the first few costs RP from a Research Lab.</p>');
+                if (!has('lab')) host.insertAdjacentHTML('beforeend', '<p class="tiny dim" style="margin:4px 2px 0">Tip: research <b>Laboratory</b> early, most research after the first few costs RP from a Research Lab.</p>');
             }
         }
         function refreshGoal() {
@@ -1030,10 +1030,10 @@
                 html += `<p class="tiny" style="margin:0 0 6px">${Object.entries(r.in).map(([k, v]) => v + ' ' + ITEMS[k].n).join(' + ')} → ${r.n} ${ITEMS[r.out].n} · ${r.t}s</p>`;
             }
             if (b.type === 'splitter' && has('filter')) {
-                html += `<label class="tiny muted">Send straight ahead: <select id="inspFilter" style="width:100%;margin-top:4px;padding:4px;border-radius:7px;background:var(--bg-2);color:var(--text);border:1px solid var(--line-2)"><option value="">— nothing (split evenly) —</option>${Object.entries(ITEMS).map(([k, it]) => `<option value="${k}" ${b.filter === k ? 'selected' : ''}>${it.n}</option>`).join('')}</select></label>`;
+                html += `<label class="tiny muted">Send straight ahead: <select id="inspFilter" style="width:100%;margin-top:4px;padding:4px;border-radius:7px;background:var(--bg-2);color:var(--text);border:1px solid var(--line-2)"><option value="">Nothing (split evenly)</option>${Object.entries(ITEMS).map(([k, it]) => `<option value="${k}" ${b.filter === k ? 'selected' : ''}>${it.n}</option>`).join('')}</select></label>`;
             }
             html += '<div class="tiny muted" id="inspBuf" style="margin-top:6px"></div>';
-            html += `<div class="row" style="margin-top:8px">${['storage', 'seller', 'lab', 'generator', 'pole', 'solar'].includes(b.type) ? '' : '<button class="btn sm" id="inspRot">⟳ Rotate</button>'}<button class="btn sm danger" id="inspDel">Demolish</button><button class="btn sm ghost" id="inspClose">✕</button></div>`;
+            html += `<div class="row" style="margin-top:8px">${['storage', 'seller', 'lab', 'generator', 'pole', 'solar'].includes(b.type) ? '' : '<button class="btn sm" id="inspRot">Rotate</button>'}<button class="btn sm danger" id="inspDel">Demolish</button><button class="btn sm ghost" id="inspClose">✕</button></div>`;
             el.innerHTML = html;
             el.hidden = false;
             el.querySelectorAll('[data-r]').forEach(btn => btn.onclick = () => {
@@ -1058,8 +1058,8 @@
             if (!el) return;
             const parts = [];
             if (isDrill(b.type)) parts.push('Mining: ' + (resAt(b.x, b.y) ? RES[resAt(b.x, b.y)].n : 'nothing'));
-            if (BUILD[b.type].power < 0) parts.push(b.net ? `⚡ ${Math.round((b.pw || 0) * 100)}% power` : '🔌 Not connected — put a power pole within 4 tiles');
-            if (b.type === 'generator') parts.push(b.burn > 0 ? `🔥 Burning · ${Math.ceil(b.burn)}s left` : 'Out of fuel — belt in wood or coal', `Fuel: ${b.inp.wood || 0} wood, ${b.inp.coal || 0} coal`);
+            if (BUILD[b.type].power < 0) parts.push(b.net ? `⚡ ${Math.round((b.pw || 0) * 100)}% power` : '🔌 Not connected, put a power pole within 4 tiles');
+            if (b.type === 'generator') parts.push(b.burn > 0 ? `🔥 Burning · ${Math.ceil(b.burn)}s left` : 'Out of fuel, belt in wood or coal', `Fuel: ${b.inp.wood || 0} wood, ${b.inp.coal || 0} coal`);
             if (b.type === 'pole' || b.type === 'solar' || b.type === 'generator') if (b.net) parts.push(`Network: ${Math.round(b.net.supply || 0)}W made / ${Math.round(b.net.demand || 0)}W used`);
             if (b.type === 'lab') parts.push(`${b.ob.length} item${b.ob.length === 1 ? '' : 's'} queued · ${Arcade.fmt(S.rp)} RP`);
             const inp = Object.entries(b.inp).filter(([, v]) => v > 0).map(([k, v]) => v + ' ' + ITEMS[k].n);

@@ -37,10 +37,10 @@
     </header>
     <main class="stage">
         <div class="tbar">
-            <button class="btn sm primary" id="sellBtn">💰 Sell catch</button>
-            <button class="btn sm" id="shopBtn">🛒 Tackle shop</button>
-            <button class="btn sm" id="areaBtn">🗺️ Fishing spots</button>
-            <button class="btn sm" id="dexBtn">📖 Fishdex</button>
+            <button class="btn sm primary" id="sellBtn">Sell catch</button>
+            <button class="btn sm" id="shopBtn">Tackle shop</button>
+            <button class="btn sm" id="areaBtn">Fishing spots</button>
+            <button class="btn sm" id="dexBtn">Fishdex</button>
         </div>
         <div class="canvas-box" id="box">
             <canvas class="screen" id="cv"></canvas>
@@ -147,7 +147,7 @@
             S.dex[key] = { n: (prev ? prev.n : 0) + 1, best: Math.max(prev ? prev.best : 0, size) };
             S.caught++;
             let note = '';
-            if (S.cooler.length >= coolerCap()) { S.coins += Math.round(value * 0.5); note = 'Cooler full — sold on the spot for half price'; }
+            if (S.cooler.length >= coolerCap()) { S.coins += Math.round(value * 0.5); note = 'Cooler full, sold on the spot for half price'; }
             else S.cooler.push({ name: f[0], e: f[1], hue: f[5], value, r: f[2] });
             if (f[2] === 'L') { S.legends++; Arcade.count('legendary'); Arcade.sfx('win'); } else Arcade.sfx('coin');
             Arcade.count('fish');
@@ -302,7 +302,7 @@
                 c.fillStyle = `hsl(${120 - power * 120},90%,55%)`; c.fillRect(boatX - 50, by - 120, 100 * power, 12);
                 c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.fillText('Release to cast', boatX, by - 128);
             }
-            if (state === 'sinking') { c.fillStyle = '#fff'; c.font = '700 13px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m — click to stop here`, hook.x, hook.y - 22); }
+            if (state === 'sinking') { c.fillStyle = '#fff'; c.font = '700 13px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m, click to stop here`, hook.x, hook.y - 22); }
             if (state === 'waiting') { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = '600 12px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m · waiting for a bite… (click to reel in)`, Math.min(W - 160, Math.max(160, hook.x)), hook.y - 22); }
             if (state === 'bite') { c.fillStyle = '#facc15'; c.font = '900 34px system-ui'; c.fillText('!', hook.x, hook.y - 30 + Math.sin(t * 30) * 3); c.font = '800 13px system-ui'; c.fillText('HOLD NOW!', hook.x, hook.y - 60); }
             if (state === 'reeling') drawReel();

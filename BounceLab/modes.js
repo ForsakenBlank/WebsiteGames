@@ -132,7 +132,7 @@
             BL.note(S, b, 0, true);
             S.marks.push({ x, y, t: 1, c: BL.pcol(S.noteI, S.t), n: S.noteI });
             if (S.marks.length > 60) S.marks.shift();
-            if (S.noteI >= S.song.length * 2) S.finish('♪ Fin — ' + S.songName);
+            if (S.noteI >= S.song.length * 2) S.finish('♪ Fin, ' + S.songName);
         },
         post(S, dt) { for (const m of S.marks) m.t = Math.max(0.15, m.t - dt * 0.25); },
         drawMid(S, g) { for (const m of S.marks) { g.globalAlpha = m.t; g.fillStyle = m.c; if (BL.look.glow) { g.shadowColor = m.c; g.shadowBlur = 12; } g.beginPath(); g.arc(m.x, m.y, 4 + m.t * 3, 0, TAU); g.fill(); } g.globalAlpha = 1; g.shadowBlur = 0; },
@@ -762,7 +762,7 @@
                 if (b.y > S.finishY) { b.fin = true; b.fixed = true; S.order.push(b); S.text(b.x, b.y - 20, b.name + ' is safe!', b.col, true); }
                 else if (b.y - b.r < S.lavaY) { b.dead = true; S.fx.emit(b.x, b.y, { n: 30, speed: 200, color: ['#f97316', '#facc15', b.col], life: 0.8, size: 4 }); S.text(b.x, b.y + 20, b.name + ' melted', '#f97316', true); if (S.audible) BL.noise(0.25, 0.08, 300); }
             }
-            if (!S.balls.some(b => !b.dead && !b.fin)) S.finish(S.order.length ? `🏁 ${S.order.length} survived — ${S.order[0].name} first!` : '🔥 The lava got everyone!');
+            if (!S.balls.some(b => !b.dead && !b.fin)) S.finish(S.order.length ? `🏁 ${S.order.length} survived, ${S.order[0].name} first!` : '🔥 The lava got everyone!');
         },
         hit(S, b) { if (b === S.leader) BL.note(S, b, 0); },
         post(S) {
@@ -940,7 +940,7 @@
                 const wn = picks[i % picks.length], Wd = WEAPONS[wn], [, col] = team(off + i);
                 S.addBall(70 + (i % 2) * 220 + R(-20, 20), 200 + Math.floor(i / 2) * 200 + R(-20, 20), R(0, TAU), S.P.speed, S.P.r, i, { col, name: wn[0].toUpperCase() + wn.slice(1), hp: 100, id: i, hitCd: {}, w: { type: wn, len: Wd.len, spin: Wd.spin, dmg: Wd.dmg, ang: R(0, TAU), dir: 1 } });
             }
-            S.title = m === 2 ? `${S.balls[0].name} vs ${S.balls[1].name} — who wins?` : `${m}-way weapon battle!`;
+            S.title = m === 2 ? `${S.balls[0].name} vs ${S.balls[1].name}, who wins?` : `${m}-way weapon battle!`;
             S.clashCd = 0;
             S.limit = 90; S.limitMsg = () => { const b = S.balls.filter(x => !x.dead).sort((a, c) => c.hp - a.hp)[0]; return b ? '⏱ ' + b.name + ' wins on HP' : 'Draw'; };
         },

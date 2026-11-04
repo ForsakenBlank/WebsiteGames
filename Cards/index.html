@@ -64,7 +64,7 @@
             <span class="chip accent">Wins <b id="wins">0</b></span>
             <span class="chip">Played <b id="played">0</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="newBtn">⟲ New game</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="newBtn">New game</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="opps" id="opps"></div>
@@ -85,7 +85,7 @@
         <div class="overlay fixed" id="setupOv">
             <div class="modal">
                 <h2>🃏 Crazy Cards</h2>
-                <p class="small">Match the colour or the symbol. Skips, reverses, draw-twos and wilds — and press <b>ONE!</b> before you play down to your last card, or get caught.</p>
+                <p class="small">Match the colour or the symbol. Skips, reverses, draw-twos and wilds, and press <b>ONE!</b> before you play down to your last card, or get caught.</p>
                 <div class="setup">
                     <div class="seg" id="botSeg"><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
                     <button class="btn sm" id="stackBtn"></button>
@@ -173,7 +173,7 @@
             // ONE! rule
             if (p.hand.length === 1) {
                 const said = p.you ? armed : Math.random() < 0.85;
-                if (said) { msg += ' — ONE!'; p.said = true; if (!p.you) Arcade.sfx('select'); }
+                if (said) { msg += ', ONE!'; p.said = true; if (!p.you) Arcade.sfx('select'); }
                 else { p.said = false; vulnerable = p; if (p.you) setTimeout(() => botCatch(p), 900 + Math.random() * 900); else msg += ' (forgot to say ONE!)'; }
             }
             armed = false;
@@ -197,7 +197,7 @@
         }
         function botCatch(p) {
             if (over || vulnerable !== p || p.hand.length !== 1) return;
-            if (Math.random() < 0.75) { give(p, 2); say(`Caught! You didn't say ONE! — draw 2`); Arcade.sfx('bad'); }
+            if (Math.random() < 0.75) { give(p, 2); say(`Caught! You didn't say ONE!, draw 2`); Arcade.sfx('bad'); }
             vulnerable = null;
             render();
         }
@@ -269,7 +269,7 @@
             if (!c) { say('No cards left to draw'); return advance(false); }
             p.hand.push(c); p.said = false;
             Arcade.sfx('click');
-            if (canPlay(c)) { drawnCard = c; say('You drew a playable card — play it or keep it'); render(); }
+            if (canPlay(c)) { drawnCard = c; say('You drew a playable card, play it or keep it'); render(); }
             else { say('You drew a card'); advance(false); }
         }
         function finish(p) {
@@ -335,7 +335,7 @@
             $('passBtn').hidden = !drawnCard;
             $('oneBtn').classList.toggle('armed', armed);
             $('oneBtn').disabled = !(me.hand.length === 2 && myTurn);
-            $('youInfo').textContent = over ? '' : myTurn ? (pendingDraw ? `Stack a +${top().v === 'd4' ? 4 : 2} or draw ${pendingDraw}` : drawnCard ? '' : me.hand.some(canPlay) ? 'Your turn — play a raised card' : 'No match — click the deck to draw') : players[turn].name + ' is thinking…';
+            $('youInfo').textContent = over ? '' : myTurn ? (pendingDraw ? `Stack a +${top().v === 'd4' ? 4 : 2} or draw ${pendingDraw}` : drawnCard ? '' : me.hand.some(canPlay) ? 'Your turn, play a raised card' : 'No match, click the deck to draw') : players[turn].name + ' is thinking…';
             Arcade.text('wins', stats.wins); Arcade.text('played', stats.played);
         }
         $('deck').onclick = youDraw;

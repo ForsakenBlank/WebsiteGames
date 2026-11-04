@@ -49,7 +49,7 @@
         <div class="opts">
             <span class="small muted">Opponents:</span>
             <div class="seg" id="botSeg"><button class="btn sm" data-v="0">Solo</button><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
-            <button class="btn sm" id="newBtn">⟲ New game</button>
+            <button class="btn sm" id="newBtn">New game</button>
         </div>
         <div class="table">
             <div class="play">
@@ -57,7 +57,7 @@
                     <div class="turninfo" id="info">Roll the dice!</div>
                     <div class="dice" id="dice"></div>
                     <div style="height:10px"></div>
-                    <button class="btn primary lg" id="rollBtn">🎲 Roll (3 left)</button>
+                    <button class="btn primary lg" id="rollBtn">Roll (3 left)</button>
                 </div>
                 <p class="tiny dim center" style="max-width:320px;margin:0">Roll up to three times. Click dice to hold them, then pick a box on the score sheet. Upper section total of 63+ earns a 35 bonus. <kbd>Space</kbd> rolls · <kbd>1</kbd>–<kbd>5</kbd> hold.</p>
             </div>
@@ -67,7 +67,7 @@
             <div class="modal">
                 <h2 id="endTitle">Game over</h2>
                 <div class="big-num" id="endScore">0</div>
-                <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                <div class="new-best" id="newBest" hidden>New best!</div>
                 <p id="endText"></p>
                 <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
             </div>
@@ -126,7 +126,7 @@
         function startTurn() {
             dice = [1, 2, 3, 4, 5]; held = [false, false, false, false, false]; rollsLeft = 3; busy = false; lastCell = lastCell;
             const p = players[turn];
-            $('info').textContent = p.bot ? p.name + ' is playing…' : 'Your turn — roll the dice!';
+            $('info').textContent = p.bot ? p.name + ' is playing…' : 'Your turn, roll the dice!';
             render();
             if (p.bot) botTurn();
         }
@@ -140,7 +140,7 @@
             if (isYahtzee(dice)) {
                 $('info').textContent = (p.bot ? p.name + ' rolled' : 'You rolled') + ' FIVE OF A KIND! 🎉';
                 if (!p.bot) { Arcade.sfx('win'); stats.yahtzees++; Arcade.save('arcade.dice.stats', stats); Arcade.count('yahtzee'); }
-            } else if (!p.bot) $('info').textContent = rollsLeft ? `${rollsLeft} roll${rollsLeft > 1 ? 's' : ''} left — hold dice or pick a box` : 'Pick a box to score';
+            } else if (!p.bot) $('info').textContent = rollsLeft ? `${rollsLeft} roll${rollsLeft > 1 ? 's' : ''} left, hold dice or pick a box` : 'Pick a box to score';
             return true;
         }
         function choose(cat) {

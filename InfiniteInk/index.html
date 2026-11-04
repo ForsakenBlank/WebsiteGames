@@ -192,7 +192,7 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Infinite Ink</h1>
         <div class="stats">
-            <span class="chip accent">Canvas <b id="worldName">—</b></span>
+            <span class="chip accent">Canvas <b id="worldName">-</b></span>
             <span class="chip">Strokes <b id="strokeCount">0</b></span>
             <span class="chip hide-sm" title="Position of the view centre">Pos <b id="posVal">0, 0</b></span>
         </div>
@@ -265,7 +265,7 @@
             <button class="ctog" id="tlDup" title="Copy this frame into a new one">Duplicate</button>
             <button class="ctog danger" id="tlDel" title="Delete this frame">Delete</button>
             <div class="ctx-sep"></div>
-            <button class="ctog" id="tlPlay">▶ Play</button>
+            <button class="ctog" id="tlPlay">Play</button>
             <label class="cc"><div class="cl"><span>Speed</span><b id="tlFpsV">8 fps</b></div><input type="range" id="tlFps" min="1" max="30" value="8"></label>
             <button class="ctog" id="tlOnion" title="See the previous (red) and next (green) frames faintly">Onion skin</button>
             <button class="ctog" id="tlAll" title="New strokes appear on every frame (a background)">Draw on all frames</button>
@@ -1575,7 +1575,7 @@
             open() { MEM.data = Arcade.load('arcade.ink.memstore', null) || { canvases: {}, strokes: {} }; return Promise.resolve(); },
             persist() {
                 try { localStorage.setItem('arcade.ink.memstore', JSON.stringify(MEM.data, (k, v) => (v instanceof Float32Array ? Array.from(v) : v))); }
-                catch (e) { Arcade.toast('Browser storage is full — export a backup', 'bad', 4000); }
+                catch (e) { Arcade.toast('Browser storage is full, export a backup', 'bad', 4000); }
             },
             listCanvases() { return Promise.resolve(Object.values(MEM.data.canvases)); },
             loadStrokes(cid) { return Promise.resolve(Object.values(MEM.data.strokes[cid] || {})); },
@@ -1637,7 +1637,7 @@
                 for (const id of ids) if (!deadIds.has(id)) dirtyIds.add(id);
                 for (const id of dels) if (!dirtyIds.has(id)) deadIds.add(id);
                 console.warn('Infinite Ink: save failed', e);
-                Arcade.toast('Could not save — storage may be full. Export a backup from the Export menu.', 'bad', 4500);
+                Arcade.toast('Could not save, storage may be full. Export a backup from the Export menu.', 'bad', 4500);
             });
             await saving;
             saving = null;
@@ -2196,7 +2196,7 @@
         }
         function canDraw() {
             const l = activeLayer();
-            if (!l.visible) { Arcade.toast('"' + l.name + '" is hidden — show it or pick another layer', 'bad', 2200); return false; }
+            if (!l.visible) { Arcade.toast('"' + l.name + '" is hidden, show it or pick another layer', 'bad', 2200); return false; }
             if (l.locked) { Arcade.toast('"' + l.name + '" is locked', 'bad', 1800); return false; }
             return true;
         }
@@ -2645,7 +2645,7 @@
         function paste() {
             let clip = clipboard;
             if (!clip) try { clip = JSON.parse(localStorage.getItem('arcade.ink.clip') || 'null'); } catch (e) { clip = null; }
-            if (!clip || !clip.length) { Arcade.toast('Nothing to paste — copy something first (Ctrl+C)', null, 1500); return; }
+            if (!clip || !clip.length) { Arcade.toast('Nothing to paste, copy something first (Ctrl+C)', null, 1500); return; }
             if (!canDraw()) return;
             const list = clip.map(r => fromRec(r));
             const b = unionBB(list), dx = cam.x - (b.x0 + b.x1) / 2, dy = cam.y - (b.y0 + b.y1) / 2;
@@ -2659,7 +2659,7 @@
             renderCtx(); req(true, true, true);
         }
         function selAction(name) {
-            if (!sel.length && !['all', 'none'].includes(name)) { Arcade.toast('Select something first — tap a stroke or drag a box', null, 1500); return; }
+            if (!sel.length && !['all', 'none'].includes(name)) { Arcade.toast('Select something first, tap a stroke or drag a box', null, 1500); return; }
             SEL_ACTIONS[name]();
             renderCtx(); req(true, true, true);
         }
@@ -3038,13 +3038,13 @@
             { id: 'select', icon: 'select', title: 'Select & transform (V)' },
             { id: 'hand', icon: 'hand', title: 'Pan (H · or hold Space)' },
             { sep: true },
-            { id: 'brush', icon: 'brush', title: 'Brushes (B) — click again for the brush library', more: true },
+            { id: 'brush', icon: 'brush', title: 'Brushes (B), click again for the brush library', more: true },
             { id: 'erase', icon: 'eraser', title: 'Eraser (E)' },
-            { id: 'shape', icon: 'shapes', title: 'Shapes (U, O, L, Y) — click again for all shapes', more: true },
+            { id: 'shape', icon: 'shapes', title: 'Shapes (U, O, L, Y), click again for all shapes', more: true },
             { id: 'lasso', icon: 'lasso', title: 'Lasso fill (R)' },
             { id: 'text', icon: 'text', title: 'Text (T)' },
             { id: 'note', icon: 'note', title: 'Sticky note (P)' },
-            { id: 'conn', icon: 'conn', title: 'Connector (Z) — drag from one note or shape to another' },
+            { id: 'conn', icon: 'conn', title: 'Connector (Z), drag from one note or shape to another' },
             { id: 'picker', icon: 'picker', title: 'Eyedropper (I · or Alt+click)' },
         ];
         function buildRail() {
@@ -3276,7 +3276,7 @@
             if (tool === 'text') host.insertAdjacentHTML('beforeend', '<span class="hint">Tap to type · tap existing text to edit · Enter places it</span>');
             if (tool === 'erase') host.insertAdjacentHTML('beforeend', '<span class="hint">Opacity slider = soft erase</span>');
             if (tool === 'note') host.insertAdjacentHTML('beforeend', '<span class="hint">Tap to add a note · tap a note to edit · Shift+Enter = new line · Size = text size</span>');
-            if (tool === 'conn') host.insertAdjacentHTML('beforeend', '<span class="hint">Drag between notes or shapes — the arrow follows them when they move</span>');
+            if (tool === 'conn') host.insertAdjacentHTML('beforeend', '<span class="hint">Drag between notes or shapes, the arrow follows them when they move</span>');
             if (G.sym !== 'off' && (g === 'brush' || g === 'shape' || tool === 'erase')) {
                 host.appendChild(sep());
                 const b = document.createElement('button');
@@ -3304,7 +3304,7 @@
                 const p = cfg.toPos(cfg.get());
                 fill.style.height = p * 100 + '%';
                 thumb.style.bottom = p * 100 + '%';
-                val.textContent = on ? cfg.fmt(cfg.get()) : '—';
+                val.textContent = on ? cfg.fmt(cfg.get()) : '-';
             };
             const at = (e) => { const r = track.getBoundingClientRect(); return clamp(1 - (e.clientY - r.top) / r.height, 0, 1); };
             let drag = false;
@@ -3521,7 +3521,7 @@
                 commit({ t: 'del', items });
                 sel = [];
                 hidePops(); renderCtx(); req(true, true, true);
-                Arcade.toast('Cleared — undo brings it back', null, 2000);
+                Arcade.toast('Cleared, undo brings it back', null, 2000);
             }, { danger: true });
             pop.appendChild(clear);
         }
@@ -3610,7 +3610,7 @@
             const items = [...byId.values()].filter(s => s.layer === l.id);
             if (items.length && $('lDel').dataset.armed !== '1') {
                 $('lDel').dataset.armed = '1'; $('lDel').title = 'Tap again to delete "' + l.name + '" and its ' + items.length + ' strokes';
-                Arcade.toast('Tap delete again to remove "' + l.name + '" (' + items.length + ' strokes) — undo can bring it back', null, 2500);
+                Arcade.toast('Tap delete again to remove "' + l.name + '" (' + items.length + ' strokes), undo can bring it back', null, 2500);
                 setTimeout(() => { $('lDel').dataset.armed = ''; $('lDel').title = 'Delete layer'; }, 2500);
                 return;
             }
@@ -3955,7 +3955,7 @@
             // stay within what every browser can encode (≤ 8192 px a side, ≤ 16 megapixels)
             scale = Math.min(scale, 8192 / Math.max(bw, 1e-300), 8192 / Math.max(bh, 1e-300), Math.sqrt(16e6 / Math.max(bw * bh, 1e-300)));
             const cv = renderRegion(b, scale, transparent);
-            cv.toBlob((blob) => { if (!blob) { Arcade.toast('Export failed — try a smaller area', 'bad'); return; } download(blob, safeName() + '.png'); Arcade.toast(`Exported ${cv.width}×${cv.height} PNG`, 'good'); }, 'image/png');
+            cv.toBlob((blob) => { if (!blob) { Arcade.toast('Export failed, try a smaller area', 'bad'); return; } download(blob, safeName() + '.png'); Arcade.toast(`Exported ${cv.width}×${cv.height} PNG`, 'good'); }, 'image/png');
         }
         function exportBackup() {
             const data = { format: 'infinite-ink', version: 7, name: M.name, bg, cam, layers: M.layers, activeLayer: M.activeLayer, anim: M.anim || null, strokes: [...byId.values()].sort((a, b) => a.z - b.z).map(plain) };
@@ -4214,7 +4214,7 @@
             Arcade.toast(`Exported ${fr.length} pages`, 'good');
         }
         async function exportVideo() {
-            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { Arcade.toast('Video recording is not supported in this browser — try the sprite sheet', 'bad', 3000); return; }
+            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { Arcade.toast('Video recording is not supported in this browser, try the sprite sheet', 'bad', 3000); return; }
             const fr = animFrames(1280);
             if (!fr) { Arcade.toast('Nothing to export yet', 'bad'); return; }
             const cv = document.createElement('canvas');
@@ -4265,7 +4265,7 @@
             item('expImg', 'Selection', sel.length ? `${sel.length} selected strokes` : 'Select something first', () => run('sel'), !sel.length);
             if (anim) {
                 item('expAnim', 'Video (.webm)', `Plays at ${M.anim.fps} fps, loops for about 3 seconds`, exportVideo);
-                item('expAnim', 'Sprite sheet (.png)', 'Every frame in a grid — for games and GIF makers', exportSheet);
+                item('expAnim', 'Sprite sheet (.png)', 'Every frame in a grid, for games and GIF makers', exportSheet);
                 item('expAnim', 'PDF flipbook', 'One page per frame', exportFramesPDF);
             }
             item('expBak', 'Download backup (.ink.json)', 'Full, editable copy of this canvas', exportBackup);
@@ -4405,7 +4405,7 @@
             resize();
             buildRail();
             try { await IDB.open(); Store = IDB; }
-            catch (e) { await MEM.open(); Store = MEM; Arcade.toast('Using basic storage in this browser mode — export backups to keep big drawings safe', null, 4000); }
+            catch (e) { await MEM.open(); Store = MEM; Arcade.toast('Using basic storage in this browser mode, export backups to keep big drawings safe', null, 4000); }
             await migrateLegacy();
             metas = await Store.listCanvases();
             if (!metas.length) { const m = blankMeta('My Canvas'); await Store.write(m, [], []); metas = [m]; }

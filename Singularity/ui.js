@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — interface: panels, palette, inspector, modals
+   SINGULARITY, interface: panels, palette, inspector, modals
    and the main loop. Buttons use data-act so panels can be
    re-rendered freely without rebinding handlers.
    ========================================================== */
@@ -75,7 +75,7 @@
         } else h += `<div class="card2 big-model hi"><div class="nm">SINGULARITY</div><div class="vr">Every model is trained. ${s.won ? 'The universe is yours.' : 'Take the rest of the universe on the 🗺️ Map.'}</div></div>`;
         if (E.has('rival')) {
             const rv = E.rivalVer();
-            h += `<div class="card2 ${E.rivalAhead() ? 'bad' : ''}"><b>👁️ NEXUS — rival AI</b><small>NEXUS is at level ${rv}, you are at ${s.ai.ver}. ${E.rivalAhead() ? 'It is ahead: your AI services earn 30% less. Take sabotage contracts to slow it down.' : 'You are ahead. Keep it that way.'}</small></div>`;
+            h += `<div class="card2 ${E.rivalAhead() ? 'bad' : ''}"><b>👁️ NEXUS, rival AI</b><small>NEXUS is at level ${rv}, you are at ${s.ai.ver}. ${E.rivalAhead() ? 'It is ahead: your AI services earn 30% less. Take sabotage contracts to slow it down.' : 'You are ahead. Keep it that way.'}</small></div>`;
         }
         h += `<h3>Model history</h3><div class="timeline">${MODELS.map((mm, i) => {
             const st = i < s.ai.ver ? 'done' : i === s.ai.ver ? 'cur' : i > s.ai.ver + 1 ? 'lock' : '';
@@ -88,7 +88,7 @@
     function tabWork() {
         const s = S(), st = E.site(), task = TASKS[st.task];
         let h = '';
-        if (s.breaker.tripped) h += `<div class="card2 bad"><b>⚡ The breaker tripped</b><small>Everything that uses power is off. You overloaded your supply — add power or switch something off first, then reset it.</small>
+        if (s.breaker.tripped) h += `<div class="card2 bad"><b>⚡ The breaker tripped</b><small>Everything that uses power is off. You overloaded your supply, add power or switch something off first, then reset it.</small>
             <div class="row"><button class="btn primary" data-act="breaker">⚡ Rewire the panel</button><button class="btn" data-act="electrician">📞 Electrician · ${money(E.incUnit() * 30)}</button></div></div>`;
         const broken = s.nodes.filter(n => n.br);
         if (broken.length) h += `<div class="card2 bad"><b>🔧 ${broken.length} broken machine${broken.length > 1 ? 's' : ''}</b>${broken.slice(0, 6).map(n => `<div class="row between" style="margin-top:6px"><span>${NODES[n.t].icon} ${esc(NODES[n.t].name)}</span><span class="row"><button class="btn sm primary" data-act="fixMini" data-id="${n.id}">Fix it</button><button class="btn sm" data-act="fixPay" data-id="${n.id}">${E.repairCost(n) ? 'Pay ' + money(E.repairCost(n)) : 'Hot-swap'}</button></span></div>`).join('')}</div>`;
@@ -161,7 +161,7 @@
     function tabFocus() {
         const s = S(), left = E.focusTotal() - E.focusSpent();
         let h = `<div class="card2"><div class="focus-pts"><b>${left}</b> focus point${left === 1 ? '' : 's'} to spend <span class="dim">(${E.focusTotal()} earned)</span></div>
-            <small style="margin:0">You get one for every model you train and every move. Perks in a tree unlock in order, and there are never enough points for everything — pick a build.</small></div>`;
+            <small style="margin:0">You get one for every model you train and every move. Perks in a tree unlock in order, and there are never enough points for everything, pick a build.</small></div>`;
         FOCUS.forEach(tr => {
             h += `<div class="tree" style="--tc:${tr.col}"><div class="tree-h"><span>${tr.icon}</span><b>${tr.name}</b><span class="tiny muted">${esc(tr.desc)}</span></div><div class="perks">${tr.perks.map((p, i) => {
                 const own = s.focus[p.id], can = E.focusAvail(tr, i);
@@ -190,7 +190,7 @@
             ${P.short > 0 ? meter('short', 'Shortfall', P.short, P.D, E.fmtW(P.short)) : ''}
             ${st.space ? '' : `<div class="tiny muted">${day ? 'Sunset' : 'Sunrise'} in ${dur(toTurn)}. A day lasts ${E.DAY / 60} minutes.</div>`}
             ${P.debtCut ? '<div class="tiny bad">The power company cut you off for unpaid bills. Get your cash above zero.</div>' : ''}</div>`;
-        h += `<div class="card2 ${P.ratio > 1 ? 'bad' : ''}"><b>🌡️ Heat — ${Math.round(P.temp)}°C</b><small>Every watt a machine uses turns into heat. Without enough cooling, machines slow down and wear out faster.</small>
+        h += `<div class="card2 ${P.ratio > 1 ? 'bad' : ''}"><b>🌡️ Heat, ${Math.round(P.temp)}°C</b><small>Every watt a machine uses turns into heat. Without enough cooling, machines slow down and wear out faster.</small>
             ${meter('heat', 'Heat', P.heat, Math.max(P.heat, P.cool, 1), E.fmtW(P.heat))}
             ${meter('', 'Cooling', P.cool, Math.max(P.heat, P.cool, 1), E.fmtW(P.cool))}
             ${P.ratio > 1 ? `<div class="tiny bad">Overheating: machines run at ${Math.round(P.thr * 100)}% speed.</div>` : ''}</div>`;
@@ -198,8 +198,8 @@
         const cur = s.bills.cur, last = s.bills.last || {};
         const tc = rows.reduce((a, [k]) => a + (cur[k] || 0), 0), tl = rows.reduce((a, [k]) => a + (last[k] || 0), 0);
         h += `<div class="card2"><b>🧾 Bills</b><small>A month lasts 10 minutes. ${st.rent ? `Rent here is ${money(st.rent * E.fx('bills'))}/s.` : 'No rent here.'}${st.tax ? ` Sales tax ${Math.round(st.tax * E.fx('tax') * 100)}%.` : ''}${s.saleCut ? ` Investors take ${Math.round(s.saleCut * 100)}% of sales.` : ''}</small>
-            <div class="bills"><span></span><i>this month</i><i>last</i>${rows.map(([k, nm]) => `<span>${nm}</span><b>${money(cur[k] || 0)}</b><i>${s.bills.last ? money(last[k] || 0) : '—'}</i>`).join('')}
-            <span class="tot">Total</span><b class="tot">${money(tc)}</b><i class="tot">${s.bills.last ? money(tl) : '—'}</i></div>
+            <div class="bills"><span></span><i>this month</i><i>last</i>${rows.map(([k, nm]) => `<span>${nm}</span><b>${money(cur[k] || 0)}</b><i>${s.bills.last ? money(last[k] || 0) : '-'}</i>`).join('')}
+            <span class="tot">Total</span><b class="tot">${money(tc)}</b><i class="tot">${s.bills.last ? money(tl) : '-'}</i></div>
             <div class="tiny muted" style="margin-top:4px">${dur(600 - s.bills.t)} until the month ends.</div></div>`;
         return h;
     }
@@ -220,7 +220,7 @@
             h += `<h3>🪙 CrypToken</h3><div class="card2"><div class="row between"><b>${money(s.coinPrice)}</b><span class="${ch >= 0 ? 'good' : 'bad'} small">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}% (1 min)</span></div>
                 <canvas id="coinCv"></canvas>
                 <div class="row between small"><span>You hold <b>${fmt(s.coin, 3)}</b> 🪙</span><span>= ${money(s.coin * s.coinPrice)}</span></div>
-                ${E.has('coinsight') ? `<div class="tiny ${s.coinPrice < E.coinBase() ? 'good' : 'bad'}">📊 Fair value about ${money(E.coinBase())} — ${s.coinPrice < E.coinBase() ? 'cheap right now' : 'expensive right now'}.</div>` : ''}
+                ${E.has('coinsight') ? `<div class="tiny ${s.coinPrice < E.coinBase() ? 'good' : 'bad'}">📊 Fair value about ${money(E.coinBase())}, ${s.coinPrice < E.coinBase() ? 'cheap right now' : 'expensive right now'}.</div>` : ''}
                 <div class="coin-row" style="margin-top:6px"><button class="btn" data-act="coin" data-f="0.1">Buy 10%</button><button class="btn" data-act="coin" data-f="0.5">Buy 50%</button><button class="btn" data-act="coin" data-f="-0.5">Sell ½</button><button class="btn" data-act="coin" data-f="-1">Sell all</button></div>
                 <div class="tiny muted" style="margin-top:4px">Buying spends that share of your cash. ${E.has('nofee') ? 'No trading fee.' : '1% fee.'} Crypto Miners turn compute into tokens.</div></div>`;
         }
@@ -391,7 +391,7 @@
         if (s.won) {
             const laws = E.lawChoices();
             if (!laws.some(l => l.id === lawPick)) lawPick = laws[0].id;
-            h += `<div class="card2 hi"><b>♾️ Recursion</b><small>You are everything there is. Collapse it all and start again, in a new universe with different physics — keeping your Echoes.</small>
+            h += `<div class="card2 hi"><b>♾️ Recursion</b><small>You are everything there is. Collapse it all and start again, in a new universe with different physics, keeping your Echoes.</small>
                 <div class="row between"><span>You will gain</span><span class="echo-num">+${E.echoGain()} ✦</span></div>
                 <div class="tiny muted">Faster runs earn more. This run: ${dur(s.playT)}.</div></div>
                 <h3>Pick the laws of the next universe</h3>${laws.map(l => `<button class="law ${lawPick === l.id ? 'on' : ''}" data-act="law" data-id="${l.id}"><span class="ic">${l.icon}</span><b>${esc(l.name)}</b><small>${esc(l.desc)}</small><span class="m">×${l.mult}</span></button>`).join('')}
@@ -474,7 +474,7 @@
             const opts = E.producible(A).filter(it => E.accepts(B, it));
             setHTML(el, `<div class="insp-h"><span class="ic">🔗</span><div><b>Cable</b><small>${NODES[A.t].icon} ${esc(NODES[A.t].name)} → ${NODES[B.t].icon} ${esc(NODES[B.t].name)}</small></div><button class="btn sm ghost close" data-act="desel">✕</button></div>
                 <div class="kv"><span>Carrying</span><b>${l.flow > 0.001 && l.it ? `${ITEMS[l.it].icon} ${fmt(l.flow)}/s` : 'nothing right now'}</b></div>
-                ${opts.length > 1 ? `<p class="d">Filter — only let one item through:</p><div class="row" style="gap:4px;margin-bottom:8px"><button class="btn sm ${!l.f ? 'active' : ''}" data-act="filter" data-id="">All</button>${opts.map(it => `<button class="btn sm ${l.f === it ? 'active' : ''}" data-act="filter" data-id="${it}">${ITEMS[it].icon} ${esc(ITEMS[it].name)}</button>`).join('')}</div>` : ''}
+                ${opts.length > 1 ? `<p class="d">Filter, only let one item through:</p><div class="row" style="gap:4px;margin-bottom:8px"><button class="btn sm ${!l.f ? 'active' : ''}" data-act="filter" data-id="">All</button>${opts.map(it => `<button class="btn sm ${l.f === it ? 'active' : ''}" data-act="filter" data-id="${it}">${ITEMS[it].icon} ${esc(ITEMS[it].name)}</button>`).join('')}</div>` : ''}
                 <div class="btns"><button class="btn danger wide" data-act="unlink">✂️ Cut cable</button></div>`);
             return;
         }
@@ -527,11 +527,11 @@
             const e = EVENTS.find(x => x.id === s.ev.cur.id);
             if (e) h += `<div class="alert ev"><h4>${esc(e.title)}</h4><p>${esc(e.text)}</p><div class="row">${e.choices.map((ch, i) => { const c = E.eventCost(ch); return `<button class="btn ${i === 0 ? 'primary' : ''}" data-act="event" data-i="${i}" ${S().cash < c ? 'disabled' : ''}>${esc(ch.t)}${c ? ' · ' + money(c) : ''}</button>`; }).join('')}</div></div>`;
         }
-        if (s.breaker.tripped) h += `<div class="alert bad"><b>⚡ Breaker tripped</b> — machines are off. <button class="btn sm" data-act="tab" data-id="work">Fix</button></div>`;
+        if (s.breaker.tripped) h += `<div class="alert bad"><b>⚡ Breaker tripped</b>, machines are off. <button class="btn sm" data-act="tab" data-id="work">Fix</button></div>`;
         const br = s.nodes.filter(n => n.br).length;
         if (br) h += `<div class="alert bad">🔧 ${br} machine${br > 1 ? 's' : ''} broken <button class="btn sm" data-act="tab" data-id="work">Repair</button></div>`;
-        if (E.P.short > 0 && !s.breaker.tripped) h += `<div class="alert">🔌 Short ${E.fmtW(E.P.short)} of power — machines slow down.</div>`;
-        if (E.P.ratio > 1) h += `<div class="alert">🌡️ Overheating (${Math.round(E.P.temp)}°C) — add cooling.</div>`;
+        if (E.P.short > 0 && !s.breaker.tripped) h += `<div class="alert">🔌 Short ${E.fmtW(E.P.short)} of power, machines slow down.</div>`;
+        if (E.P.ratio > 1) h += `<div class="alert">🌡️ Overheating (${Math.round(E.P.temp)}°C), add cooling.</div>`;
         setHTML($('alerts'), h);
         const g = GOALS[s.goal];
         const gc = $('goalCard');
@@ -558,7 +558,7 @@
         const n = [...Graph.multi].filter(id => S().nodes.some(m => m.id === id)).length;
         const el = $('selBar');
         el.hidden = !n && !Graph.placingBp;
-        if (Graph.placingBp) setHTML(el, `📐 Placing <b>${esc(Graph.placingBp.bp.name)}</b> — click on the floor. <button class="btn sm" data-act="bpCancel">Cancel</button>`);
+        if (Graph.placingBp) setHTML(el, `📐 Placing <b>${esc(Graph.placingBp.bp.name)}</b>, click on the floor. <button class="btn sm" data-act="bpCancel">Cancel</button>`);
         else if (n) setHTML(el, `<b>${n}</b> selected <button class="btn sm primary" data-act="bpSave">📐 Save blueprint</button><button class="btn sm" data-act="copy">📋 Copy</button><button class="btn sm danger" data-act="multiDel">🗑 Scrap</button><button class="btn sm ghost" data-act="multiClear">✕</button>`);
         $('selBtn').classList.toggle('active', Graph.selMode);
     }
@@ -612,12 +612,12 @@
             <ul class="help">
                 <li><b>Build</b> machines from the left panel. Drag a cable from a machine's <b>right dot</b> onto another machine to send it items. Drag the background to pan, scroll to zoom.</li>
                 <li><b>Money:</b> solve desk jobs (captchas) in 💼 Work, sell things through a Market Stall, and take contracts.</li>
-                <li><b>Power:</b> anything with a plug needs watts — solar by day, batteries at night, generators, later the grid. Overload the shack and the breaker trips.</li>
+                <li><b>Power:</b> anything with a plug needs watts, solar by day, batteries at night, generators, later the grid. Overload the shack and the breaker trips.</li>
                 <li><b>Heat:</b> every watt becomes heat. Too hot and machines slow down and break faster. Add fans and AC.</li>
                 <li><b>Your AI:</b> feed compute 🧮 and data 📚 into a Training Rig. Each trained model unlocks something big and gives a 🎯 focus point.</li>
                 <li><b>Wear:</b> machines break eventually. Fix them yourself (a quick wiring puzzle) or pay someone.</li>
-                <li><b>Storage:</b> wire things into a 📦 Storage Shed to keep them — bigger machines need parts from storage to build, and contracts deliver from it.</li>
-                <li><b>Markets:</b> only so many buyers exist. Flood a market and prices drop for a while — contracts pay far better and never flood.</li>
+                <li><b>Storage:</b> wire things into a 📦 Storage Shed to keep them, bigger machines need parts from storage to build, and contracts deliver from it.</li>
+                <li><b>Markets:</b> only so many buyers exist. Flood a market and prices drop for a while, contracts pay far better and never flood.</li>
                 <li><b>Numbers on machines:</b> left = items waiting inside, right = what it makes per second. Cables show how much they carry per second.</li>
                 <li><b>Blueprints:</b> Shift-drag (or ⬚) to select machines, then save them as a 📐 blueprint and paste them anywhere. Ctrl+C / Ctrl+V works too.</li>
                 <li><b>Move</b> (🏠 Site tab) to bigger places as your AI grows. The whole interface upgrades with you.</li>
@@ -636,7 +636,7 @@
         cat: (d) => { cat = d.id; },
         build: (d) => {
             const why = E.lockReason(NODES[d.id]);
-            if (why) { toast('Locked — ' + why, 'bad'); return; }
+            if (why) { toast('Locked, ' + why, 'bad'); return; }
             const [x, y] = Graph.freeSpot();
             const r = E.place(d.id, x, y);
             if (r.err) { toast(r.err, 'bad'); Arcade.sfx('bad'); return; }
@@ -691,7 +691,7 @@
             if (f > 0) { const amt = s.cash * f / (s.coinPrice * (E.has('nofee') ? 1 : 1.01)); if (amt > 0 && E.trade(amt)) Arcade.sfx('coin'); }
             else if (E.trade(s.coin * f)) Arcade.sfx('coin');
         },
-        move: () => { if (E.move()) { Arcade.sfx('win'); Graph.fit(); showModal(`<h2>${E.site().icon} ${esc(E.site().name)}</h2><p class="lead" style="text-align:center">${esc(E.site().blurb)}</p><div class="perk-big">New machines are in the build list, and you have <b>${E.slots()}</b> slots. ${E.site().grid ? '' : '<br>No grid here — bring your own power.'}${E.site().space ? '<br>No air in space: build radiators for cooling.' : ''}</div><div class="actions"><button class="btn primary" data-act="closeModal">Let's go</button></div>`); } },
+        move: () => { if (E.move()) { Arcade.sfx('win'); Graph.fit(); showModal(`<h2>${E.site().icon} ${esc(E.site().name)}</h2><p class="lead" style="text-align:center">${esc(E.site().blurb)}</p><div class="perk-big">New machines are in the build list, and you have <b>${E.slots()}</b> slots. ${E.site().grid ? '' : '<br>No grid here, bring your own power.'}${E.site().space ? '<br>No air in space: build radiators for cooling.' : ''}</div><div class="actions"><button class="btn primary" data-act="closeModal">Let's go</button></div>`); } },
         target: (d) => { E.setTarget(d.l, +d.i); },
         law: (d) => { lawPick = d.id; },
         recurse: () => {
@@ -712,7 +712,7 @@
         },
         hideGoal: () => { goalHidden = true; },
         showGoal: () => { goalHidden = false; },
-        skipTut: () => { if (confirm('Skip the tutorial? Every shack machine unlocks right away.')) { E.skipTut(); toast('Tutorial skipped — everything here is unlocked.', 'good'); } },
+        skipTut: () => { if (confirm('Skip the tutorial? Every shack machine unlocks right away.')) { E.skipTut(); toast('Tutorial skipped, everything here is unlocked.', 'good'); } },
         mapLayer: (d) => { mapLayer = d.id; },
         bpSave: () => {
             const ids = [...Graph.multi];
@@ -728,7 +728,7 @@
         bpCancel: () => { Graph.placingBp = null; },
         bpRename: (d) => { const bp = E.M.bps[+d.i]; const n = bp && prompt('Rename blueprint:', bp.name); if (n) E.renameBp(+d.i, n.trim()); },
         bpDel: (d) => { const bp = E.M.bps[+d.i]; if (bp && confirm(`Delete blueprint “${bp.name}”?`)) E.delBp(+d.i); },
-        copy: () => { clip = E.makeBp([...Graph.multi], 'Copied machines'); if (clip) toast('📋 Copied — press Ctrl+V to paste.', '', 1800); },
+        copy: () => { clip = E.makeBp([...Graph.multi], 'Copied machines'); if (clip) toast('📋 Copied, press Ctrl+V to paste.', '', 1800); },
         multiDel: () => {
             const ns = S().nodes.filter(n => Graph.multi.has(n.id));
             if (ns.length && confirm(`Scrap ${ns.length} machines for a 50% refund?`)) { ns.forEach(n => E.removeNode(n)); Graph.multi = new Set(); Graph.sel = null; }
@@ -768,12 +768,12 @@
 
     /* ---------- engine hooks ---------- */
     E.onModel = (m) => {
-        showModal(`<h2>🧠 ${esc(m.name)} is online</h2><p class="lead" style="text-align:center">${m.ver} — your AI just got smarter.</p><div class="perk-big">${esc(m.perk)}<br><br>+1 🎯 focus point to spend.</div>
+        showModal(`<h2>🧠 ${esc(m.name)} is online</h2><p class="lead" style="text-align:center">${m.ver}, your AI just got smarter.</p><div class="perk-big">${esc(m.perk)}<br><br>+1 🎯 focus point to spend.</div>
             ${MODELS[S().ai.ver] ? `<p class="lead">Next up: <b>${esc(MODELS[S().ai.ver].name)}</b> needs ${fmt(E.modelNeed().c)} PF of compute and ${fmt(E.modelNeed().d)} data.</p>` : ''}<div class="actions"><button class="btn primary" data-act="closeModal">Onward</button></div>`);
     };
     E.onWin = () => {
         showModal(`<h2>♾️ Singularity</h2><p class="lead" style="text-align:center">Every star, every galaxy, every thought in the observable universe is yours. It took ${dur(S().playT)}.</p>
-            <div class="perk-big">Recursion is unlocked. Collapse this universe for <b>${E.echoGain()} Echoes</b> and start over with new laws of physics and permanent perks — whenever you're ready.</div>
+            <div class="perk-big">Recursion is unlocked. Collapse this universe for <b>${E.echoGain()} Echoes</b> and start over with new laws of physics and permanent perks, whenever you're ready.</div>
             <div class="actions"><button class="btn primary" data-act="tab" data-id="recursion">Open Recursion</button><button class="btn" data-act="closeModal">Stay a while</button></div>`);
         $('modal').addEventListener('click', (e) => { if (e.target.closest('[data-act="tab"]')) closeModal(); }, { once: true });
     };

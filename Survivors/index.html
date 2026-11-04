@@ -44,7 +44,7 @@
             <div class="overlay" id="startOv">
                 <div class="modal wide">
                     <h2>🧛 Night Survivors</h2>
-                    <p>Your weapons fire by themselves — just move. Survive until dawn (15:00). Best: <b id="bestT">—</b></p>
+                    <p>Your weapons fire by themselves, just move. Survive until dawn (15:00). Best: <b id="bestT">-</b></p>
                     <div class="chars" id="chars"></div>
                     <h4 style="margin:14px 0 2px">Power-ups (kept between runs) · <span class="gold">🪙 <b id="shopGold">0</b></span></h4>
                     <div class="shop" id="shop"></div>
@@ -68,7 +68,7 @@
                 <div class="modal">
                     <h2 id="endTitle">You fell</h2>
                     <div class="big-num" id="endTime">0:00</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid" id="endStats"></div>
                     <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
                 </div>
@@ -561,7 +561,7 @@
 
         /* ---------- menus ---------- */
         function buildStart() {
-            $('bestT').textContent = save.best ? Arcade.time(save.best) : '—';
+            $('bestT').textContent = save.best ? Arcade.time(save.best) : '-';
             const ch = $('chars'); ch.innerHTML = '';
             for (const k of CHARS) {
                 const b = document.createElement('button');

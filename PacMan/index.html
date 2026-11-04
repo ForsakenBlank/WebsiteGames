@@ -59,7 +59,7 @@
             <div class="overlay" id="menuOv">
                 <div class="modal">
                     <h2>Pac-Man</h2>
-                    <p>Eat every dot. Power pellets turn the ghosts blue — eat them for combos.</p>
+                    <p>Eat every dot. Power pellets turn the ghosts blue, eat them for combos.</p>
                     <div class="maps" id="maps">
                         <button class="btn map-btn" data-map="arcade"><span>🕹️</span><b>Arcade</b><small>The 1980 maze</small></button>
                         <button class="btn map-btn" data-map="original"><span>🟡</span><b>Original</b><small>Our compact maze</small></button>
@@ -154,7 +154,7 @@
             // The original 1980 arcade layout (28 × 31).
             arcade: {
                 name: 'Arcade',
-                info: 'The real 28×31 maze from the 1980 arcade cabinet — 240 dots, 4 energizers and the side tunnel.',
+                info: 'The real 28×31 maze from the 1980 arcade cabinet, 240 dots, 4 energizers and the side tunnel.',
                 rows: [
                     '############################',
                     '#............##............#',
@@ -224,7 +224,7 @@
             },
             infinite: {
                 name: 'Infinite',
-                info: 'A maze that goes on forever up and down. No dead ends. Go deeper for higher levels — and more ghosts.',
+                info: 'A maze that goes on forever up and down. No dead ends. Go deeper for higher levels, and more ghosts.',
                 infinite: true,
             },
         };
@@ -240,7 +240,7 @@
         const pickFruit = () => FRUITS[Arcade.randi(Math.max(0, level - 3), Math.min(FRUITS.length - 1, level + 2))];
         const POWERS = {
             boots: { e: '👟', name: 'Speed boots', time: 8 },
-            freeze: { e: '❄️', name: 'Ghosts frozen — eat them!', time: 5 },
+            freeze: { e: '❄️', name: 'Ghosts frozen, eat them!', time: 5 },
             double: { e: '✖️', name: 'Double points', time: 10 },
             magnet: { e: '🧲', name: 'Dot magnet', time: 8 },
             mystery: { e: '❓', name: 'Mystery box', time: 0 },
@@ -283,7 +283,7 @@
          * Infinite maze. Node tiles sit at odd x / even y; the tiles between them are corridors or walls.
          * Every node row is split into horizontal corridor segments of 2+ nodes, so every node has at least
          * one horizontal neighbour. The end node of every segment is always given a vertical link (both up
-         * and down), so every tile has at least two exits — no dead ends anywhere. Every third node row is
+         * and down), so every tile has at least two exits, no dead ends anywhere. Every third node row is
          * one long corridor that ties all the vertical strands together, so the whole maze is connected.
          * Rows are a pure function of the seed, so going back the way you came shows the same maze.
          */
@@ -507,7 +507,7 @@
             Arcade.text('best', Math.max(best, score));
             Arcade.text('level', level);
             Arcade.text('depth', depth);
-            Arcade.text('lives', lives > 0 ? '●'.repeat(Math.min(lives, 6)) : '—');
+            Arcade.text('lives', lives > 0 ? '●'.repeat(Math.min(lives, 6)) : '-');
             Arcade.text('livesLbl', swap ? 'Pac lives' : 'Lives');
             const act = Object.entries(pw).filter(([, t]) => t > 0).map(([k, t]) => POWERS[k].e + ' ' + Math.ceil(t));
             document.getElementById('pwChip').hidden = !act.length;
@@ -639,7 +639,7 @@
             if (lv > level) {
                 level = lv;
                 addScore(500);
-                Arcade.toast('Level ' + level + ' — ghosts are faster!', 'gold');
+                Arcade.toast('Level ' + level + ', ghosts are faster!', 'gold');
                 Arcade.sfx('level');
                 while (ghosts.length < ghostCount()) {
                     const g = makeGhost(ghosts.length, 0, 0, 0);
@@ -933,12 +933,12 @@
             collide();
         }
 
-        /** Ghost mode: Pac-Man is out of lives — next level, faster Pac. */
+        /** Ghost mode: Pac-Man is out of lives, next level, faster Pac. */
         function ghostWin() {
             Arcade.count('ghostwin');
             addScore(2000, true);
             Arcade.sfx('win');
-            Arcade.toast('🏆 Pac-Man is out of lives! +2000 — level ' + (level + 1), 'gold', 2400);
+            Arcade.toast('🏆 Pac-Man is out of lives! +2000, level ' + (level + 1), 'gold', 2400);
             level++; lives = 3;
             setWorld(); placeActors(); setState('ready'); hud();
         }
@@ -1268,7 +1268,7 @@
             const box = document.getElementById('customBox'), host = document.getElementById('customList');
             box.hidden = !showCustom;
             host.innerHTML = '';
-            if (!customs.length) host.innerHTML = '<p class="small dim">No mazes yet — make one!</p>';
+            if (!customs.length) host.innerHTML = '<p class="small dim">No mazes yet, make one!</p>';
             for (const c of customs) {
                 const r = document.createElement('div');
                 r.className = 'custom-row' + (mapId === 'c_' + c.id ? ' sel' : '');

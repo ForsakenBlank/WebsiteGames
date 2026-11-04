@@ -12,13 +12,13 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Essence Farming</h1>
         <nav class="seg nav-seg" id="tabs">
-            <button class="btn sm" data-nav="farm">🌿 Farm</button>
-            <button class="btn sm" data-nav="void">🌀 Void</button>
-            <button class="btn sm" data-nav="research">🔬 Research</button>
-            <button class="btn sm" data-nav="greenhouse">🏡 Greenhouse</button>
+            <button class="btn sm" data-nav="farm">Farm</button>
+            <button class="btn sm" data-nav="void">Void</button>
+            <button class="btn sm" data-nav="research">Research</button>
+            <button class="btn sm" data-nav="greenhouse">Greenhouse</button>
             <button class="btn sm" data-nav="frontier" style="position:relative">🗺️ Frontier<i id="evDot" hidden style="position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)"></i></button>
-            <button class="btn sm" data-nav="ascend">🌸 Ascension</button>
-            <button class="btn sm" data-nav="stats">📊 Stats</button>
+            <button class="btn sm" data-nav="ascend">Ascension</button>
+            <button class="btn sm" data-nav="stats">Stats</button>
         </nav>
         <div class="stats">
             <span class="chip accent">Essence <b id="hEss">0</b></span>
@@ -40,8 +40,8 @@
             <div class="sub"><b id="eps">0</b> essence / sec · Void power <b id="vmult">×1.00</b> · Milestones <b id="mpow">×1.00</b><span id="seedLine"></span></div>
             <div class="row center">
                 <button class="btn primary lg" id="hireBtn">Hire farmer</button>
-                <button class="btn lg" id="buyAllBtn">⚡ Buy all levels</button>
-                <button class="btn lg" id="ghBtn" hidden>🏡 Unlock greenhouse</button>
+                <button class="btn lg" id="buyAllBtn">Buy all levels</button>
+                <button class="btn lg" id="ghBtn" hidden>Unlock greenhouse</button>
             </div>
             <p class="tiny dim" id="tip"></p>
         </section>
@@ -113,8 +113,8 @@
                     <div class="row between">
                         <div class="inv" id="inv"></div>
                         <div class="row" style="gap:6px">
-                            <button class="btn sm" id="plantAllBtn">🌱 Plant all</button>
-                            <button class="btn sm primary" id="harvestAllBtn">🧺 Harvest all</button>
+                            <button class="btn sm" id="plantAllBtn">Plant all</button>
+                            <button class="btn sm primary" id="harvestAllBtn">Harvest all</button>
                             <button class="btn sm" id="expandBtn"></button>
                         </div>
                     </div>
@@ -127,11 +127,11 @@
                 </section>
                 <section class="panel">
                     <h3>🧬 Cross-breeding lab</h3>
-                    <p class="small muted" style="margin-top:0">Pick two parent crops to try for a hybrid (65% chance). Crops growing next to a different crop can also <b>mutate</b> into one when harvested. Every hybrid you own boosts something — and they're kept when you ascend.</p>
+                    <p class="small muted" style="margin-top:0">Pick two parent crops to try for a hybrid (65% chance). Crops growing next to a different crop can also <b>mutate</b> into one when harvested. Every hybrid you own boosts something, and they're kept when you ascend.</p>
                     <div class="row" style="gap:8px;flex-wrap:wrap">
                         <select id="breedA" class="field-sel"></select><span>✕</span><select id="breedB" class="field-sel"></select>
                         <span class="small" id="breedOut"></span>
-                        <button class="btn primary" id="breedBtn">🧬 Cross-breed</button>
+                        <button class="btn primary" id="breedBtn">Cross-breed</button>
                     </div>
                     <div class="grid" id="hybrids" style="margin-top:12px"></div>
                 </section>
@@ -151,7 +151,7 @@
         <section class="panel locked-panel" id="frLocked">
             <div class="big-ic">🗺️</div>
             <h3>The Frontier</h3>
-            <p>Beyond the greenhouse lies endless wild land. Claim it tile by tile with <b>Aether ✦</b> — every biome gives its own bonus, the land grows richer the further you go, and ancient ruins hide permanent relics.</p>
+            <p>Beyond the greenhouse lies endless wild land. Claim it tile by tile with <b>Aether ✦</b>, every biome gives its own bonus, the land grows richer the further you go, and ancient ruins hide permanent relics.</p>
             <button class="btn primary lg" id="frUnlockBtn"></button>
         </section>
         <div class="fr" id="frOpen" hidden>
@@ -181,7 +181,7 @@
             <div class="asc">
                 <div>
                     <h3>🌸 Ascension</h3>
-                    <p class="small" style="margin-top:0">Let this farm return to the earth. You lose essence, farmers, the void, research, the greenhouse and the frontier — and gain <b>Soul Seeds</b>. Every <b>unspent</b> seed gives <b id="perSeed">+10%</b> essence forever, or spend seeds on permanent perks below. Relics are always kept.</p>
+                    <p class="small" style="margin-top:0">Let this farm return to the earth. You lose essence, farmers, the void, research, the greenhouse and the frontier, and gain <b>Soul Seeds</b>. Every <b>unspent</b> seed gives <b id="perSeed">+10%</b> essence forever, or spend seeds on permanent perks below. Relics are always kept.</p>
                     <div class="minis">
                         <div class="mini"><small>Soul seeds</small><b id="aSeeds">0</b></div>
                         <div class="mini"><small>Seed bonus</small><b id="aBonus">×1</b></div>
@@ -205,7 +205,7 @@
             <div class="asc">
                 <div>
                     <h3>🌌 Transcendence</h3>
-                    <p class="small" style="margin-top:0">The layer above ascension. Transcending resets <b>soul seeds, perks and hybrids</b> on top of everything an ascension resets — but turns the seeds you earned into <b>Eternity Shards 🔷</b> for huge permanent upgrades. Relics and discovered hybrids are kept.</p>
+                    <p class="small" style="margin-top:0">The layer above ascension. Transcending resets <b>soul seeds, perks and hybrids</b> on top of everything an ascension resets, but turns the seeds you earned into <b>Eternity Shards 🔷</b> for huge permanent upgrades. Relics and discovered hybrids are kept.</p>
                     <div class="minis">
                         <div class="mini"><small>Shards</small><b id="tShards">0</b></div>
                         <div class="mini"><small>Seeds since last</small><b id="tSeeds">0</b></div>
@@ -544,7 +544,7 @@
             $('expandBtn').disabled = state.plots >= MAX_PLOTS || state.cropInventory.wheat < ec;
             const auto = autoHarvesting();
             $('harvestAllBtn').hidden = auto; $('plantAllBtn').hidden = auto;
-            $('ghTip').innerHTML = auto ? '🤖 <b>Auto-harvesting</b> — plots harvest and replant the selected seed on their own.' : 'Tap an empty plot to plant the selected seed. Tap a glowing plot to harvest. With <b>Bulk Growth</b> you can tap a growing plot to add more seeds of the same kind.';
+            $('ghTip').innerHTML = auto ? '🤖 <b>Auto-harvesting</b>, plots harvest and replant the selected seed on their own.' : 'Tap an empty plot to plant the selected seed. Tap a glowing plot to harvest. With <b>Bulk Growth</b> you can tap a growing plot to add more seeds of the same kind.';
             plotEls.forEach((el, i) => {
                 const p = state.ghCrops[i];
                 const locked = i >= state.plots;
@@ -678,7 +678,7 @@
             if (t) {
                 const B = BIOMES[t.b], c = tileUpCost(t, sx, sy);
                 info.innerHTML = `<h3>${B.icon} ${B.name} <span class="dim">· (${sx}, ${sy}) · ring ${ring(sx, sy)}</span></h3>
-                    <div class="minis"><div class="mini"><small>Level</small><b>${t.lvl}/25</b></div><div class="mini"><small>Aether</small><b>${fmt(tileAether(t, sx, sy) * aetherMult())}/s</b></div><div class="mini"><small>Bonus</small><b>${B.bonus ? '+' + Math.round(B.bonus[1] * t.lvl * 100) + '%' : '—'}</b></div></div>
+                    <div class="minis"><div class="mini"><small>Level</small><b>${t.lvl}/25</b></div><div class="mini"><small>Aether</small><b>${fmt(tileAether(t, sx, sy) * aetherMult())}/s</b></div><div class="mini"><small>Bonus</small><b>${B.bonus ? '+' + Math.round(B.bonus[1] * t.lvl * 100) + '%' : '-'}</b></div></div>
                     <p class="small muted">${B.bonus ? B.bonus[2] + ' per level.' : 'Your home. Upgrading it boosts its Aether.'} Each level ×1.9 Aether.</p>
                     <button class="btn primary block" id="tileUp">${t.lvl >= 25 ? 'Max level' : 'Upgrade · ✦' + fmt(c)}</button>`;
                 $('tileUp').disabled = t.lvl >= 25 || F.aether < c;
@@ -696,7 +696,7 @@
                     if (r.found) {
                         const R = RELICS[r.found];
                         $('relicIcon').textContent = R.icon;
-                        $('relicText').innerHTML = `<b>${R.name}</b> (now level ${state.relics[r.found]}) — ${R.desc} per level. Relics are kept forever, even when you ascend.`;
+                        $('relicText').innerHTML = `<b>${R.name}</b> (now level ${state.relics[r.found]}), ${R.desc} per level. Relics are kept forever, even when you ascend.`;
                         Arcade.show('relicOv');
                     } else Arcade.toast(`Claimed ${BIOMES[r.b].icon} ${BIOMES[r.b].name}!`, 'good', 1400);
                     refreshAll();
@@ -739,8 +739,8 @@
                 evKey = key;
                 if (!ev) box.innerHTML = `<h3>🌧️ Gentle rain</h3><p class="small muted">Crops grow 50% faster. <b data-left></b>s left.</p>`;
                 else if (ev.kind === 'storm') box.innerHTML = `<h3>⛈️ Storm!</h3><p class="small muted">Aether production is halved until it passes (<b data-left></b>s). Calm it to bring a gentle rain instead (+50% crop growth for 2 min).</p><button class="btn primary block" id="evAct"></button>`;
-                else if (ev.kind === 'bloom') box.innerHTML = `<h3>🌈 Aether bloom</h3><p class="small muted">A rift of pure Aether opened — grab it before it fades (<b data-left></b>s).</p><button class="btn primary block" id="evAct"></button>`;
-                else if (ev.kind === 'explorer') box.innerHTML = `<h3>🧭 Lost explorer</h3><p class="small muted">An explorer knows the land. Your next claim is <b>free</b> for <b data-left></b>s — pick any open tile.</p>`;
+                else if (ev.kind === 'bloom') box.innerHTML = `<h3>🌈 Aether bloom</h3><p class="small muted">A rift of pure Aether opened, grab it before it fades (<b data-left></b>s).</p><button class="btn primary block" id="evAct"></button>`;
+                else if (ev.kind === 'explorer') box.innerHTML = `<h3>🧭 Lost explorer</h3><p class="small muted">An explorer knows the land. Your next claim is <b>free</b> for <b data-left></b>s, pick any open tile.</p>`;
                 else box.innerHTML = `<h3>🧙 Wandering merchant</h3><p class="small muted">Leaving in <b data-left></b>s. Each deal once.</p><div class="up-list">${ev.offers.map(o => `<div class="up-item${o.done ? ' owned' : ''}"><span class="ic">${o.id === 'relic' ? '🏺' : o.id === 'aether' ? '✦' : '🧬'}</span><b>${o.label}</b><button class="btn sm primary" data-offer="${o.id}" ${o.done ? 'disabled' : ''}>${o.done ? 'Sold' : (o.cur === 'aether' ? '✦ ' : '') + fmt(o.cost) + (o.cur === 'essence' ? ' essence' : '')}</button><small>${o.id === 'relic' ? 'A random relic level' : o.id === 'aether' ? 'Trade essence for Aether' : 'Three hybrids of one kind'}</small></div>`).join('')}</div>`;
                 const act = box.querySelector('#evAct');
                 if (act && ev.kind === 'storm') act.onclick = () => { if (calmStorm()) { Arcade.toast('🌧️ The storm turns to a gentle rain', 'good'); evKey = ''; refreshAll(); } };

@@ -80,13 +80,13 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Pet Sudoku</h1>
         <div class="stats">
-            <span class="chip accent">Level <b id="lvlName">—</b></span>
+            <span class="chip accent">Level <b id="lvlName">-</b></span>
             <span class="chip">Time <b id="timer">0:00</b></span>
             <span class="chip bad" id="mistakeChip">Mistakes <b id="mistakes">0</b></span>
             <span class="chip gold">Hints <b id="hintsLeft">0</b></span>
         </div>
         <div class="actions">
-            <button class="btn sm" id="menuBtn">☰ Levels</button>
+            <button class="btn sm" id="menuBtn">Levels</button>
             <button class="btn sm icon" id="pauseBtn" title="Pause (P)">⏸</button>
             <button class="btn sm icon" data-mute>🔊</button>
         </div>
@@ -112,7 +112,7 @@
                 <div class="seg themes" id="themes"></div>
                 <div class="levels" id="levels"></div>
                 <div class="actions">
-                    <button class="btn primary resume" id="resumeBtn" hidden>▶ Resume game</button>
+                    <button class="btn primary resume" id="resumeBtn" hidden>Resume game</button>
                     <button class="btn" id="closeMenu" hidden>Close</button>
                 </div>
                 <p class="tiny dim" style="margin-top:12px"><span class="desktop-only">Click a cell, then a pet (or press <kbd>1</kbd>–<kbd>9</kbd>) · <kbd>Arrows</kbd> move · <kbd>N</kbd> notes · <kbd>H</kbd> hint · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span><span class="touch-only">Tap a cell, then a pet. Use ✏️ for notes.</span></p>
@@ -136,7 +136,7 @@
                 <div class="stat-grid">
                     <div><small>Mistakes</small><b id="winMistakes">0</b></div>
                     <div><small>Hints used</small><b id="winHints">0</b></div>
-                    <div><small>Best time</small><b id="winBestTime">—</b></div>
+                    <div><small>Best time</small><b id="winBestTime">-</b></div>
                     <div><small>Wins here</small><b id="winCount">0</b></div>
                 </div>
                 <div class="actions">
@@ -486,7 +486,7 @@
             if (!game) return;
             const L = game.level;
             Arcade.text('lvlName', L.icon + ' ' + L.name);
-            Arcade.text('mistakes', L.blind ? '—' : (L.lives ? `${game.mistakes} / ${L.lives}` : game.mistakes));
+            Arcade.text('mistakes', L.blind ? '-' : (L.lives ? `${game.mistakes} / ${L.lives}` : game.mistakes));
             const hl = Math.max(0, L.hints - game.hintsUsed);
             Arcade.text('hintsLeft', L.hints >= 99 ? '∞' : hl);
             document.getElementById('hintBtn').disabled = hl <= 0 || ended;
@@ -602,7 +602,7 @@
             pushUndo(sel >= 0 ? sel : 0);
             for (let i = 0; i < G.N2; i++) if (!game.values[i]) game.notes[i] = candMask(i);
             Arcade.sfx('power');
-            Arcade.toast('🪄 Notes filled — they tidy themselves as you place pets', 'good', 1600);
+            Arcade.toast('🪄 Notes filled, they tidy themselves as you place pets', 'good', 1600);
             render(); persist();
         }
         /** The simplest step a person could spot right now. */
@@ -662,10 +662,10 @@
             let text, zone;
             if (st.kind === 'naked') {
                 const others = bitsOf(G.full & ~(1 << (k - 1))).map(symbol).join(' ');
-                text = `This square can only be <b>${pet}</b>. Its row, column and box already contain ${others} — so ${pet} is the only pet left.`;
+                text = `This square can only be <b>${pet}</b>. Its row, column and box already contain ${others}, so ${pet} is the only pet left.`;
                 zone = G.peers[i];
             } else if (st.kind === 'hidden') {
-                text = `<b>${pet}</b> has to go here. In ${unitLabel(st.u)}, every other empty square already sees a ${pet} in its row, column or box — this is the only spot left for it.`;
+                text = `<b>${pet}</b> has to go here. In ${unitLabel(st.u)}, every other empty square already sees a ${pet} in its row, column or box, this is the only spot left for it.`;
                 zone = G.units[st.u];
             } else {
                 const opts = bitsOf(candMask(i)).map(symbol).join(' or ');
@@ -682,7 +682,7 @@
             if (game.level.blind) {
                 const wrong = game.values.filter((v, i) => v !== game.solution[i]).length;
                 if (wrong) {
-                    Arcade.toast(`Not quite — ${wrong} ${wrong === 1 ? 'pet is' : 'pets are'} in the wrong place`, 'bad', 2600);
+                    Arcade.toast(`Not quite, ${wrong} ${wrong === 1 ? 'pet is' : 'pets are'} in the wrong place`, 'bad', 2600);
                     Arcade.sfx('bad');
                     return;
                 }
@@ -706,7 +706,7 @@
             setTimeout(() => {
                 Arcade.text('winTime', Arcade.time(t));
                 Arcade.text('winLevel', `${L.icon} ${L.name} · ${L.desc}`);
-                Arcade.text('winMistakes', L.blind ? '—' : game.mistakes);
+                Arcade.text('winMistakes', L.blind ? '-' : game.mistakes);
                 Arcade.text('winHints', game.hintsUsed);
                 Arcade.text('winBestTime', Arcade.time(st.best));
                 Arcade.text('winCount', st.wins);

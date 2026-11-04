@@ -69,7 +69,7 @@
                     <h2 class="bad" id="overTitle">Shattered</h2>
                     <div class="stars" id="overStars" hidden></div>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Kills</small><b id="finalKills">0</b></div>
                         <div><small>Best combo</small><b id="finalCombo">0</b></div>
@@ -83,7 +83,7 @@
                 </div>
             </div>
         </div>
-        <div class="row center touch-only"><button class="btn" id="nadeBtn">💣 Grenade</button><button class="btn" id="empBtn">⚡ EMP</button></div>
+        <div class="row center touch-only"><button class="btn" id="nadeBtn">Grenade</button><button class="btn" id="empBtn">EMP</button></div>
     </main>
 
     <script src="../_shared/arcade.js"></script>
@@ -258,7 +258,7 @@
         function useAmmo() {
             if (!isFinite(weapon.ammo)) return;
             weapon.ammo--;
-            if (weapon.ammo <= 0) { weapon = { id: 'pistol', ammo: Infinity }; Arcade.toast('Out of ammo — back to the pistol', '', 1000); }
+            if (weapon.ammo <= 0) { weapon = { id: 'pistol', ammo: Infinity }; Arcade.toast('Out of ammo, back to the pistol', '', 1000); }
         }
         function shoot(tx, ty) {
             if (state !== 'play' || reload > 0) return;
@@ -398,7 +398,7 @@
             Arcade.text('finalTimeLbl', mode === 'level' ? 'Time (par ' + LEVELS[level].par + 's)' : 'Time survived');
             Arcade.text('finalTime', gameTime.toFixed(1) + 's');
             $('newBest').hidden = !isNew;
-            $('newBest').textContent = mode === 'arena' ? '★ New best wave ★' : '★ New best ★';
+            $('newBest').textContent = mode === 'arena' ? '★ New best wave ★' : 'New best!';
             $('nextBtn').hidden = !(mode === 'level' && stars && level < LEVELS.length - 1);
             $('againBtn').textContent = mode === 'level' ? 'Retry' : 'Again';
             Arcade.show('overOv');
@@ -727,7 +727,7 @@
         }
         function buildLevels() {
             const total = Object.values(lvStars).reduce((a, b) => a + b, 0);
-            Arcade.text('levelStars', `★ ${total} / ${LEVELS.length * 3} — 3 stars: beat par time without getting hit.`);
+            Arcade.text('levelStars', `★ ${total} / ${LEVELS.length * 3}, 3 stars: beat par time without getting hit.`);
             const g = $('levelGrid');
             g.innerHTML = '';
             LEVELS.forEach((L, i) => {

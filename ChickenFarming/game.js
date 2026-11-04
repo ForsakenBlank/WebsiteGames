@@ -1,5 +1,5 @@
 /* ==========================================================
-   Chicken Farming — game logic.
+   Chicken Farming, game logic.
    Save key and data shape are kept from the original game
    ("ChickenGame") so existing saves keep working.
 
@@ -272,7 +272,7 @@ const Upgrades = {
         { id: 'haggle', name: 'Bulk Orders', icon: '🏷️', desc: '−2% farmer prices', baseCost: 1500000, costIncrease: 1.5, levelReq: 30, maxLevel: 20 },
     ],
     Evil: [
-        { id: 'DarkBarn', name: 'Dark Barn', icon: '🏚️', desc: '+20 evil chicken capacity — the flock can never grow past it', baseCost: 80, costIncrease: 1.35, levelReq: 15, maxLevel: Infinity },
+        { id: 'DarkBarn', name: 'Dark Barn', icon: '🏚️', desc: '+20 evil chicken capacity, the flock can never grow past it', baseCost: 80, costIncrease: 1.35, levelReq: 15, maxLevel: Infinity },
         { id: 'IncubatorGenerator', stat: true, name: 'Incubator Generators', icon: '🏭', desc: '+1 incubator every 5 seconds', increase: 1, baseCost: 10, costIncrease: 2.5, levelReq: 15, maxLevel: Infinity },
         { id: 'DarkFeed', name: 'Dark Feed', icon: '🌑', desc: '+10% evil eggs', baseCost: 300, costIncrease: 1.5, levelReq: 20, maxLevel: Infinity },
         { id: 'EvilChickenConvertAmount', stat: true, name: 'Mass Conversion', icon: '🌀', desc: '+1 chicken converted per evil event', increase: 1, baseCost: 100, costIncrease: 2.2, levelReq: 28, maxLevel: 30 },
@@ -1055,7 +1055,7 @@ setInterval(() => {
 // Only the tab running the economy writes on the way out; others would write a stale copy.
 function unloadSave() { if (isMasterTab()) save(); }
 window.addEventListener('pagehide', unloadSave);
-// Coming back through the back/forward cache restores an old copy in memory — reload it.
+// Coming back through the back/forward cache restores an old copy in memory, reload it.
 window.addEventListener('pageshow', (e) => { if (e.persisted) { loadGame(); if (typeof refresh === 'function') refresh(); } });
 // Another tab changed the save: mirror it straight away.
 window.addEventListener('storage', (e) => { if (e.key === GameSave) { loadGame(); if (typeof refresh === 'function') refresh(); } });

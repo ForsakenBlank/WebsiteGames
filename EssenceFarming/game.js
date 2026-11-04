@@ -1,5 +1,5 @@
 /* ==========================================================
-   Essence Farming — game engine.
+   Essence Farming, game engine.
    Save key and state shape are kept from the original
    ("df_v5_save") so existing saves keep working.
 
@@ -519,7 +519,7 @@ const tileUpCost = (t, x, y) => Math.ceil(BIOMES[t.b].up * Math.pow(2.6, t.lvl -
 const aetherMult = () => (1 + perk('map') * 0.25) * (1 + state.upgrades.starfruit[2] * 0.1) * (1 + hybridBonus('aether')) * Math.pow(2, tLvl('aether')) * (eventOn('storm') ? 0.5 : 1);
 
 /* ---------- Frontier events ---------- */
-// storm: halves Aether until it passes (or you pay to calm it — that brings rain, +50% crop growth)
+// storm: halves Aether until it passes (or you pay to calm it, that brings rain, +50% crop growth)
 // merchant: three one-off deals · bloom: collect a burst of Aether · explorer: your next claim is free
 const EVENTS = {
     storm: { icon: '⛈️', name: 'Storm', secs: 75 },
@@ -583,7 +583,7 @@ function buyOffer(id) {
     if (id === 'relic') {
         const pool = Object.keys(RELICS).filter(k => relic(k) < RELIC_MAX);
         if (pool.length) { const r = Arcade.pick(pool); state.relics[r] = relic(r) + 1; got = `${RELICS[r].icon} ${RELICS[r].name} (Lv ${state.relics[r]})`; }
-        else { F.aether += o.cost; got = 'a refund — your relics are all maxed'; }
+        else { F.aether += o.cost; got = 'a refund, your relics are all maxed'; }
     } else if (id === 'aether') { F.aether += o.amount; got = '✦ ' + fmt(o.amount); }
     else {
         const known = Object.keys(HYBRIDS).filter(k => state.unlockedCrops.includes(HYBRIDS[k].a) && state.unlockedCrops.includes(HYBRIDS[k].b));
@@ -612,7 +612,7 @@ function claimTile(x, y) {
     state.frontier.aether -= c;
     const b = biomeAt(x, y);
     state.frontier.tiles[x + ',' + y] = { b, lvl: 1 };
-    if (eventOn('explorer')) { state.frontier.event = null; Arcade.toast('🧭 The explorer showed you the way — free claim!', 'gold', 1800); }
+    if (eventOn('explorer')) { state.frontier.event = null; Arcade.toast('🧭 The explorer showed you the way, free claim!', 'gold', 1800); }
     let found = null;
     if (b === 'ruins') {
         const pool = Object.keys(RELICS).filter(k => relic(k) < RELIC_MAX);
@@ -758,7 +758,7 @@ function heartbeat() {
     if (++eventTick >= 10) { eventTick = 0; rollEvent(); }
 }
 let histTick = 290, eventTick = 0;
-/** Essence/sec every 30s, last 4 hours — drawn on the Stats tab. */
+/** Essence/sec every 30s, last 4 hours, drawn on the Stats tab. */
 function sampleHistory() {
     const h = state.history;
     h.push([Date.now(), state.totalGain || 0, state.essence]);

@@ -11,10 +11,9 @@
             position: relative;
             width: calc(var(--cell) * var(--n) + var(--gap) * (var(--n) + 1));
             height: calc(var(--cell) * var(--n) + var(--gap) * (var(--n) + 1));
-            border-radius: 16px;
-            background: #1c2340;
-            border: 1px solid var(--line-2);
-            box-shadow: var(--shadow), 0 0 70px -36px var(--accent);
+            border-radius: 22px;
+            background: #4a4038;
+            box-shadow: 0 8px 0 #2f2924;
             touch-action: none;
         }
         .slot, .tile {
@@ -23,12 +22,13 @@
             height: var(--cell);
             border-radius: calc(var(--cell) * 0.12);
         }
-        .slot { background: rgba(255,255,255,0.05); }
+        .slot { background: rgba(255,255,255,0.07); }
         .tile {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 900;
+            font-family: var(--display);
+            font-weight: 600;
             font-variant-numeric: tabular-nums;
             transition: transform 0.11s ease-out;
             will-change: transform;
@@ -62,8 +62,8 @@
     <main class="stage">
         <div class="side">
             <div class="seg" id="sizes"></div>
-            <button class="btn sm" id="undoBtn" title="Undo last move (Z)">↶ Undo</button>
-            <button class="btn sm" id="newBtn">⟲ New game</button>
+            <button class="btn sm" id="undoBtn" title="Undo last move (Z)">Undo</button>
+            <button class="btn sm" id="newBtn">New game</button>
         </div>
         <div class="canvas-box" id="box">
             <div class="board" id="board"></div>
@@ -71,12 +71,12 @@
                 <div class="modal">
                     <h2 id="endTitle">Game over</h2>
                     <div class="big-num" id="endScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <p id="endText"></p>
                     <div class="actions">
                         <button class="btn primary lg" id="againBtn">New game</button>
                         <button class="btn" id="keepBtn" hidden>Keep going</button>
-                        <button class="btn" id="undoEndBtn">↶ Undo</button>
+                        <button class="btn" id="undoEndBtn">Undo</button>
                     </div>
                 </div>
             </div>
@@ -89,10 +89,10 @@
     (() => {
         const SIZES = [3, 4, 5, 6, 8];
         const COLORS = {
-            2: ['#eee4da', '#3b2f22'], 4: ['#ede0c8', '#3b2f22'], 8: ['#f2b179', '#fff'], 16: ['#f59563', '#fff'],
-            32: ['#f67c5f', '#fff'], 64: ['#f65e3b', '#fff'], 128: ['#edcf72', '#fff'], 256: ['#edcc61', '#fff'],
-            512: ['#edc850', '#fff'], 1024: ['#edc53f', '#fff'], 2048: ['#edc22e', '#fff'], 4096: ['#a78bfa', '#fff'],
-            8192: ['#818cf8', '#fff'], 16384: ['#38bdf8', '#04121f'], 32768: ['#34d399', '#04130b'],
+            2: ['#f4ecdd', '#5a4a3a'], 4: ['#efdcbc', '#5a4a3a'], 8: ['#f7b07a', '#fff'], 16: ['#f28c6a', '#fff'],
+            32: ['#ec6a62', '#fff'], 64: ['#d94f63', '#fff'], 128: ['#f6c445', '#4a3200'], 256: ['#eeaa2e', '#3d2600'],
+            512: ['#86d4b4', '#163a2d'], 1024: ['#4fb3bf', '#fff'], 2048: ['#8d6be0', '#fff'], 4096: ['#5b4bd0', '#fff'],
+            8192: ['#2d2442', '#ffd166'], 16384: ['#14324a', '#82c3ec'], 32768: ['#163a2d', '#86d4b4'],
         };
         const board = document.getElementById('board');
         const box = document.getElementById('box');
@@ -142,7 +142,7 @@
             const inner = t.el.firstChild;
             inner.style.background = bg;
             inner.style.color = fg;
-            inner.style.boxShadow = t.v >= 128 ? `inset 0 -4px 0 rgba(0,0,0,0.18), 0 0 ${Math.min(30, Math.log2(t.v) * 2)}px -4px ${bg}` : '';
+            inner.style.boxShadow = 'inset 0 -5px 0 rgba(0,0,0,0.16)';
             inner.textContent = t.v;
             t.el.dataset.v = t.v;
             t.el.style.fontSize = fontFor(t.v) + 'px';
@@ -278,8 +278,11 @@
             return false;
         }
 
+        let reportedTop = 0;
         function checkEnd() {
             const top = Math.max(...values());
+            // tell the arcade about big tiles straight away so quests tick over
+            if (top >= 128 && top > reportedTop) { reportedTop = top; Arcade.report('tile', top); }
             if (!won && top >= 2048) {
                 won = true;
                 Arcade.sfx('win');
@@ -288,6 +291,7 @@
             }
             if (!canMove()) {
                 over = true;
+                Arcade.report('score', score);
                 Arcade.sfx('die');
                 setTimeout(() => showEnd(false), 400);
             }

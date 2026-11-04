@@ -91,9 +91,9 @@
     <main class="stage">
         <div class="modes">
             <div class="seg" id="modeSeg">
-                <button class="btn sm" data-mode="daily">📅 Daily</button>
-                <button class="btn sm" data-mode="unlimited">♾ Unlimited</button>
-                <button class="btn sm" data-mode="poople" title="Word ladder: change one letter at a time until you reach POOP">💩 Poople</button>
+                <button class="btn sm" data-mode="daily">Daily</button>
+                <button class="btn sm" data-mode="unlimited">Unlimited</button>
+                <button class="btn sm" data-mode="poople" title="Word ladder: change one letter at a time until you reach POOP">Poople</button>
             </div>
             <div class="seg" id="lenSeg" title="Word length">
                 <button class="btn sm" data-len="4">4</button>
@@ -106,12 +106,12 @@
         </div>
         <div class="grid" id="grid"></div>
         <div class="poople" id="poople" hidden>
-            <div class="plead">Change <b>one letter at a time</b> — every step must be a real word — until you reach <b>POOP</b>.</div>
+            <div class="plead">Change <b>one letter at a time</b>, every step must be a real word, until you reach <b>POOP</b>.</div>
             <div class="pchain" id="pchain"></div>
             <div class="pbtns">
-                <button class="btn sm" id="pUndo">↩ Undo</button>
-                <button class="btn sm" id="pHint">💡 Hint</button>
-                <button class="btn sm" id="pNew">🔄 New puzzle</button>
+                <button class="btn sm" id="pUndo">Undo</button>
+                <button class="btn sm" id="pHint">Hint</button>
+                <button class="btn sm" id="pNew">New puzzle</button>
             </div>
         </div>
         <div class="kb" id="kb"></div>
@@ -126,7 +126,7 @@
                 <p class="small" id="nextDaily"></p>
                 <div class="actions">
                     <button class="btn primary lg" id="againBtn">Play unlimited</button>
-                    <button class="btn" id="shareBtn">📋 Share</button>
+                    <button class="btn" id="shareBtn">Share</button>
                     <button class="btn ghost" id="closeEnd">Close</button>
                 </div>
             </div>
@@ -526,7 +526,7 @@
             if (pg.done) return;
             const cur = pg.chain[pg.chain.length - 1], d = PDIST.get(cur);
             const next = pNeighbours(cur).filter(w => PDIST.get(w) === d - 1);
-            if (!next.length) { toast('Try undoing a step — this word is a dead end'); return; }
+            if (!next.length) { toast('Try undoing a step, this word is a dead end'); return; }
             pg.hints++;
             const w = next[0], i = [...w].findIndex((ch, k) => ch !== cur[k]);
             toast(pg.hints > 2 ? `Try ${w.toUpperCase()}  (${d} step${d === 1 ? '' : 's'} to go)` : `Try changing letter ${i + 1}  (${d} step${d === 1 ? '' : 's'} to go)`);

@@ -133,10 +133,10 @@
                 <button class="btn sm" data-mode="classic">Classic</button>
                 <button class="btn sm" data-mode="mystery">Mystery</button>
             </div>
-            <button class="btn sm" id="undoBtn" title="Undo (unlimited)">↶ Undo</button>
-            <button class="btn sm" id="customBtn" hidden>⚙ Custom setup</button>
+            <button class="btn sm" id="undoBtn" title="Undo (unlimited)">Undo</button>
+            <button class="btn sm" id="customBtn" hidden>Custom setup</button>
             <button class="btn sm" id="tubeBtn">+ Tube</button>
-            <button class="btn sm" id="restartBtn">⟲ Restart</button>
+            <button class="btn sm" id="restartBtn">Restart</button>
             <span class="level-tag" id="levelTag" data-kind="normal"></span>
         </div>
         <div class="canvas-box">
@@ -162,7 +162,7 @@
                 <p>Build your own puzzle. Settings are kept for every custom level.</p>
                 <div class="cust-grid">
                     <label>Colours <output id="cColOut">8</output><input type="range" id="cCol" min="2" max="20" value="8"><small>How many different colours to sort.</small></label>
-                    <label>Tube height <output id="cCapOut">4</output><input type="range" id="cCap" min="2" max="10" value="4"><small>Blocks per tube — taller tubes are harder.</small></label>
+                    <label>Tube height <output id="cCapOut">4</output><input type="range" id="cCap" min="2" max="10" value="4"><small>Blocks per tube, taller tubes are harder.</small></label>
                     <label>Empty tubes <output id="cEmptyOut">2</output><input type="range" id="cEmpty" min="1" max="6" value="2"><small>Spare tubes you start with. Fewer = harder.</small></label>
                     <label class="cust-check"><input type="checkbox" id="cExtra" checked> Allow the +Tube helper</label>
                 </div>
@@ -211,7 +211,7 @@
             lock: { label: 'Locked tube', icon: '🔒', tip: 'A spare tube that opens once you finish 2 tubes' },
             out: { label: 'Pour-out tube', icon: '⬆', tip: 'The gold tube can only be poured out of, never into' },
             mono: { label: 'One-colour tube', icon: '🎯', tip: 'The glowing tube only accepts its own colour' },
-            tall: { label: 'XL tube', icon: '📦', tip: 'A double-height spare tube that can hold several colours — it must end empty' },
+            tall: { label: 'XL tube', icon: '📦', tip: 'A double-height spare tube that can hold several colours, it must end empty' },
         };
         const MODES = { classic: 'Classic', mystery: 'Mystery' };
         const host = document.getElementById('tubes');

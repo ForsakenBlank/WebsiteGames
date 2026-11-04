@@ -50,9 +50,9 @@
                     <h2>Gravity Runner</h2>
                     <p>Flip between floor and ceiling. Dodge spikes, pillars and blocks.</p>
                     <p class="small"><span class="desktop-only"><kbd>Space</kbd> / <kbd>Click</kbd> to flip · <kbd>P</kbd> pause</span><span class="touch-only">Tap anywhere to flip</span></p>
-                    <p class="tiny dim">You can only flip while touching a surface — time it!</p>
+                    <p class="tiny dim">You can only flip while touching a surface, time it!</p>
                     <div class="row center" style="margin-top:10px"><span class="small muted">World</span>
-                        <div class="seg" id="worldSeg"><button class="btn sm" data-world="classic">Classic</button><button class="btn sm" data-world="biomes">🌋 Biomes</button></div></div>
+                        <div class="seg" id="worldSeg"><button class="btn sm" data-world="classic">Classic</button><button class="btn sm" data-world="biomes">Biomes</button></div></div>
                     <p class="tiny dim" id="worldInfo" style="margin:6px 0 0"></p>
                     <div class="diffs" id="diffs"></div>
                     <p class="small diff-info" id="diffInfo"></p>
@@ -77,7 +77,7 @@
                 <div class="modal">
                     <h2 class="bad">Crashed</h2>
                     <div class="big-num" id="finalDist">0m</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <p class="small" id="finalDiff"></p>
                     <div class="stat-grid">
                         <div><small>Coins</small><b id="finalCoins">0</b></div>
@@ -253,7 +253,7 @@
                     spikes(x0 + 90, other(side), 2);
                     len = 150; break;
                 }
-                case 'laser': { // a beam that blinks on and off — time your pass
+                case 'laser': { // a beam that blinks on and off, time your pass
                     obstacles.push({ type: 'laser', x: x0, w: 18, period: 1.7 - d * 0.4, ph: Math.random() * 2 });
                     len = 18; break;
                 }
@@ -362,7 +362,7 @@
         function update(dt) {
             const tScale = slow > 0 ? 0.6 : 1;
             const sdt = dt * tScale;
-            // Unleashed accelerates a little harder the faster it goes — there is no ceiling.
+            // Unleashed accelerates a little harder the faster it goes, there is no ceiling.
             const accel = diff.unleashed ? diff.accel * (1 + dist / 40000) : diff.accel;
             speed = Math.min(diff.max, speed + accel * dt);
             topSpeed = Math.max(topSpeed, speed);
@@ -455,7 +455,7 @@
                     if (u.kind === 'magnet') magnet = 8;
                     if (u.kind === 'slow') slow = 5;
                     if (u.kind === 'double') { airFlip = 10; p.airUsed = false; }
-                    Arcade.toast({ shield: '🛡 Shield!', magnet: '🧲 Magnet!', slow: '⏳ Slow-mo!', double: '🦘 Double jump — flip once in mid-air!' }[u.kind], 'good', 1300);
+                    Arcade.toast({ shield: '🛡 Shield!', magnet: '🧲 Magnet!', slow: '⏳ Slow-mo!', double: '🦘 Double jump, flip once in mid-air!' }[u.kind], 'good', 1300);
                     Arcade.sfx('power');
                 }
             }
@@ -474,7 +474,7 @@
             const m = Math.floor(dist / 10);
             if (m >= lastMilestone + 500) {
                 lastMilestone += 500;
-                if (diff.unleashed) Arcade.toast(lastMilestone + 'm — ' + mps(speed) + ' m/s!', 'gold', 1000); else
+                if (diff.unleashed) Arcade.toast(lastMilestone + 'm, ' + mps(speed) + ' m/s!', 'gold', 1000); else
                 Arcade.toast(lastMilestone + 'm!', 'gold', 1000);
                 Arcade.sfx('score');
             }

@@ -12,12 +12,12 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Chicken Farming</h1>
         <div class="seg nav-seg" id="tabs">
-            <button class="btn sm" data-tab="farm">🐔 Farm</button>
-            <button class="btn sm" data-tab="market">🛒 Market</button>
-            <button class="btn sm" data-tab="hunt" hidden>🦊 Egg Hunt</button>
+            <button class="btn sm" data-tab="farm">Farm</button>
+            <button class="btn sm" data-tab="market">Market</button>
+            <button class="btn sm" data-tab="hunt" hidden>Egg Hunt</button>
             <button class="btn sm" data-tab="trips">🧭 Expeditions<span class="dotnote" id="tripDot" hidden></span></button>
-            <button class="btn sm" data-tab="golden">🪶 Golden Coop</button>
-            <button class="btn sm" data-tab="stars">⭐ Star Coop</button>
+            <button class="btn sm" data-tab="golden">Golden Coop</button>
+            <button class="btn sm" data-tab="stars">Star Coop</button>
         </div>
         <div class="stats">
             <span class="chip gold">Eggs <b id="hEggs">0</b></span>
@@ -87,7 +87,7 @@
 
         <section class="panel">
             <div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">🤠 Farmers</h3>
-                <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" id="levelAllBtn" title="Spend eggs on the cheapest farmer levels first">⬆ Level all</button><button class="btn sm" id="perksAllBtn" title="Buy every unlocked, affordable perk">⭐ Buy all perks</button><button class="btn primary" id="hireBtn" hidden>Hire</button></div></div>
+                <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" id="levelAllBtn" title="Spend eggs on the cheapest farmer levels first">Level all</button><button class="btn sm" id="perksAllBtn" title="Buy every unlocked, affordable perk">Buy all perks</button><button class="btn primary" id="hireBtn" hidden>Hire</button></div></div>
             <div id="farmersLocked" class="locked">
                 <div class="big">🔒</div>
                 <p>Legendary farmers fight arena chickens for you, even while you're busy.</p>
@@ -139,7 +139,7 @@
             </div>
             <div class="row between tiny muted"><span>Rank <b id="hRank2">1</b> → <b id="hRankNext">2</b></span><span id="hXp">0 / 0 XP</span></div>
             <div class="bar"><i id="hXpBar"></i></div>
-            <p class="small muted" style="margin:10px 0 0">Dig up a field. Every safe tile pays <b>clovers</b>; hidden <b>golden eggs</b> pay a lot more. A number tells you how many foxes touch that tile. Hit a fox and you lose a heart — run out and the hunt ends (you keep what you dug). Clear every safe tile for a big bonus, double if you never got bitten. Spend clovers on perks that make your <b>whole farm</b> stronger.</p>
+            <p class="small muted" style="margin:10px 0 0">Dig up a field. Every safe tile pays <b>clovers</b>; hidden <b>golden eggs</b> pay a lot more. A number tells you how many foxes touch that tile. Hit a fox and you lose a heart, run out and the hunt ends (you keep what you dug). Clear every safe tile for a big bonus, double if you never got bitten. Spend clovers on perks that make your <b>whole farm</b> stronger.</p>
         </section>
         <section class="panel">
             <h3>🗺️ Fields</h3>
@@ -148,7 +148,7 @@
         <section class="panel">
             <div class="row between hunt-hud">
                 <div class="row" style="gap:14px;flex-wrap:wrap"><span id="hHearts" class="hearts" title="Hearts left"></span><span class="small muted">🦊 left <b id="hFoxes">0</b></span><span class="small muted">🍀 this hunt <b id="hEarned">0</b></span></div>
-                <div class="row" style="gap:8px"><button class="btn sm" id="flagBtn" title="Touch devices can also long-press a tile">🚩 Flag mode</button><button class="btn sm" id="huntAgain">New hunt</button></div>
+                <div class="row" style="gap:8px"><button class="btn sm" id="flagBtn" title="Touch devices can also long-press a tile">Flag mode</button><button class="btn sm" id="huntAgain">New hunt</button></div>
             </div>
             <div class="hunt-msg" id="huntMsg"></div>
             <div class="hunt-wrap"><div class="hunt-board" id="huntBoard"></div></div>
@@ -164,7 +164,7 @@
     <div class="page" data-view="trips" hidden>
         <section class="panel">
             <h3>🧭 Expeditions</h3>
-            <p class="small muted" style="margin-top:0">Send a flock of hens exploring. They come back with eggs, evil eggs and sometimes an <b>artifact</b> — artifacts are permanent and survive retirement. Only one expedition can run at a time.</p>
+            <p class="small muted" style="margin-top:0">Send a flock of hens exploring. They come back with eggs, evil eggs and sometimes an <b>artifact</b>, artifacts are permanent and survive retirement. Only one expedition can run at a time.</p>
             <div id="tripActive"></div>
             <div class="trip-grid" id="tripList"></div>
         </section>
@@ -180,7 +180,7 @@
             <h3>🪶 Retire the farm</h3>
             <div class="retire">
                 <div>
-                    <p class="small" style="margin-top:0">Hand the farm to the next generation. You lose eggs, chickens, upgrades, farmers and farm level — but earn <b>Golden Feathers</b>. Every unspent feather gives <b>+5% eggs and damage</b>, or spend them on permanent perks below.</p>
+                    <p class="small" style="margin-top:0">Hand the farm to the next generation. You lose eggs, chickens, upgrades, farmers and farm level, but earn <b>Golden Feathers</b>. Every unspent feather gives <b>+5% eggs and damage</b>, or spend them on permanent perks below.</p>
                     <div class="minis" style="grid-template-columns:repeat(3,1fr)">
                         <div class="mini"><small>Feathers</small><b id="gFeathers">0</b></div>
                         <div class="mini"><small>Bonus</small><b id="gBonus">+0%</b></div>
@@ -207,7 +207,7 @@
             <h3>⭐ Ascend to the Star Coop</h3>
             <div class="retire">
                 <div>
-                    <p class="small" style="margin-top:0">The second prestige. Ascending resets <b>everything a retirement resets, plus your golden feathers and golden perks</b> — but pays <b>Star Eggs</b> for powerful permanent upgrades. Artifacts, stats and star upgrades are kept.</p>
+                    <p class="small" style="margin-top:0">The second prestige. Ascending resets <b>everything a retirement resets, plus your golden feathers and golden perks</b>, but pays <b>Star Eggs</b> for powerful permanent upgrades. Artifacts, stats and star upgrades are kept.</p>
                     <div class="minis" style="grid-template-columns:repeat(3,1fr)">
                         <div class="mini"><small>Star eggs</small><b id="sStars">0</b></div>
                         <div class="mini"><small>Feathers this ascension</small><b id="sFeathers">0</b></div>
@@ -242,7 +242,7 @@
             <div class="loot-icon" id="lootIcon">🌼</div>
             <div class="stat-grid" id="lootStats"></div>
             <p id="lootArt"></p>
-            <div class="actions"><button class="btn primary" id="lootClose">Nice!</button><button class="btn" id="lootAgain">🔁 Send again</button></div>
+            <div class="actions"><button class="btn primary" id="lootClose">Nice!</button><button class="btn" id="lootAgain">Send again</button></div>
         </div>
     </div>
 
@@ -624,7 +624,7 @@
             if (b.won) {
                 Arcade.sfx('win');
                 Arcade.toast(b.hits === 0 ? `🏆 Perfect clear! Bonus +${fmt(b.bonus)} 🍀` : `Field cleared! Bonus +${fmt(b.bonus)} 🍀`, 'gold', 3500);
-            } else { Arcade.sfx('die'); Arcade.toast('Out of hearts — the foxes win this one.', 'bad', 3000); }
+            } else { Arcade.sfx('die'); Arcade.toast('Out of hearts, the foxes win this one.', 'bad', 3000); }
         }
         function sizeHunt() {
             if (!board) return;
@@ -676,7 +676,7 @@
             $('hHearts').textContent = '❤️'.repeat(Math.max(0, b.hearts)) + '🖤'.repeat(b.maxHearts - Math.max(0, b.hearts));
             $('hFoxes').textContent = Math.max(0, huntFoxesLeft());
             $('hEarned').textContent = fmt(b.earned);
-            $('huntMsg').textContent = b.over ? (b.won ? (b.hits === 0 ? '🏆 Perfect clear!' : '✅ Field cleared!') : '💀 Out of hearts') : !b.placed ? 'Dig anywhere to begin — your first dig is always safe.' : '';
+            $('huntMsg').textContent = b.over ? (b.won ? (b.hits === 0 ? '🏆 Perfect clear!' : '✅ Field cleared!') : '💀 Out of hearts') : !b.placed ? 'Dig anywhere to begin, your first dig is always safe.' : '';
             for (let i = 0; i < b.n; i++) {
                 const c = huntCells[i];
                 let cls = 'hcell', txt = '';

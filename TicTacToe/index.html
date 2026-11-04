@@ -46,7 +46,7 @@
         <div class="tbar">
             <div class="seg" id="modeSeg"><button class="btn sm" data-v="classic">Classic 3×3</button><button class="btn sm" data-v="ultimate">Ultimate</button></div>
             <div class="seg" id="oppSeg"><button class="btn sm" data-v="easy">AI Easy</button><button class="btn sm" data-v="normal">AI Normal</button><button class="btn sm" data-v="hard">AI Hard</button><button class="btn sm" data-v="2p">2 players</button></div>
-            <button class="btn sm" id="newBtn">⟲ New game</button>
+            <button class="btn sm" id="newBtn">New game</button>
         </div>
         <div class="status" id="status"></div>
         <div id="wrap"><div class="big" id="big"></div></div>
@@ -237,14 +237,14 @@
             let st;
             if (over) st = r === 'D' ? 'Draw!' : cfg.opp === '2p' ? `${sym(r)} wins!` : r === human ? `You win! ${sym(r)}` : `The AI wins ${sym(r)}`;
             else if (thinking) st = `AI ${sym(S.turn)} is thinking…`;
-            else st = cfg.opp === '2p' ? `${sym(S.turn)} to play` : `Your move ${sym(S.turn)}` + (S.meta.length > 1 && S.next >= 0 && !S.meta[S.next] ? ' — in the highlighted board' : S.meta.length > 1 ? ' — anywhere' : '');
+            else st = cfg.opp === '2p' ? `${sym(S.turn)} to play` : `Your move ${sym(S.turn)}` + (S.meta.length > 1 && S.next >= 0 && !S.meta[S.next] ? ', in the highlighted board' : S.meta.length > 1 ? ', anywhere' : '');
             $('status').innerHTML = st + (over ? ' &nbsp;<button class="btn sm primary" id="againBtn">Play again</button>' : '');
             if (over) $('againBtn').onclick = newGame;
             document.querySelectorAll('#modeSeg [data-v]').forEach(x => x.classList.toggle('active', x.dataset.v === cfg.mode));
             document.querySelectorAll('#oppSeg [data-v]').forEach(x => { x.classList.toggle('active', x.dataset.v === cfg.opp); if (x.dataset.v === 'hard') x.textContent = cfg.mode === 'classic' ? 'AI Impossible' : 'AI Hard'; });
             $('help').textContent = cfg.mode === 'ultimate'
                 ? 'Ultimate: win small boards to claim them; win three small boards in a row to win. The square you pick decides which board your opponent must play in next. If that board is finished, they can play anywhere.'
-                : 'Get three in a row. Impossible AI never loses — can you force a draw?';
+                : 'Get three in a row. Impossible AI never loses, can you force a draw?';
             Arcade.text('wins', stats.wins); Arcade.text('draws', stats.draws); Arcade.text('losses', stats.losses);
         }
         document.querySelectorAll('#modeSeg [data-v]').forEach(x => x.onclick = () => { cfg.mode = x.dataset.v; Arcade.save('arcade.ttt.cfg', cfg); newGame(); });

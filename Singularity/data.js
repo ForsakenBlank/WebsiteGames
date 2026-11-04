@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — content tables.
+   SINGULARITY, content tables.
    Everything the game knows about (items, machines, places,
    models, research, focus trees, events, prestige) lives here
    so balance changes never touch the engine.
@@ -51,7 +51,7 @@
           blurb: 'A leaky wooden shack in the middle of nowhere. A dumpster of e-waste out back. No power lines for forty miles.',
           task: 'captcha', req: null },
         { id: 'garage', name: "Uncle Ray's Garage", icon: '🏚️', slots: 18, cooling: 1500, grid: true, gridPrice: 1.5, rent: 1, net: 0.2, tax: 0,
-          blurb: 'A suburban garage with a real power outlet, a workbench and an uncle who asks no questions — as long as rent arrives.',
+          blurb: 'A suburban garage with a real power outlet, a workbench and an uncle who asks no questions, as long as rent arrives.',
           task: 'label', req: { ai: 2, cash: 2000 } },
         { id: 'loft', name: 'Startup Loft', icon: '🏢', slots: 26, cooling: 2e4, grid: true, gridPrice: 4, rent: 30, net: 5, tax: 0.1,
           blurb: 'Exposed brick, a ping-pong table nobody uses and a commercial power feed. You are officially a company.',
@@ -63,7 +63,7 @@
           blurb: 'Glass towers, private fusion research, a robotics wing. Governments now call you before they make decisions.',
           task: 'turing', req: { ai: 8, cash: 2e9, rep: 200 } },
         { id: 'orbit', name: 'Orbital Ring', icon: '🛰️', slots: 56, cooling: 0, grid: false, gridPrice: 0, rent: 0, net: 0, tax: 0.1,
-          blurb: 'A ring of factories in low orbit. Sunlight never sets, but heat has nowhere to go — build radiators.',
+          blurb: 'A ring of factories in low orbit. Sunlight never sets, but heat has nowhere to go, build radiators.',
           task: 'signal', space: true, req: { ai: 10, cash: 5e11, infl: 200 } },
         { id: 'sol', name: 'Sol Swarm', icon: '☀️', slots: 66, cooling: 0, grid: false, gridPrice: 0, rent: 0, net: 0, tax: 0,
           blurb: 'Your machines circle the Sun itself. Planets are raw material. Start wrapping the star.',
@@ -85,7 +85,7 @@
     const add = (site, cat, list) => list.forEach(n => N.push(Object.assign({ site, cat }, n)));
 
     add(0, 'logistics', [
-        { id: 'stall', name: 'Market Stall', icon: '🏪', kind: 'sell', rate: 5, reach: 1, cost: 30, grow: 1.5, desc: 'A table by the road. Sells anything, but only a few people pass by — flood it and prices crash.' },
+        { id: 'stall', name: 'Market Stall', icon: '🏪', kind: 'sell', rate: 5, reach: 1, cost: 30, grow: 1.5, desc: 'A table by the road. Sells anything, but only a few people pass by, flood it and prices crash.' },
         { id: 'shed', name: 'Storage Shed', icon: '📦', kind: 'store', rate: 10, cost: 40, grow: 1.6, desc: 'Puts items in your inventory. Machines and contracts take items from there.' },
     ]);
     add(0, 'source', [
@@ -93,7 +93,7 @@
         { id: 'dealer', name: 'Junk Dealer', icon: '🚚', time: 4, out: { scrap: 8 }, opex: 1.2, cost: 100, grow: 1.3, desc: 'A guy with a van sells you e-waste by the bag.' },
     ]);
     add(0, 'process', [
-        { id: 'bench', name: 'Workbench', icon: '🔧', time: 3, in: { scrap: 3 }, out: { parts: 1 }, cost: 25, grow: 1.3, desc: 'Strip boards, wire and screws from scrap. Hand tools only — no power needed.' },
+        { id: 'bench', name: 'Workbench', icon: '🔧', time: 3, in: { scrap: 3 }, out: { parts: 1 }, cost: 25, grow: 1.3, desc: 'Strip boards, wire and screws from scrap. Hand tools only, no power needed.' },
         { id: 'assembler', name: 'Assembly Table', icon: '🖥️', time: 16, in: { parts: 8 }, out: { pc: 1 }, w: 30, cost: 150, grow: 1.3, wear: 1500, desc: 'Turn parts into working PCs. Needs a soldering iron (30 W).' },
     ]);
     add(0, 'compute', [
@@ -110,7 +110,7 @@
     add(0, 'power', [
         { id: 'solar1', name: 'Salvaged Solar Panel', icon: '☀️', kind: 'gen', w: -120, solar: true, cost: 60, grow: 1.15, desc: '120 W in full sun. Nothing at night.' },
         { id: 'diesel', name: 'Diesel Generator', icon: '⛽', kind: 'gen', w: -1500, fuel: 2.5, cost: 300, grow: 1.35, wear: 2400, noHeat: true, desc: '1.5 kW day and night. Burns jerry cans of diesel: $2.50 per kW each second it runs.' },
-        { id: 'carbatt', name: 'Car Battery', icon: '🔋', kind: 'batt', cap: 2.5e4, cost: 80, grow: 1.2, desc: 'Stores 25 kJ — enough to run two laptops through one night. Charges from spare power.' },
+        { id: 'carbatt', name: 'Car Battery', icon: '🔋', kind: 'batt', cap: 2.5e4, cost: 80, grow: 1.2, desc: 'Stores 25 kJ, enough to run two laptops through one night. Charges from spare power.' },
     ]);
     add(0, 'cool', [
         { id: 'fan', name: 'Box Fan', icon: '🌀', kind: 'cool', cool: 300, w: 40, cost: 35, grow: 1.3, noHeat: true, desc: 'Moves 300 W of heat out of the window.' },
@@ -125,7 +125,7 @@
     ]);
     add(1, 'process', [
         { id: 'recycler', name: 'E-waste Recycler', icon: '♻️', time: 4, in: { scrap: 10 }, out: { parts: 5 }, w: 300, cost: 1500, grow: 1.25, wear: 2400, desc: 'Shreds and sorts scrap. Twice as efficient as a workbench.' },
-        { id: 'gpuasm', name: 'GPU Assembly', icon: '🎮', time: 20, in: { chip: 3, parts: 12 }, out: { gpu: 1 }, w: 400, cost: 4000, grow: 1.28, wear: 2400, desc: 'Solder chips onto boards. Each GPU sells for $650 — or powers a rig.' },
+        { id: 'gpuasm', name: 'GPU Assembly', icon: '🎮', time: 20, in: { chip: 3, parts: 12 }, out: { gpu: 1 }, w: 400, cost: 4000, grow: 1.28, wear: 2400, desc: 'Solder chips onto boards. Each GPU sells for $650, or powers a rig.' },
     ]);
     add(1, 'compute', [
         { id: 'gpurig', name: 'GPU Rig', icon: '🖲️', time: 1, out: { compute: 15 }, w: 800, cost: 2500, items: { gpu: 2 }, grow: 1.15, wear: 2400, desc: '15 PF/s from two GPUs on a milk crate. Needs 2 GPUs from storage.' },
@@ -206,7 +206,7 @@
     ]);
     add(3, 'power', [
         { id: 'substation', name: 'Substation', icon: '⚡', kind: 'grid', cap: 2e7, cost: 5e6, grow: 1.4, desc: '20 MW grid connection.' },
-        { id: 'turbine', name: 'Gas Turbine Plant', icon: '🌪️', kind: 'gen', w: -4e7, fuel: 2, cost: 3e7, grow: 1.3, wear: 1e4, noHeat: true, desc: '40 MW of your own power at $2 per kW·s — cheaper than the grid.' },
+        { id: 'turbine', name: 'Gas Turbine Plant', icon: '🌪️', kind: 'gen', w: -4e7, fuel: 2, cost: 3e7, grow: 1.3, wear: 1e4, noHeat: true, desc: '40 MW of your own power at $2 per kW·s, cheaper than the grid.' },
         { id: 'solarfarm', name: 'Solar Farm', icon: '☀️', kind: 'gen', w: -6e7, solar: true, cost: 6e7, grow: 1.22, noHeat: true, desc: '60 MW of solar. Free, but only in daylight.' },
         { id: 'megapack', name: 'Battery Megapack', icon: '🔋', kind: 'batt', cap: 3e9, cost: 3e6, grow: 1.22, desc: 'Stores 3 GJ.' },
     ]);
@@ -306,7 +306,7 @@
         { id: 'solinst', name: 'Solar Academy', icon: '🔬', time: 4, in: { compute: 1e10 }, out: { rp: 1e8 }, w: 1e16, cost: 6e14, grow: 1.28, desc: 'Research at the speed of light.' },
     ]);
     add(6, 'power', [
-        { id: 'dyson', name: 'Dyson Swarm', icon: '🌞', kind: 'dyson', in: { panel: 1 }, cost: 1e15, grow: 3, tech: 'dyson', noHeat: true, desc: 'Absorbs Dyson Panels. Every panel adds 50 PW of power — forever.' },
+        { id: 'dyson', name: 'Dyson Swarm', icon: '🌞', kind: 'dyson', in: { panel: 1 }, cost: 1e15, grow: 3, tech: 'dyson', noHeat: true, desc: 'Absorbs Dyson Panels. Every panel adds 50 PW of power, forever.' },
     ]);
     add(6, 'cool', [
         { id: 'shade', name: 'Heat Shade Array', icon: '🧊', kind: 'cool', cool: 2e17, cost: 2e14, items: { payload: 20 }, grow: 1.2, noHeat: true, desc: 'Removes 200 PW of heat.' },
@@ -393,7 +393,7 @@
         { name: 'Markov-1', ver: 'v0.1', compute: 300, data: 100, perk: 'Research Desk unlocked. Auto-solves a captcha every 30 s.' },
         { name: 'Tiny-RNN', ver: 'v0.2', compute: 5e3, data: 1200, perk: "Auto-captcha every 15 s. You can move to Uncle Ray's Garage." },
         { name: 'Wordsmith-3', ver: 'v0.3', compute: 3e5, data: 4.5e4, perk: 'Highlights suspicious lines in Debug jobs. +1 contract slot.' },
-        { name: 'Chatter-4', ver: 'v0.5', compute: 1.5e6, data: 1.8e5, perk: 'Chatbot API unlocked — your AI earns money itself. Startup Loft available.' },
+        { name: 'Chatter-4', ver: 'v0.5', compute: 1.5e6, data: 1.8e5, perk: 'Chatbot API unlocked, your AI earns money itself. Startup Loft available.' },
         { name: 'Parrot-5', ver: 'v1.0', compute: 4e7, data: 4e6, perk: 'Agents: delivery contracts complete themselves from your inventory.' },
         { name: 'Oracle-6', ver: 'v1.5', compute: 1.2e8, data: 1e7, perk: 'Self-maintenance: machines slowly repair themselves. Datacenter available.' },
         { name: 'Polymath-7', ver: 'v2', compute: 2e9, data: 1.2e8, perk: 'AI scientist: +50% research from every source.' },
@@ -462,7 +462,7 @@
         { id: 'omega', name: 'Omega Architecture', site: 8, cost: 2e12, unlock: true, desc: 'Unlocks the Omega Core.' },
         { id: 'heatdeath', name: 'Heat Death Engine', site: 8, cost: 5e12, unlock: true, desc: 'Unlocks the Dark Energy Tap.' },
     ];
-    // repeatable research — the RP sink for every era
+    // repeatable research, the RP sink for every era
     const REPEAT = [
         { id: 'r_compute', name: 'Compiler Optimisation', icon: '🧮', base: 50, fx: 'speed:@compute', step: 1.1, desc: '+10% compute per level.' },
         { id: 'r_train', name: 'Training Recipes', icon: '🧠', base: 80, fx: 'train', step: 1.1, desc: '+10% training throughput per level.' },
@@ -567,7 +567,7 @@
           choices: [{ t: 'Fund job retraining', cost: 'inc:400', fx: { rep: 15 } }, { t: 'Ignore them', fx: { buff: ['speed', 0.85, 600] } }] },
         { id: 'flare', site: [5, 6, 7], title: '☀️ Solar flare', text: 'A flare will hit your orbital machines.',
           choices: [{ t: 'Shield up', cost: 'inc:120', fx: {} }, { t: 'Ride it out', fx: { chanceBreak: ['compute', 0.6] } }] },
-        { id: 'asteroid', site: [5, 6], title: '☄️ Rogue asteroid', text: 'An asteroid is on a collision course — or a free mine.',
+        { id: 'asteroid', site: [5, 6], title: '☄️ Rogue asteroid', text: 'An asteroid is on a collision course, or a free mine.',
           choices: [{ t: 'Deflect it', cost: 'inc:100', fx: { rep: 5 } }, { t: 'Capture it', fx: { gamble: [0.6, { item: ['ore', 'inc:5'] }, { breakRandom: 2 }] } }] },
         { id: 'signal', site: [6, 7, 8], title: '📡 A signal', text: 'Something out there is broadcasting prime numbers.',
           choices: [{ t: 'Decode it', fx: { mini: 'captcha', reward: { rp: 'rp:300' }, fail: {} } }, { t: 'Stay silent', fx: { rep: 3 } }] },
@@ -619,21 +619,21 @@
     // hl = what to point at: { tab }, { pal: nodeId }, { port: nodeId }, { sel: 1 }.
     const GOALS = [
         { id: 'g1', title: 'Broke in a shack', text: 'Solve a captcha in the 💼 Work tab.', hl: { tab: 'work' }, reward: { cash: 10 },
-          body: 'You have $50, a dumpster of e-waste out back and no power. Click farms pay a little for proof that you are human — that is your first income.' },
+          body: 'You have $50, a dumpster of e-waste out back and no power. Click farms pay a little for proof that you are human, that is your first income.' },
         { id: 'g2', title: 'Sell some scrap', text: "Drag from the Scrap Heap's right-hand dot onto the Market Stall.", hl: { port: 'heap' }, reward: { cash: 10 }, unlock: ['bench'],
           body: 'Machines pass items along cables. The heap digs up e-waste by itself; the stall sells whatever reaches it.' },
         { id: 'g3', title: 'Add value', text: 'Build a 🔧 Workbench and wire Scrap Heap → Workbench → Market Stall.', hl: { pal: 'bench' }, reward: { cash: 20 }, unlock: ['shed'],
-          body: 'Scrap sells for pennies; parts are worth eight times more. Only a few people pass the stall, though — flood it and prices crash (watch the 📉 on its card).' },
+          body: 'Scrap sells for pennies; parts are worth eight times more. Only a few people pass the stall, though, flood it and prices crash (watch the 📉 on its card).' },
         { id: 'g4', title: 'Somewhere to keep things', text: 'Build a 📦 Storage Shed and wire the Workbench into it too.', hl: { pal: 'shed' }, reward: { cash: 15 },
-          body: 'Contracts and some machines need items from storage. One output can feed several machines — items are shared between the cables.' },
+          body: 'Contracts and some machines need items from storage. One output can feed several machines, items are shared between the cables.' },
         { id: 'g5', title: 'Your first client', text: "Accept Dusty Pete's contract in 💼 Work and deliver the parts.", hl: { tab: 'work' }, reward: { rep: 2 }, unlock: ['laptop', 'solar1'],
           body: 'Out here, jobs for real people pay far better than a roadside stall. Contracts never flood the market.' },
         { id: 'g6', title: 'A computer from junk', text: 'Build an 💻 Old Laptop (it needs parts from storage) and a ☀️ Solar Panel to power it.', hl: { pal: 'laptop' }, reward: { cash: 30 }, unlock: ['scraper', 'cleaner'],
-          body: 'Power needs no cables — every machine shares it. Solar only works in daylight; a day here lasts five minutes.' },
+          body: 'Power needs no cables, every machine shares it. Solar only works in daylight; a day here lasts five minutes.' },
         { id: 'g7', title: 'Feed it words', text: 'Wire Laptop → 🕸️ Web Scraper → 🧹 Data Cleaner, and give the cleaner compute from the laptop too.', hl: { pal: 'scraper' }, reward: { cash: 40 }, unlock: ['rig', 'carbatt', 'fan', 'dealer'],
           body: 'An AI learns from data. Scrapers pull raw text off the internet; cleaners turn it into training data. Both burn compute.' },
         { id: 'g8', title: 'The first brain', text: 'Build a 🧠 Training Rig and wire compute and clean data into it.', hl: { pal: 'rig' }, reward: { cash: 50 },
-          body: 'Progress shows in the 🧠 AI tab. Night will come: a 🔋 Car Battery stores spare solar for later. Laptops get hot — a 🌀 Box Fan helps.' },
+          body: 'Progress shows in the 🧠 AI tab. Night will come: a 🔋 Car Battery stores spare solar for later. Laptops get hot, a 🌀 Box Fan helps.' },
         { id: 'g9', title: 'Markov-1', text: 'Finish training Markov-1 (🧠 AI tab).', hl: { tab: 'ai' }, reward: { cash: 100 }, unlock: ['desk', 'assembler', 'diesel'],
           body: 'This takes a while. Add laptops, solar and contracts meanwhile. Tip: 🎛️ Tune in the AI tab cuts the work a model needs.' },
         { id: 'g10', title: 'Research', text: 'Build a 🔬 Research Desk, feed it compute, then buy something in 🔬 Research.', hl: { pal: 'desk' }, reward: { rp: 5 },
@@ -645,19 +645,19 @@
         { id: 'g13', title: 'Tiny-RNN', text: 'Train Tiny-RNN.', hl: { tab: 'ai' }, reward: { cash: 200 },
           body: 'A Diesel Generator runs all night if you can afford the fuel. Short on slots? Click a machine and add units to it instead of building new ones.' },
         { id: 'g14', title: 'Leave the shack', text: "Move to Uncle Ray's Garage (🏠 Site tab).", hl: { tab: 'site' }, reward: { cash: 300 },
-          body: 'Uncle Ray has a real power socket and asks no questions — as long as rent arrives.' },
+          body: 'Uncle Ray has a real power socket and asks no questions, as long as rent arrives.' },
         { id: 'g15', title: 'Plug in', text: 'Build a 🔌 Grid Connection.', hl: { pal: 'gridconn' }, reward: { cash: 300 },
-          body: 'The grid gives power day and night. You only pay for what you use — check the ⚡ Power tab for bills.' },
+          body: 'The grid gives power day and night. You only pay for what you use, check the ⚡ Power tab for bills.' },
         { id: 'g16', title: 'Make GPUs', text: 'Feed chips and parts into a 🎮 GPU Assembly.', hl: { pal: 'gpuasm' }, reward: { cash: 500 },
           body: 'A Chip Supplier buys chips; workbenches and the Recycler make parts. Send GPUs to storage: a GPU Rig needs two to build.' },
         { id: 'g17', title: 'Real compute', text: 'Build a 🖲️ GPU Rig.', hl: { pal: 'gpurig' }, reward: { cash: 800 },
           body: 'One rig does the work of fifteen old laptops.' },
         { id: 'g18', title: 'Blueprints', text: 'Shift-drag (or use ⬚ Select) around a production line and save it as a 📐 blueprint.', hl: { sel: 1 }, reward: { cash: 500 },
-          body: 'Blueprints remember machines and cables. Paste them again any time — even in a new universe after Recursion.' },
+          body: 'Blueprints remember machines and cables. Paste them again any time, even in a new universe after Recursion.' },
         { id: 'g19', title: 'Wordsmith-3', text: 'Train Wordsmith-3.', hl: { tab: 'ai' }, reward: { cash: 2000 },
           body: 'Labeled data counts four times as much as clean data. Research Data Labeling for a Labeling Desk.' },
         { id: 'g20', title: 'Chatter-4', text: 'Train Chatter-4, then move to the Startup Loft.', hl: { tab: 'site' }, reward: { cash: 2e4 },
-          body: 'The Loft needs 25 ⭐ reputation — contracts are how you earn it.' },
+          body: 'The Loft needs 25 ⭐ reputation, contracts are how you earn it.' },
     ];
     // market depth: roughly how many $/s of one item the buyers at each site absorb before prices halve (× the best seller's reach)
     const DEPTH = [0.5, 50, 1000, 3e4, 1e6, 5e7, 2e9, 1e11, 5e12];
