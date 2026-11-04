@@ -151,7 +151,7 @@
             if (p.kind === 'you') { stats.wins++; Arcade.count('win'); Arcade.addXP(15, true); }
             Arcade.save('arcade.snl.stats', stats);
             Arcade.sfx(p.kind === 'bot' && youPlaying ? 'die' : 'win');
-            $('endTitle').textContent = p.kind === 'you' ? '🏆 You win!' : `🏆 ${p.name} wins!`;
+            $('endTitle').textContent = p.kind === 'you' ? 'You win!' : `🏆 ${p.name} wins!`;
             $('endTitle').className = p.kind === 'bot' && youPlaying ? 'bad' : 'good';
             $('endText').textContent = `Your record: ${stats.wins} wins in ${stats.played} games · ${stats.ladders} ladders climbed, ${stats.snakes} snakes met`;
             setTimeout(() => Arcade.show('endOv'), 700);

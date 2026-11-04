@@ -473,7 +473,7 @@
             Arcade.report('kills', kills);
             Arcade.addXP(Math.min(80, Math.floor(secs / 15)), true);
             Arcade.sfx(won ? 'win' : 'die');
-            $('endTitle').textContent = won ? '🌅 You survived the night!' : 'You fell';
+            $('endTitle').textContent = won ? 'You survived the night!' : 'You fell';
             $('endTitle').className = won ? 'good' : 'bad';
             $('endTime').textContent = Arcade.time(secs);
             $('newBest').hidden = !r.isNew;

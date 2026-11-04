@@ -790,7 +790,7 @@
         function digCard() {
             const ns = G.shafts.length;
             if (ns >= MAXSHAFT) return '<p class="note" style="margin:0">Every seam is dug. Sell the mine for super cash to go again.</p>';
-            return `<button class="btn block" id="newShaft" ${G.cash < newShaftCost(ns) ? 'disabled' : ''}>⛏️ Dig shaft ${ns + 1} · ${ORES[ns % ORES.length][0]} · 💰 ${fmt(newShaftCost(ns))}</button>`;
+            return `<button class="btn block" id="newShaft" ${G.cash < newShaftCost(ns) ? 'disabled' : ''}>Dig shaft ${ns + 1} · ${ORES[ns % ORES.length][0]} · 💰 ${fmt(newShaftCost(ns))}</button>`;
         }
         function prestigeCard() {
             const g = scGain(), nextAt = 2e5 * Math.pow(g + 1, 2), prevAt = 2e5 * g * g;

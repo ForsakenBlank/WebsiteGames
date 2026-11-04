@@ -291,7 +291,7 @@
             const wpm = S.t > 5 ? Math.round(S.typedOk / 5 / (S.t / 60)) : 0;
             Arcade.addXP(Math.min(40, S.wave * 3), true);
             Arcade.sfx('die');
-            $('resTitle').textContent = '☄️ The city fell, wave ' + S.wave;
+            $('resTitle').textContent = 'The city fell, wave ' + S.wave;
             $('resWpm').textContent = S.score;
             $('newBest').hidden = !r.isNew;
             $('resStats').innerHTML = [['Wave', S.wave], ['Typing speed', wpm + ' wpm'], ['Accuracy', S.typedAll ? Math.round(S.typedOk / S.typedAll * 100) + '%' : '-']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');

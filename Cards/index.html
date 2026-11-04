@@ -288,7 +288,7 @@
             Arcade.sfx(p.you ? 'win' : 'die');
             const pts = (c) => (c.c === 'w' ? 50 : isNaN(+c.v) ? 20 : +c.v);
             const scores = players.filter(q => q !== p).map(q => `${q.you ? 'You' : q.name}: ${q.hand.length} cards (${q.hand.reduce((a, c) => a + pts(c), 0)} pts)`);
-            $('endTitle').textContent = p.you ? '🏆 You win!' : `${p.name} wins`;
+            $('endTitle').textContent = p.you ? 'You win!' : `${p.name} wins`;
             $('endTitle').className = p.you ? 'good' : 'bad';
             $('endText').textContent = scores.join(' · ');
             setTimeout(() => Arcade.show('endOv'), 600);
