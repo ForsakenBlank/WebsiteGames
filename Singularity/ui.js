@@ -84,7 +84,7 @@
         return h;
     }
 
-    /* ---------- Work tab ---------- */
+    /* ---------- work tab ---------- */
     function tabWork() {
         const s = S(), st = E.site(), task = TASKS[st.task];
         let h = '';
@@ -129,7 +129,7 @@
         return '';
     }
 
-    /* ---------- Research tab ---------- */
+    /* ---------- research tab ---------- */
     function tabResearch() {
         const s = S();
         let h = `<div class="card2"><div class="row between"><b>🔬 ${fmt(s.rp)} research</b><span class="tiny muted">+${fmt(E.rpRate)}/s</span></div><small style="margin:0">Make research with a 🔬 Research Desk (needs Markov-1) and its bigger cousins.</small></div>`;
@@ -157,7 +157,7 @@
         return h;
     }
 
-    /* ---------- Focus tab ---------- */
+    /* ---------- focus tab ---------- */
     function tabFocus() {
         const s = S(), left = E.focusTotal() - E.focusSpent();
         let h = `<div class="card2"><div class="focus-pts"><b>${left}</b> focus point${left === 1 ? '' : 's'} to spend <span class="dim">(${E.focusTotal()} earned)</span></div>
@@ -172,7 +172,7 @@
         return h;
     }
 
-    /* ---------- Power tab ---------- */
+    /* ---------- power tab ---------- */
     function meter(cls, label, v, max, txt) {
         return `<div class="meter ${cls}"><span>${label}</span><div class="bar"><i style="width:${Math.min(100, max > 0 ? v / max * 100 : 0)}%"></i></div><b>${txt}</b></div>`;
     }
@@ -204,7 +204,7 @@
         return h;
     }
 
-    /* ---------- Market tab ---------- */
+    /* ---------- market tab ---------- */
     let coinCv = null;
     function tabMarket() {
         const s = S();
@@ -253,7 +253,7 @@
         c.fillStyle = g; c.fill();
     }
 
-    /* ---------- Site tab ---------- */
+    /* ---------- site tab ---------- */
     function tabSite() {
         const s = S(), st = E.site(), ns = E.nextSite();
         let h = `<div class="card2 hi"><b>${st.icon} ${esc(st.name)}</b><small>${esc(st.blurb)}</small>
@@ -274,7 +274,7 @@
         return h;
     }
 
-    /* ---------- Map tab ---------- */
+    /* ---------- map tab ---------- */
     function mapOpen(L) { return S().site >= MAP[L].sites; }
     function tabMap() {
         const s = S();
@@ -364,7 +364,7 @@
         if (i >= 0 && !S().map[mapLayer].got[i]) { E.setTarget(mapLayer, i); Arcade.sfx('select'); render(); }
     });
 
-    /* ---------- Blueprints tab ---------- */
+    /* ---------- blueprints tab ---------- */
     function tabBp() {
         const bps = E.M.bps || [];
         let h = `<div class="card2"><b>📐 Blueprints</b><small style="margin:0">Hold <kbd>Shift</kbd> and drag on empty floor (or press <b>⬚</b> by the zoom buttons) to box-select machines. Then <b>Save blueprint</b> in the bar that appears. <b>Place</b> builds one unit of each machine; <b>Full</b> rebuilds every unit. <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste a selection. Blueprints survive Recursion.</small></div>`;
@@ -383,7 +383,7 @@
         return h;
     }
 
-    /* ---------- Recursion tab ---------- */
+    /* ---------- recursion tab ---------- */
     let lawPick = 'none';
     function tabRecursion() {
         const s = S(), M = E.M;
@@ -406,7 +406,7 @@
         return h;
     }
 
-    /* ---------- Stats tab ---------- */
+    /* ---------- stats tab ---------- */
     function tabStats() {
         const s = S(), st = s.stats;
         const rows = [['Play time this run', dur(s.playT)], ['Cash earned', money(st.earned)], ['Compute produced', fmt(st.compute) + ' PF'], ['Desk jobs done', fmt(st.captchas)],

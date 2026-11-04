@@ -163,7 +163,7 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        /* ---------- Content ---------- */
+        /* ---------- content ---------- */
         const THEMES = {
             pets: { name: '🐶 Pets', set: ['🐶', '🐱', '🐰', '🐹', '🦊', '🐼', '🐨', '🐸', '🐵'] },
             farm: { name: '🐮 Farm', set: ['🐮', '🐷', '🐔', '🐴', '🐑', '🦆', '🐐', '🦃', '🐝'] },
@@ -191,7 +191,7 @@
         ];
         const SHAPE = { 4: [2, 2], 6: [2, 3], 9: [3, 3] };
 
-        /* ---------- Geometry ---------- */
+        /* ---------- geometry ---------- */
         const geoCache = {};
         function geometry(n) {
             if (geoCache[n]) return geoCache[n];
@@ -216,8 +216,8 @@
 
         const popcount = (m) => { let c = 0; while (m) { m &= m - 1; c++; } return c; };
 
-        /* ---------- Solver ---------- */
-        // Counts solutions up to `limit` (fills `out` with the first one found). Bitmask backtracking with MRV.
+        /* ---------- solver ---------- */
+        // counts solutions up to `limit` (fills `out` with the first one found). Bitmask backtracking with MRV.
         function solve(grid, G, limit, randomize, out) {
             const { n, N2, R, C, B, full } = G;
             const rows = new Int32Array(n), cols = new Int32Array(n), boxes = new Int32Array(n);
@@ -256,7 +256,7 @@
             return found;
         }
 
-        // True if the puzzle can be finished using only naked singles and hidden singles.
+        // true if the puzzle can be finished using only naked singles and hidden singles.
         function singlesSolvable(grid, G) {
             const { n, N2, R, C, B, units, full } = G;
             const g = Int8Array.from(grid);
@@ -287,7 +287,7 @@
             }
         }
 
-        // The hardest levels build a few candidates and keep the one with the fewest clues.
+        // the hardest levels build a few candidates and keep the one with the fewest clues.
         function generate(level) {
             let best = null;
             for (let k = 0; k < (level.pick || 1); k++) {
@@ -349,7 +349,7 @@
             return last;
         }
 
-        /* ---------- State ---------- */
+        /* ---------- state ---------- */
         const SAVE_KEY = 'arcade.petdoku.current', STATS_KEY = 'arcade.petdoku.stats';
         let theme = Arcade.load('arcade.petdoku.theme', 'pets');
         if (!THEMES[theme]) theme = 'pets';
@@ -396,7 +396,7 @@
             }, 30);
         }
 
-        /* ---------- Layout ---------- */
+        /* ---------- layout ---------- */
         function layout() {
             const play = document.getElementById('play').getBoundingClientRect();
             const n = G ? G.n : 9;
@@ -408,7 +408,7 @@
         }
         window.addEventListener('resize', layout);
 
-        /* ---------- Rendering ---------- */
+        /* ---------- rendering ---------- */
         function render(full) {
             if (!game) return;
             const { n, br, bc, N2, R, C, peers } = G;
@@ -497,7 +497,7 @@
             Arcade.text('timer', Arcade.time(game.time));
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         function select(i) {
             if (!game || ended || paused) return;
             sel = i;
@@ -588,7 +588,7 @@
             render(); persist();
         }
 
-        /* ---------- Notes & explaining hints ---------- */
+        /* ---------- notes & explaining hints ---------- */
         // pets a square could still hold, judged only by correctly placed pets
         function candMask(i) {
             let m = G.full;
@@ -605,7 +605,7 @@
             Arcade.toast('🪄 Notes filled, they tidy themselves as you place pets', 'good', 1600);
             render(); persist();
         }
-        /** The simplest step a person could spot right now. */
+        /** the simplest step a person could spot right now. */
         function findStep() {
             const empty = (i) => game.values[i] !== game.solution[i];
             // a square with only one possible pet
@@ -725,7 +725,7 @@
             setTimeout(() => Arcade.show('loseOv'), 500);
         }
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             const th = document.getElementById('themes');
             th.innerHTML = '';
@@ -773,7 +773,7 @@
             if (on) Arcade.show('pauseOv'); else Arcade.hide('pauseOv');
         }
 
-        /* ---------- Wiring ---------- */
+        /* ---------- wiring ---------- */
         document.getElementById('undoBtn').onclick = undo;
         document.getElementById('eraseBtn').onclick = erase;
         document.getElementById('notesBtn').onclick = () => { notesMode = !notesMode; Arcade.sfx('select'); hud(); };
@@ -828,7 +828,7 @@
         document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
         window.addEventListener('beforeunload', persist);
 
-        // Start: resume a saved game behind the menu if there is one.
+        // start: resume a saved game behind the menu if there is one.
         const saved = Arcade.load(SAVE_KEY, null);
         if (saved && saved.puzzle && levelOf(saved.level).size === Math.sqrt(saved.puzzle.length)) start(levelOf(saved.level), saved);
         else { G = geometry(9); layout(); }

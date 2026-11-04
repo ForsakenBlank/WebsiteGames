@@ -290,7 +290,7 @@
             $('foe').classList.remove('hit'); void $('foe').offsetWidth; $('foe').classList.add('hit');
         }
 
-        /* ---------- Farm ---------- */
+        /* ---------- farm ---------- */
         // hold a tap target to keep tapping (about 8 taps a second)
         function holdable(el, fn) {
             let timer = null;
@@ -390,7 +390,7 @@
             deleteSave();
         };
 
-        /* ---------- Market ---------- */
+        /* ---------- market ---------- */
         const marketRows = [];
         function buildMarket() {
             for (const [hostId, shop, list] of [['normal', 'Normal', Upgrades.Market], ['evil', 'Evil', Upgrades.Evil]]) {
@@ -486,7 +486,7 @@
             }
         }
 
-        /* ---------- Expeditions ---------- */
+        /* ---------- expeditions ---------- */
         function refreshTrips() {
             const g = gameData, x = g.expedition;
             const act0 = $('tripActive');
@@ -539,7 +539,7 @@
         $('lootClose').onclick = () => Arcade.hide('lootOv');
         $('lootAgain').onclick = () => { Arcade.hide('lootOv'); if (lastTrip && startExpedition(lastTrip)) refresh(); else Arcade.toast("Can't send that trip right now", 'bad'); };
 
-        /* ---------- Egg Hunt ---------- */
+        /* ---------- egg Hunt ---------- */
         const huntCells = [], huntRows = [];
         let flagMode = false, builtBoard = null, lastPress = 0;
         const CELL_EMOJI = { flag: '🚩', fox: '🦊', egg: '🥚' };
@@ -692,7 +692,7 @@
             }
         }
 
-        /* ---------- Golden coop ---------- */
+        /* ---------- golden coop ---------- */
         const goldRows = [];
         function buildGolden() {
             for (const p of GOLDEN) {
@@ -722,7 +722,7 @@
                 b.disabled = maxed || !q.n;
             }
         }
-        /* ---------- Star coop ---------- */
+        /* ---------- star coop ---------- */
         const starRows = [];
         function buildStars() {
             for (const p of STAR_UPS) {
@@ -769,7 +769,7 @@
             if (gain) { builtFarmers = -1; Arcade.toast(`Retired! +${fmt(gain)} golden feathers 🪶`, 'gold', 3500); refresh(); }
         };
 
-        /* ---------- Refresh ---------- */
+        /* ---------- refresh ---------- */
         function refresh() {
             refreshHeader();
             const g = gameData, c = g.combatData;

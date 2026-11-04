@@ -309,7 +309,7 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        /* ---------- Content ---------- */
+        /* ---------- content ---------- */
         // solid, clearly different colours, a region is simply the tiles of one colour
         const REGION_COLORS = ['#ea6b5f', '#5b9be6', '#f6c445', '#5fb37a', '#9b7ae0', '#f29a4a', '#6fd0d6', '#f39ac0', '#9a7058', '#b6dc6e', '#5d6b7a', '#d070d8', '#d9d2c5', '#3f9a8c']; // soft colours, still spread across hue and lightness so no two look alike
         const THEMES = {
@@ -341,7 +341,7 @@
         const CHAPTER = 20;
         const CHAPTER_NAMES = ['Sunny Garden', 'Puppy Park', 'Bunny Hills', 'Fishbowl Bay', 'Kitty Castle', 'Pony Prairie', 'Hamster Heights', 'Parrot Jungle', 'Frosty Den', 'Starlight Zoo'];
 
-        /* ---------- Puzzle engine ---------- */
+        /* ---------- puzzle engine ---------- */
         // cells are indexed r*n+c; reg[i] = colour region of cell i
         function units(n, reg) {
             const rows = [], cols = [], regs = Array.from({ length: n }, () => []);
@@ -367,7 +367,7 @@
             return [...out];
         }
 
-        // Exact solver: finds up to `limit` solutions (arrays of pet cells). Branches on the tightest unit.
+        // exact solver: finds up to `limit` solutions (arrays of pet cells). Branches on the tightest unit.
         function solveAll(n, reg, limit) {
             const U = units(n, reg), sols = [];
             const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
@@ -438,7 +438,7 @@
             if (r > 0) out.push(i - n); if (r < n - 1) out.push(i + n); if (c > 0) out.push(i - 1); if (c < n - 1) out.push(i + 1);
             return out;
         };
-        // Moves cell q into a neighbouring colour if that keeps its old colour in one piece.
+        // moves cell q into a neighbouring colour if that keeps its old colour in one piece.
         function tryMove(n, reg, q, seeds) {
             if (seeds.has(q)) return false;
             const nb = Arcade.shuffle(orth(n, q).map(j => reg[j]).filter(g => g !== reg[q]));
@@ -495,7 +495,7 @@
             return null;
         }
 
-        /* Logical grader: solves like a person would and reports the hardest step it needed (6 = stuck). */
+        /* logical grader: solves like a person would and reports the hardest step it needed (6 = stuck). */
         function grade(n, reg) {
             const U = units(n, reg);
             const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
@@ -602,7 +602,7 @@
             return best;
         }
 
-        /* ---------- Progress ---------- */
+        /* ---------- progress ---------- */
         // keys kept from the previous version so levels already reached carry over
         const CUR_KEY = 'arcade.petdoku.q.current', STATS_KEY = 'arcade.petdoku.q.stats';
         const levelKey = (d) => 'arcade.petdoku.q.level.' + d.id;
@@ -619,7 +619,7 @@
         const levelOf = (d) => Arcade.load(levelKey(d), 1);      // the next unbeaten level
         const starsOf = (d) => Arcade.load(starsKey(d), {});
 
-        // Map size climbs with the level; every 10th level is a bonus big map.
+        // map size climbs with the level; every 10th level is a bonus big map.
         function sizeFor(lv, d) {
             let n = d.size + Math.floor((lv - 1) / 12);
             let label = '';
@@ -670,7 +670,7 @@
             }, 40);
         }
 
-        /* ---------- Layout & rendering ---------- */
+        /* ---------- layout & rendering ---------- */
         function layout() {
             const play = $('play').getBoundingClientRect();
             const n = game ? game.n : 8;
@@ -746,7 +746,7 @@
             $('timer').parentElement.hidden = !opts.timer;
         }
 
-        /* ---------- Moves ---------- */
+        /* ---------- moves ---------- */
         function snapshot() { game.undo.push(game.cells.slice()); if (game.undo.length > 400) game.undo.shift(); }
 
         function setCell(i, v) {
@@ -858,7 +858,7 @@
             render(); persist();
         }
 
-        /* ---------- Hints that explain the reasoning ---------- */
+        /* ---------- hints that explain the reasoning ---------- */
         const COLOUR_NAMES = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink', 'brown', 'lime', 'peach', 'grey', 'violet', 'teal'];
         /** "row 3", "column 2" or "the <b>red</b> colour" (capitalised when it starts a sentence). */
         function unitName(u, cap) {
@@ -993,7 +993,7 @@
             checkWin();
         }
 
-        /* ---------- Pointer: tap = mark (or pet), double-tap / hold = pet, drag = ✕ many ---------- */
+        /* ---------- pointer: tap = mark (or pet), double-tap / hold = pet, drag = ✕ many ---------- */
         let press = null, lastTap = { i: -1, t: 0 };
         const HOLD_MS = 380, DOUBLE_MS = 320;
         const cellAt = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest && el.closest('.cell') ? +el.closest('.cell').dataset.i : -1; };
@@ -1066,7 +1066,7 @@
         boardEl.addEventListener('pointercancel', () => { if (press) clearTimeout(press.timer); press = null; });
         boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        /* ---------- Level map ---------- */
+        /* ---------- level map ---------- */
         function buildHome() {
             const tabs = $('tabs');
             tabs.innerHTML = '';
@@ -1124,7 +1124,7 @@
             playLevel(saved && saved.diff === diff.id ? saved.level : levelOf(diff));
         };
 
-        /* ---------- Settings ---------- */
+        /* ---------- settings ---------- */
         function buildSettings() {
             const th = $('themes');
             th.innerHTML = '';
@@ -1145,7 +1145,7 @@
         $('homeSetBtn').onclick = openSettings;
         $('setClose').onclick = () => Arcade.hide('setPop');
 
-        /* ---------- Wiring ---------- */
+        /* ---------- wiring ---------- */
         $('undoBtn').onclick = undo;
         $('clearBtn').onclick = clearBoard;
         $('hintBtn').onclick = hint;

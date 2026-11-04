@@ -94,7 +94,7 @@
         post(S) { for (const b of S.balls) BL.keepSpeed(b, S.P.speed, S.P.speed); },
         sub: (S) => `Bricks ${left(S)} · Balls ${S.balls.length}`, subY: 640 - 18,
     };
-    /* ---------- Ballz, played by a bot ---------- */
+    /* ---------- ballz, played by a bot ---------- */
     const BZ = { cols: 7, cell: 48, x0: 12, top: 100, floor: 600 };
     M.bballz = {
         label: 'Ballz bot', icon: '🎱', name: 'How long can the bot survive?',

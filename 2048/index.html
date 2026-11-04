@@ -322,7 +322,7 @@
             hud();
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right' };
         window.addEventListener('keydown', (e) => {
             if (KEYS[e.code]) { e.preventDefault(); move(KEYS[e.code]); }

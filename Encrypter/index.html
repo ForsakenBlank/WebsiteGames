@@ -187,7 +187,7 @@
             }
         }
 
-        /* ---------- Geometry ---------- */
+        /* ---------- geometry ---------- */
         function segHit(p1, p2, p3, p4) {
             const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
             if (d === 0) return null;
@@ -216,7 +216,7 @@
             return L;
         }
 
-        /* ---------- Capture ---------- */
+        /* ---------- capture ---------- */
         function capture(poly) {
             let n = 0;
             const caught = (e) => {
@@ -307,7 +307,7 @@
             hud();
         }
 
-        /* ---------- Update ---------- */
+        /* ---------- update ---------- */
         function update(dt) {
             inv = Math.max(0, inv - dt);
             freezeT = Math.max(0, freezeT - dt);
@@ -423,7 +423,7 @@
             setTimeout(() => Arcade.show('upOv'), 250);
         }
 
-        /* ---------- Render ---------- */
+        /* ---------- render ---------- */
         const COLORS = { bug: '#f87171', seeker: '#fb923c', cutter: '#c084fc', shield: '#f87171', swarm: '#facc15', splitter: '#e879f9', darter: '#f43f5e', armor: '#94a3b8', tracer: '#2dd4bf', boss: '#dc2626' };
         function render() {
             ctx.fillStyle = '#020a06'; ctx.fillRect(0, 0, W, H);

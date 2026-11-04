@@ -76,7 +76,7 @@
         const COMBO_COLS = ['#fde68a', '#fde68a', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#c084fc', '#60a5fa', '#34d399'];
         const comboCol = (k) => COMBO_COLS[Math.min(COMBO_COLS.length - 1, k)];
         const WOODS = ['#d9a066', '#c78a52', '#e8c27a', '#b9784a', '#deb27c', '#a86b3c'];
-        // Block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
+        // block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
         const THEMES = {
             wood: { name: 'Wood', icon: '🪵', colors: WOODS, bg: '#151021', frame: '#2b1d14', cellA: '#3a281b', cellB: '#33231a', style: 'wood',
                     need: () => true, req: 'Unlocked' },
@@ -271,7 +271,7 @@
             hud();
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function cell(x, y, s, color, alpha, c2, style) {
             c2 = c2 || ctx;
             c2.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -469,7 +469,7 @@
             render();
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         canvas.addEventListener('pointerdown', (e) => {
             if (over) return;
             const p = Arcade.pointer(canvas, e, W, H);

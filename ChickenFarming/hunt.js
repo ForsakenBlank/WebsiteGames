@@ -62,7 +62,7 @@ function placeFoxes(b, first) {
     return safe.filter(i => !b.egg[i]).slice(0, hLvl('hound'));
 }
 
-/** Reveals tile i (flood-filling empty areas). Mutates the board and `res`; payout happens in settle(). */
+/** reveals tile i (flood-filling empty areas). Mutates the board and `res`; payout happens in settle(). */
 function revealCore(b, i, res) {
     if (b.rev[i] || b.flag[i] || b.over) return;
     if (b.fox[i]) {
@@ -81,7 +81,7 @@ function revealCore(b, i, res) {
     if (b.safeRev >= b.safeTotal) { b.over = true; b.won = true; }
 }
 
-/** Pays out whatever `res` earned, inside one act() so the save stays consistent. */
+/** pays out whatever `res` earned, inside one act() so the save stays consistent. */
 function settle(b, res) {
     const f = fieldOf(b.fid), m = huntMult();
     let clovers = (res.tiles * f.per + res.eggs * f.per * 15) * m;
@@ -114,7 +114,7 @@ function settle(b, res) {
     return res;
 }
 
-/** Left click / tap on tile i. Returns a result object, or null if nothing happened. */
+/** left click / tap on tile i. Returns a result object, or null if nothing happened. */
 function huntReveal(i) {
     const b = board;
     if (!b || b.over || b.rev[i] || b.flag[i]) return null;
@@ -129,7 +129,7 @@ function huntReveal(i) {
     return res;
 }
 
-/** Clicking a revealed number whose flags are all placed opens its remaining neighbours. */
+/** clicking a revealed number whose flags are all placed opens its remaining neighbours. */
 function huntChord(i) {
     const b = board;
     if (!b || b.over || b.rev[i] !== 1 || !b.num[i]) return null;

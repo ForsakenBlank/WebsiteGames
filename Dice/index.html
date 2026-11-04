@@ -111,7 +111,7 @@
             return 0;
         }
         const isYahtzee = (d) => d.every(v => v === d[0]);
-        // Joker rule: an extra five-of-a-kind counts as a full house / straight when its upper box is used
+        // joker rule: an extra five-of-a-kind counts as a full house / straight when its upper box is used
         function scoreFor(p, cat, d) {
             let s = score(cat, d);
             if (isYahtzee(d) && p.sheet.yahtzee === 50 && p.sheet[CATS[d[0] - 1][0]] != null) {

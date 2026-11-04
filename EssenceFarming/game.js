@@ -40,7 +40,7 @@ const BASE_STATE = {
 const KEEP_ON_ASCEND = ['seeds', 'totalSeeds', 'ascensions', 'perks', 'relics', 'bestRun', 'lifetimeEssence', 'lastUpdate',
     'hybrids', 'discovered', 'history', 'events', 'shards', 'totalShards', 'transcends', 'tUps', 'seedsSinceT'];
 
-/* ---------- Crops ---------- */
+/* ---------- crops ---------- */
 const CROPS = {
     wheat:     { icon: '🌾', name: 'Wheat',     time: 100,  cost: 0,    tier: 1 },
     corn:      { icon: '🌽', name: 'Corn',      time: 300,  cost: 1e18, tier: 3 },
@@ -90,7 +90,7 @@ const CROP_UPGRADES = {
 };
 const CROP_BASE_PRICE = { wheat: 10, corn: 15, soy: 30, potato: 40, pumpkin: 50, starfruit: 60, bloom: 80 };
 
-/* ---------- Hybrids: cross-breed two crops (or get lucky with a mutation between neighbouring plots) ---------- */
+/* ---------- hybrids: cross-breed two crops (or get lucky with a mutation between neighbouring plots) ---------- */
 const HYBRIDS = {
     maize:    { a: 'wheat', b: 'corn', icon: '🌟', name: 'Golden Maize', kind: 'ess', per: 0.05, label: 'essence' },
     dustbean: { a: 'corn', b: 'soy', icon: '🫘', name: 'Dust Bean', kind: 'dust', per: 0.08, label: 'void dust' },
@@ -114,7 +114,7 @@ function gainHybrid(k, n) {
     if (fresh) state.discovered.push(k);
     return fresh;
 }
-/** Spend crops of both parents for a 65% chance at one hybrid. */
+/** spend crops of both parents for a 65% chance at one hybrid. */
 function crossBreed(x, y) {
     const k = hybridOf(x, y);
     if (!k) return { ok: false, why: 'These two won\'t cross' };
@@ -126,7 +126,7 @@ function crossBreed(x, y) {
     return { ok: false, why: 'The seeds didn\'t take this time', spent: true };
 }
 
-/* ---------- Transcendence: the prestige above ascension ---------- */
+/* ---------- transcendence: the prestige above ascension ---------- */
 const TRANSCEND_ASC = 5, TRANSCEND_SEEDS = 1000;
 const TUPS = {
     eternal: { icon: '♾️', name: 'Eternal Harvest', desc: (l) => `×${Math.pow(3, l)} essence`, base: 1, grow: 2, max: 12 },
@@ -143,7 +143,7 @@ function shardGain() {
     return Math.max(1, Math.floor(Math.sqrt(state.seedsSinceT / 250)));
 }
 
-/* ---------- Ascension perks & relics ---------- */
+/* ---------- ascension perks & relics ---------- */
 const PERKS = {
     quick:    { icon: '⚡', name: 'Quick Start', desc: (l) => `Start runs with ${fmt(50 * Math.pow(100, l))} essence`, base: 2, grow: 1.6, max: 15 },
     veteran:  { icon: '👨‍🌾', name: 'Veteran Hands', desc: (l) => `Start runs with ${l} extra farmer${l === 1 ? '' : 's'}`, base: 3, grow: 1.8, max: 10 },
@@ -170,7 +170,7 @@ const RELICS = {
 };
 const RELIC_MAX = 10;
 
-/* ---------- Frontier ---------- */
+/* ---------- frontier ---------- */
 const BIOMES = {
     home:     { icon: '🏠', name: 'Homestead', aether: 1, up: 15, bonus: null, color: '#3f6212' },
     meadow:   { icon: '🌾', name: 'Meadow', aether: 1, up: 20, bonus: ['ess', 0.06, '+6% essence'], color: '#4d7c0f' },
@@ -210,7 +210,7 @@ function biomeAt(x, y) {
     return 'meadow';
 }
 
-/* ---------- State & migration ---------- */
+/* ---------- state & migration ---------- */
 function migrate(s) {
     s = s && typeof s === 'object' ? s : {};
     for (const k in BASE_STATE) if (s[k] === undefined || (s[k] === null && BASE_STATE[k] !== null)) s[k] = structuredClone(BASE_STATE[k]);
@@ -237,7 +237,7 @@ function save() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { }
 }
 
-/* ---------- Only one tab runs the economy ---------- */
+/* ---------- only one tab runs the economy ---------- */
 const TAB_ID = Math.random().toString(36).slice(2);
 function isMaster() {
     const lock = Arcade.load(SAVE_KEY + '.lock', null), now = Date.now();
@@ -250,7 +250,7 @@ window.addEventListener('storage', (e) => {
 // coming back through the back/forward cache restores an old copy in memory
 window.addEventListener('pageshow', (e) => { if (e.persisted) state = migrate(Arcade.load(SAVE_KEY, null)); });
 
-/* ---------- Bonuses ---------- */
+/* ---------- bonuses ---------- */
 const perk = (k) => state.perks[k] || 0;
 const relic = (k) => state.relics[k] || 0;
 const project = (k) => (state.frontier && state.frontier.projects[k]) || 0;
@@ -279,7 +279,7 @@ function globalMult() {
         * (1 + hybridBonus('ess'))
         * Math.pow(3, tLvl('eternal'));
 }
-// Farmer EXP milestones: ×1.6 each (they used to double forever, which broke the late game)
+// farmer EXP milestones: ×1.6 each (they used to double forever, which broke the late game)
 const expBonus = (f) => Math.pow(1.6, f.m_lvl || 0) * (1 + (state.r_up1 || 0) * 0.2);
 const expReq = (f) => 10 * Math.pow(2.6, f.m_lvl || 0);
 const farmerYield = (f) => f.level * f.mult * milestonePower() * expBonus(f) * globalMult();
@@ -300,7 +300,7 @@ const cropYieldMult = () => 1 + perk('vault') * 0.25;
 const offlineHours = () => 8 + perk('warp') * 2 + relic('hourglass');
 const tenMilestone = () => 2 + perk('mile') * 0.1;
 
-/* ---------- Costs ---------- */
+/* ---------- costs ---------- */
 function cropUpgradeCost(crop, i) {
     const lvl = state.upgrades[crop][i];
     if (crop === 'corn' && i === 2) return Math.floor(5 * Math.pow(5, lvl));
@@ -328,14 +328,14 @@ const VOID_SHOP = {
 };
 const voidCost = (key) => VOID_SHOP[key].base * Math.pow(VOID_SHOP[key].scale, state[key] || 0);
 
-/* ---------- Essence bookkeeping ---------- */
+/* ---------- essence bookkeeping ---------- */
 function addEssence(x) {
     state.essence += x;
     state.runEssence += x;
     state.lifetimeEssence += x;
 }
 
-/* ---------- Farm actions ---------- */
+/* ---------- farm actions ---------- */
 function hire(free) {
     if (!free && state.essence < state.hireCost) return false;
     if (!free) state.essence -= state.hireCost;
@@ -380,7 +380,7 @@ function unlockGreenhouse() {
     return true;
 }
 
-/* ---------- Void ---------- */
+/* ---------- void ---------- */
 function buyVoid(key) {
     const s = VOID_SHOP[key], c = voidCost(key);
     if (state[s.cur] < c) { Arcade.sfx('bad'); return false; }
@@ -411,7 +411,7 @@ function unlockResearch() {
     return true;
 }
 
-/* ---------- Research ---------- */
+/* ---------- research ---------- */
 function condense() {
     if (state.essence < condenseCost()) return false;
     state.essence -= condenseCost();
@@ -435,7 +435,7 @@ function forgeGem(k, cur) {
     return true;
 }
 
-/* ---------- Greenhouse ---------- */
+/* ---------- greenhouse ---------- */
 function plant(i, type) {
     state.ghCrops[i] = { type, status: 'growing', progress: 0, stack: 1, time: CROPS[type].time };
 }
@@ -505,7 +505,7 @@ function buyCropUpgrade(crop, i) {
 const goldValue = () => state.goldenCrops * (state.totalGain || 1) * 600 * (1 + state.rareUpgrades.goldEff * 0.25);
 const diamValue = () => state.diamondCrops * (state.totalGain || 1) * 1800;
 
-/* ---------- Frontier ---------- */
+/* ---------- frontier ---------- */
 function unlockFrontier(free) {
     if (state.frontier) return false;
     if (!free) { if (state.essence < FRONTIER_COST) { Arcade.sfx('bad'); return false; } state.essence -= FRONTIER_COST; }
@@ -518,7 +518,7 @@ const claimCost = (x, y) => eventOn('explorer') ? 0 : Math.ceil(20 * Math.pow(1.
 const tileUpCost = (t, x, y) => Math.ceil(BIOMES[t.b].up * Math.pow(2.6, t.lvl - 1) * (1 + ring(x, y) * 0.25));
 const aetherMult = () => (1 + perk('map') * 0.25) * (1 + state.upgrades.starfruit[2] * 0.1) * (1 + hybridBonus('aether')) * Math.pow(2, tLvl('aether')) * (eventOn('storm') ? 0.5 : 1);
 
-/* ---------- Frontier events ---------- */
+/* ---------- frontier events ---------- */
 // storm: halves Aether until it passes (or you pay to calm it, that brings rain, +50% crop growth)
 // merchant: three one-off deals · bloom: collect a burst of Aether · explorer: your next claim is free
 const EVENTS = {
@@ -639,7 +639,7 @@ function buyProject(k) {
     return true;
 }
 
-/* ---------- Ascension ---------- */
+/* ---------- ascension ---------- */
 const ASCEND_MIN = 1e18;
 function seedGain() {
     if (state.runEssence < ASCEND_MIN) return 0;
@@ -647,7 +647,7 @@ function seedGain() {
         * (1 + relic('crown') * 0.05) * (1 + landBonus('seeds')) * (1 + state.upgrades.bloom[2] * 0.03)
         * (1 + hybridBonus('seeds')) * Math.pow(1.5, tLvl('echo')));
 }
-/** Run-start boosts shared by ascension and transcendence. */
+/** run-start boosts shared by ascension and transcendence. */
 function startPerks() {
     state.essence = 50 * Math.pow(100, perk('quick'));
     for (let i = 0; i < perk('veteran'); i++) hire(true);
@@ -717,7 +717,7 @@ function buyPerk(k) {
     return true;
 }
 
-/* ---------- Heartbeat (10 ticks / second) ---------- */
+/* ---------- heartbeat (10 ticks / second) ---------- */
 let condenseTick = 0, saveTick = 0;
 function heartbeat() {
     if (!isMaster()) return;
@@ -758,7 +758,7 @@ function heartbeat() {
     if (++eventTick >= 10) { eventTick = 0; rollEvent(); }
 }
 let histTick = 290, eventTick = 0;
-/** Essence/sec every 30s, last 4 hours, drawn on the Stats tab. */
+/** essence/sec every 30s, last 4 hours, drawn on the Stats tab. */
 function sampleHistory() {
     const h = state.history;
     h.push([Date.now(), state.totalGain || 0, state.essence]);
@@ -780,7 +780,7 @@ function offlineProgress() {
     setTimeout(() => Arcade.toast(`Welcome back! Your farmers gathered ${fmt(ess)} essence` + (dust > 0 ? `, ${fmt(dust)} dust` : '') + (aeth > 0 ? ` and ${fmt(aeth)} Aether` : '') + ' while you were away.', 'gold', 5000), 400);
 }
 
-/* ---------- Header & tab locks ---------- */
+/* ---------- header & tab locks ---------- */
 function navState() {
     return {
         farm: true,

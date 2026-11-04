@@ -151,7 +151,7 @@
         const DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
         const $ = (id) => document.getElementById(id);
 
-        /* ---------- Campaign: 30 hand-made levels ---------- */
+        /* ---------- campaign: 30 hand-made levels ---------- */
         const rect = (x, y, w, h) => { const out = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([x + i, y + j]); return out; };
         const hl = (y, x0, x1) => rect(x0, y, x1 - x0 + 1, 1);
         const vl = (x, y0, y1) => rect(x, y0, 1, y1 - y0 + 1);
@@ -192,7 +192,7 @@
         const CAMP_KEY = 'arcade.snake.campaign';
         let camp = Arcade.load(CAMP_KEY, {}) || {}; // { idx: stars }
 
-        /* ---------- Canvas + state ---------- */
+        /* ---------- canvas + state ---------- */
         const canvas = $('c');
         const view = Arcade.fitCanvas(canvas, W, W, { max: 1.6 });
         const ctx = view.ctx;
@@ -219,7 +219,7 @@
         const idx = (x, y) => x + y * N;
         const isWall = (x, y) => walls.has(idx(x, y));
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             skin = Arcade.cosmetic('snake.skin');
             document.querySelectorAll('#tabs [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -286,12 +286,12 @@
         document.querySelectorAll('#tabs [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; Arcade.save('arcade.snake.tab', tab); Arcade.sfx('click'); buildMenu(); });
         $('pwSwitch').onclick = () => { powerOn = !powerOn; Arcade.save('arcade.snake.powerups', powerOn); Arcade.sfx('select'); buildMenu(); };
 
-        /* ---------- Level helpers ---------- */
+        /* ---------- level helpers ---------- */
         function setWalls(cells) {
             walls = new Set();
             for (const [x, y] of cells) if (x >= 0 && y >= 0 && x < N && y < N) walls.add(idx(x, y));
         }
-        /** Finds a free horizontal run for the starting snake, as close to (6,10) as possible. */
+        /** finds a free horizontal run for the starting snake, as close to (6,10) as possible. */
         function findStart() {
             const rows = [10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1];
             for (const y of rows) for (const x of [6, 7, 8, 5, 9, 10, 11, 12, 13, 4]) {
@@ -332,7 +332,7 @@
             return null;
         }
 
-        /* ---------- Starting runs ---------- */
+        /* ---------- starting runs ---------- */
         function startEndless() {
             const m = MODES[mode];
             run = { kind: 'endless', wrap: m.wrap, speed: m.speed, inc: m.inc, max: m.max, rocks: m.rocks, goal: 0, walls: [] };
@@ -419,7 +419,7 @@
             if (queue.length < 3) queue.push(d);
         }
 
-        /* ---------- Power-ups ---------- */
+        /* ---------- power-ups ---------- */
         const PW = {
             slow: { icon: '🐌', name: 'Slow-mo', time: 6, color: '#60a5fa' },
             ghost: { icon: '👻', name: 'Ghost, pass through yourself once', time: 10, color: '#e2e8f0' },
@@ -458,7 +458,7 @@
             }
         }
 
-        /* ---------- Simulation ---------- */
+        /* ---------- simulation ---------- */
         let magnetTick = 0;
         function step() {
             if (queue.length) dir = queue.shift();
@@ -583,7 +583,7 @@
             Arcade.show('menuOv');
         }
 
-        /* ---------- Level editor ---------- */
+        /* ---------- level editor ---------- */
         let edit = null; // { name, goal, speed, wrap, cells:Set, index }
         for (const g of [5, 8, 10, 12, 15, 20, 25, 30, 40]) { const o = document.createElement('option'); o.value = g; o.textContent = g + ' apples'; $('edGoal').appendChild(o); }
         function openEditor(i) {
@@ -652,7 +652,7 @@
             catch (e) { prompt('Copy this level code:', code); }
         };
         $('edBack').onclick = () => { tab = 'custom'; toMenu(); };
-        /** Returns to the editor after a test run without losing unsaved changes. */
+        /** returns to the editor after a test run without losing unsaved changes. */
         function resumeEditor() {
             state = 'edit';
             ['overOv', 'pauseOv', 'winOv', 'menuOv'].forEach(Arcade.hide);
@@ -662,7 +662,7 @@
             $('goalChip').hidden = true;
         }
 
-        /* ---------- Rendering ---------- */
+        /* ---------- rendering ---------- */
         const SKINS = {
             classic: { body: (f) => `hsl(${158 - f * 30}, 70%, ${52 - f * 22}%)`, head: '#5eead4', glow: '#34d399' },
             fire: { body: (f) => `hsl(${35 - f * 30}, 95%, ${56 - f * 16}%)`, head: '#fde047', glow: '#f97316' },
@@ -805,7 +805,7 @@
             flash = Math.max(0, flash - dt * 2);
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;

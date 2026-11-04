@@ -102,7 +102,7 @@
             { id: 'specter', name: 'Specter', price: 1200, col: '#a78bfa', hp: 1, spd: 1.1, dmg: 1.05, rate: 1.05, cd: 20, ability: 'Time Warp', abDesc: 'enemies and their bullets slow to half speed for 4s',
               info: 'Bends time itself.' },
         ];
-        // Each boss has three phases (66% and 33% hp) and cycles through named attacks.
+        // each boss has three phases (66% and 33% hp) and cycles through named attacks.
         const BOSSES = [
             { name: 'The Warden', col: '#f43f5e', phases: [['Spiral Volley', 'Aimed Burst'], ['Twin Lances', 'Call Reinforcements', 'Spiral Volley'], ['Desperation Nova', 'Twin Lances']] },
             { name: 'Hive Queen', col: '#84cc16', phases: [['Brood Spawn', 'Aimed Burst'], ['Acid Rain', 'Brood Spawn'], ['Swarm Frenzy', 'Acid Rain']] },
@@ -132,7 +132,7 @@
         let keys = {}, pointer = null;
         const stars = Array.from({ length: 120 }, () => ({ x: Math.random() * W, y: Math.random() * H, z: Math.random() * 0.8 + 0.2 }));
 
-        /* ---------- Hangar ---------- */
+        /* ---------- hangar ---------- */
         function cost(u) { return Math.round(u.base * Math.pow(u.scale, lv(u.id))); }
 
         function buildHangar() {
@@ -194,7 +194,7 @@
             }
         }
 
-        /* ---------- Run ---------- */
+        /* ---------- run ---------- */
         function launch(bossRush) {
             rush = bossRush === true;
             document.getElementById('hangarTitle').textContent = 'Hangar';
@@ -272,7 +272,7 @@
         function damageMult() { return (1 + lv('dmg') * 0.2) * shipDef().dmg; }
         function fireDelay() { return 1 / ((1 + lv('rate') * 0.12) * shipDef().rate * (overdrive > 0 ? 3 : 1)); }
 
-        /** The selected ship's special ability. */
+        /** the selected ship's special ability. */
         function ability() {
             if (state !== 'play' || abilCd > 0) return;
             const S = shipDef();
@@ -290,10 +290,10 @@
             }
         }
 
-        /* ---------- Bosses ---------- */
+        /* ---------- bosses ---------- */
         const shot = (x, y, a, sp, o) => enemyShots.push(Object.assign({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp }, o || {}));
         const aimAt = (e) => Math.atan2(ship.y - e.y, ship.x - e.x);
-        // Each attack runs every frame while active; `k` scales with phase so later phases are denser.
+        // each attack runs every frame while active; `k` scales with phase so later phases are denser.
         const ATTACKS = {
             'Spiral Volley': (e, dt, k) => { if ((e.shotT -= dt) <= 0) { e.shotT = 0.1 / k; for (let i = 0; i < 3; i++) shot(e.x, e.y, e.atkT * 2.6 + i * Math.PI * 2 / 3, 170 + 20 * k); } },
             'Aimed Burst': (e, dt, k) => { if ((e.shotT -= dt) <= 0) { e.shotT = 0.75 / k; const a = aimAt(e); for (let i = -2; i <= 2; i++) shot(e.x, e.y + 20, a + i * 0.13, 260); } },
@@ -445,7 +445,7 @@
             abilCd = Math.max(0, abilCd - dt); overdrive = Math.max(0, overdrive - dt); aegis = Math.max(0, aegis - dt);
             dash = Math.max(0, dash - dt); warp = Math.max(0, warp - dt);
             if (banner && (banner.t -= dt) <= 0) banner = null;
-            const edt = warp > 0 ? dt * 0.45 : dt; // Time Warp slows the enemy side
+            const edt = warp > 0 ? dt * 0.45 : dt; // time Warp slows the enemy side
             // drones orbit the ship and shoot the nearest enemy
             const dl = lv('droneLv');
             drones.forEach((d, i) => {
@@ -576,7 +576,7 @@
             Arcade.text('bombN', bombs || 0);
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         const HULLS = {
             falcon: [[0, -22], [18, 14], [6, 10], [0, 16], [-6, 10], [-18, 14]],
             bulwark: [[0, -18], [14, -10], [22, 10], [10, 16], [-10, 16], [-22, 10], [-14, -10]],
@@ -723,7 +723,7 @@
             render();
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         function setPaused(on) {
             if (on && state === 'play') { state = 'pause'; Arcade.show('pauseOv'); }
             else if (!on && state === 'pause') { state = 'play'; Arcade.hide('pauseOv'); }

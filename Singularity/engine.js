@@ -126,7 +126,7 @@
     const sellable = (it) => ITEMS[it] && !ITEMS[it].cur && ITEMS[it].price > 0;
     const isCur = (it) => ITEMS[it] && ITEMS[it].cur;
     function itemPrice(it) { return (ITEMS[it].price || 0) * fx('price:' + it); }
-    // Buyers are limited: selling lots of one item pushes its price down; it recovers over a minute or two.
+    // buyers are limited: selling lots of one item pushes its price down; it recovers over a minute or two.
     function depth() {
         let reach = 1;
         for (const n of S.nodes) { const d = NODES[n.t]; if (d.kind === 'sell' && d.reach > reach) reach = d.reach; }
@@ -365,7 +365,7 @@
         if (gridUse > 0) bill('power', gridUse / 1000 * st.gridPrice * fx('grid') * dt);
         // breaker: early sites trip on a heavy overload unless you own Smart Breakers
         const breakerRisk = (S.site <= 1 || has('fragile')) && !has('nobreaker');
-        // Only overloading a generator or the grid trips it. Not enough sun just means a brownout.
+        // only overloading a generator or the grid trips it. Not enough sun just means a brownout.
         if (breakerRisk && !S.breaker.tripped && sat < 0.75 && fuelCap + gridCap > 0 && D > 0 && !offline) {
             S.breaker.overT += dt;
             if (S.breaker.overT > 4) { S.breaker.tripped = true; S.breaker.overT = 0; note('⚡ Breaker tripped! Your machines are off. Fix it in the 💼 Work tab.', 'bad'); }

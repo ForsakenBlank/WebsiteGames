@@ -142,7 +142,7 @@
         const DIFF_IDS = Object.keys(DIFFS);
         const SLOTS = 7;
 
-        /* ---------- Board layouts ----------
+        /* ---------- board layouts ----------
            Compact base shapes that grow tall: upper layers sit on the corner of four tiles (pyramid),
            between two tiles (brick), straight on top (stack, hides the tile below completely),
            or alternate (mixed). Small footprints + deep stacks mean most tiles are buried. */
@@ -309,7 +309,7 @@
 
         const unlockedExtreme = () => wins.easy >= 3 && wins.medium >= 3 && wins.hard >= 3;
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             const seg = document.getElementById('diffSeg');
             seg.innerHTML = '';
@@ -370,7 +370,7 @@
             }
         }
 
-        /* ---------- Generation (always solvable) ---------- */
+        /* ---------- generation (always solvable) ---------- */
         const overlaps = (a, b) => Math.abs(a.x - b.x) < 0.98 && Math.abs(a.y - b.y) < 0.98;
 
         function buildPositions(L, cfg, preview) {
@@ -449,7 +449,7 @@
                 order.push(pick);
                 remaining.splice(remaining.indexOf(pick), 1);
             }
-            // Deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
+            // deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
             // late as the tray allows (never more than 6 loose tiles), so matching tiles end up far apart and
             // usually buried, but following this order always clears the board.
             const kinds = Arcade.shuffle(EMOJI.slice()).slice(0, Math.min(cfg.types, order.length / 3));
@@ -481,7 +481,7 @@
             return pos;
         }
 
-        /* ---------- Game ---------- */
+        /* ---------- game ---------- */
         function start(d, L) {
             diff = d || diff;
             if (L) { layout = L; Arcade.save('arcade.tapmatch.layout', L.id); }
@@ -645,7 +645,7 @@
             }, won ? 500 : 700);
         }
 
-        /* ---------- Power-ups ---------- */
+        /* ---------- power-ups ---------- */
         function undo() {
             if (busy || over || !powers.undo) return;
             const t = history.pop();
@@ -690,7 +690,7 @@
             afterChange();
         }
 
-        /* ---------- Wiring ---------- */
+        /* ---------- wiring ---------- */
         document.getElementById('undoBtn').onclick = undo;
         document.getElementById('shuffleBtn').onclick = shuffle;
         document.getElementById('magicBtn').onclick = magic;

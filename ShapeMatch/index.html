@@ -109,7 +109,7 @@
         const goal = () => 10 + level * 2;
         const isBonusNext = () => level % 4 === 0;
 
-        /* ---------- Bins ---------- */
+        /* ---------- bins ---------- */
         function shapeCount() { return level < 4 ? 3 : level < 8 ? 5 : level < 12 ? 6 : 8; }
         function colorCount() { return level < 4 ? 3 : level < 8 ? 5 : 7; }
         function makeBins() {
@@ -138,7 +138,7 @@
             bins.forEach((b, i) => { b.tx = i * w; b.w = w; if (b.x === undefined) b.x = b.tx; });
         }
         const fits = (it, b) => it.gold || (b.rule === 'both' ? it.shape === b.shape && it.color === b.color : b.rule === 'shape' ? it.shape === b.shape : it.color === b.color);
-        /** Picks traits that some bin accepts, so every shape is sortable. */
+        /** picks traits that some bin accepts, so every shape is sortable. */
         function sortableTraits() {
             const b = Arcade.pick(bins);
             let shape = b.shape, color = b.color;
@@ -147,7 +147,7 @@
             return { shape, color };
         }
 
-        /* ---------- Items ---------- */
+        /* ---------- items ---------- */
         const speed = () => (60 + Math.min(level, 25) * 12) * D().speed;
         function spawnItem() {
             const x = Arcade.rand(40, W - 40);
@@ -167,7 +167,7 @@
             items.push({ x: -30, y: BELT_Y, vx: 120 + level * 4, vy: 0, shape: t.shape, color: t.color, gold: Math.random() < 0.08, r: 22, rot: 0, vr: 0, belt: true });
         }
 
-        /* ---------- Game ---------- */
+        /* ---------- game ---------- */
         function start(fromLevel) {
             level = fromLevel || startLevel;
             items = []; popups = []; score = 0; lives = D().lives; sorted = 0; streak = 0; bestStreak = 0; drag = null;
@@ -340,7 +340,7 @@
             popups = popups.filter(p => (p.t -= dt) > 0);
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function shapePath(c, shape, x, y, r, rot) {
             c.save(); c.translate(x, y); c.rotate(rot || 0);
             c.beginPath();
@@ -474,7 +474,7 @@
             render();
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         canvas.addEventListener('pointerdown', (e) => {
             if (state !== 'play' && state !== 'bonus') return;
             const p = Arcade.pointer(canvas, e, W, H);
@@ -515,7 +515,7 @@
         canvas.addEventListener('pointerup', drop);
         canvas.addEventListener('pointercancel', drop);
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             const ds = $('diffSeg');
             ds.innerHTML = '';

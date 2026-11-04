@@ -109,7 +109,7 @@
             { id: 'rainbow', name: 'Prism', price: 700 },
         ];
 
-        // Every difficulty has a speed limit except Unleashed, which just keeps accelerating.
+        // every difficulty has a speed limit except Unleashed, which just keeps accelerating.
         // ramp = metres-ish of distance until obstacle patterns reach full difficulty.
         const DIFFS = [
             { id: 'easy', name: 'Easy', col: '#34d399', start: 250, accel: 4, max: 470, ramp: 9000, gapMul: 1.3, coinMul: 0.5, powerChance: 0.18,
@@ -124,7 +124,7 @@
               info: 'NO speed limit. It never stops getting faster. How long can you last? Coins ×3.' },
         ];
 
-        // Classic look, plus the four biomes that cycle every 600m in Biome mode.
+        // classic look, plus the four biomes that cycle every 600m in Biome mode.
         const CLASSIC = { id: 'classic', name: 'Classic', bg: ['#120c2a', '#0b1020'], floor: '#1b1440', line: 'rgba(167,139,250,0.25)', glow: '#a78bfa', obst: '#f472b6', fill: '#2a1650', star: '196,181,253', grav: 1 };
         const BIOMES = [
             { id: 'cave', name: 'The Caves', icon: '🦇', bg: ['#1c140d', '#0b0805'], floor: '#3b2a1c', line: 'rgba(214,164,107,0.22)', glow: '#d6a46b', obst: '#e7b77a', fill: '#4a3424', star: '214,164,107', grav: 1, special: 'faller' },
@@ -146,7 +146,7 @@
         let owned = Arcade.load('arcade.gravity.skins', ['cube']);
         let skin = Arcade.load('arcade.gravity.skin', 'cube');
         let diff = DIFFS.find(d => d.id === Arcade.load('arcade.gravity.diff', 'normal')) || DIFFS[1];
-        // Per-difficulty bests. The old single best counts as Normal.
+        // per-difficulty bests. The old single best counts as Normal.
         const bests = {};
         for (const d of DIFFS) bests[d.id] = Number(Arcade.load('arcade.gravity.best.' + d.id, 0)) || 0;
         bests.normal = Math.max(bests.normal, Number(Arcade.load('arcade.gravity.best', 0)) || 0);
@@ -165,7 +165,7 @@
             fx.clear();
         }
 
-        // Physics scale: above ~700px/s gravity gets stronger so flips stay snappy at ludicrous speed.
+        // physics scale: above ~700px/s gravity gets stronger so flips stay snappy at ludicrous speed.
         const gScale = () => speed > 700 ? Math.pow(speed / 700, 0.55) : 1;
 
         function start() {
@@ -175,7 +175,7 @@
             Arcade.sfx('level');
         }
 
-        /* ---------- Level generation ---------- */
+        /* ---------- level generation ---------- */
         function difficulty() { return Math.min(1, dist / diff.ramp); }
 
         function spawnPattern() {
@@ -283,7 +283,7 @@
             }
         }
 
-        /* ---------- Gameplay ---------- */
+        /* ---------- gameplay ---------- */
         function tryFlip() {
             if (state !== 'play') return;
             const air = !(p.grounded || coyote > 0);
@@ -362,7 +362,7 @@
         function update(dt) {
             const tScale = slow > 0 ? 0.6 : 1;
             const sdt = dt * tScale;
-            // Unleashed accelerates a little harder the faster it goes, there is no ceiling.
+            // unleashed accelerates a little harder the faster it goes, there is no ceiling.
             const accel = diff.unleashed ? diff.accel * (1 + dist / 40000) : diff.accel;
             speed = Math.min(diff.max, speed + accel * dt);
             topSpeed = Math.max(topSpeed, speed);
@@ -480,7 +480,7 @@
             }
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function drawSkin(c, id, x, y, s, rot, alpha) {
             c.save();
             c.translate(x + s / 2, y + s / 2);
@@ -708,7 +708,7 @@
             }
         });
 
-        /* ---------- Menu / difficulty / skins ---------- */
+        /* ---------- menu / difficulty / skins ---------- */
         function buildDiffs() {
             const host = document.getElementById('diffs');
             host.innerHTML = '';

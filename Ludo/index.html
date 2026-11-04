@@ -177,7 +177,7 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        /* ---------- Board geometry (15 × 15 cells) ---------- */
+        /* ---------- board geometry (15 × 15 cells) ---------- */
         const CELL = 40, SIZE = CELL * 15;
         const COLORS = [
             { name: 'Red', c: '#ef4444', d: '#991b1b', l: '#fecaca' },
@@ -223,7 +223,7 @@
         }
         const absOf = (seat, p) => (p >= 0 && p <= 50 ? (START[seat] + p) % 52 : -1);
 
-        /* ---------- State ---------- */
+        /* ---------- state ---------- */
         const canvas = document.getElementById('c');
         const view = Arcade.fitCanvas(canvas, SIZE, SIZE, { max: 2 });
         const ctx = view.ctx;
@@ -282,7 +282,7 @@
             renderSide();
         }
 
-        /* ---------- Rules ---------- */
+        /* ---------- rules ---------- */
         function targetOf(pl, k, d) {
             const p = pl.tokens[k];
             if (p === LAST) return null;
@@ -314,7 +314,7 @@
             return v;
         }
 
-        /* ---------- Turn flow ---------- */
+        /* ---------- turn flow ---------- */
         function startTurn() {
             if (!G || (G.over && !G.watching)) return;
             G.rolled = false; G.dice = G.dice || 0;
@@ -538,7 +538,7 @@
             return best;
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function drawStar(x, y, r, col) {
             ctx.fillStyle = col;
             ctx.beginPath();
@@ -667,7 +667,7 @@
             fx.update(dt); fx.draw(ctx);
         }
 
-        /* ---------- Side panel ---------- */
+        /* ---------- side panel ---------- */
         const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
         function showDice(v) {
             [...$('dice').children].forEach((el, i) => el.classList.toggle('on', !!v && PIPS[v].includes(i)));
@@ -712,7 +712,7 @@
             $('forceRow').querySelectorAll('.btn').forEach(b => b.classList.toggle('active', +b.dataset.v === tester.force));
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         function hitToken(px, py, onlyMovable) {
             const pl = cur();
             let best = null, bd = 0.5;
@@ -773,7 +773,7 @@
             }
         });
 
-        /* ---------- Loop ---------- */
+        /* ---------- loop ---------- */
         const loop = Arcade.loop((dt) => {
             time += dt;
             if (anim) {
@@ -791,7 +791,7 @@
             render(dt);
         });
 
-        /* ---------- Setup screen ---------- */
+        /* ---------- setup screen ---------- */
         function buildSetup() {
             const cp = $('colorPick');
             cp.innerHTML = '';
@@ -862,7 +862,7 @@
         $('againBtn').onclick = () => { clearTimeout(timerId); anim = null; newGame(); };
         $('watchBtn').onclick = () => { G.watching = true; Arcade.hide('endOv'); schedule(nextTurn, 300); };
 
-        /* ---------- Tester tools ---------- */
+        /* ---------- tester tools ---------- */
         const fr = $('forceRow');
         for (const v of [0, 1, 2, 3, 4, 5, 6]) {
             const b = document.createElement('button');

@@ -418,7 +418,7 @@
         const techReady = (t) => !(t.req || []).some(r => !has(r));
 
         /* ================= POWER ================= */
-        // Poles, generators and panels within 6 tiles join one network; consumers within 4 tiles of a node draw from it.
+        // poles, generators and panels within 6 tiles join one network; consumers within 4 tiles of a node draw from it.
         let netDirty = true, nets = [], powerInfo = { supply: 0, demand: 0 };
         function rebuildNets() {
             netDirty = false;
@@ -522,7 +522,7 @@
             return false;
         }
 
-        // Advances a machine's current job, or starts `recipe` if it is idle and has the inputs.
+        // advances a machine's current job, or starts `recipe` if it is idle and has the inputs.
         function craft(b, recipe, dt) {
             if (!b.cur) {
                 if (!recipe || b.ob.length + recipe.n > 10) return;
@@ -1100,7 +1100,7 @@
             }
         }
 
-        /* Terrain is pre-drawn into 16×16-tile chunk images (resources never change), so a big
+        /* terrain is pre-drawn into 16×16-tile chunk images (resources never change), so a big
            zoomed-out factory costs a handful of drawImage calls instead of thousands of paths. */
         const CH = 16, CPX = 24; // tiles per chunk, pixels per tile in the cache
         const chunks = new Map();
@@ -1126,7 +1126,7 @@
             return c;
         }
 
-        /* Machines are drawn once per type/direction into sprites and stamped. */
+        /* machines are drawn once per type/direction into sprites and stamped. */
         const sprites = new Map();
         function sprite(type, dir) {
             const k = type + dir;

@@ -71,7 +71,7 @@
         const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * W, y: Math.random() * 3000, s: Math.random() * 1.6 + 0.4 }));
 
         const hue = (i) => (170 + i * 9) % 360;
-        // Tower themes unlock as your best height grows.
+        // tower themes unlock as your best height grows.
         const THEMES = [
             { id: 'classic', name: 'Classic', icon: '🌈', need: 0 },
             { id: 'sky', name: 'Skyscraper', icon: '🏢', need: 10 },
@@ -81,7 +81,7 @@
         ];
         let theme = Arcade.load('arcade.stacker.theme', 'classic');
         if (!THEMES.some(t => t.id === theme)) theme = 'classic';
-        // Sky zones you climb through: [floor, top colour, bottom colour, name]
+        // sky zones you climb through: [floor, top colour, bottom colour, name]
         const ZONES = [
             [0, [218, 60, 22], [200, 55, 38], null],
             [15, [205, 70, 45], [200, 70, 62], '☁️ Above the clouds'],

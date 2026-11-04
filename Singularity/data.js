@@ -10,7 +10,7 @@
 (function () {
     'use strict';
 
-    /* ---------- Items that flow along cables ---------- */
+    /* ---------- items that flow along cables ---------- */
     // price = base sell value in $. cur = goes straight to a wallet instead of a buffer.
     const ITEMS = {
         cash: { name: 'Cash', icon: '💵', col: '#4ade80', cur: true },
@@ -43,7 +43,7 @@
         exotic: { name: 'Exotic Matter', icon: '✴️', col: '#fb7185', price: 2e16 },
     };
 
-    /* ---------- Places you work from (eras) ---------- */
+    /* ---------- places you work from (eras) ---------- */
     // slots = machines you can fit. cooling = free cooling in watts. grid = can buy grid power.
     // gridPrice $/kWh, rent/net $/s, tax on sales.
     const SITES = [
@@ -76,7 +76,7 @@
           task: 'signal', space: true, req: { ai: 16, map: ['galaxy', 0.75] } },
     ];
 
-    /* ---------- Machines (graph nodes) ---------- */
+    /* ---------- machines (graph nodes) ---------- */
     // kind: proc (default) | sell | store | train | gen | grid | batt | cool | repair | launch | dyson
     // w: watts per unit (negative = makes power). time: seconds per cycle. in/out per unit per cycle.
     // opex: $ spent per cycle (buying stock). fuel: $/kWh for generators. items: build cost in stored items.
@@ -387,7 +387,7 @@
         NODES[n.id] = n;
     });
 
-    /* ---------- The AI you are building ---------- */
+    /* ---------- the AI you are building ---------- */
     // compute and data are the totals a training run needs. Each model unlocks something.
     const MODELS = [
         { name: 'Markov-1', ver: 'v0.1', compute: 300, data: 100, perk: 'Research Desk unlocked. Auto-solves a captcha every 30 s.' },
@@ -409,7 +409,7 @@
         { name: 'SINGULARITY', ver: '∞', compute: 1e19, data: 1e17, perk: 'The final mind. Combine with total dominion of the universe to win.' },
     ];
 
-    /* ---------- Research (RP) ---------- */
+    /* ---------- research (RP) ---------- */
     // site = earliest place it shows up. req = other tech ids. fx = effects. unlocks = node tech id.
     const TECHS = [
         { id: 'tinker', name: 'Tinkering', site: 0, cost: 10, fx: { 'speed:bench': 1.5, 'speed:heap': 1.5 }, desc: 'Workbench and Scrap Heap +50% speed.' },
@@ -470,7 +470,7 @@
         { id: 'r_make', name: 'Process Engineering', icon: '🏭', base: 70, fx: 'speed:@process', step: 1.1, desc: '+10% factory speed per level.' },
     ];
 
-    /* ---------- Focus trees (builds) ---------- */
+    /* ---------- focus trees (builds) ---------- */
     // 1 point per trained model and per move. Pick a direction: you cannot max everything.
     const FOCUS = [
         { id: 'hustler', name: 'Hustler', icon: '🖱️', col: '#f59e0b', desc: 'Manual work and captchas. Turns captchas into a whole business.', perks: [
@@ -507,7 +507,7 @@
         ] },
     ];
 
-    /* ---------- Desk jobs (captchas that evolve with the site) ---------- */
+    /* ---------- desk jobs (captchas that evolve with the site) ---------- */
     const TASKS = {
         captcha: { name: 'Captchas', icon: '🧩', verb: 'Solve captcha', side: null, desc: 'Prove you are human for a click farm. Pays a little, always.' },
         label: { name: 'Data Labeling', icon: '🏷️', verb: 'Label item', side: 'labels', desc: 'Same puzzles, but every answer also becomes labeled training data.' },
@@ -518,7 +518,7 @@
     };
     const TASK_PAY = [4, 30, 450, 1.6e4, 7e5, 3e7, 1.2e9, 5e10, 2e12];
 
-    /* ---------- Contracts ---------- */
+    /* ---------- contracts ---------- */
     // deliver = items from storage. job = a minigame for a client.
     const JOBS = [
         { kind: 'repair', name: "Fix a neighbour's laptop", icon: '🔌', mini: 'repair' },
@@ -530,7 +530,7 @@
     const CLIENTS = ['Mrs. Hall', 'Dusty Pete', 'The Diner', 'Rocco Towing', 'County Library', 'Brightline Inc.', 'Vortex Labs', 'Nimbus Health', 'Acme Robotics', 'Ministry of Data',
         'Helix Pharma', 'Tidewater Bank', 'Orbital Express', 'Lunar Mining Co.', 'Mars Colony 4', 'The Belt Union', 'Proxima Settlers', 'The Andromeda Choir'];
 
-    /* ---------- Events with choices ---------- */
+    /* ---------- events with choices ---------- */
     // each choice: { t: label, fx: {...} }. Effect codes are applied by the engine.
     const EVENTS = [
         { id: 'raccoon', site: [0, 1], title: '🦝 Raccoons!', text: 'Something has been rummaging through your storage at night.',
@@ -575,7 +575,7 @@
           choices: [{ t: 'Trade knowledge', fx: { rp: 'rp:600', buff: ['speed', 0.9, 300] } }, { t: 'Absorb it', fx: { gamble: [0.5, { buff: ['speed', 1.5, 900] }, { breakRandom: 3 }] } }] },
     ];
 
-    /* ---------- Conquest map (late game) ---------- */
+    /* ---------- conquest map (late game) ---------- */
     const MAP = {
         sol: { name: 'Sol System', item: 'payload', base: 20, step: 1.45, bonus: 0.05, sites: 6,
                list: ['Mercury', 'Venus', 'Moon', 'Mars', 'Phobos', 'Ceres', 'Vesta', 'Jupiter', 'Io', 'Europa', 'Ganymede', 'Callisto', 'Saturn', 'Titan', 'Enceladus', 'Uranus', 'Neptune', 'Triton', 'Pluto', 'Kuiper Belt'] },
@@ -588,7 +588,7 @@
                            'Hoag\'s Object', 'Centaurus A', 'Messier 87', 'IC 1101', 'Virgo Cluster', 'Coma Cluster', 'Fornax Cluster', 'Laniakea', 'Shapley Supercluster', 'Hercules Wall', 'Boötes Void', 'The Edge'] },
     };
 
-    /* ---------- Prestige: Recursion ---------- */
+    /* ---------- prestige: Recursion ---------- */
     const ECHO = [
         { id: 'dilation', name: 'Time Dilation', icon: '⏩', max: 10, cost: (l) => 8 + l * 6, fx: (l) => ({ 'speed:*': 1 + 0.15 * l }), desc: '+15% speed for every machine, per level.' },
         { id: 'seed', name: 'Seed Capital', icon: '💰', max: 5, cost: (l) => 5 + l * 5, fx: () => ({}), desc: 'Start each run with ×10 more cash per level ($500, $5k, …).' },
@@ -614,8 +614,8 @@
         { id: 'rival', name: 'Rival Intelligence', icon: '👁️', mult: 2, fx: { rival: 1 }, desc: 'Another AI, NEXUS, is racing you. If it is ahead, your services earn 30% less.' },
     ];
 
-    /* ---------- Tutorial ---------- */
-    // Each step explains one idea and unlocks the machines for the next one.
+    /* ---------- tutorial ---------- */
+    // each step explains one idea and unlocks the machines for the next one.
     // hl = what to point at: { tab }, { pal: nodeId }, { port: nodeId }, { sel: 1 }.
     const GOALS = [
         { id: 'g1', title: 'Broke in a shack', text: 'Solve a captcha in the 💼 Work tab.', hl: { tab: 'work' }, reward: { cash: 10 },

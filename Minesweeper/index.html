@@ -51,7 +51,7 @@
         .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         #face { font-size: 1.3rem; padding: 6px 12px; }
 
-        /* ---------- Custom map editor ---------- */
+        /* ---------- custom map editor ---------- */
         .editor { width: min(880px, 100%); text-align: left; }
         .editor h2, .editor > p { text-align: center; }
         .ed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
@@ -195,7 +195,7 @@
         let playable = 0, wrapEdges = false, safeStart = true, freeHints = false;
         let noGuess = !!Arcade.load('arcade.mines.noguess', false);
 
-        /* Custom map: mask is one char per cell, '0' hole, '1' cell, '2' hand-placed mine */
+        /* custom map: mask is one char per cell, '0' hole, '1' cell, '2' hand-placed mine */
         const blankCustom = () => ({ r: 12, c: 12, m: 20, mask: '1'.repeat(144), safe: true, wrap: false, free: false });
         let custom = Object.assign(blankCustom(), Arcade.load('arcade.mines.custom', {}));
         if (typeof custom.mask !== 'string' || custom.mask.length !== custom.r * custom.c) custom = blankCustom();
@@ -476,7 +476,7 @@
             hud();
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         const cellFrom = (e) => {
             const el = e.target.closest('.cell');
             const c = el ? cells[+el.dataset.i] : null;
@@ -520,7 +520,7 @@
             else if (e.code === 'KeyR') newGame();
         });
 
-        /* ---------- Custom map editor ---------- */
+        /* ---------- custom map editor ---------- */
         const ed = { r: 0, c: 0, mask: [], brush: 'toggle', mirror: false, host: $('edBoard') };
 
         function openEditor() {

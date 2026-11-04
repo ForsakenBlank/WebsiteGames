@@ -188,7 +188,7 @@
         },
         sub: (S) => 'Spikes: ' + S.ghost.spikes.length,
     };
-    /* ---------- Spike freeze: touch a spike and you're stuck there forever ---------- */
+    /* ---------- spike freeze: touch a spike and you're stuck there forever ---------- */
     const FROZEN_MAPS = ['circle', 'square', 'hexagon', 'octagon', 'mines', 'double'];
     const MAP_NAMES = { circle: 'Circle', square: 'Square', hexagon: 'Hexagon', octagon: 'Octagon', mines: 'Spike mines', double: 'Double ring' };
     BL.FROZEN_MAPS = FROZEN_MAPS; BL.MAP_NAMES = MAP_NAMES;
