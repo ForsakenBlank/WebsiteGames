@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Party Cards · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f08aa7; --accent-ink: #47152a; }
+        .stage { justify-content: flex-start; padding-top: 6px; }
+        .box { width: min(520px, 100%); display: flex; flex-direction: column; gap: 14px; }
+        .decks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .deck { position: relative; border: 0; border-radius: 22px; padding: 14px; text-align: left; cursor: pointer; color: var(--ink); background: var(--bg); font: inherit; box-shadow: 0 4px 0 rgba(0,0,0,.25); opacity: 0.45; transition: opacity 0.15s, transform 0.1s; }
+        .deck.on { opacity: 1; }
+        .deck:active { transform: translateY(2px); }
+        .deck b { font-family: var(--display); font-weight: 600; font-size: 1.05rem; display: block; line-height: 1.15; }
+        .deck small { opacity: 0.75; font-weight: 800; }
+        .deck .em { font-size: 1.7rem; display: block; margin-bottom: 4px; }
+        .deck .tick { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.18); display: grid; place-items: center; }
+        .deck.on .tick { background: var(--ink); color: var(--bg); }
+        .deck .tick svg { width: 15px; height: 15px; }
+        .pcard { position: relative; min-height: min(62vh, 440px); border-radius: 32px; padding: 26px 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; background: var(--bg); color: var(--ink); cursor: pointer; box-shadow: 0 8px 0 rgba(0,0,0,.28); user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+        .pcard .kind { font-family: var(--display); font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .pcard .kind::after { content: ""; flex: 1; height: 5px; border-radius: 5px; background: currentColor; opacity: 0.25; }
+        .pcard .text { font-family: var(--display); font-weight: 600; font-size: clamp(1.6rem, 7vw, 2.3rem); line-height: 1.18; }
+        .pcard .or { display: block; font-size: 0.6em; opacity: 0.6; margin: 10px 0; }
+        .pcard .foot { display: flex; justify-content: space-between; font-weight: 800; opacity: 0.7; font-size: 0.85rem; }
+        .pcard.flip { animation: flipIn 0.35s cubic-bezier(.2, 1.3, .4, 1); }
+        @keyframes flipIn { from { transform: translateX(40px) rotate(4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+        .ctrl { display: flex; gap: 10px; }
+        .ctrl .btn { flex: 1; }
+        .screen[hidden] { display: none; }
+        .screen { display: flex; flex-direction: column; gap: 14px; }
+        h2.big { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 6px 0 0; text-align: center; line-height: 1.1; }
+        .sub { color: var(--muted); text-align: center; margin: 0; }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Party Cards</h1>
+        <div class="stats"><span class="chip accent">Flipped <b id="flipN">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="box">
+            <section class="screen" id="sPick">
+                <h2 class="big">Pick your decks</h2>
+                <p class="sub">Mix as many as you like. Pass the phone, read the card out loud, tap for the next one.</p>
+                <div class="decks" id="decks"></div>
+                <button class="btn primary lg block" id="goBtn">Shuffle and start</button>
+            </section>
+            <section class="screen" id="sPlay" hidden>
+                <div class="pcard" id="card"><div class="kind"></div><div class="text"></div><div class="foot"><span></span><span>Tap for next</span></div></div>
+                <div class="ctrl"><button class="btn lg" id="prevBtn">Back</button><button class="btn lg" id="deckBtn">Decks</button><button class="btn primary lg" id="nextBtn">Next</button></div>
+            </section>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const DECKS = {
+            wyr: { name: 'Would you rather', em: '🤔', bg: '#82c3ec', ink: '#14324a', cards: [
+                'be able to fly|be invisible', 'have a pet dragon|a pet unicorn', 'only eat pizza forever|never eat pizza again', 'live in space|live under the sea',
+                'talk to animals|speak every language', 'be super fast|super strong', 'never be cold|never be too hot', 'have no phone for a month|no TV for a year',
+                'always be 10 minutes late|always be 20 minutes early', 'have a rewind button|a pause button for life', 'be a famous singer|a famous athlete', 'live in a treehouse|a castle',
+                'have hands for feet|feet for hands', 'sneeze glitter|cry lemonade', 'explore the ocean|explore space', 'be the funniest person|the smartest person',
+                'never have homework|never have chores', 'have a robot butler|a personal chef', 'see the future|change the past', 'only whisper|only shout',
+                'be a wizard|a superhero', 'live without music|without movies', 'have a giant hamster|a tiny elephant', 'always have to sing|always have to dance',
+                'eat a bug|lick a shoe', 'teleport anywhere|read minds', 'be stuck in a lift with your teacher|your crush', 'have 10 siblings|be an only child',
+                'win the lottery|live twice as long', 'have a third arm|a third eye', 'be a cat|be a dog', 'have snow every day|sun every day',
+                'go to the past|go to the future', 'never use stairs again|never use a lift again', 'be a famous gamer|a famous chef', 'have a jetpack|a hoverboard',
+            ] },
+            likely: { name: 'Most likely to', em: '👉', bg: '#f6c445', ink: '#4a3200', cards: [
+                'become famous', 'forget their own birthday', 'survive a zombie apocalypse', 'trip over nothing', 'cry at a film', 'eat something off the floor',
+                'win a reality show', 'become a millionaire', 'get lost in their own town', 'adopt ten cats', 'laugh at the wrong moment', 'sleep through an alarm',
+                'start a band', 'move to another country', 'win an argument with a teacher', 'talk their way out of trouble', 'break a world record', 'spend all their money in a day',
+                'be late to their own wedding', 'befriend a stranger on a bus', 'become president', 'go viral online', 'eat dessert first', 'start a food fight',
+                'fall asleep at a party', 'send a text to the wrong person', 'be a secret genius', 'write a book', 'cheat at board games', 'get a tattoo of a cartoon',
+                'win at hide and seek', 'scream at a spider', 'talk to their plants', 'become a spy', 'still be awake at 3am', 'know all the song lyrics',
+            ] },
+            truth: { name: 'Truth', em: '💬', bg: '#86d4b4', ink: '#163a2d', cards: [
+                "What's the most embarrassing thing in your room?", "What's a secret talent nobody knows about?", 'What was your worst haircut?', "What's the last lie you told?",
+                'Who in this room would you swap lives with for a day?', "What's the weirdest food you actually like?", "What's your most used emoji?", "What's the silliest thing you're scared of?",
+                'Have you ever pretended to be sick to skip something?', "What's the worst gift you ever got?", "What's your guilty pleasure song?", 'What was your first crush like?',
+                "What's the most trouble you've ever been in?", 'What do you do when nobody is watching?', "What's the funniest thing you've seen someone do?", 'Which app do you use the most?',
+                "What's a habit you wish you could stop?", 'What would you do with a million pounds?', 'Who was your childhood hero?', "What's the strangest dream you remember?",
+                'What do you always get wrong?', "What's the cringiest thing you've posted?", 'If you could redo one day, which would it be?', "What's something you've never told your parents?",
+                "What's your worst habit at the dinner table?", 'Which film made you cry the most?', 'What is your most irrational fear?', 'Who do you text the most?',
+                "What's the longest you've gone without showering?", "What's the nicest thing someone has done for you?",
+            ] },
+            dare: { name: 'Dare', em: '🎯', bg: '#e8655a', ink: '#3a1d1a', cards: [
+                'Talk in an accent until your next turn', 'Do your best impression of someone here', 'Sing the chorus of a song everyone picks', 'Do 10 star jumps right now',
+                'Speak only in questions for 2 minutes', 'Let the group pick a new nickname for you', 'Do a dramatic reading of the last text you got', 'Balance a book on your head for a minute',
+                'Show the last photo in your camera roll', 'Act like a chicken for 30 seconds', 'Try to lick your elbow', 'Tell a joke. If nobody laughs, tell another',
+                'Do your best runway walk across the room', 'Hold a plank for 30 seconds', 'Draw a portrait of the person on your left', 'Say the alphabet backwards',
+                'Do a robot dance for 20 seconds', 'Speak in rhymes until your next turn', 'Let someone else post an emoji on your status', 'Hum a song until someone guesses it',
+                'Pretend to be a news reporter describing the room', 'Make the group laugh in under a minute', 'Do your best evil laugh', 'Eat a spoon of something the group picks (safe!)',
+                'Spin around 5 times then walk in a straight line', 'Compliment everyone in the room', 'Act out your morning routine in silence', 'Keep a straight face while everyone tries to make you laugh',
+                'Wear a sock on your hand until your next turn', 'Narrate what everyone is doing like a nature documentary',
+            ] },
+            never: { name: 'Never have I ever', em: '🙊', bg: '#8d6be0', ink: '#ffffff', cards: [
+                'fallen asleep in class', 'broken a bone', 'been on a plane', 'eaten a whole pizza by myself', 'stayed up all night', 'cried at a cartoon', 'forgotten a friend\'s birthday',
+                'sent a message to the wrong person', 'been in a school play', 'lost a phone', 'tried to cut my own hair', 'laughed so hard I cried', 'walked into a glass door',
+                'pretended to know a song', 'been to a concert', 'met someone famous', 'ridden a horse', 'gotten lost in a shop', 'broken something and blamed someone else',
+                'eaten food that fell on the floor', 'been stung by a bee', 'binge watched a whole series in a day', 'sung karaoke', 'had a nickname I hated', 'won a competition',
+                'fallen off a bike', 'slept in a tent', 'burned toast', 'waved at someone who wasn\'t waving at me', 'talked to myself in the mirror',
+            ] },
+            hot: { name: 'Hot takes', em: '🔥', bg: '#f7a77a', ink: '#4a2210', cards: [
+                'Pineapple belongs on pizza', 'Cereal is a soup', 'Cats are better than dogs', 'Breakfast is the best meal', 'Summer is better than winter', 'Books are better than films',
+                'Socks with sandals are fine', 'A hot dog is a sandwich', 'Mornings are better than nights', 'Video games count as sport', 'Water is wet', 'Cold pizza beats hot pizza',
+                'Homework should be banned', 'The book is always better', 'Chocolate ice cream is overrated', 'Everyone should learn to cook', 'Tea is better than coffee', 'Rain is relaxing',
+                'Phones should be banned at dinner', 'Ketchup goes on everything', 'Sequels are never as good', 'Aliens definitely exist', 'Beaches are overrated', 'Board games beat video games',
+                'Christmas songs before December are wrong', 'Crocs are stylish', 'Taking naps is a skill', 'Mint chocolate tastes like toothpaste', 'Paper books beat e-readers', 'You should make your bed every day',
+            ] },
+        };
+        let picked = Arcade.load('arcade.partycards.decks', ['wyr', 'likely', 'truth', 'dare']);
+        let deck = [], hist = [], pos = -1, flipped = 0;
+
+        function renderPick() {
+            const host = $('decks'); host.innerHTML = '';
+            for (const [k, d] of Object.entries(DECKS)) {
+                const b = document.createElement('button');
+                b.className = 'deck' + (picked.includes(k) ? ' on' : '');
+                b.style.setProperty('--bg', d.bg); b.style.setProperty('--ink', d.ink);
+                b.innerHTML = `<span class="tick">${Arcade.icon('check')}</span><span class="em">${d.em}</span><b>${d.name}</b><small>${d.cards.length} cards</small>`;
+                b.onclick = () => { picked = picked.includes(k) ? picked.filter(x => x !== k) : [...picked, k]; Arcade.sfx('select'); renderPick(); };
+                host.appendChild(b);
+            }
+            $('goBtn').disabled = !picked.length;
+        }
+        function build() {
+            deck = [];
+            for (const k of picked) for (const c of DECKS[k].cards) deck.push([k, c]);
+            Arcade.shuffle(deck);
+            hist = []; pos = -1;
+        }
+        function draw(dir) {
+            if (dir < 0) { if (pos > 0) pos--; else return; }
+            else {
+                pos++;
+                if (pos >= hist.length) {
+                    if (!deck.length) build();
+                    hist.push(deck.pop());
+                    flipped++;
+                    $('flipN').textContent = flipped;
+                    // report in small batches so the counter in achievements moves without spamming saves
+                    if (flipped % 5 === 0) Arcade.count('cards', 5);
+                }
+            }
+            const [k, c] = hist[pos];
+            const d = DECKS[k];
+            const card = $('card');
+            card.style.setProperty('--bg', d.bg); card.style.setProperty('--ink', d.ink);
+            card.classList.remove('flip'); void card.offsetWidth; card.classList.add('flip');
+            card.querySelector('.kind').textContent = d.em + ' ' + d.name;
+            const t = card.querySelector('.text');
+            if (k === 'wyr') { const [a, b] = c.split('|'); t.innerHTML = `Would you rather ${Arcade.esc(a)}<span class="or">or</span>${Arcade.esc(b)}?`; }
+            else if (k === 'likely') t.textContent = 'Who is most likely to ' + c + '?';
+            else if (k === 'never') t.textContent = 'Never have I ever ' + c + '.';
+            else if (k === 'hot') t.textContent = '"' + c + '." Agree or disagree?';
+            else t.textContent = c;
+            card.querySelector('.foot span').textContent = (pos + 1) + ' cards in';
+            $('prevBtn').disabled = pos <= 0;
+            Arcade.sfx('pop');
+        }
+        $('goBtn').onclick = () => { Arcade.save('arcade.partycards.decks', picked); build(); $('sPick').hidden = true; $('sPlay').hidden = false; draw(1); };
+        $('deckBtn').onclick = () => { $('sPick').hidden = false; $('sPlay').hidden = true; renderPick(); };
+        $('nextBtn').onclick = () => draw(1);
+        $('prevBtn').onclick = () => draw(-1);
+        $('card').onclick = () => draw(1);
+        Arcade.swipe($('card'), (d) => { if (d === 'left') draw(1); if (d === 'right') draw(-1); });
+        window.addEventListener('keydown', (e) => { if ($('sPlay').hidden) return; if (e.key === 'ArrowRight' || e.key === ' ') draw(1); if (e.key === 'ArrowLeft') draw(-1); });
+        window.addEventListener('pagehide', () => { const rest = flipped % 5; if (rest) Arcade.count('cards', rest); });
+        renderPick();
+    })();
+    </script>
+</body>
+</html>

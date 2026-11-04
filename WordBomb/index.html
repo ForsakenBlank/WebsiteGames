@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Word Bomb · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #ef7a5a; --accent-ink: #3a1208; }
+        .stage { justify-content: flex-start; padding-top: 6px; }
+        .box { width: min(520px, 100%); display: flex; flex-direction: column; gap: 14px; }
+        .screen[hidden] { display: none; }
+        .screen { display: flex; flex-direction: column; gap: 14px; }
+        h2.big { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 6px 0 0; text-align: center; line-height: 1.1; }
+        .sub { color: var(--muted); text-align: center; margin: 0; }
+        .group { background: var(--surface); border-radius: 22px; padding: 16px; }
+        .group > b { display: block; font-family: var(--display); font-weight: 600; margin-bottom: 10px; }
+        .stepper { display: flex; align-items: center; gap: 12px; }
+        .stepper .n { font-family: var(--display); font-size: 1.8rem; min-width: 46px; text-align: center; }
+        .plist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        .plist input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--bg-2); color: var(--text); font: inherit; font-weight: 700; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--bg-2); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+        .bombzone { border-radius: 30px; background: var(--surface); padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+        .holder { font-family: var(--display); font-weight: 600; font-size: 1.3rem; color: var(--muted); }
+        .holder b { color: var(--text); }
+        .bomb { position: relative; width: 150px; height: 150px; }
+        .bomb .ball { position: absolute; inset: 18px 10px 0 10px; border-radius: 50%; background: #2a2a2f; box-shadow: inset -12px -14px 0 rgba(0,0,0,.35), inset 10px 10px 0 rgba(255,255,255,.06); }
+        .bomb .cap { position: absolute; left: 50%; top: 6px; width: 34px; height: 24px; margin-left: -17px; border-radius: 8px; background: #46464d; }
+        .bomb .spark { position: absolute; left: 50%; top: -14px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #f5c04e; box-shadow: 0 0 0 6px rgba(245,192,78,.3); animation: flick 0.25s infinite alternate; }
+        .bomb.fast .spark { animation-duration: 0.1s; background: #ef6a5a; box-shadow: 0 0 0 8px rgba(239,106,90,.35); }
+        .bomb.boom .ball { background: #ef6a5a; transform: scale(1.3); transition: 0.15s; }
+        @keyframes flick { from { transform: scale(0.8); } to { transform: scale(1.15); } }
+        .combo { font-family: var(--display); font-weight: 600; font-size: clamp(3.4rem, 18vw, 5.4rem); letter-spacing: 0.08em; line-height: 1; padding: 12px 26px; border-radius: 24px; background: var(--pill); color: var(--pill-ink); box-shadow: 0 5px 0 var(--lip); }
+        .rule { color: var(--muted); font-weight: 700; }
+        .passbtn { font-size: 1.4rem !important; padding: 22px !important; border-radius: 24px !important; }
+        .lives { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+        .life { padding: 10px 12px; border-radius: 14px; background: var(--bg-2); font-weight: 800; display: flex; justify-content: space-between; gap: 6px; }
+        .life.out { opacity: 0.4; text-decoration: line-through; }
+        .life.cur { box-shadow: inset 0 0 0 2px var(--accent); }
+        .boomscr { position: fixed; inset: 0; z-index: 80; background: #c4463a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; animation: fadeIn 0.1s; }
+        .boomscr .big { font-family: var(--display); font-size: clamp(4rem, 20vw, 7rem); line-height: 1; }
+        .boomscr p { font-size: 1.2rem; font-weight: 800; margin: 0; }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Word Bomb</h1>
+        <div class="stats"><span class="chip accent">Round <b id="roundN">1</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="helpBtn" title="How to play"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="box">
+            <section class="screen" id="sSetup">
+                <h2 class="big">Don't be holding it</h2>
+                <p class="sub">Say a word with the letters on screen, then pass the phone. The bomb could go off any second.</p>
+                <div class="group">
+                    <b>Players</b>
+                    <div class="stepper"><button class="btn icon" id="pMinus">-</button><span class="n" id="pCount">4</span><button class="btn icon" id="pPlus">+</button><span class="small muted">2 to 12</span></div>
+                    <div class="plist" id="plist"></div>
+                </div>
+                <div class="group"><b>Lives each</b><div class="chips" id="lifeChips"></div></div>
+                <div class="group"><b>Difficulty</b><div class="chips" id="diffChips"></div></div>
+                <div class="group"><b>Word must</b><div class="chips" id="ruleChips"></div></div>
+                <button class="btn primary lg block" id="startBtn">Light the fuse</button>
+            </section>
+            <section class="screen" id="sPlay" hidden>
+                <div class="bombzone">
+                    <div class="holder">Holding it: <b id="holder">Sam</b></div>
+                    <div class="bomb" id="bomb"><div class="cap"></div><div class="ball"></div><div class="spark"></div></div>
+                    <div class="rule" id="ruleTxt">Say a word containing</div>
+                    <div class="combo" id="combo">ING</div>
+                </div>
+                <button class="btn primary lg block passbtn" id="passBtn">Said one! Pass it on</button>
+                <div class="lives" id="lives"></div>
+            </section>
+            <section class="screen" id="sEnd" hidden>
+                <h2 class="big" id="endTitle">Sam wins!</h2>
+                <p class="sub" id="endSub"></p>
+                <div class="row"><button class="btn primary lg grow" id="againBtn">Play again</button><button class="btn lg" id="setupBtn">Setup</button></div>
+            </section>
+        </div>
+        <div class="boomscr" id="boom" hidden>
+            <div class="big">BOOM</div>
+            <p id="boomTxt">Sam was holding it</p>
+            <button class="btn lg" id="boomBtn" style="--b:#fff;color:#c4463a">Next round</button>
+        </div>
+        <div class="overlay fixed" id="helpOv" hidden>
+            <div class="modal">
+                <h2>How to play</h2>
+                <ol class="help">
+                    <li>Sit in a circle. Whoever holds the phone says a word that fits the letters, out loud.</li>
+                    <li>Everyone agrees it counts? Tap the button and pass the phone to the left.</li>
+                    <li>The fuse is secret. It can blow after a few seconds or much later.</li>
+                    <li>Whoever holds it when it blows loses a life. Last one standing wins.</li>
+                    <li>No repeating words in the same round!</li>
+                </ol>
+                <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const COMBOS = {
+            easy: ['AN', 'ER', 'IN', 'ON', 'AT', 'EN', 'ES', 'OR', 'TE', 'AR', 'ST', 'RE', 'LE', 'IT', 'AL', 'ED', 'SH', 'CH', 'OU', 'EA', 'OO', 'LL', 'TH', 'ME', 'CA', 'BA', 'PO', 'MA', 'LO', 'DO', 'SO', 'NO', 'BE', 'GO', 'HA'],
+            normal: ['ING', 'ION', 'ENT', 'ACK', 'ART', 'OUN', 'IGH', 'AIN', 'EST', 'OLD', 'ICE', 'AME', 'OCK', 'ILL', 'UMP', 'ASH', 'ORT', 'ANT', 'ATE', 'INK', 'OOK', 'EAR', 'ALL', 'ARE', 'PRE', 'CON', 'STR', 'TER', 'UND', 'OUT', 'ITE', 'OME', 'UCK', 'ANG', 'ELL'],
+            hard: ['OUG', 'TCH', 'GHT', 'SPR', 'IGN', 'MPL', 'NCE', 'QU', 'ZZ', 'XT', 'PH', 'WR', 'KN', 'RCH', 'DGE', 'OAK', 'EAK', 'UIT', 'ELF', 'YST', 'OIS', 'RTH', 'LY', 'IOU', 'AU', 'SCR', 'THR', 'OVE', 'IVE', 'URN', 'OX', 'EW', 'NK', 'OY', 'AW'],
+        };
+        const RULES = { has: 'Say a word containing', start: 'Say a word starting with', end: 'Say a word ending with' };
+        const cfg = Object.assign({ n: 4, names: [], lives: 2, diff: 'normal', rule: 'has' }, Arcade.load('arcade.wordbomb.cfg', {}));
+        let players = [], cur = 0, fuse = 0, fuseT = 0, tickT = 0, started = 0, round = 1, live = false;
+
+        const pname = (i) => (cfg.names[i] || '').trim() || 'Player ' + (i + 1);
+        function show(id) { for (const s of ['sSetup', 'sPlay', 'sEnd']) $(s).hidden = s !== id; }
+        function chips(host, list, val, set) {
+            host.innerHTML = '';
+            for (const [v, l] of list) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (v === val ? ' on' : '');
+                b.textContent = l;
+                b.onclick = () => { set(v); Arcade.sfx('select'); renderSetup(); };
+                host.appendChild(b);
+            }
+        }
+        function renderSetup() {
+            $('pCount').textContent = cfg.n;
+            const pl = $('plist');
+            pl.querySelectorAll('input').forEach((inp, i) => { cfg.names[i] = inp.value; });
+            pl.innerHTML = '';
+            for (let i = 0; i < cfg.n; i++) {
+                const inp = document.createElement('input');
+                inp.maxLength = 14; inp.placeholder = 'Player ' + (i + 1); inp.value = cfg.names[i] || '';
+                inp.oninput = () => { cfg.names[i] = inp.value; };
+                pl.appendChild(inp);
+            }
+            chips($('lifeChips'), [[1, '1'], [2, '2'], [3, '3']], cfg.lives, v => cfg.lives = v);
+            chips($('diffChips'), [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']], cfg.diff, v => cfg.diff = v);
+            chips($('ruleChips'), [['has', 'Contain it'], ['start', 'Start with it'], ['end', 'End with it']], cfg.rule, v => cfg.rule = v);
+        }
+        $('pMinus').onclick = () => { cfg.n = Math.max(2, cfg.n - 1); renderSetup(); };
+        $('pPlus').onclick = () => { cfg.n = Math.min(12, cfg.n + 1); renderSetup(); };
+
+        function newCombo() {
+            // ending with rare combos is brutal, so the end rule uses the easier list
+            const list = cfg.rule === 'end' && cfg.diff === 'hard' ? COMBOS.normal : COMBOS[cfg.diff];
+            let c;
+            do { c = Arcade.pick(list); } while (c === $('combo').textContent && list.length > 1);
+            $('combo').textContent = c;
+        }
+        function renderLives() {
+            $('lives').innerHTML = players.map((p, i) => `<div class="life ${p.lives <= 0 ? 'out' : ''} ${i === cur ? 'cur' : ''}"><span>${Arcade.esc(p.name)}</span><span>${'♥'.repeat(Math.max(0, p.lives))}</span></div>`).join('');
+            $('holder').textContent = players[cur].name;
+        }
+        function startGame() {
+            $('plist').querySelectorAll('input').forEach((inp, i) => { cfg.names[i] = inp.value; });
+            Arcade.save('arcade.wordbomb.cfg', cfg);
+            players = [...Array(cfg.n).keys()].map(i => ({ name: pname(i), lives: cfg.lives }));
+            cur = Arcade.randi(0, cfg.n - 1);
+            round = 1;
+            startRound();
+        }
+        function startRound() {
+            $('roundN').textContent = round;
+            $('ruleTxt').textContent = RULES[cfg.rule];
+            newCombo();
+            renderLives();
+            show('sPlay');
+            // secret fuse between 12 and 45 seconds
+            fuse = Arcade.rand(12, 45) * 1000;
+            started = performance.now();
+            live = true;
+            clearTimeout(fuseT);
+            fuseT = setTimeout(explode, fuse);
+            ticker();
+        }
+        function ticker() {
+            clearTimeout(tickT);
+            if (!live) return;
+            const p = (performance.now() - started) / fuse;
+            $('bomb').classList.toggle('fast', p > 0.7);
+            Arcade.tone(p > 0.7 ? 1200 : 900, 0.03, 'square', 0.03);
+            tickT = setTimeout(ticker, Math.max(140, 700 - p * 600));
+        }
+        $('passBtn').onclick = () => {
+            if (!live) return;
+            Arcade.sfx('select');
+            Arcade.buzz(15);
+            do { cur = (cur + 1) % players.length; } while (players[cur].lives <= 0);
+            newCombo();
+            renderLives();
+        };
+        function explode() {
+            live = false;
+            clearTimeout(tickT);
+            $('bomb').classList.add('boom');
+            Arcade.sfx('boom');
+            Arcade.buzz([200, 80, 300]);
+            const p = players[cur];
+            p.lives--;
+            Arcade.count('round');
+            const alive = players.filter(x => x.lives > 0);
+            $('boomTxt').textContent = p.lives > 0 ? `${p.name} was holding it and loses a life` : `${p.name} is out!`;
+            $('boomBtn').textContent = alive.length > 1 ? 'Next round' : 'See who won';
+            $('boom').hidden = false;
+            $('boomBtn').onclick = () => {
+                $('boom').hidden = true;
+                $('bomb').classList.remove('boom', 'fast');
+                if (alive.length <= 1) {
+                    $('endTitle').textContent = (alive[0] ? alive[0].name : 'Nobody') + ' wins!';
+                    $('endSub').textContent = `Survived ${round} round${round === 1 ? '' : 's'} of ticking.`;
+                    Arcade.sfx('win');
+                    show('sEnd');
+                    return;
+                }
+                round++;
+                // whoever lost starts the next round (or the next player if they're out)
+                while (players[cur].lives <= 0) cur = (cur + 1) % players.length;
+                startRound();
+            };
+        }
+        $('startBtn').onclick = startGame;
+        $('againBtn').onclick = startGame;
+        $('setupBtn').onclick = () => { renderSetup(); show('sSetup'); };
+        $('helpBtn').innerHTML = Arcade.icon('help');
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => Arcade.hide('helpOv'));
+        document.addEventListener('visibilitychange', () => {
+            // pause the fuse if the app is hidden so nobody loses to a phone call
+            if (!live) return;
+            if (document.hidden) { clearTimeout(fuseT); clearTimeout(tickT); fuse -= performance.now() - started; }
+            else { started = performance.now(); fuseT = setTimeout(explode, Math.max(1000, fuse)); ticker(); }
+        });
+        renderSetup();
+    })();
+    </script>
+</body>
+</html>

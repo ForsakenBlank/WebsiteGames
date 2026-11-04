@@ -2,83 +2,136 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Battleship · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #0ea5e9; --accent-2: #38bdf8; --accent-ink: #021624; --c: min(4.2vw, 4.4vh, 38px); }
-        body.no-scroll { overflow: auto; }
+        :root { --accent: #4fb3bf; --accent-ink: #082528; --sea: #24585e; --sea-2: #2f6c73; --ship: #f4ecdd; --hit: #ef6a5a; --c: min(8.4vw, 36px); }
         .stage { justify-content: flex-start; overflow: auto; }
-        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
-        .boards { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
-        .side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .side h3 { margin: 0; font-size: 0.95rem; }
-        .side h3 small { color: var(--muted); font-weight: 500; }
-        .board { display: grid; grid-template-columns: repeat(10, var(--c)); grid-template-rows: repeat(10, var(--c)); gap: 2px; padding: 6px; border-radius: 14px; background: linear-gradient(160deg, #0c4a6e, #082f49); border: 1px solid var(--line-2); box-shadow: var(--shadow); position: relative; }
-        .cell { border: 0; border-radius: 4px; background: rgba(125, 211, 252, 0.12); padding: 0; cursor: default; display: grid; place-items: center; font-size: calc(var(--c) * 0.5); color: #fff; position: relative; }
+        .msg { min-height: 1.5em; font-family: var(--display); font-weight: 600; font-size: 1.15rem; text-align: center; }
+        .msg.good { color: var(--good); } .msg.bad { color: var(--bad); }
+        .boards { display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+        .side { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .side h3 { margin: 0; font-size: 1.05rem; }
+        .side h3 small { color: var(--muted); font-family: var(--font); font-weight: 700; font-size: 0.82rem; }
+        .board { display: grid; grid-template-columns: repeat(10, var(--c)); grid-template-rows: repeat(10, var(--c)); gap: 3px; padding: 8px; border-radius: 22px; background: var(--sea); position: relative; }
+        .board.small { --c: min(5vw, 22px); gap: 2px; padding: 6px; border-radius: 16px; }
+        .cell { border: 0; border-radius: 7px; background: var(--sea-2); padding: 0; cursor: default; display: grid; place-items: center; position: relative; }
+        .board.small .cell { border-radius: 4px; }
         .enemy .cell.open { cursor: crosshair; }
-        .enemy .cell.open:hover { background: rgba(250, 204, 21, 0.35); }
-        .cell.ship { background: #64748b; }
-        .cell.ship.h0 { border-radius: 10px 3px 3px 10px; } .cell.ship.h1 { border-radius: 3px 10px 10px 3px; }
-        .cell.ship.v0 { border-radius: 10px 10px 3px 3px; } .cell.ship.v1 { border-radius: 3px 3px 10px 10px; }
-        .cell.miss::after { content: ''; width: 26%; height: 26%; border-radius: 50%; background: rgba(226, 232, 240, 0.7); }
-        .cell.hit { background: #b91c1c; }
-        .cell.hit::after { content: '🔥'; }
-        .cell.sunk { background: #450a0a; }
-        .cell.sunk::after { content: '✕'; color: #fca5a5; font-weight: 900; }
-        .cell.preview { background: rgba(34, 197, 94, 0.55); }
-        .cell.bad { background: rgba(239, 68, 68, 0.55); }
-        .cell.last { box-shadow: 0 0 0 2px #facc15 inset; }
-        .cell.heat { background: rgba(250, 204, 21, var(--h)); }
-        .fleet { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(var(--c) * 10 + 40px); }
+        .enemy .cell.open:hover { background: color-mix(in srgb, #f5c04e 55%, var(--sea-2)); }
+        .cell.ship { background: var(--ship); }
+        .cell.ship.h0 { border-radius: 50% 6px 6px 50%; } .cell.ship.h1 { border-radius: 6px 50% 50% 6px; }
+        .cell.ship.v0 { border-radius: 50% 50% 6px 6px; } .cell.ship.v1 { border-radius: 6px 6px 50% 50%; }
+        .cell.miss::after { content: ''; width: 30%; height: 30%; border-radius: 50%; background: rgba(255, 255, 255, 0.55); }
+        .cell.hit { background: var(--hit); }
+        .cell.hit::after { content: ''; width: 38%; height: 38%; border-radius: 50%; background: #fff3; box-shadow: 0 0 0 3px #fff8; }
+        .cell.sunk { background: #5b2a2a; }
+        .cell.sunk::after { content: ''; width: 46%; height: 4px; border-radius: 4px; background: #ffb3a8; transform: rotate(45deg); box-shadow: 0 0 0 0 transparent; }
+        .cell.preview { background: color-mix(in srgb, var(--good) 75%, var(--sea-2)); }
+        .cell.bad { background: color-mix(in srgb, var(--bad) 70%, var(--sea-2)); }
+        .cell.last { box-shadow: inset 0 0 0 3px #f5c04e; }
+        .cell.heat { background: color-mix(in srgb, #f5c04e calc(var(--h) * 100%), var(--sea-2)); }
+        .fleet { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(var(--c) * 10 + 60px); }
         .fleet .btn.done { opacity: 0.45; text-decoration: line-through; }
-        .fleet .tag { padding: 3px 8px; border-radius: 99px; background: var(--bg-2); border: 1px solid var(--line); font-size: 0.72rem; }
-        .fleet .tag.sunk { text-decoration: line-through; color: var(--bad); }
-        .msg { min-height: 1.4em; font-weight: 700; text-align: center; }
+        .fleet .tag { padding: 4px 10px; border-radius: 99px; background: var(--surface); color: var(--text); font-size: 0.78rem; }
+        .fleet .tag.sunk { text-decoration: line-through; color: var(--bad); opacity: 0.7; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .board.shake { animation: shake 0.3s; }
+        /* setup + pass screens */
+        .setup { width: min(460px, 100%); text-align: left; }
+        .setup h2 { text-align: center; }
+        .setup label.lab { display: block; margin: 16px 0 8px; font-family: var(--display); font-weight: 600; }
+        .opts { display: grid; gap: 8px; }
+        .opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); border: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+        .opt .em { font-size: 1.6rem; width: 36px; text-align: center; }
+        .opt b { font-family: var(--display); font-weight: 600; display: block; }
+        .opt small { color: var(--muted); }
+        .opt.on { box-shadow: inset 0 0 0 3px var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg-2)); }
+        .names { display: flex; gap: 8px; }
+        .names input { flex: 1; min-width: 0; padding: 11px 13px; border-radius: 14px; border: 0; background: var(--bg-2); color: var(--text); font: inherit; font-weight: 700; }
+        .toggle { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); cursor: pointer; }
+        .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+        .pass { position: fixed; inset: 0; z-index: 90; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+        .pass .big { font-size: 4rem; }
+        .pass h2 { margin: 0; font-size: 2rem; }
+        .pass p { color: var(--muted); margin: 0; max-width: 320px; }
     </style>
 </head>
-<body class="no-scroll no-select">
+<body class="no-select">
     <header class="topbar">
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Battleship</h1>
         <div class="stats">
             <span class="chip accent">Wins <b id="wins">0</b></span>
             <span class="chip">Played <b id="played">0</b></span>
-            <span class="chip hide-sm">Accuracy <b id="acc">—</b></span>
+            <span class="chip hide-sm">Accuracy <b id="acc">-</b></span>
         </div>
-        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn icon sm" id="menuBtn" title="New game"></button><button class="btn icon sm" data-mute></button></div>
     </header>
     <main class="stage">
         <div class="tbar" id="setupBar">
-            <div class="seg" id="diffSeg"><button class="btn sm" data-v="easy">Easy</button><button class="btn sm" data-v="normal">Normal</button><button class="btn sm" data-v="hard">Hard</button></div>
-            <button class="btn sm" id="rotBtn">⟳ Rotate (R)</button>
-            <button class="btn sm" id="randBtn">🎲 Random</button>
+            <button class="btn sm" id="rotBtn">Rotate (R)</button>
+            <button class="btn sm" id="randBtn">Random</button>
             <button class="btn sm" id="clearBtn">Clear</button>
-            <button class="btn sm primary" id="goBtn" disabled>Start battle ⚓</button>
+            <button class="btn sm primary" id="goBtn" disabled>Ready</button>
         </div>
         <div class="tbar" id="battleBar" hidden>
-            <button class="btn sm" id="newBtn">⟲ New game</button>
-            <button class="btn sm" id="heatBtn" title="Show where the hard AI thinks your ships are">🔥 AI heat-map</button>
+            <span class="tag" id="modeTag"></span>
+            <button class="btn sm ghost" id="heatBtn" title="Show where the hard AI thinks your ships are">AI heat map</button>
         </div>
-        <div class="msg" id="msg">Place your fleet: pick a ship, then click your board.</div>
-        <div class="boards">
-            <div class="side">
-                <h3>Your fleet <small id="youLeft"></small></h3>
-                <div class="board" id="me"></div>
-                <div class="fleet" id="fleetPick"></div>
-            </div>
-            <div class="side" id="enemySide">
-                <h3>Enemy waters <small id="themLeft"></small></h3>
+        <div class="msg" id="msg"></div>
+        <div class="boards" id="boards">
+            <div class="side" id="targetSide">
+                <h3 id="themTitle">Enemy waters <small id="themLeft"></small></h3>
                 <div class="board enemy" id="them"></div>
                 <div class="fleet" id="themFleet"></div>
             </div>
+            <div class="side" id="ownSide">
+                <h3 id="meTitle">Your fleet <small id="youLeft"></small></h3>
+                <div class="board" id="me"></div>
+                <div class="fleet" id="fleetPick"></div>
+            </div>
         </div>
+
+        <div class="overlay fixed" id="setupOv">
+            <div class="modal setup">
+                <h2>Battleship</h2>
+                <label class="lab">Opponent</label>
+                <div class="opts" id="modeOpts">
+                    <button class="opt" data-mode="ai"><span class="em">🤖</span><span><b>Computer</b><small>Play the AI on this device</small></span></button>
+                    <button class="opt" data-mode="pvp"><span class="em">🤝</span><span><b>2 players</b><small>Pass and play. Each player hides their screen</small></span></button>
+                </div>
+                <div id="aiBox">
+                    <label class="lab">AI difficulty</label>
+                    <div class="opts" id="diffOpts">
+                        <button class="opt" data-diff="easy"><span class="em">🐣</span><span><b>Easy</b><small>Fires mostly at random</small></span></button>
+                        <button class="opt" data-diff="normal"><span class="em">⚓</span><span><b>Normal</b><small>Hunts around hits and sweeps in a pattern</small></span></button>
+                        <button class="opt" data-diff="hard"><span class="em">🦈</span><span><b>Hard</b><small>Works out where your ships can still be</small></span></button>
+                    </div>
+                </div>
+                <div id="pvpBox" hidden>
+                    <label class="lab">Names</label>
+                    <div class="names"><input id="n1" maxlength="12" placeholder="Player 1"><input id="n2" maxlength="12" placeholder="Player 2"></div>
+                </div>
+                <label class="lab">Rules</label>
+                <label class="toggle"><input type="checkbox" id="bonusChk"><span><b style="font-family:var(--display);font-weight:600">Hit again</b><br><small class="muted">A hit gives you another shot</small></span></label>
+                <div class="actions"><button class="btn primary lg" id="startBtn">Place ships</button></div>
+            </div>
+        </div>
+
+        <div class="pass" id="passScr" hidden>
+            <div class="big">🙈</div>
+            <h2 id="passTitle">Pass to Player 2</h2>
+            <p id="passText">Don't peek! Hand the device over, then tap when ready.</p>
+            <button class="btn primary lg" id="passBtn">I'm ready</button>
+        </div>
+
         <div class="overlay fixed" id="endOv" hidden>
             <div class="modal">
                 <h2 id="endTitle">Victory!</h2>
                 <p id="endText"></p>
-                <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button><button class="btn lg" id="changeBtn">Change mode</button></div>
             </div>
         </div>
     </main>
@@ -89,11 +142,12 @@
         const $ = (id) => document.getElementById(id);
         const N = 10;
         const SHIPS = [['Carrier', 5], ['Battleship', 4], ['Cruiser', 3], ['Submarine', 3], ['Destroyer', 2]];
-        const cfg = Object.assign({ diff: 'normal' }, Arcade.load('arcade.battleship.cfg', {}));
-        cfg.bonus = true; // a hit always earns another shot
+        const cfg = Object.assign({ diff: 'normal', mode: 'ai', bonus: true, names: ['', ''] }, Arcade.load('arcade.battleship.cfg', {}));
         const stats = Object.assign({ wins: 0, played: 0, shots: 0, hits: 0 }, Arcade.load('arcade.battleship.stats', {}));
-        let me, them, phase, sel, horiz = true, hoverCell = -1, turn, lastShot = { me: -1, them: -1 }, showHeat = false, aiBusy = false;
+        // boards[0] belongs to player 1 (you vs the ai), boards[1] to player 2 or the ai
+        let boards, phase, sel, horiz = true, hoverCell = -1, turn, placing, lastShot, showHeat = false, busy = false;
 
+        const name = (i) => cfg.mode === 'ai' ? (i === 0 ? 'You' : 'Computer') : ((cfg.names[i] || '').trim() || 'Player ' + (i + 1));
         const blank = () => ({ ships: [], occ: new Int8Array(N * N).fill(-1), shots: new Uint8Array(N * N) });
         function cellsFor(start, len, h) { const x = start % N, y = (start / N) | 0, out = []; for (let k = 0; k < len; k++) { const cx = h ? x + k : x, cy = h ? y : y + k; if (cx >= N || cy >= N) return null; out.push(cy * N + cx); } return out; }
         function fits(b, cells) { return cells && cells.every(v => b.occ[v] < 0); }
@@ -102,18 +156,74 @@
         function randomFleet(b) {
             for (let i = 0; i < SHIPS.length; i++) {
                 if (b.ships[i]) continue;
-                for (let t = 0; t < 500; t++) { const h = Math.random() < 0.5, cells = cellsFor(Arcade.randi(0, N * N - 1), SHIPS[i][1], h); if (fits(b, cells)) { place(b, i, cells, h); break; } }
+                for (let t = 0; t < 800; t++) { const h = Math.random() < 0.5, cells = cellsFor(Arcade.randi(0, N * N - 1), SHIPS[i][1], h); if (fits(b, cells)) { place(b, i, cells, h); break; } }
             }
         }
+        function say(s, cls) { const m = $('msg'); m.textContent = s; m.className = 'msg ' + (cls || ''); }
+
+        /* ---------- flow ---------- */
+        function openSetup() {
+            phase = 'setup';
+            $('setupOv').hidden = false;
+            $('n1').value = cfg.names[0] || ''; $('n2').value = cfg.names[1] || '';
+            $('bonusChk').checked = cfg.bonus;
+            syncSetup();
+        }
+        function syncSetup() {
+            document.querySelectorAll('#modeOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.mode === cfg.mode));
+            document.querySelectorAll('#diffOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.diff === cfg.diff));
+            $('aiBox').hidden = cfg.mode !== 'ai';
+            $('pvpBox').hidden = cfg.mode !== 'pvp';
+        }
+        document.querySelectorAll('#modeOpts .opt').forEach(b => b.onclick = () => { cfg.mode = b.dataset.mode; Arcade.sfx('select'); syncSetup(); });
+        document.querySelectorAll('#diffOpts .opt').forEach(b => b.onclick = () => { cfg.diff = b.dataset.diff; Arcade.sfx('select'); syncSetup(); });
+        $('startBtn').onclick = () => {
+            cfg.names = [$('n1').value.trim(), $('n2').value.trim()];
+            cfg.bonus = $('bonusChk').checked;
+            Arcade.save('arcade.battleship.cfg', cfg);
+            $('setupOv').hidden = true;
+            newGame();
+        };
+
         function newGame() {
-            me = blank(); them = blank();
-            randomFleet(them);
-            phase = 'place'; sel = 0; turn = 'me'; lastShot = { me: -1, them: -1 }; aiBusy = false;
+            boards = [blank(), blank()];
+            if (cfg.mode === 'ai') randomFleet(boards[1]);
+            phase = 'place'; placing = 0; sel = 0; turn = 0; lastShot = [-1, -1]; busy = false; showHeat = false;
             $('setupBar').hidden = false; $('battleBar').hidden = true;
-            say('Place your fleet: pick a ship, then click your board. R rotates.');
+            startPlacing();
+        }
+        function startPlacing() {
+            sel = 0; horiz = true;
+            say(cfg.mode === 'pvp' ? `${name(placing)}: place your fleet` : 'Place your fleet. Pick a ship, then tap your board.');
             render();
         }
-        function say(s, cls) { const m = $('msg'); m.textContent = s; m.className = 'msg ' + (cls || ''); }
+        function passTo(i, text, then) {
+            $('passTitle').textContent = 'Pass to ' + name(i);
+            $('passText').textContent = text || "Don't peek! Hand the device over, then tap when ready.";
+            $('passScr').hidden = false;
+            $('passBtn').onclick = () => { $('passScr').hidden = true; Arcade.sfx('select'); then(); };
+        }
+        $('goBtn').onclick = () => {
+            if (cfg.mode === 'pvp' && placing === 0) {
+                placing = 1;
+                passTo(1, 'Your turn to hide your ships.', startPlacing);
+                render();
+                return;
+            }
+            phase = 'battle';
+            turn = Math.random() < 0.5 ? 0 : 1;
+            $('setupBar').hidden = true; $('battleBar').hidden = false;
+            $('modeTag').textContent = cfg.mode === 'ai' ? 'vs Computer · ' + cfg.diff : name(0) + ' vs ' + name(1);
+            $('heatBtn').hidden = cfg.mode !== 'ai';
+            if (cfg.mode === 'pvp') passTo(turn, name(turn) + ' fires first.', beginTurn);
+            else beginTurn();
+        };
+        function beginTurn() {
+            busy = false;
+            if (cfg.mode === 'ai' && turn === 1) { say('The computer is aiming...'); render(); setTimeout(aiTurn, 700); return; }
+            say(cfg.mode === 'pvp' ? `${name(turn)}, fire at ${name(1 - turn)}'s waters` : 'Your turn. Tap enemy waters.');
+            render();
+        }
 
         /* ---------- shooting ---------- */
         function fire(b, v) {
@@ -125,37 +235,45 @@
             return { hit: true };
         }
         const allSunk = (b) => b.ships.every(s => s && s.sunk);
-        function playerShot(v) {
-            if (phase !== 'battle' || turn !== 'me' || them.shots[v]) return;
-            const r = fire(them, v);
-            lastShot.them = v;
-            stats.shots++; if (r.hit) stats.hits++;
-            if (r.sunk) { Arcade.sfx('boom'); say(`💥 You sank their ${r.sunk.name}!`, 'good'); }
-            else if (r.hit) { Arcade.sfx('hit'); say('🔥 Hit!', 'good'); }
-            else { Arcade.tone(200, 0.12, 'sine', 0.05, 90); say('Splash — a miss.'); }
-            if (allSunk(them)) return end(true);
-            if (!(r.hit && cfg.bonus)) { turn = 'ai'; setTimeout(aiTurn, 650); }
+        function humanShot(v) {
+            if (phase !== 'battle' || busy) return;
+            if (cfg.mode === 'ai' && turn !== 0) return;
+            const target = boards[1 - turn];
+            if (target.shots[v]) return;
+            const r = fire(target, v);
+            lastShot[1 - turn] = v;
+            if (cfg.mode === 'ai') { stats.shots++; if (r.hit) stats.hits++; }
+            if (r.sunk) { Arcade.sfx('boom'); Arcade.buzz(60); say(`You sank the ${r.sunk.name}!`, 'good'); }
+            else if (r.hit) { Arcade.sfx('hit'); Arcade.buzz(25); say('Hit!', 'good'); }
+            else { Arcade.tone(200, 0.12, 'sine', 0.06, 90); say('Splash, a miss.'); }
+            if (allSunk(target)) return end(turn);
+            if (r.hit && cfg.bonus) { render(); return; }
+            busy = true;
             render();
+            if (cfg.mode === 'ai') { turn = 1; setTimeout(beginTurn, 650); }
+            else setTimeout(() => { turn = 1 - turn; passTo(turn, (r.hit ? 'Your fleet took a hit. ' : '') + 'Your turn to fire.', beginTurn); }, 1100);
         }
         function aiTurn() {
             if (phase !== 'battle') return;
-            const v = aiPick();
-            const r = fire(me, v);
-            lastShot.me = v;
-            if (r.sunk) { Arcade.sfx('boom'); say(`They sank your ${r.sunk.name}!`, 'bad'); $('me').classList.add('shake'); setTimeout(() => $('me').classList.remove('shake'), 300); }
-            else if (r.hit) { Arcade.sfx('bad'); say('They hit your ' + me.ships[me.occ[v]].name + '!', 'bad'); }
+            const b = boards[0];
+            const v = aiPick(b);
+            const r = fire(b, v);
+            lastShot[0] = v;
+            if (r.sunk) { Arcade.sfx('boom'); Arcade.buzz(80); say(`They sank your ${r.sunk.name}!`, 'bad'); $('me').classList.add('shake'); setTimeout(() => $('me').classList.remove('shake'), 300); }
+            else if (r.hit) { Arcade.sfx('bad'); say('They hit your ' + b.ships[b.occ[v]].name + '!', 'bad'); }
             else say('They missed. Your turn!');
-            if (allSunk(me)) return end(false);
-            if (r.hit && cfg.bonus) { render(); setTimeout(aiTurn, 650); return; }
-            turn = 'me';
+            if (allSunk(b)) return end(1);
+            if (r.hit && cfg.bonus) { render(); setTimeout(aiTurn, 700); return; }
+            turn = 0;
             render();
         }
-        // unresolved hits: hit cells whose ship isn't sunk yet
+        // hits whose ship isn't sunk yet
         const openHits = (b) => { const out = []; for (let v = 0; v < N * N; v++) if (b.shots[v] && b.occ[v] >= 0 && !b.ships[b.occ[v]].sunk) out.push(v); return out; };
         const nb = (v) => { const x = v % N, y = (v / N) | 0, o = []; if (x > 0) o.push(v - 1); if (x < N - 1) o.push(v + 1); if (y > 0) o.push(v - N); if (y < N - 1) o.push(v + N); return o; };
+        // counts how many ways each remaining ship could lie over each cell
         function heat(b) {
             const H = new Float64Array(N * N), hits = openHits(b), hitSet = new Set(hits);
-            const blocked = (v) => b.shots[v] && !(hitSet.has(v));
+            const blocked = (v) => b.shots[v] && !hitSet.has(v);
             for (const s of b.ships) {
                 if (s.sunk) continue;
                 for (let st = 0; st < N * N; st++) for (const h of [true, false]) {
@@ -169,42 +287,52 @@
             }
             return H;
         }
-        function aiPick() {
-            const free = []; for (let v = 0; v < N * N; v++) if (!me.shots[v]) free.push(v);
+        function aiPick(b) {
+            const free = []; for (let v = 0; v < N * N; v++) if (!b.shots[v]) free.push(v);
+            const hits = openHits(b);
             if (cfg.diff === 'easy') {
-                const hits = openHits(me);
-                if (hits.length && Math.random() < 0.5) { const cand = hits.flatMap(nb).filter(v => !me.shots[v]); if (cand.length) return Arcade.pick(cand); }
+                if (hits.length && Math.random() < 0.4) { const cand = hits.flatMap(nb).filter(v => !b.shots[v]); if (cand.length) return Arcade.pick(cand); }
                 return Arcade.pick(free);
             }
             if (cfg.diff === 'normal') {
-                const hits = openHits(me);
                 if (hits.length) {
-                    // follow a line if two hits are in a row
                     let cand = [];
-                    for (const a of hits) for (const b2 of hits) if (a !== b2 && nb(a).includes(b2)) { const d = b2 - a, nx = b2 + d; if (nx >= 0 && nx < N * N && !me.shots[nx] && (Math.abs(d) === N || ((nx / N) | 0) === ((b2 / N) | 0))) cand.push(nx); }
-                    if (!cand.length) cand = hits.flatMap(nb).filter(v => !me.shots[v]);
+                    // keep going along a line once two hits touch
+                    for (const a of hits) for (const b2 of hits) if (a !== b2 && nb(a).includes(b2)) { const d = b2 - a, nx = b2 + d; if (nx >= 0 && nx < N * N && !b.shots[nx] && (Math.abs(d) === N || ((nx / N) | 0) === ((b2 / N) | 0))) cand.push(nx); }
+                    if (!cand.length) cand = hits.flatMap(nb).filter(v => !b.shots[v]);
                     if (cand.length) return Arcade.pick(cand);
                 }
                 const par = free.filter(v => ((v % N) + ((v / N) | 0)) % 2 === 0);
                 return Arcade.pick(par.length ? par : free);
             }
-            const H = heat(me);
+            const H = heat(b);
             let best = -1, bv = free[0];
             for (const v of free) { const h = H[v] + Math.random() * 0.01; if (h > best) { best = h; bv = v; } }
             return bv;
         }
-        function end(won) {
+        function end(winner) {
             phase = 'over';
-            stats.played++;
-            if (won) { stats.wins++; Arcade.count('win'); Arcade.addXP(cfg.diff === 'hard' ? 40 : cfg.diff === 'normal' ? 25 : 12, true); }
-            Arcade.save('arcade.battleship.stats', stats);
-            Arcade.sfx(won ? 'win' : 'die');
-            const shots = them.shots.reduce((a, b) => a + b, 0), hits = them.ships.reduce((a, s) => a + s.hits, 0);
-            $('endTitle').textContent = won ? '⚓ Victory!' : '🌊 Your fleet was sunk';
-            $('endTitle').className = won ? 'good' : 'bad';
-            $('endText').textContent = `${shots} shots, ${hits} hits (${Math.round(hits / Math.max(1, shots) * 100)}% accuracy) on ${cfg.diff}. ` + (won ? '' : 'Their ships are now shown.');
+            busy = false;
+            if (cfg.mode === 'ai') {
+                stats.played++;
+                const won = winner === 0;
+                if (won) { stats.wins++; Arcade.count('win'); Arcade.count('win.' + cfg.diff); Arcade.addXP(cfg.diff === 'hard' ? 40 : cfg.diff === 'normal' ? 20 : 8); }
+                Arcade.save('arcade.battleship.stats', stats);
+                Arcade.sfx(won ? 'win' : 'die');
+                const shots = boards[1].shots.reduce((a, x) => a + x, 0), hits = boards[1].ships.reduce((a, s) => a + s.hits, 0);
+                $('endTitle').textContent = won ? 'Victory!' : 'Your fleet was sunk';
+                $('endTitle').className = won ? 'good' : 'bad';
+                $('endText').textContent = `${shots} shots, ${hits} hits (${Math.round(hits / Math.max(1, shots) * 100)}% accuracy) on ${cfg.diff}.` + (won ? '' : ' Their ships are now shown.');
+            } else {
+                Arcade.count('pvp');
+                Arcade.sfx('win');
+                $('endTitle').textContent = name(winner) + ' wins!';
+                $('endTitle').className = 'good';
+                const shots = boards[1 - winner].shots.reduce((a, x) => a + x, 0);
+                $('endText').textContent = `Sunk the whole fleet in ${shots} shots. Both fleets are shown now.`;
+            }
             render();
-            setTimeout(() => Arcade.show('endOv'), 600);
+            setTimeout(() => Arcade.show('endOv'), 700);
         }
 
         /* ---------- render ---------- */
@@ -214,92 +342,91 @@
             return ' ship' + (k === 0 ? ' ' + dir + '0' : k === s.len - 1 ? ' ' + dir + '1' : '');
         }
         function render() {
+            if (!boards) return;
+            // whose eyes are on the screen right now
+            const viewer = phase === 'place' ? placing : cfg.mode === 'ai' ? 0 : turn;
+            const own = boards[viewer], target = boards[1 - viewer];
             const meEl = $('me'), themEl = $('them');
-            const pv = new Set(), bad = phase === 'place' && sel >= 0 && hoverCell >= 0 && !fits(me, cellsFor(hoverCell, SHIPS[sel][1], horiz));
+            const pv = new Set(), bad = phase === 'place' && sel >= 0 && hoverCell >= 0 && !fits(own, cellsFor(hoverCell, SHIPS[sel][1], horiz));
             if (phase === 'place' && sel >= 0 && hoverCell >= 0) { const cells = cellsFor(hoverCell, SHIPS[sel][1], horiz); if (cells) cells.forEach(v => pv.add(v)); else pv.add(hoverCell); }
-            const H = showHeat && phase === 'battle' ? heat(me) : null, hmax = H ? Math.max(...H) || 1 : 1;
+            const H = showHeat && phase === 'battle' && cfg.mode === 'ai' ? heat(boards[0]) : null, hmax = H ? Math.max(...H) || 1 : 1;
             if (meEl.children.length !== N * N) {
-                for (let v = 0; v < N * N; v++) for (const el of [meEl, themEl]) { const c = document.createElement('button'); c.dataset.v = v; el.appendChild(c); }
+                for (let v = 0; v < N * N; v++) for (const e of [meEl, themEl]) { const c = document.createElement('button'); c.dataset.v = v; e.appendChild(c); }
             }
+            const myTurn = phase === 'battle' && !busy && (cfg.mode === 'pvp' || turn === 0);
             for (let v = 0; v < N * N; v++) {
                 const a = meEl.children[v];
-                let cls = shipClass(me, v);
-                if (me.shots[v]) cls += me.occ[v] >= 0 ? (me.ships[me.occ[v]].sunk ? ' sunk' : ' hit') : ' miss';
+                let cls = shipClass(own, v);
+                if (own.shots[v]) cls += own.occ[v] >= 0 ? (own.ships[own.occ[v]].sunk ? ' sunk' : ' hit') : ' miss';
                 if (pv.has(v)) cls += bad ? ' bad' : ' preview';
-                if (v === lastShot.me) cls += ' last';
-                if (H && !me.shots[v] && H[v] > 0) { cls += ' heat'; a.style.setProperty('--h', (H[v] / hmax * 0.75).toFixed(2)); }
+                if (v === lastShot[viewer]) cls += ' last';
+                if (H && !own.shots[v] && H[v] > 0) { cls += ' heat'; a.style.setProperty('--h', (H[v] / hmax * 0.8).toFixed(2)); }
                 a.className = 'cell' + cls;
                 const b = themEl.children[v];
                 let tc = '';
-                const reveal = phase === 'over' || (them.occ[v] >= 0 && them.ships[them.occ[v]].sunk);
-                if (reveal) tc += shipClass(them, v);
-                if (them.shots[v]) tc += them.occ[v] >= 0 ? (them.ships[them.occ[v]].sunk ? ' sunk' : ' hit') : ' miss';
-                else if (phase === 'battle' && turn === 'me') tc += ' open';
-                if (v === lastShot.them) tc += ' last';
+                const reveal = phase === 'over' || (target.occ[v] >= 0 && target.ships[target.occ[v]] && target.ships[target.occ[v]].sunk);
+                if (reveal) tc += shipClass(target, v);
+                if (target.shots[v]) tc += target.occ[v] >= 0 ? (target.ships[target.occ[v]].sunk ? ' sunk' : ' hit') : ' miss';
+                else if (myTurn) tc += ' open';
+                if (v === lastShot[1 - viewer]) tc += ' last';
                 b.className = 'cell' + tc;
             }
-            $('enemySide').style.opacity = phase === 'place' ? 0.45 : 1;
+            $('targetSide').hidden = phase === 'place';
+            meEl.classList.toggle('small', phase !== 'place');
+            $('meTitle').firstChild.textContent = cfg.mode === 'pvp' ? name(viewer) + "'s fleet " : 'Your fleet ';
+            $('themTitle').firstChild.textContent = cfg.mode === 'pvp' ? name(1 - viewer) + "'s waters " : 'Enemy waters ';
             const fp = $('fleetPick'); fp.innerHTML = '';
-            SHIPS.forEach(([name, len], i) => {
+            SHIPS.forEach(([nm, len], i) => {
                 if (phase === 'place') {
                     const b = document.createElement('button');
-                    b.className = 'btn sm' + (i === sel ? ' primary' : '') + (me.ships[i] ? ' done' : '');
-                    b.textContent = name + ' ' + '▮'.repeat(len);
-                    b.onclick = () => { sel = i; if (me.ships[i]) unplace(me, i); render(); };
+                    b.className = 'btn sm' + (i === sel ? ' primary' : '') + (own.ships[i] ? ' done' : '');
+                    b.textContent = nm + ' ' + len;
+                    b.onclick = () => { sel = i; if (own.ships[i]) unplace(own, i); render(); };
                     fp.appendChild(b);
-                } else fp.insertAdjacentHTML('beforeend', `<span class="tag${me.ships[i].sunk ? ' sunk' : ''}">${name} ${len}</span>`);
+                } else if (own.ships[i]) fp.insertAdjacentHTML('beforeend', `<span class="tag${own.ships[i].sunk ? ' sunk' : ''}">${nm} ${len}</span>`);
             });
             const tf = $('themFleet'); tf.innerHTML = '';
-            them.ships.forEach(s => tf.insertAdjacentHTML('beforeend', `<span class="tag${s.sunk ? ' sunk' : ''}">${s.name} ${s.len}</span>`));
-            $('goBtn').disabled = !me.ships.filter(Boolean).length || me.ships.filter(Boolean).length < SHIPS.length;
-            $('youLeft').textContent = phase === 'place' ? '' : `· ${me.ships.filter(s => !s.sunk).length} afloat`;
-            $('themLeft').textContent = `· ${them.ships.filter(s => !s.sunk).length} afloat`;
+            target.ships.forEach(s => s && tf.insertAdjacentHTML('beforeend', `<span class="tag${s.sunk ? ' sunk' : ''}">${s.name} ${s.len}</span>`));
+            const placed = own.ships.filter(Boolean).length;
+            $('goBtn').disabled = placed < SHIPS.length;
+            $('goBtn').textContent = cfg.mode === 'pvp' && placing === 0 ? 'Done, pass on' : 'Start battle';
+            $('youLeft').textContent = phase === 'place' ? '' : `· ${own.ships.filter(s => s && !s.sunk).length} afloat`;
+            $('themLeft').textContent = `· ${target.ships.filter(s => s && !s.sunk).length} afloat`;
             Arcade.text('wins', stats.wins); Arcade.text('played', stats.played);
-            Arcade.text('acc', stats.shots ? Math.round(stats.hits / stats.shots * 100) + '%' : '—');
-            document.querySelectorAll('#diffSeg [data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.diff));
-            $('heatBtn').classList.toggle('primary', showHeat);
+            Arcade.text('acc', stats.shots ? Math.round(stats.hits / stats.shots * 100) + '%' : '-');
+            $('heatBtn').classList.toggle('active', showHeat);
         }
+        const ownBoard = () => boards[placing];
         $('me').addEventListener('pointerover', (e) => { const v = e.target.dataset && e.target.dataset.v; if (v !== undefined && phase === 'place' && hoverCell !== +v) { hoverCell = +v; render(); } });
         $('me').addEventListener('pointerleave', () => { if (hoverCell < 0) return; hoverCell = -1; if (phase === 'place') render(); });
         $('me').addEventListener('click', (e) => {
             if (phase !== 'place') return;
             const v = +e.target.dataset.v; if (isNaN(v)) return;
-            const i = me.occ[v];
-            if (i >= 0) { unplace(me, i); sel = i; horiz = true; render(); return; }
+            const own = ownBoard();
+            const i = own.occ[v];
+            if (i >= 0) { unplace(own, i); sel = i; render(); return; }
             if (sel < 0) return;
             const cells = cellsFor(v, SHIPS[sel][1], horiz);
-            if (!fits(me, cells)) { Arcade.sfx('bad'); return; }
-            place(me, sel, cells, horiz); Arcade.sfx('select');
-            sel = SHIPS.findIndex((_, k) => !me.ships[k]);
+            if (!fits(own, cells)) { Arcade.sfx('bad'); return; }
+            place(own, sel, cells, horiz); Arcade.sfx('select');
+            sel = SHIPS.findIndex((_, k) => !own.ships[k]);
             render();
         });
-        $('them').addEventListener('click', (e) => { const v = +e.target.dataset.v; if (!isNaN(v)) playerShot(v); });
+        $('them').addEventListener('click', (e) => { const v = +e.target.dataset.v; if (!isNaN(v)) humanShot(v); });
         const rotate = () => { horiz = !horiz; render(); };
         $('rotBtn').onclick = rotate;
         window.addEventListener('keydown', (e) => { if (e.code === 'KeyR' && phase === 'place') rotate(); });
-        $('randBtn').onclick = () => { me = blank(); randomFleet(me); sel = -1; render(); };
-        $('clearBtn').onclick = () => { me = blank(); sel = 0; render(); };
-        $('goBtn').onclick = () => {
-            phase = 'battle'; turn = Math.random() < 0.5 ? 'me' : 'ai';
-            $('setupBar').hidden = true; $('battleBar').hidden = false;
-            say(turn === 'me' ? 'Battle stations! You fire first — click enemy waters.' : 'The enemy fires first…');
-            render();
-            if (turn === 'ai') setTimeout(aiTurn, 900);
-        };
-        document.querySelectorAll('#diffSeg [data-v]').forEach(b => b.onclick = () => { cfg.diff = b.dataset.v; Arcade.save('arcade.battleship.cfg', cfg); render(); });
+        $('randBtn').onclick = () => { boards[placing] = blank(); randomFleet(boards[placing]); sel = -1; render(); };
+        $('clearBtn').onclick = () => { boards[placing] = blank(); sel = 0; render(); };
         $('heatBtn').onclick = () => { showHeat = !showHeat; render(); };
-        // in-page replacement for confirm(): browsers can permanently suppress confirm() dialogs, which made buttons silently do nothing
-        let _armed = null;
-        function sureTwice(msg) {
-            if (_armed === msg) { _armed = null; return true; }
-            _armed = msg; Arcade.toast(msg + ' Click again to confirm.', '', 2500);
-            setTimeout(() => { if (_armed === msg) _armed = null; }, 3000);
-            return false;
-        }
-        $('newBtn').onclick = () => { if (phase === 'battle' && !sureTwice('Abandon this battle?')) return; newGame(); };
+        $('menuBtn').innerHTML = Arcade.icon('restart');
+        $('menuBtn').onclick = () => { Arcade.hide('endOv'); openSetup(); };
         $('againBtn').onclick = () => { Arcade.hide('endOv'); newGame(); };
-        newGame();
-        window.__bs = { get me() { return me; }, get them() { return them; }, playerShot, get phase() { return phase; }, get turn() { return turn; }, cfg, start: () => { $('randBtn').click(); $('goBtn').click(); } };
+        $('changeBtn').onclick = () => { Arcade.hide('endOv'); openSetup(); };
+        boards = [blank(), blank()]; lastShot = [-1, -1]; placing = 0; phase = 'setup';
+        render();
+        openSetup();
+        window.__bs = { get boards() { return boards; }, humanShot, get phase() { return phase; }, get turn() { return turn; }, cfg };
     })();
     </script>
 </body>

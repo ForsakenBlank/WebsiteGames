@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Reaction Duel · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #8fe3ff; --accent-ink: #0d2b36; }
+        .stage { justify-content: flex-start; padding-top: 6px; }
+        .box { width: min(520px, 100%); display: flex; flex-direction: column; gap: 14px; }
+        h2.big { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 6px 0 0; text-align: center; line-height: 1.1; }
+        .sub { color: var(--muted); text-align: center; margin: 0; }
+        .group { background: var(--surface); border-radius: 22px; padding: 16px; }
+        .group > b { display: block; font-family: var(--display); font-weight: 600; margin-bottom: 10px; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--bg-2); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+        .games { display: grid; gap: 8px; }
+        .gopt { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: var(--bg-2); cursor: pointer; }
+        .gopt input { width: 20px; height: 20px; accent-color: var(--accent); }
+        .gopt b { font-family: var(--display); font-weight: 600; display: block; }
+        .gopt small { color: var(--muted); }
+        /* arena */
+        .arena { position: fixed; inset: 0; z-index: 80; display: grid; gap: 6px; padding: 6px; background: #111114; touch-action: none; user-select: none; -webkit-user-select: none; }
+        .arena.p2 { grid-template-rows: 1fr 1fr; }
+        .arena.p4 { grid-template-rows: 1fr 1fr; grid-template-columns: 1fr 1fr; }
+        .zone { position: relative; border-radius: 26px; background: var(--zc); color: #1d1d1f; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden; transition: filter 0.15s; }
+        .zone.flip { transform: rotate(180deg); }
+        .zone.empty { background: #1d1d20; }
+        .zone .nm { position: absolute; top: 14px; left: 18px; font-family: var(--display); font-weight: 600; font-size: 1.1rem; opacity: 0.8; }
+        .zone .pts { position: absolute; top: 10px; right: 16px; font-family: var(--display); font-weight: 600; font-size: 1.8rem; }
+        .zone .disp { font-family: var(--display); font-weight: 600; font-size: clamp(2rem, 9vmin, 4.2rem); line-height: 1; text-align: center; padding: 0 10px; }
+        .zone .hint { font-weight: 800; opacity: 0.7; text-align: center; padding: 0 12px; font-size: 0.95rem; }
+        .zone.go { filter: brightness(1.15); }
+        .zone.win { box-shadow: inset 0 0 0 8px #fff; }
+        .zone.oops { filter: grayscale(1) brightness(0.6); }
+        .quit { position: fixed; z-index: 81; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Reaction Duel</h1>
+        <div class="stats"><span class="chip accent">Rounds <b id="roundsN">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="box" id="setup">
+            <h2 class="big">Fastest finger wins</h2>
+            <p class="sub">Put the phone or tablet flat between you. Everyone gets a corner.</p>
+            <div class="group"><b>Players</b><div class="chips" id="pChips"></div></div>
+            <div class="group"><b>First to</b><div class="chips" id="toChips"></div></div>
+            <div class="group"><b>Mini games</b><div class="games" id="gameOpts"></div></div>
+            <button class="btn primary lg block" id="startBtn">Start</button>
+        </div>
+        <div class="arena" id="arena" hidden></div>
+        <button class="btn icon quit" id="quitBtn" hidden title="Quit"></button>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const COLORS = ['#86d4b4', '#f6c445', '#82c3ec', '#f08aa7'];
+        const NAMES = ['Mint', 'Sun', 'Sky', 'Rose'];
+        const GAMES = {
+            green: { name: 'Green light', desc: 'Tap the moment it says TAP. Too early and you sit the round out.' },
+            match: { name: 'Colour match', desc: 'Tap when the word matches the colour it is written in.' },
+            spot: { name: 'Spot it', desc: 'Tap when the target picture shows up.' },
+            count: { name: 'Over ten', desc: 'Numbers keep adding up. Tap when the total goes past 10.' },
+        };
+        const INK = [['RED', '#d63b3b'], ['BLUE', '#2f6fd6'], ['GREEN', '#2a9d58'], ['PURPLE', '#7c4dd6'], ['ORANGE', '#e07a1f']];
+        const SPOT = ['🐱', '🐶', '🐸', '🦊', '🐼', '🐵', '🐷', '🐰', '🐻', '🐨'];
+        const cfg = Object.assign({ n: 2, to: 5, games: ['green', 'match', 'spot', 'count'] }, Arcade.load('arcade.duel.cfg', {}));
+        let zones = [], pts = [], out = [], phase = 'off', timers = [], gameKey = '', rounds = 0, target = null, total = 0;
+
+        function chips(host, list, val, set) {
+            host.innerHTML = '';
+            for (const [v, l] of list) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (v === val ? ' on' : '');
+                b.textContent = l;
+                b.onclick = () => { set(v); Arcade.sfx('select'); renderSetup(); };
+                host.appendChild(b);
+            }
+        }
+        function renderSetup() {
+            chips($('pChips'), [[2, '2'], [3, '3'], [4, '4']], cfg.n, v => cfg.n = v);
+            chips($('toChips'), [[3, '3'], [5, '5'], [7, '7'], [10, '10']], cfg.to, v => cfg.to = v);
+            const go = $('gameOpts'); go.innerHTML = '';
+            for (const [k, g] of Object.entries(GAMES)) {
+                const l = document.createElement('label');
+                l.className = 'gopt';
+                l.innerHTML = `<input type="checkbox" ${cfg.games.includes(k) ? 'checked' : ''}><span><b>${g.name}</b><small>${g.desc}</small></span>`;
+                l.querySelector('input').onchange = (e) => {
+                    cfg.games = e.target.checked ? [...new Set([...cfg.games, k])] : cfg.games.filter(x => x !== k);
+                    $('startBtn').disabled = !cfg.games.length;
+                };
+                go.appendChild(l);
+            }
+            $('startBtn').disabled = !cfg.games.length;
+        }
+
+        const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+        const clearAll = () => { timers.forEach(clearTimeout); timers = []; };
+        function setAll(disp, hint, cls) {
+            zones.forEach((z, i) => {
+                if (!z) return;
+                z.querySelector('.disp').innerHTML = disp;
+                z.querySelector('.hint').textContent = hint || '';
+                z.classList.remove('go', 'win', 'oops');
+                if (out[i]) z.classList.add('oops');
+                if (cls) z.classList.add(cls);
+            });
+        }
+        function build() {
+            const a = $('arena');
+            a.innerHTML = '';
+            a.className = 'arena ' + (cfg.n === 2 ? 'p2' : 'p4');
+            zones = []; pts = [];
+            const slots = cfg.n === 2 ? 2 : 4;
+            for (let s = 0; s < slots; s++) {
+                const z = document.createElement('div');
+                const used = s < cfg.n;
+                z.className = 'zone' + (s < (cfg.n === 2 ? 1 : 2) ? ' flip' : '') + (used ? '' : ' empty');
+                if (used) {
+                    z.style.setProperty('--zc', COLORS[s]);
+                    z.innerHTML = `<span class="nm">${NAMES[s]}</span><span class="pts">0</span><div class="disp"></div><div class="hint"></div>`;
+                    z.addEventListener('pointerdown', (e) => { e.preventDefault(); tap(s); });
+                    zones.push(z); pts.push(0);
+                }
+                a.appendChild(z);
+            }
+        }
+        function start() {
+            Arcade.save('arcade.duel.cfg', cfg);
+            build();
+            $('arena').hidden = false; $('quitBtn').hidden = false;
+            $('setup').hidden = true;
+            nextRound();
+        }
+        function stop() {
+            clearAll();
+            phase = 'off';
+            $('arena').hidden = true; $('quitBtn').hidden = true;
+            $('setup').hidden = false;
+        }
+        function nextRound() {
+            clearAll();
+            out = zones.map(() => false);
+            gameKey = Arcade.pick(cfg.games);
+            phase = 'intro';
+            setAll(GAMES[gameKey].name, GAMES[gameKey].desc);
+            later(() => run(), 2200);
+        }
+        function run() {
+            phase = 'wait';
+            if (gameKey === 'green') {
+                setAll('Wait...', "Don't tap yet");
+                later(() => { phase = 'go'; setAll('TAP!', '', 'go'); Arcade.tone(880, 0.12, 'sine', 0.12); }, Arcade.rand(1500, 5000));
+            } else if (gameKey === 'match') {
+                let n = 0;
+                const step = () => {
+                    // after a few tries a match becomes more likely so rounds don't drag
+                    const w = Arcade.pick(INK);
+                    const match = n > 2 && Math.random() < 0.35 + n * 0.05;
+                    const ink = match ? w : Arcade.pick(INK.filter(x => x !== w));
+                    phase = match ? 'go' : 'wait';
+                    setAll(`<span style="color:${ink[1]};background:#fffd;padding:4px 14px;border-radius:14px">${w[0]}</span>`, 'Tap only when the word matches its colour');
+                    n++;
+                    later(step, Math.max(650, 1300 - n * 40));
+                };
+                step();
+            } else if (gameKey === 'spot') {
+                target = Arcade.pick(SPOT);
+                let n = 0;
+                const step = () => {
+                    const hit = n > 2 && Math.random() < 0.3 + n * 0.04;
+                    const e = hit ? target : Arcade.pick(SPOT.filter(x => x !== target));
+                    phase = hit ? 'go' : 'wait';
+                    setAll(`<span style="font-size:1.6em">${e}</span>`, 'Tap when you see ' + target);
+                    n++;
+                    later(step, Math.max(600, 1150 - n * 35));
+                };
+                step();
+            } else if (gameKey === 'count') {
+                total = 0;
+                const step = () => {
+                    const add = Arcade.randi(1, 4);
+                    total += add;
+                    phase = total > 10 ? 'go' : 'wait';
+                    setAll('+' + add, 'Tap when the total is over 10');
+                    if (total > 10) { later(() => { phase = 'between'; setAll('Too slow!', 'Nobody tapped in time'); later(nextRound, 1500); }, 3500); return; }
+                    later(step, Arcade.rand(900, 1500));
+                };
+                step();
+            }
+        }
+        function tap(i) {
+            if (phase === 'intro' || phase === 'off' || phase === 'between' || out[i]) return;
+            if (phase === 'wait') {
+                // too early: sit this round out
+                out[i] = true;
+                zones[i].classList.add('oops');
+                zones[i].querySelector('.hint').textContent = 'Too early! Out this round';
+                Arcade.sfx('bad'); Arcade.buzz(80);
+                if (out.every(Boolean)) { clearAll(); phase = 'between'; setAll('Everyone jumped!', 'No point this round'); later(nextRound, 2000); }
+                return;
+            }
+            // phase go: first valid tap wins
+            clearAll();
+            phase = 'between';
+            pts[i]++;
+            rounds++;
+            Arcade.text('roundsN', rounds);
+            Arcade.count('round');
+            zones[i].querySelector('.pts').textContent = pts[i];
+            setAll(NAMES[i] + ' scores', gameKey === 'count' ? 'The total was ' + total : '');
+            zones[i].classList.add('win');
+            Arcade.sfx('coin'); Arcade.buzz(40);
+            if (pts[i] >= cfg.to) {
+                later(() => { setAll(NAMES[i] + ' wins!', 'Tap the middle button to leave, or wait for a rematch'); zones[i].classList.add('win'); Arcade.sfx('win'); }, 900);
+                later(() => { pts = pts.map(() => 0); zones.forEach(z => z.querySelector('.pts').textContent = 0); nextRound(); }, 5000);
+                return;
+            }
+            later(nextRound, 1600);
+        }
+        $('startBtn').onclick = start;
+        $('quitBtn').innerHTML = Arcade.icon('close');
+        $('quitBtn').onclick = stop;
+        renderSetup();
+    })();
+    </script>
+</body>
+</html>
