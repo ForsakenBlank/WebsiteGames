@@ -81,7 +81,9 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const W = 960, H = 600, TAU = Math.PI * 2, WIN = 15 * 60;
+        // tall phones get a portrait view so it fills the screen
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 560 : 960, H = TALL ? 860 : 600, TAU = Math.PI * 2, WIN = 15 * 60;
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
         const c = view.ctx;

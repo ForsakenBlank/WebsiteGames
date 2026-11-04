@@ -88,7 +88,9 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        const W = 900, H = 600, HEAD_SPEED = 950;
+        // tall phones get a portrait arena so it fills the screen
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 600 : 900, H = TALL ? 860 : 600, HEAD_SPEED = 950;
         const canvas = document.getElementById('c');
         const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
         const ctx = view.ctx;

@@ -1203,8 +1203,24 @@
         window.addEventListener('pagehide', () => mutate(m => { m.lastSeen[gid] = Date.now(); }));
     }
 
+    /* ---------- icon buttons: swap old glyphs for svg icons ---------- */
+    const GLYPHS = { '⏸': 'pause', '⏸️': 'pause', '▶': 'play', '▶️': 'play', '⏯': 'play', '⚙': 'settings', '⚙️': 'settings', '⟲': 'restart', '↻': 'restart', '⟳': 'restart', '☰': 'menu', '❔': 'help', '↶': 'undo' };
+    function iconize(b) {
+        const t = (b.textContent || '').trim();
+        if (GLYPHS[t] && !b.querySelector('svg')) { b.innerHTML = Arcade.icon(GLYPHS[t]); if (!b.title) b.title = GLYPHS[t]; }
+    }
+    function wireIcons() {
+        Arcade.$$('.btn.icon, #pauseBtn, .rbtn').forEach(b => {
+            iconize(b);
+            if (b._iconObs || !window.MutationObserver) return;
+            b._iconObs = new MutationObserver(() => iconize(b));
+            b._iconObs.observe(b, { childList: true, characterData: true, subtree: true });
+        });
+    }
+
     /* ---------- auto wiring on load ---------- */
     document.addEventListener('DOMContentLoaded', () => {
+        wireIcons();
         Arcade.setMuted(Arcade.muted);
         Arcade.$$('[data-mute]').forEach(b => b.addEventListener('click', () => {
             Arcade.setMuted(!Arcade.muted);
