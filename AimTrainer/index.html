@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aim Trainer · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #ef4444; --accent-2: #f97316; --accent-ink: #fff; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        #cv { cursor: crosshair; }
+        .modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+        .modes button { padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; text-align: center; }
+        .modes button:hover { border-color: var(--accent); }
+        .modes button b { display: block; font-size: 1.5rem; }
+        .modes small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 3px; }
+        .modes .best { color: var(--gold); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Aim Trainer</h1>
+        <div class="stats">
+            <span class="chip accent">Reaction best <b id="react">—</b></span>
+            <span class="chip" id="liveChip"><span id="liveL">Mode</span> <b id="live">—</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="menuBtn">☰ Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal wide">
+                    <h2>🎯 Aim Trainer</h2>
+                    <p>Warm up your mouse hand. Every mode keeps your best.</p>
+                    <div class="modes" id="modes"></div>
+                </div>
+            </div>
+            <div class="overlay" id="resOv" hidden>
+                <div class="modal">
+                    <h2 id="resTitle">Results</h2>
+                    <div class="big-num" id="resBig">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid" id="resStats"></div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Again</button><button class="btn" id="resMenu">Modes</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0" id="help">Click the targets. <kbd>R</kbd> restarts · <kbd>Esc</kbd> modes</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 960, H = 580, TAU = Math.PI * 2;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
+        const c = view.ctx;
+        const MODES = {
+            gridshot:  { name: 'Gridshot', ic: '🟥', desc: '30s · three targets at a time', unit: 'pts', higher: true },
+            flick:     { name: 'Flick', ic: '⚡', desc: '25 targets, one at a time', unit: 'ms', higher: false },
+            tracking:  { name: 'Tracking', ic: '🎯', desc: '20s · keep the cursor on it', unit: '%', higher: true },
+            precision: { name: 'Precision', ic: '🔬', desc: '30s · tiny shrinking targets', unit: 'pts', higher: true },
+            reaction:  { name: 'Reaction', ic: '⏱️', desc: 'Click the moment it turns green', unit: 'ms', higher: false },
+        };
+        let mode = null, G = null, mouse = { x: W / 2, y: H / 2, in: false, down: false };
+        const fx = new Arcade.Particles(300);
+        const bestKey = (m) => 'arcade.aim.best.' + m;
+        function fmtBest(m) { const b = Arcade.load(bestKey(m), 0); return b ? b + ' ' + MODES[m].unit : '—'; }
+        function buildMenu() {
+            const host = $('modes'); host.innerHTML = '';
+            for (const [k, M] of Object.entries(MODES)) {
+                const b = document.createElement('button');
+                b.innerHTML = `<b>${M.ic}</b>${M.name}<small>${M.desc}</small><small class="best">Best: ${fmtBest(k)}</small>`;
+                b.onclick = () => start(k);
+                host.appendChild(b);
+            }
+        }
+        const rnd = (r) => ({ x: r + Math.random() * (W - 2 * r), y: r + 30 + Math.random() * (H - 2 * r - 30) });
+        function start(m) {
+            mode = m; Arcade.hide('menuOv'); Arcade.hide('resOv');
+            G = { t: 0, hits: 0, shots: 0, score: 0, targets: [], times: [], over: false, countdown: m === 'reaction' ? 0 : 1.5, onT: 0 };
+            if (m === 'gridshot') { G.dur = 30; for (let i = 0; i < 3; i++) G.targets.push(gridTarget()); }
+            if (m === 'flick') { G.left = 25; G.targets.push(flickTarget()); G.spawnAt = 0; }
+            if (m === 'tracking') { G.dur = 20; G.targets.push({ x: W / 2, y: H / 2, r: 28, vx: 220, vy: 140, ch: 0 }); }
+            if (m === 'precision') { G.dur = 30; G.spawnT = 0; }
+            if (m === 'reaction') { G.round = 0; G.state = 'idle'; G.results = []; }
+            $('help').innerHTML = m === 'reaction' ? 'Click to start, then click as soon as the screen turns green. 5 tries.' : m === 'tracking' ? 'Keep your cursor on the moving target (no clicking needed).' : 'Click the targets. <kbd>R</kbd> restarts · <kbd>Esc</kbd> modes';
+            hud();
+        }
+        const GRID = 5;
+        function gridTarget() {
+            const used = new Set(G.targets.map(t => t.cell));
+            let cell; do cell = Math.floor(Math.random() * GRID * GRID); while (used.has(cell));
+            const gx = cell % GRID, gy = Math.floor(cell / GRID), cs = 92;
+            return { cell, x: W / 2 + (gx - 2) * cs, y: H / 2 + 10 + (gy - 2) * cs, r: 30, born: G.t };
+        }
+        function flickTarget() { const r = 22; return { ...rnd(r), r, born: G.t }; }
+        function shoot(x, y) {
+            if (!G || G.over || G.countdown > 0) return;
+            if (mode === 'reaction') return reactionClick();
+            if (mode === 'tracking') return;
+            G.shots++;
+            const hit = G.targets.find(t => Math.hypot(t.x - x, t.y - y) <= t.r);
+            if (!hit) { Arcade.tone(150, 0.04, 'sine', 0.03); if (mode === 'gridshot') G.score = Math.max(0, G.score - 20); return; }
+            G.hits++;
+            Arcade.tone(900 + Math.min(G.hits, 30) * 12, 0.04, 'square', 0.03);
+            fx.emit(hit.x, hit.y, { n: 12, speed: 160, color: ['#ef4444', '#fff', '#f97316'], life: 0.35, size: 3 });
+            G.targets = G.targets.filter(t => t !== hit);
+            const dt = G.t - hit.born;
+            if (mode === 'gridshot') { G.score += 100; G.targets.push(gridTarget()); }
+            if (mode === 'flick') { G.times.push(dt * 1000); G.left--; if (G.left <= 0) return finish(); G.targets.push(flickTarget()); }
+            if (mode === 'precision') { const k = Math.hypot(hit.x - x, hit.y - y) / hit.r; G.score += Math.round(100 + (1 - k) * 100 + Math.max(0, 1.6 - dt) * 60); }
+            hud();
+        }
+        function reactionClick() {
+            if (G.state === 'idle' || G.state === 'result' || G.state === 'early') { G.state = 'wait'; G.waitT = 1.2 + Math.random() * 3; return; }
+            if (G.state === 'wait') { G.state = 'early'; Arcade.sfx('bad'); return; }
+            if (G.state === 'go') {
+                const ms = Math.round((performance.now() - G.goAt));
+                G.results.push(ms); G.last = ms; G.state = 'result'; G.round++;
+                Arcade.sfx(ms < 250 ? 'coin' : 'select');
+                if (ms < 200) Arcade.count('reactionFast');
+                Arcade.best('arcade.aim.reaction', ms, true);
+                hud();
+                if (G.round >= 5) setTimeout(finish, 900);
+            }
+        }
+        function finish() {
+            if (G.over) return;
+            G.over = true;
+            const M = MODES[mode];
+            let big, stats = [], val;
+            const acc = G.shots ? Math.round(G.hits / G.shots * 100) : 0;
+            if (mode === 'gridshot') { val = G.score; big = G.score; stats = [['Hits', G.hits], ['Accuracy', acc + '%'], ['Targets/sec', (G.hits / G.dur).toFixed(2)]]; }
+            if (mode === 'flick') { val = Math.round(G.times.reduce((a, b) => a + b, 0) / G.times.length); big = val + ' ms'; stats = [['Fastest', Math.round(Math.min(...G.times)) + ' ms'], ['Accuracy', acc + '%'], ['Targets', G.times.length]]; }
+            if (mode === 'tracking') { val = Math.round(G.onT / G.dur * 100); big = val + '%'; stats = [['On target', G.onT.toFixed(1) + 's'], ['Duration', G.dur + 's']]; }
+            if (mode === 'precision') { val = G.score; big = G.score; stats = [['Hits', G.hits], ['Missed targets', G.missed || 0], ['Accuracy', acc + '%']]; }
+            if (mode === 'reaction') { val = Math.round(G.results.reduce((a, b) => a + b, 0) / G.results.length); big = val + ' ms'; stats = [['Best', Math.min(...G.results) + ' ms'], ['Tries', G.results.join(' · ')]]; }
+            if (mode === 'precision' || mode === 'gridshot' || mode === 'flick') Arcade.report(mode, val);
+            const r = Arcade.best(bestKey(mode), val, !M.higher);
+            Arcade.addXP(8, true);
+            Arcade.sfx(r.isNew ? 'win' : 'score');
+            $('resTitle').textContent = M.ic + ' ' + M.name;
+            $('resBig').textContent = big;
+            $('newBest').hidden = !r.isNew;
+            $('resStats').innerHTML = stats.map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('') + `<div><small>Best</small><b>${fmtBest(mode)}</b></div>`;
+            Arcade.show('resOv');
+            hud();
+        }
+        function step(dt) {
+            fx.update(dt);
+            if (!G || G.over) return;
+            if (G.countdown > 0) { G.countdown -= dt; return; }
+            G.t += dt;
+            if (G.dur && G.t >= G.dur) return finish();
+            if (mode === 'tracking') {
+                const T = G.targets[0];
+                T.ch -= dt;
+                if (T.ch <= 0) { T.ch = 0.4 + Math.random() * 1.1; const a = Math.random() * TAU, sp = 180 + Math.random() * 220; T.vx = Math.cos(a) * sp; T.vy = Math.sin(a) * sp; }
+                T.x += T.vx * dt; T.y += T.vy * dt;
+                if (T.x < T.r || T.x > W - T.r) { T.vx *= -1; T.x = Arcade.clamp(T.x, T.r, W - T.r); }
+                if (T.y < T.r + 30 || T.y > H - T.r) { T.vy *= -1; T.y = Arcade.clamp(T.y, T.r + 30, H - T.r); }
+                T.on = mouse.in && Math.hypot(mouse.x - T.x, mouse.y - T.y) <= T.r;
+                if (T.on) { G.onT += dt; if (Math.random() < dt * 12) Arcade.tone(1100, 0.015, 'square', 0.01); }
+            }
+            if (mode === 'precision') {
+                G.spawnT -= dt;
+                if (G.spawnT <= 0 && G.targets.length < 3) { G.spawnT = 0.55; const r = 18; G.targets.push({ ...rnd(r), r, r0: r, born: G.t }); }
+                for (const t of G.targets) { t.r = t.r0 * (1 - (G.t - t.born) / 1.7); if (t.r <= 2) { t.dead = true; G.missed = (G.missed || 0) + 1; } }
+                G.targets = G.targets.filter(t => !t.dead);
+            }
+            if (mode === 'reaction' && G.state === 'wait') { G.waitT -= dt; if (G.waitT <= 0) { G.state = 'go'; G.goAt = performance.now(); } }
+            if (Math.random() < 0.1) hud();
+        }
+        function drawTarget(t, on) {
+            const r = t.r;
+            c.fillStyle = on ? '#22c55e' : '#ef4444'; c.beginPath(); c.arc(t.x, t.y, r, 0, TAU); c.fill();
+            c.fillStyle = '#fff'; c.beginPath(); c.arc(t.x, t.y, r * 0.66, 0, TAU); c.fill();
+            c.fillStyle = on ? '#22c55e' : '#ef4444'; c.beginPath(); c.arc(t.x, t.y, r * 0.33, 0, TAU); c.fill();
+        }
+        function draw() {
+            if (mode === 'reaction' && G) {
+                const st = G.state;
+                c.fillStyle = st === 'go' ? '#16a34a' : st === 'wait' ? '#b91c1c' : st === 'early' ? '#7c2d12' : '#1e3a8a';
+                c.fillRect(0, 0, W, H);
+                c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+                c.font = '900 48px system-ui';
+                const msg = st === 'go' ? 'CLICK!' : st === 'wait' ? 'Wait for green…' : st === 'early' ? 'Too soon!' : st === 'result' ? G.last + ' ms' : '⏱️ Reaction test';
+                c.fillText(msg, W / 2, H / 2 - 10);
+                c.font = '600 18px system-ui';
+                c.fillText(st === 'early' ? 'Click to try again' : st === 'result' ? (G.round < 5 ? `Try ${G.round}/5 — click to keep going` : 'Done!') : st === 'idle' ? 'Click anywhere to start · 5 tries' : '', W / 2, H / 2 + 40);
+                if (G.results.length) { c.font = '600 14px system-ui'; c.fillText(G.results.map(v => v + 'ms').join('   '), W / 2, H - 40); }
+                return;
+            }
+            c.fillStyle = '#0b1020'; c.fillRect(0, 0, W, H);
+            c.strokeStyle = 'rgba(148,163,184,0.06)'; c.lineWidth = 1;
+            for (let x = 0; x < W; x += 40) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+            for (let y = 0; y < H; y += 40) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+            if (!G) return;
+            for (const t of G.targets) drawTarget(t, mode === 'tracking' && t.on);
+            fx.draw(c);
+            c.fillStyle = '#e2e8f0'; c.font = '800 18px system-ui'; c.textAlign = 'left'; c.textBaseline = 'top';
+            const acc = G.shots ? Math.round(G.hits / G.shots * 100) + '%' : '—';
+            const line = mode === 'gridshot' ? `Score ${G.score} · Accuracy ${acc}` : mode === 'flick' ? `${G.left} left · ${G.times.length ? Math.round(G.times.reduce((a, b) => a + b, 0) / G.times.length) + ' ms avg' : ''}` : mode === 'tracking' ? `On target ${G.t ? Math.round(G.onT / G.t * 100) : 0}%` : `Score ${G.score} · Accuracy ${acc}`;
+            c.fillText(line, 14, 10);
+            if (G.dur) { c.textAlign = 'right'; c.fillText(Math.max(0, G.dur - G.t).toFixed(1) + 's', W - 14, 10); c.fillStyle = '#ef4444'; c.fillRect(0, H - 4, W * (1 - G.t / G.dur), 4); }
+            if (G.countdown > 0) { c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '900 64px system-ui'; c.fillText(Math.ceil(G.countdown), W / 2, H / 2); }
+        }
+        function hud() {
+            const r = Arcade.load('arcade.aim.reaction', 0);
+            Arcade.text('react', r ? r + ' ms' : '—');
+            Arcade.text('liveL', mode ? MODES[mode].name : 'Mode');
+            Arcade.text('live', mode ? 'best ' + fmtBest(mode) : '—');
+        }
+        cv.addEventListener('pointerdown', (e) => { const p = Arcade.pointer(cv, e, W, H); mouse.x = p.x; mouse.y = p.y; shoot(p.x, p.y); });
+        cv.addEventListener('pointermove', (e) => { const p = Arcade.pointer(cv, e, W, H); mouse.x = p.x; mouse.y = p.y; mouse.in = true; });
+        cv.addEventListener('pointerleave', () => { mouse.in = false; });
+        cv.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('keydown', (e) => { if (e.code === 'KeyR' && mode) start(mode); if (e.code === 'Escape') { G = null; Arcade.hide('resOv'); buildMenu(); Arcade.show('menuOv'); } });
+        $('againBtn').onclick = () => start(mode);
+        $('resMenu').onclick = () => { Arcade.hide('resOv'); buildMenu(); Arcade.show('menuOv'); };
+        $('menuBtn').onclick = () => { G = null; Arcade.hide('resOv'); buildMenu(); Arcade.show('menuOv'); };
+        buildMenu(); hud();
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__aim = { start, shoot, get G() { return G; }, finish };
+    })();
+    </script>
+</body>
+</html>

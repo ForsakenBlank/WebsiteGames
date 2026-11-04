@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NEON DEFENDER: OVERDRIVE</title>
+    <style>
+        body { margin: 0; background: #050505; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        canvas { border: 2px solid #00f2ff; cursor: crosshair; background: radial-gradient(circle, #0a1a1a 0%, #050505 100%); }
+        #ui, #upgrade-menu { position: absolute; pointer-events: none; width: 800px; height: 600px; }
+        .stat-box { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #00f2ff; pointer-events: none; z-index: 10; }
+        #upgrade-menu { pointer-events: all; background: rgba(5, 5, 5, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; border: 4px double #ff0055; z-index: 100; }
+        .upgrade-btn { background: transparent; border: 1px solid #00f2ff; color: #00f2ff; padding: 12px; margin: 8px; cursor: pointer; width: 350px; text-align: left; font-size: 0.9rem; transition: 0.2s; }
+        .upgrade-btn:hover { background: #00f2ff; color: #000; box-shadow: 0 0 15px #00f2ff; }
+        .ability-btn { border-color: #ff0055; color: #ff0055; }
+        .ability-btn.active { background: #ff0055; color: #fff; box-shadow: 0 0 15px #ff0055; }
+        .base-bar { position: absolute; bottom: 0; left: 0; height: 8px; background: #ff0055; transition: width 0.3s; box-shadow: 0 0 10px #ff0055; }
+        h2 { margin: 10px 0; text-transform: uppercase; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div class="stat-box">
+            SCRAP: <span id="scrap-val">0</span> | LEVEL: <span id="lvl-val">1</span><br>
+            SHIP HP: <span id="ship-hp">100</span> | BASE HP: <span id="base-hp">100</span>
+        </div>
+        <div id="base-health-visual" class="base-bar" style="width: 100%"></div>
+    </div>
+
+    <div id="upgrade-menu">
+        <h1 id="death-reason" style="color:#ff0055; margin-bottom:5px;">SYSTEM FAILURE</h1>
+        <p>TOTAL SCRAP: <span id="total-scrap">0</span></p>
+        
+        <h2>Passive Enhancements</h2>
+        <button class="upgrade-btn" onclick="buy('maxHp')">➕ EXTENDED HULL (+20 Ship HP) - <span id="cost-maxHp">50</span> Scrap</button>
+        <button class="upgrade-btn" onclick="buy('baseHp')">🛡️ FORTIFIED WALLS (+20 Base HP) - <span id="cost-baseHp">50</span> Scrap</button>
+        <button class="upgrade-btn" onclick="buy('fireRate')">⚡ OVERCLOCKED TURRET (+Fire Rate) - <span id="cost-fireRate">100</span> Scrap</button>
+        
+        <h2>Select One Ability</h2>
+        <div style="display:flex; flex-wrap: wrap; justify-content: center;">
+            <button id="ab-none" class="upgrade-btn ability-btn active" onclick="setAbility('none')">STANDARD CANNON</button>
+            <button id="ab-spread" class="upgrade-btn ability-btn" onclick="setAbility('spread')">TRIPLE SPREAD (Crowd Control)</button>
+            <button id="ab-beam" class="upgrade-btn ability-btn" onclick="setAbility('beam')">PIERCING PULSE (Sniper)</button>
+            <button id="ab-rapid" class="upgrade-btn ability-btn" onclick="setAbility('rapid')">STORM CORE (Ultra Fast)</button>
+        </div>
+
+        <button class="upgrade-btn" style="margin-top:25px; border:2px solid #fff; text-align:center; font-weight:bold;" onclick="restart()">REDEPLOY TO SECTOR</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800; canvas.height = 600;
+
+    // --- PERMANENT SAVE DATA ---
+    let save = { 
+        scrap: 0, 
+        maxHp: 100, 
+        baseMaxHp: 100, 
+        fireRate: 150, 
+        ability: 'none' 
+    };
+    let costs = { maxHp: 50, baseHp: 50, fireRate: 100 };
+
+    // --- GAME SESSION VARIABLES ---
+    let player = null; // Starts null to prevent the "x of undefined" error
+    let enemies = [], bullets = [], baseHp = 100, level = 1, frame = 0, gameActive = false;
+
+    function init() {
+        player = { x: 400, y: 500, hp: save.maxHp, size: 15 };
+        baseHp = save.baseMaxHp;
+        enemies = []; bullets = []; level = 1; frame = 0; gameActive = true;
+        document.getElementById('upgrade-menu').style.display = 'none';
+        updateUI();
+        requestAnimationFrame(loop);
+    }
+
+    function updateUI() {
+        document.getElementById('scrap-val').innerText = save.scrap;
+        document.getElementById('total-scrap').innerText = save.scrap;
+        document.getElementById('lvl-val').innerText = level;
+        document.getElementById('ship-hp').innerText = player ? Math.max(0, player.hp) : 0;
+        document.getElementById('base-hp').innerText = Math.max(0, baseHp);
+        document.getElementById('base-health-visual').style.width = (baseHp/save.baseMaxHp)*100 + "%";
+    }
+
+    function buy(type) {
+        if (save.scrap >= costs[type]) {
+            save.scrap -= costs[type];
+            if(type === 'maxHp') save.maxHp += 20;
+            if(type === 'baseHp') save.baseMaxHp += 20;
+            if(type === 'fireRate') save.fireRate = Math.max(40, save.fireRate - 15);
+            costs[type] = Math.floor(costs[type] * 1.6);
+            document.getElementById('cost-'+type).innerText = costs[type];
+            updateUI();
+        }
+    }
+
+    function setAbility(type) {
+        save.ability = type;
+        document.querySelectorAll('.ability-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('ab-'+type).classList.add('active');
+    }
+
+    // FIXED: Check if player exists before moving
+    canvas.addEventListener('mousemove', e => {
+        if (!player || !gameActive) return;
+        const rect = canvas.getBoundingClientRect();
+        player.x = e.clientX - rect.left;
+        player.y = e.clientY - rect.top;
+    });
+
+    function fire() {
+        if(!gameActive || !player) return;
+        
+        let rate = save.ability === 'rapid' ? save.fireRate * 0.4 : save.fireRate;
+        
+        if(save.ability === 'spread') {
+            bullets.push({x: player.x, y: player.y, vx: -2.5, vy: -7}, {x: player.x, y: player.y, vx: 0, vy: -7}, {x: player.x, y: player.y, vx: 2.5, vy: -7});
+        } else if (save.ability === 'beam') {
+            bullets.push({x: player.x, y: player.y, vx: 0, vy: -15, pierce: true, color: '#ff0055'});
+        } else {
+            bullets.push({x: player.x, y: player.y, vx: (Math.random()-0.5), vy: -8});
+        }
+        
+        setTimeout(fire, rate);
+    }
+
+    function loop() {
+        if(!gameActive) return;
+        frame++;
+        
+        // Clean frame
+        ctx.fillStyle = 'rgba(5,5,5,0.4)';
+        ctx.fillRect(0,0,800,600);
+
+        // Level scaling
+        if(frame % 1500 === 0) level++;
+        
+        // Spawn Enemies & Bosses
+        let spawnRate = Math.max(10, 50 - level * 4);
+        if(frame % spawnRate === 0) {
+            let isBoss = (level % 5 === 0 && frame % (spawnRate * 10) === 0);
+            enemies.push({
+                x: Math.random() * 740 + 30,
+                y: -50,
+                hp: isBoss ? level * 15 : level,
+                speed: isBoss ? 0.5 : 1.5 + level * 0.15,
+                size: isBoss ? 50 : 20,
+                isBoss: isBoss
+            });
+        }
+
+        // Bullets
+        bullets.forEach((b, bi) => {
+            b.x += b.vx || 0; b.y += b.vy;
+            ctx.fillStyle = b.color || '#00f2ff';
+            ctx.fillRect(b.x-2, b.y, b.pierce ? 6 : 4, 15);
+            if(b.y < -20) bullets.splice(bi, 1);
+        });
+
+        // Enemies
+        enemies.forEach((e, ei) => {
+            e.y += e.speed;
+            
+            // Draw Enemy
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = e.isBoss ? '#ffaa00' : '#ff0055';
+            ctx.strokeRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+            
+            if(e.isBoss) { // Health bar for boss
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(e.x - 25, e.y - 40, (e.hp/(level*15))*50, 5);
+            }
+
+            // Hit Base
+            if(e.y > 610) {
+                baseHp -= e.isBoss ? 50 : 10;
+                enemies.splice(ei, 1);
+                updateUI();
+            }
+
+            // Hit Ship
+            if(player && Math.hypot(e.x-player.x, e.y-player.y) < e.size) {
+                player.hp -= 20;
+                enemies.splice(ei, 1);
+                updateUI();
+            }
+
+            // Bullet Hit Enemy
+            bullets.forEach((b, bi) => {
+                if(Math.abs(e.x - b.x) < e.size/2 && Math.abs(e.y - b.y) < e.size/2) {
+                    e.hp--;
+                    if(!b.pierce) bullets.splice(bi, 1);
+                    if(e.hp <= 0) {
+                        enemies.splice(ei, 1);
+                        save.scrap += e.isBoss ? 100 : 5;
+                        updateUI();
+                    }
+                }
+            });
+        });
+
+        // Check Defeat
+        if(baseHp <= 0 || player.hp <= 0) {
+            gameActive = false;
+            document.getElementById('death-reason').innerText = baseHp <= 0 ? "BASE OVERRUN" : "SHIP DESTROYED";
+            document.getElementById('upgrade-menu').style.display = 'flex';
+            updateUI();
+            return;
+        }
+
+        // Draw Player Ship
+        ctx.strokeStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y - 15);
+        ctx.lineTo(player.x - 15, player.y + 15);
+        ctx.lineTo(player.x + 15, player.y + 15);
+        ctx.closePath();
+        ctx.stroke();
+
+        requestAnimationFrame(loop);
+    }
+
+    function restart() {
+        init();
+        fire();
+    }
+    
+    // Initial Start
+    init();
+    fire();
+</script>
+</body>
+</html>

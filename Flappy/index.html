@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #facc15; --accent-2: #fb923c; --accent-ink: #1f1600; }
+        .skins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+        .skin { border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg-2); padding: 6px 4px; cursor: pointer; color: var(--text); font: inherit; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .skin canvas { width: 56px; height: 44px; }
+        .skin.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .skin.locked { opacity: 0.55; cursor: not-allowed; }
+        .skin small { color: var(--muted); font-size: 0.62rem; text-align: center; line-height: 1.2; }
+        .medal { font-size: 3rem; line-height: 1; margin: 6px 0; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Flappy</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+            <span class="chip hide-sm">Gaps flown <b id="total">0</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="skinBtn">🐤 Birds</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="skinOv" hidden>
+                <div class="modal">
+                    <h2>Choose your bird</h2>
+                    <p class="small">New birds unlock as you fly further.</p>
+                    <div class="skins" id="skins"></div>
+                    <div class="actions"><button class="btn primary" id="skinClose">Done</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 class="bad">Game over</h2>
+                    <div class="medal" id="medal"></div>
+                    <div class="big-num" id="endScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <p id="endText"></p>
+                    <div class="actions">
+                        <button class="btn primary lg" id="againBtn">Fly again</button>
+                        <button class="btn" id="endSkin">🐤 Birds</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only"><kbd>Space</kbd> / <kbd>↑</kbd> / click to flap · <kbd>P</kbd> pause</span><span class="touch-only">Tap to flap</span> · Medals at 10, 20, 30 and 50</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 400, H = 640, GROUND = 570, TAU = Math.PI * 2;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 2 });
+        const c = view.ctx;
+        const BIRDS = [
+            { id: 'chick', name: 'Chick', body: '#facc15', belly: '#fef08a', wing: '#f59e0b', beak: '#fb923c', need: null },
+            { id: 'jay', name: 'Blue Jay', body: '#3b82f6', belly: '#dbeafe', wing: '#1d4ed8', beak: '#334155', need: ['total', 25] },
+            { id: 'cardinal', name: 'Cardinal', body: '#dc2626', belly: '#fca5a5', wing: '#991b1b', beak: '#f97316', need: ['best', 10], crest: true },
+            { id: 'owl', name: 'Owl', body: '#a16207', belly: '#fde68a', wing: '#713f12', beak: '#f59e0b', need: ['best', 20], owl: true },
+            { id: 'parrot', name: 'Parrot', body: '#22c55e', belly: '#facc15', wing: '#ef4444', beak: '#e5e7eb', need: ['total', 150] },
+            { id: 'penguin', name: 'Penguin', body: '#1e293b', belly: '#f8fafc', wing: '#0f172a', beak: '#f97316', need: ['best', 30] },
+            { id: 'phoenix', name: 'Phoenix', body: '#f97316', belly: '#fde047', wing: '#dc2626', beak: '#fef3c7', need: ['best', 50], fire: true },
+            { id: 'ufo', name: 'Saucer', ufo: true, need: ['total', 500] },
+        ];
+        let best = Arcade.load('arcade.flappy.best', 0) || 0;
+        let total = Arcade.load('arcade.flappy.total', 0) || 0;
+        let skin = Arcade.load('arcade.flappy.skin', 'chick');
+        const unlocked = (b) => !b.need || (b.need[0] === 'best' ? best : total) >= b.need[1];
+        if (!BIRDS.some(b => b.id === skin && unlocked(b))) skin = 'chick';
+        const bird = () => BIRDS.find(b => b.id === skin);
+
+        let state = 'ready', score = 0, t = 0, paused = false;
+        let B = { y: 300, vy: 0, rot: 0, flap: 0 };
+        let pipes = [], coins = [], speed = 150, nextPipe = 0, groundX = 0, deathT = 0, flash = 0;
+        const fx = new Arcade.Particles(300);
+        const clouds = Array.from({ length: 6 }, (_, i) => ({ x: i * 90 + Math.random() * 60, y: 40 + Math.random() * 180, s: 0.6 + Math.random() * 0.8 }));
+        const city = Array.from({ length: 24 }, (_, i) => ({ x: i * 26, h: 40 + Math.random() * 90, w: 22 + Math.random() * 10 }));
+
+        function reset() {
+            state = 'ready'; score = 0; t = 0; paused = false;
+            B = { y: 300, vy: 0, rot: 0, flap: 0 };
+            pipes = []; coins = []; speed = 150; nextPipe = 0.2; deathT = 0;
+            fx.clear(); hud();
+        }
+        function flap() {
+            if (paused) return;
+            if (state === 'ready') { state = 'play'; }
+            if (state !== 'play') return;
+            B.vy = -400; B.flap = 0.25;
+            Arcade.tone(660, 0.07, 'triangle', 0.05, 900);
+            if (bird().fire) fx.emit(110, B.y + 8, { n: 6, speed: 80, angle: Math.PI * 0.75, spread: 0.8, color: ['#f97316', '#facc15', '#ef4444'], life: 0.5, size: 4 });
+        }
+        function gapSize() { return Math.max(118, 160 - score * 1.2); }
+        function spawnPipe() {
+            const gap = gapSize(), top = 70 + Math.random() * (GROUND - 140 - gap);
+            const moving = score > 15 && Math.random() < Math.min(0.45, (score - 15) * 0.02);
+            pipes.push({ x: W + 30, top, gap, w: 64, scored: false, moving, phase: Math.random() * TAU, baseTop: top });
+            if (Math.random() < 0.3) coins.push({ x: W + 30 + 32, y: top + gap / 2, got: false });
+        }
+        function die() {
+            if (state !== 'play') return;
+            state = 'dead'; deathT = 0; flash = 1;
+            Arcade.sfx('hit');
+            setTimeout(() => Arcade.sfx('die'), 200);
+            const r = Arcade.best('arcade.flappy.best', score);
+            const before = BIRDS.filter(unlocked).length;
+            best = Math.max(best, score);
+            Arcade.report('score', score);
+            Arcade.addXP(Math.min(40, score), true);
+            const after = BIRDS.filter(unlocked);
+            const fresh = after.length > before ? after[after.length - 1] : null;
+            setTimeout(() => {
+                const medal = score >= 50 ? '💎' : score >= 30 ? '🥇' : score >= 20 ? '🥈' : score >= 10 ? '🥉' : '';
+                $('medal').textContent = medal;
+                $('endScore').textContent = score;
+                $('newBest').hidden = !r.isNew;
+                $('endText').textContent = (medal ? 'You earned a medal! ' : '') + 'Best ' + best + (fresh ? ` · New bird unlocked: ${fresh.name}!` : '');
+                Arcade.show('endOv');
+            }, 800);
+            hud();
+        }
+        function hud() { Arcade.text('score', score); Arcade.text('best', best); Arcade.text('total', total); }
+
+        function step(dt) {
+            if (paused) return;
+            t += dt;
+            flash = Math.max(0, flash - dt * 3);
+            for (const cl of clouds) { cl.x -= cl.s * 12 * dt; if (cl.x < -80) { cl.x = W + 40; cl.y = 40 + Math.random() * 180; } }
+            if (state !== 'dead') { groundX = (groundX - speed * dt) % 24; for (const b of city) { b.x -= speed * 0.25 * dt; if (b.x < -40) b.x += 24 * 26; } }
+            B.flap = Math.max(0, B.flap - dt);
+            if (state === 'ready') { B.y = 300 + Math.sin(t * 3) * 8; B.rot = 0; return; }
+            B.vy = Math.min(B.vy + 1500 * dt, 640);
+            B.y += B.vy * dt;
+            B.rot = Arcade.clamp(B.vy / 600, -0.5, 1.4);
+            if (state === 'dead') { deathT += dt; if (B.y > GROUND - 14) { B.y = GROUND - 14; B.vy = 0; } fx.update(dt); return; }
+            speed = Math.min(225, 150 + score * 2);
+            nextPipe -= dt;
+            if (nextPipe <= 0) { spawnPipe(); nextPipe = 215 / speed; }
+            for (const p of pipes) {
+                p.x -= speed * dt;
+                if (p.moving) p.top = Arcade.clamp(p.baseTop + Math.sin(t * 1.6 + p.phase) * 45, 50, GROUND - 60 - p.gap);
+                if (!p.scored && p.x + p.w < 100) {
+                    p.scored = true; score++; total++;
+                    Arcade.save('arcade.flappy.total', total);
+                    Arcade.sfx('score');
+                    if (score % 10 === 0) { Arcade.sfx('level'); fx.emit(110, B.y, { n: 24, speed: 220, color: ['#facc15', '#fff', '#fb923c'], life: 0.8 }); }
+                    hud();
+                }
+                // collision (circle vs rects)
+                const bx = 110, by = B.y, r = 13;
+                const hitR = (x, y, w, h) => { const cx = Arcade.clamp(bx, x, x + w), cy = Arcade.clamp(by, y, y + h); return (bx - cx) ** 2 + (by - cy) ** 2 < r * r; };
+                if (hitR(p.x, -100, p.w, p.top + 100) || hitR(p.x, p.top + p.gap, p.w, GROUND)) die();
+            }
+            for (const co of coins) {
+                co.x -= speed * dt;
+                if (!co.got && Math.hypot(co.x - 110, co.y - B.y) < 22) { co.got = true; score += 1; Arcade.sfx('coin'); fx.emit(co.x, co.y, { n: 12, speed: 120, color: ['#fde047', '#facc15'], life: 0.5 }); hud(); }
+            }
+            pipes = pipes.filter(p => p.x > -80);
+            coins = coins.filter(co => co.x > -30 && !co.got);
+            if (B.y > GROUND - 14 || B.y < -40) die();
+            if (bird().fire && Math.random() < 0.5) fx.emit(100, B.y + 4, { n: 1, speed: 40, angle: Math.PI, spread: 0.6, color: ['#f97316', '#facc15', '#ef4444'], life: 0.4, size: 4 });
+            fx.update(dt);
+        }
+
+        function skyColors() {
+            // day → sunset → night as the score climbs, then back again
+            const k = (Math.floor(score / 15) % 3);
+            return [['#7dd3fc', '#e0f2fe'], ['#fb923c', '#fde68a'], ['#0b1026', '#312e81']][k];
+        }
+        function drawBird(g, x, y, rot, b, flapK, size = 1) {
+            g.save(); g.translate(x, y); g.rotate(rot); g.scale(size, size);
+            if (b.ufo) {
+                g.fillStyle = 'rgba(125,211,252,0.6)'; g.beginPath(); g.ellipse(0, -5, 9, 9, 0, Math.PI, TAU); g.fill();
+                g.fillStyle = '#94a3b8'; g.beginPath(); g.ellipse(0, 1, 19, 7, 0, 0, TAU); g.fill();
+                g.fillStyle = '#475569'; g.fillRect(-19, 0, 38, 3);
+                for (let i = -2; i <= 2; i++) { g.fillStyle = (Math.floor(t * 6) + i) % 2 ? '#facc15' : '#22d3ee'; g.beginPath(); g.arc(i * 7, 4, 1.8, 0, TAU); g.fill(); }
+                g.restore(); return;
+            }
+            g.fillStyle = b.body; g.beginPath(); g.ellipse(0, 0, 17, 13, 0, 0, TAU); g.fill();
+            g.fillStyle = b.belly; g.beginPath(); g.ellipse(3, 5, 10, 7, 0, 0, TAU); g.fill();
+            if (b.crest) { g.fillStyle = b.body; g.beginPath(); g.moveTo(-2, -11); g.lineTo(4, -21); g.lineTo(7, -10); g.fill(); }
+            if (b.owl) { g.fillStyle = b.wing; g.beginPath(); g.moveTo(-6, -11); g.lineTo(-10, -18); g.lineTo(-1, -12); g.moveTo(6, -12); g.lineTo(10, -19); g.lineTo(11, -9); g.fill(); }
+            const wy = Math.sin(flapK * 40) * 6;
+            g.fillStyle = b.wing; g.beginPath(); g.ellipse(-5, 1 + wy * 0.6, 9, 5.5, -0.3 + wy * 0.05, 0, TAU); g.fill();
+            g.fillStyle = '#fff'; g.beginPath(); g.arc(8, -4, b.owl ? 5.5 : 4.6, 0, TAU); g.fill();
+            if (b.owl) { g.beginPath(); g.arc(0, -4, 5, 0, TAU); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(1, -4, 2.2, 0, TAU); g.fill(); }
+            g.fillStyle = '#111'; g.beginPath(); g.arc(9.5, -4, 2.2, 0, TAU); g.fill();
+            g.fillStyle = b.beak; g.beginPath(); g.moveTo(13, 0); g.lineTo(23, 3); g.lineTo(13, 7); g.fill();
+            g.restore();
+        }
+        function draw() {
+            const [s0, s1] = skyColors();
+            const grd = c.createLinearGradient(0, 0, 0, GROUND);
+            grd.addColorStop(0, s0); grd.addColorStop(1, s1);
+            c.fillStyle = grd; c.fillRect(0, 0, W, GROUND);
+            const night = Math.floor(score / 15) % 3 === 2;
+            if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const x = (i * 97) % W, y = (i * 53) % 300; c.globalAlpha = 0.4 + 0.4 * Math.sin(t * 2 + i); c.fillRect(x, y, 2, 2); } c.globalAlpha = 1; c.fillStyle = '#fef9c3'; c.beginPath(); c.arc(320, 90, 26, 0, TAU); c.fill(); }
+            c.fillStyle = night ? 'rgba(148,163,184,0.25)' : 'rgba(255,255,255,0.85)';
+            for (const cl of clouds) { c.beginPath(); c.arc(cl.x, cl.y, 18 * cl.s, 0, TAU); c.arc(cl.x + 20 * cl.s, cl.y - 8 * cl.s, 22 * cl.s, 0, TAU); c.arc(cl.x + 42 * cl.s, cl.y, 17 * cl.s, 0, TAU); c.fill(); }
+            c.fillStyle = night ? '#1e1b4b' : 'rgba(30,64,175,0.25)';
+            for (const b of city) c.fillRect(b.x, GROUND - b.h, b.w, b.h);
+            if (night) { c.fillStyle = '#fde68a'; for (const b of city) for (let y = GROUND - b.h + 6; y < GROUND - 6; y += 10) for (let x = b.x + 4; x < b.x + b.w - 4; x += 7) if ((x * 7 + y) % 3 === 0) c.fillRect(x, y, 3, 4); }
+            // pipes
+            for (const p of pipes) {
+                const pg = c.createLinearGradient(p.x, 0, p.x + p.w, 0);
+                pg.addColorStop(0, '#15803d'); pg.addColorStop(0.45, '#4ade80'); pg.addColorStop(1, '#166534');
+                c.fillStyle = pg;
+                c.fillRect(p.x, -10, p.w, p.top + 10);
+                c.fillRect(p.x, p.top + p.gap, p.w, GROUND - p.top - p.gap);
+                c.fillRect(p.x - 5, p.top - 24, p.w + 10, 24);
+                c.fillRect(p.x - 5, p.top + p.gap, p.w + 10, 24);
+                c.strokeStyle = '#052e16'; c.lineWidth = 2;
+                c.strokeRect(p.x - 5, p.top - 24, p.w + 10, 24); c.strokeRect(p.x - 5, p.top + p.gap, p.w + 10, 24);
+                if (p.moving) { c.fillStyle = '#fde047'; c.fillRect(p.x + p.w / 2 - 6, p.top - 14, 12, 4); c.fillRect(p.x + p.w / 2 - 6, p.top + p.gap + 10, 12, 4); }
+            }
+            for (const co of coins) {
+                const sx = Math.abs(Math.cos(t * 4));
+                c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(co.x, co.y, 9 * sx + 1, 9, 0, 0, TAU); c.fill();
+                c.strokeStyle = '#a16207'; c.lineWidth = 2; c.stroke();
+            }
+            // ground
+            c.fillStyle = '#ded895'; c.fillRect(0, GROUND, W, H - GROUND);
+            c.fillStyle = '#84cc16'; c.fillRect(0, GROUND, W, 14);
+            c.fillStyle = '#65a30d'; for (let x = groundX; x < W; x += 24) { c.beginPath(); c.moveTo(x, GROUND + 14); c.lineTo(x + 12, GROUND); c.lineTo(x + 24, GROUND); c.lineTo(x + 12, GROUND + 14); c.fill(); }
+            c.fillStyle = '#c2b97a'; for (let x = groundX * 1.5 % 40; x < W; x += 40) c.fillRect(x, GROUND + 30, 20, 4);
+            fx.draw(c);
+            drawBird(c, 110, B.y, B.rot, bird(), B.flap);
+            // score
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.font = '900 52px system-ui, sans-serif'; c.lineWidth = 6; c.strokeStyle = '#1f2937'; c.fillStyle = '#fff';
+            if (state !== 'ready') { c.strokeText(score, W / 2, 80); c.fillText(score, W / 2, 80); }
+            if (state === 'ready') {
+                c.font = '900 40px system-ui'; c.strokeText('Get ready!', W / 2, 170); c.fillStyle = '#facc15'; c.fillText('Get ready!', W / 2, 170);
+                c.font = '700 16px system-ui'; c.fillStyle = '#1f2937'; c.fillText('Tap, click or press Space to flap', W / 2, 400);
+                c.fillText('Best ' + best, W / 2, 426);
+            }
+            if (paused) { c.fillStyle = 'rgba(0,0,0,0.4)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 34px system-ui'; c.fillText('Paused', W / 2, H / 2); }
+            if (flash > 0) { c.fillStyle = `rgba(255,255,255,${flash * 0.7})`; c.fillRect(0, 0, W, H); }
+        }
+
+        function buildSkins() {
+            const host = $('skins'); host.innerHTML = '';
+            for (const b of BIRDS) {
+                const ok = unlocked(b);
+                const btn = document.createElement('button');
+                btn.className = 'skin' + (b.id === skin ? ' on' : '') + (ok ? '' : ' locked');
+                const pc = document.createElement('canvas'); pc.width = 112; pc.height = 88;
+                const g = pc.getContext('2d'); g.scale(2, 2);
+                drawBird(g, 28, 22, 0, b, 0.1, 1.15);
+                btn.appendChild(pc);
+                btn.insertAdjacentHTML('beforeend', `<b>${b.name}</b><small>${ok ? (b.id === skin ? 'Flying' : 'Unlocked') : (b.need[0] === 'best' ? 'Score ' + b.need[1] + ' in one flight' : 'Fly ' + b.need[1] + ' gaps in total')}</small>`);
+                btn.onclick = () => { if (!ok) { Arcade.sfx('bad'); return; } skin = b.id; Arcade.save('arcade.flappy.skin', skin); Arcade.sfx('select'); buildSkins(); };
+                host.appendChild(btn);
+            }
+        }
+        const openSkins = () => { if (state === 'play') return; buildSkins(); Arcade.show('skinOv'); };
+        $('skinBtn').onclick = openSkins;
+        $('endSkin').onclick = () => { Arcade.hide('endOv'); reset(); openSkins(); };
+        $('skinClose').onclick = () => Arcade.hide('skinOv');
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); reset(); };
+
+        const busy = () => !$('skinOv').hidden || !$('endOv').hidden;
+        cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!busy()) flap(); });
+        window.addEventListener('keydown', (e) => {
+            if (busy()) { if ((e.code === 'Space' || e.code === 'Enter') && !$('endOv').hidden && state === 'dead') { e.preventDefault(); $('againBtn').click(); } return; }
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); if (!e.repeat) flap(); }
+            if ((e.code === 'KeyP' || e.code === 'Escape') && state === 'play') paused = !paused;
+        });
+        document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') paused = true; });
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        reset();
+        loop.start();
+        window.__flappy = { get state() { return state; }, get score() { return score; }, flap, get B() { return B; }, get pipes() { return pipes; } };
+    })();
+    </script>
+</body>
+</html>

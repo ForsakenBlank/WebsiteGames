@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Miner · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f59e0b; --accent-2: #a16207; --accent-ink: #1c1003; }
+        .stage { flex-direction: row; align-items: stretch; gap: 12px; padding: 10px; }
+        .mine { flex: 1; min-width: 0; position: relative; overflow-y: auto; border-radius: 16px; border: 1px solid var(--line-2); background: #1c1206; }
+        .mine canvas { display: block; width: 100%; cursor: pointer; }
+        .panel2 { width: 330px; flex: none; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        .card2 { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+        .card2 h4 { margin: 0 0 4px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .card2 h4 small { color: var(--muted); font-weight: 500; }
+        .card2 p { margin: 0 0 6px; font-size: 0.76rem; color: var(--muted); }
+        .row2 { display: flex; gap: 6px; flex-wrap: wrap; }
+        .row2 .btn { flex: 1; font-size: 0.78rem; padding: 6px 8px; }
+        .sel { outline: 2px solid var(--accent); }
+        .buyamt { display: flex; gap: 4px; }
+        @media (max-width: 820px) { .stage { flex-direction: column; } .panel2 { width: auto; max-height: 42vh; } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Idle Miner</h1>
+        <div class="stats">
+            <span class="chip gold">💰 <b id="cash">0</b></span>
+            <span class="chip accent">Per sec <b id="rate">0</b></span>
+            <span class="chip hide-sm">💎 Super cash <b id="sc">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="boostBtn">⚡ Rush ×2</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="mine" id="mineBox"><canvas id="cv"></canvas></div>
+        <div class="panel2">
+            <div class="card2">
+                <h4>Buy amount <span class="seg buyamt" id="amtSeg"><button class="btn sm" data-v="1">×1</button><button class="btn sm" data-v="10">×10</button><button class="btn sm" data-v="max">Max</button></span></h4>
+                <p>Tap a station in the mine to make it work once. Hire a manager and it works by itself — even while you're away.</p>
+            </div>
+            <div class="card2" id="selCard"></div>
+            <div class="card2" id="shaftCard"></div>
+            <div class="card2" id="prestigeCard"></div>
+        </div>
+        <div class="overlay fixed" id="awayOv" hidden>
+            <div class="modal">
+                <h2>⛏️ Welcome back!</h2>
+                <p id="awayText"></p>
+                <div class="big-num" id="awayCash">0</div>
+                <div class="actions"><button class="btn primary lg" id="awayOk">Collect</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const fmt = (n) => Arcade.fmt(n);
+        const W = 720, TOP = 150, ROW = 110;
+        const cv = $('cv'), box = $('mineBox');
+        const c = cv.getContext('2d');
+        const ORES = [['Coal', '#334155'], ['Copper', '#c2410c'], ['Iron', '#94a3b8'], ['Silver', '#e2e8f0'], ['Gold', '#facc15'], ['Ruby', '#e11d48'], ['Sapphire', '#2563eb'], ['Emerald', '#10b981'], ['Amethyst', '#9333ea'], ['Diamond', '#a5f3fc']];
+        const MAXSHAFT = 30;
+        const KEY = 'arcade.idleminer.save';
+        const def = () => ({ cash: 25, shafts: [{ lvl: 1, mgr: false, stock: 0 }], elev: { lvl: 1, mgr: false }, ware: { lvl: 1, mgr: false }, surface: 0, sc: 0, earned: 0, total: 0, last: Date.now(), boostT: 0, boostCd: 0 });
+        const G = Object.assign(def(), Arcade.load(KEY, {}) || {});
+        let amt = Arcade.load('arcade.idleminer.amt', '1');
+        let sel = { kind: 'shaft', i: 0 };
+
+        /* ---------- economy ---------- */
+        const mult = () => (1 + G.sc * 0.1) * (G.boostT > 0 ? 2 : 1);
+        const milestone = (L) => Math.pow(2, [10, 25, 50, 100, 200, 300, 400].filter(m => L >= m).length);
+        const shaftRate = (i, L = G.shafts[i].lvl) => 2.5 * Math.pow(9, i) * L * milestone(L) * mult();
+        const shaftCost = (i, L) => 9 * Math.pow(9, i) * Math.pow(1.13, L - 1);
+        const newShaftCost = (i) => 250 * Math.pow(26, i - 1);
+        const mgrCost = (kind, i) => (kind === 'shaft' ? 60 * Math.pow(9, i) : 120 * Math.pow(3, G.shafts.length - 1));
+        const elevCap = (L = G.elev.lvl) => 60 * Math.pow(1.22, L - 1) * milestone(L);
+        const elevSpeed = (L = G.elev.lvl) => 1 + Math.min(4, L * 0.04);
+        const elevCost = (L) => 30 * Math.pow(1.17, L - 1);
+        const wareCap = (L = G.ware.lvl) => 60 * Math.pow(1.22, L - 1) * milestone(L);
+        const wareSpeed = (L = G.ware.lvl) => 1 + Math.min(4, L * 0.04);
+        const wareCost = (L) => 30 * Math.pow(1.17, L - 1);
+        const elevTrip = () => (2.2 + G.shafts.length * 0.9) / elevSpeed();
+        const wareTrip = () => 4 / wareSpeed();
+        const costFor = (kind, i, L) => kind === 'shaft' ? shaftCost(i, L) : kind === 'elev' ? elevCost(L) : wareCost(L);
+        const stationOf = (kind, i) => kind === 'shaft' ? G.shafts[i] : kind === 'elev' ? G.elev : G.ware;
+        function bulk(kind, i) {
+            const st = stationOf(kind, i);
+            let n = 0, cost = 0, L = st.lvl;
+            const lim = amt === 'max' ? 1000 : +amt;
+            while (n < lim) { const k = costFor(kind, i, L + n); if (amt === 'max' && cost + k > G.cash) break; cost += k; n++; }
+            if (amt === 'max' && n === 0) { n = 1; cost = costFor(kind, i, L); }
+            return { n, cost };
+        }
+        function upgrade(kind, i) {
+            const { n, cost } = bulk(kind, i);
+            if (G.cash < cost) { Arcade.sfx('bad'); return; }
+            G.cash -= cost; stationOf(kind, i).lvl += n;
+            Arcade.sfx('coin');
+            render();
+        }
+        function hire(kind, i) {
+            const st = stationOf(kind, i), cost = mgrCost(kind, i);
+            if (st.mgr || G.cash < cost) return;
+            G.cash -= cost; st.mgr = true;
+            Arcade.sfx('power');
+            render();
+        }
+        function buyShaft() {
+            const i = G.shafts.length, cost = newShaftCost(i);
+            if (i >= MAXSHAFT || G.cash < cost) return;
+            G.cash -= cost; G.shafts.push({ lvl: 1, mgr: false, stock: 0 });
+            Arcade.sfx('level');
+            Arcade.report('shafts', G.shafts.length);
+            sel = { kind: 'shaft', i };
+            resizeCanvas(); render();
+            box.scrollTop = box.scrollHeight;
+        }
+        const scGain = () => Math.floor(Math.sqrt(G.earned / 2e5));
+        function prestige() {
+            const g = scGain();
+            if (g < 1) return;
+            if (!confirm(`Sell this mine for ${g} super cash? Shafts, levels, managers and cash reset. Each super cash adds +10% income forever.`)) return;
+            const keep = { sc: G.sc + g, total: G.total };
+            Object.assign(G, def(), keep);
+            anims = freshAnims();
+            Arcade.sfx('win'); Arcade.toast(`+${g} 💎 super cash — income now ×${(1 + G.sc * 0.1).toFixed(1)}`, 'gold', 3500);
+            resizeCanvas(); render();
+        }
+
+        /* ---------- simulation: work cycles drawn as moving workers ---------- */
+        const freshAnims = () => ({ shafts: [], elev: { state: 'idle', t: 0, y: 0, load: 0, at: -1 }, ware: { state: 'idle', t: 0, load: 0 } });
+        let anims = freshAnims();
+        const SHAFT_CYCLE = 4;
+        function shaftAnim(i) { return anims.shafts[i] || (anims.shafts[i] = { working: false, t: 0 }); }
+        function tapShaft(i) { const a = shaftAnim(i); if (!a.working) { a.working = true; a.t = 0; Arcade.tone(500, 0.04, 'square', 0.03); } }
+        function tapElev() { if (anims.elev.state === 'idle') { anims.elev.state = 'down'; anims.elev.t = 0; anims.elev.load = 0; anims.elev.at = -1; Arcade.tone(400, 0.04, 'square', 0.03); } }
+        function tapWare() { if (anims.ware.state === 'idle' && G.surface > 0) { anims.ware.state = 'go'; anims.ware.t = 0; anims.ware.load = Math.min(G.surface, wareCap()); G.surface -= anims.ware.load; Arcade.tone(600, 0.04, 'square', 0.03); } }
+        let incomeWin = [];
+        function step(dt) {
+            G.boostT = Math.max(0, G.boostT - dt); G.boostCd = Math.max(0, G.boostCd - dt);
+            G.shafts.forEach((s, i) => {
+                const a = shaftAnim(i);
+                if (s.mgr && !a.working) { a.working = true; a.t = 0; }
+                if (a.working) {
+                    a.t += dt;
+                    if (a.t >= SHAFT_CYCLE) { s.stock += shaftRate(i) * SHAFT_CYCLE; a.working = false; a.t = 0; }
+                }
+            });
+            // elevator: down through every shaft, filling up, then back up
+            const E = anims.elev, trip = elevTrip(), n = G.shafts.length;
+            if (G.elev.mgr && E.state === 'idle') { E.state = 'down'; E.t = 0; E.load = 0; E.at = -1; }
+            if (E.state !== 'idle') {
+                E.t += dt;
+                const half = trip / 2;
+                if (E.state === 'down') {
+                    const k = Math.min(1, E.t / half);
+                    E.y = k * n;
+                    const reached = Math.min(n - 1, Math.floor(k * n - 0.0001));
+                    while (E.at < reached) { E.at++; const s = G.shafts[E.at], take = Math.min(s.stock, elevCap() - E.load); s.stock -= take; E.load += take; }
+                    if (E.t >= half) { E.state = 'up'; E.t = 0; }
+                } else if (E.state === 'up') {
+                    E.y = n * (1 - Math.min(1, E.t / half));
+                    if (E.t >= half) { G.surface += E.load; E.load = 0; E.state = 'idle'; E.y = 0; }
+                }
+            }
+            const Wk = anims.ware;
+            if (G.ware.mgr && Wk.state === 'idle' && G.surface > 0) tapWare();
+            if (Wk.state !== 'idle') {
+                Wk.t += dt;
+                if (Wk.t >= wareTrip()) {
+                    G.cash += Wk.load; G.earned += Wk.load; G.total += Wk.load;
+                    incomeWin.push([performance.now(), Wk.load]);
+                    if (Wk.load > 0 && Math.random() < 0.4) Arcade.tone(1300, 0.05, 'triangle', 0.02);
+                    Wk.load = 0; Wk.state = 'idle';
+                }
+            }
+        }
+        function steadyRate() {
+            // what the mine earns per second once it is running by itself: the slowest of the three stages
+            const prod = G.shafts.reduce((a, s, i) => a + (s.mgr ? shaftRate(i) : 0), 0);
+            const el = G.elev.mgr ? elevCap() / elevTrip() : 0, wa = G.ware.mgr ? wareCap() / wareTrip() : 0;
+            return Math.min(prod, el, wa);
+        }
+        function liveRate() {
+            const now = performance.now();
+            incomeWin = incomeWin.filter(([t]) => now - t < 20000);
+            const sum = incomeWin.reduce((a, [, v]) => a + v, 0);
+            return sum / 20;
+        }
+
+        /* ---------- drawing ---------- */
+        let H = 600;
+        function resizeCanvas() {
+            H = TOP + Math.max(4, G.shafts.length + 1) * ROW + 30;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            cv.width = W * dpr; cv.height = H * dpr;
+            cv.style.aspectRatio = W + ' / ' + H;
+            c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        const EX = 120, EW = 70;   // elevator shaft x
+        function miner(x, y, phase, carry, col) {
+            const bob = Math.sin(phase * 10) * 2;
+            c.fillStyle = '#facc15'; c.beginPath(); c.arc(x, y - 22 + bob, 7, Math.PI, 0); c.fill();   // helmet
+            c.fillStyle = '#fde68a'; c.beginPath(); c.arc(x, y - 18 + bob, 6, 0, Math.PI * 2); c.fill();
+            c.fillStyle = col || '#2563eb'; c.fillRect(x - 6, y - 12 + bob, 12, 12);
+            c.fillStyle = '#1e293b'; c.fillRect(x - 5, y, 4, 6); c.fillRect(x + 1, y, 4, 6);
+            if (carry) { c.fillStyle = carry; c.beginPath(); c.arc(x + 9, y - 6 + bob, 5, 0, Math.PI * 2); c.fill(); }
+        }
+        function draw() {
+            const t = performance.now() / 1000;
+            // sky & surface
+            const sky = c.createLinearGradient(0, 0, 0, TOP);
+            sky.addColorStop(0, '#38bdf8'); sky.addColorStop(1, '#bae6fd');
+            c.fillStyle = sky; c.fillRect(0, 0, W, TOP);
+            c.fillStyle = '#65a30d'; c.fillRect(0, TOP - 20, W, 20);
+            c.fillStyle = '#3f2a12'; c.fillRect(0, TOP, W, H - TOP);
+            for (let y = TOP; y < H; y += 40) { c.fillStyle = y / 40 % 2 ? '#3b2610' : '#432c13'; c.fillRect(0, y, W, 40); }
+            // warehouse
+            c.fillStyle = '#7c2d12'; c.fillRect(W - 220, TOP - 90, 140, 70);
+            c.fillStyle = '#9a3412'; c.beginPath(); c.moveTo(W - 230, TOP - 90); c.lineTo(W - 150, TOP - 130); c.lineTo(W - 70, TOP - 90); c.fill();
+            c.fillStyle = '#fde68a'; c.font = '800 13px system-ui'; c.textAlign = 'center'; c.fillText('MARKET', W - 150, TOP - 60);
+            c.fillStyle = '#e2e8f0'; c.font = '700 12px system-ui'; c.fillText('💰 sells ' + fmt(wareCap()) + ' / trip', W - 150, TOP - 38);
+            // surface stockpile
+            c.fillStyle = '#78350f'; c.beginPath(); c.ellipse(EX + EW + 70, TOP - 20, 34, 12, 0, Math.PI, 0); c.fill();
+            c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.fillText(fmt(G.surface), EX + EW + 70, TOP - 36);
+            // transporter
+            const Wk = anims.ware, wt = Wk.state === 'idle' ? 0 : Wk.t / wareTrip();
+            const tx = EX + EW + 90 + (W - 240 - EX - EW - 90) * (wt < 0.5 ? wt * 2 : 2 - wt * 2);
+            miner(tx, TOP - 22, Wk.state === 'idle' ? 0 : t, Wk.load > 0 && wt < 0.5 ? '#facc15' : null, '#16a34a');
+            if (!G.ware.mgr) { c.fillStyle = Wk.state === 'idle' && G.surface > 0 ? '#facc15' : 'rgba(255,255,255,0.4)'; c.font = '800 12px system-ui'; c.fillText(Wk.state === 'idle' ? (G.surface > 0 ? '👆 TAP' : '') : '', tx, TOP - 52); }
+            else { c.font = '14px system-ui'; c.fillText('🧑‍💼', W - 60, TOP - 30); }
+            // elevator shaft
+            c.fillStyle = '#1c1206'; c.fillRect(EX, TOP - 60, EW, H - TOP + 30);
+            c.strokeStyle = '#a16207'; c.lineWidth = 4; c.strokeRect(EX, TOP - 60, EW, H - TOP + 30);
+            c.fillStyle = '#a16207'; c.fillRect(EX - 10, TOP - 70, EW + 20, 14);
+            const E = anims.elev, ey = TOP - 50 + E.y * ROW + (E.state !== 'idle' ? 0 : 0);
+            c.strokeStyle = '#94a3b8'; c.lineWidth = 2; c.beginPath(); c.moveTo(EX + EW / 2, TOP - 56); c.lineTo(EX + EW / 2, ey); c.stroke();
+            c.fillStyle = '#b45309'; c.fillRect(EX + 6, ey, EW - 12, 44);
+            c.fillStyle = '#fde68a'; c.fillRect(EX + 10, ey + 4, EW - 20, 14);
+            c.fillStyle = '#fff'; c.font = '700 11px system-ui'; c.fillText(fmt(E.load), EX + EW / 2, ey + 34);
+            if (!G.elev.mgr && E.state === 'idle') { c.fillStyle = '#facc15'; c.font = '800 12px system-ui'; c.fillText('👆 TAP', EX + EW / 2, TOP - 76); }
+            if (G.elev.mgr) { c.font = '14px system-ui'; c.fillText('🧑‍💼', EX - 18, TOP - 40); }
+            // shafts
+            G.shafts.forEach((s, i) => {
+                const y = TOP + 20 + i * ROW, [oreName, oreCol] = ORES[i % ORES.length];
+                c.fillStyle = '#120b03'; c.fillRect(EX + EW, y, W - EX - EW - 20, ROW - 30);
+                c.fillStyle = 'rgba(255,255,255,0.04)'; c.fillRect(EX + EW, y, W - EX - EW - 20, 4);
+                // ore wall
+                for (let k = 0; k < 12; k++) { c.fillStyle = oreCol; c.globalAlpha = 0.6 + (k % 3) * 0.15; c.beginPath(); c.arc(W - 40 - (k % 3) * 8, y + 10 + k * 6, 5, 0, Math.PI * 2); c.fill(); }
+                c.globalAlpha = 1;
+                // stockpile at the elevator
+                c.fillStyle = oreCol; c.beginPath(); c.ellipse(EX + EW + 40, y + ROW - 32, 28, Math.min(16, 4 + Math.log10(1 + s.stock) * 3), 0, Math.PI, 0); c.fill();
+                c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.textAlign = 'center'; c.fillText(fmt(s.stock), EX + EW + 40, y + ROW - 52);
+                // miners
+                const a = shaftAnim(i), ph = a.working ? a.t / SHAFT_CYCLE : 0;
+                const nMiners = Math.min(3, 1 + Math.floor(s.lvl / 10));
+                for (let m = 0; m < nMiners; m++) {
+                    const p = (ph + m * 0.33) % 1, x0 = EX + EW + 80, x1 = W - 70;
+                    const x = a.working ? (p < 0.5 ? x0 + (x1 - x0) * p * 2 : x1 - (x1 - x0) * (p - 0.5) * 2) : x0 + 20 + m * 30;
+                    miner(x, y + ROW - 36, a.working ? t + m : 0, a.working && p > 0.5 ? oreCol : null);
+                }
+                c.textAlign = 'left'; c.fillStyle = '#fde68a'; c.font = '800 13px system-ui';
+                c.fillText(`Shaft ${i + 1} · ${oreName}`, EX + EW + 10, y + 16);
+                c.fillStyle = '#cbd5e1'; c.font = '600 11px system-ui';
+                c.fillText(`Lv ${s.lvl} · ${fmt(shaftRate(i))}/s`, EX + EW + 10, y + 31);
+                c.textAlign = 'center';
+                if (!s.mgr && !a.working) { c.fillStyle = '#facc15'; c.font = '800 12px system-ui'; c.fillText('👆 TAP TO MINE', (EX + EW + W) / 2, y + 45); }
+                if (s.mgr) { c.font = '15px system-ui'; c.fillText('🧑‍💼', W - 34, y + ROW - 34); }
+                if (sel.kind === 'shaft' && sel.i === i) { c.strokeStyle = '#f59e0b'; c.lineWidth = 3; c.strokeRect(EX + EW + 1.5, y + 1.5, W - EX - EW - 23, ROW - 33); }
+            });
+            if (sel.kind === 'elev') { c.strokeStyle = '#f59e0b'; c.lineWidth = 3; c.strokeRect(EX - 4, TOP - 64, EW + 8, H - TOP + 38); }
+            if (sel.kind === 'ware') { c.strokeStyle = '#f59e0b'; c.lineWidth = 3; c.strokeRect(EX + EW + 30, TOP - 135, W - EX - EW - 60, 118); }
+            // next shaft slot
+            const ny = TOP + 20 + G.shafts.length * ROW;
+            if (G.shafts.length < MAXSHAFT) {
+                c.strokeStyle = 'rgba(253,230,138,0.4)'; c.setLineDash([8, 6]); c.lineWidth = 2; c.strokeRect(EX + EW + 4, ny, W - EX - EW - 28, ROW - 34); c.setLineDash([]);
+                c.fillStyle = G.cash >= newShaftCost(G.shafts.length) ? '#facc15' : '#a8a29e'; c.font = '800 14px system-ui';
+                c.fillText(`➕ New shaft — 💰 ${fmt(newShaftCost(G.shafts.length))}`, (EX + EW + W) / 2, ny + 42);
+            }
+            if (G.boostT > 0) { c.fillStyle = '#facc15'; c.font = '900 16px system-ui'; c.fillText(`⚡ RUSH ×2 · ${Math.ceil(G.boostT)}s`, 160, 30); }
+        }
+        cv.addEventListener('click', (e) => {
+            const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+            if (x >= EX - 6 && x <= EX + EW + 6) { sel = { kind: 'elev' }; tapElev(); render(); return; }
+            if (y < TOP && x > EX + EW) { sel = { kind: 'ware' }; tapWare(); render(); return; }
+            const i = Math.floor((y - TOP - 20) / ROW);
+            if (i >= 0 && i < G.shafts.length) { sel = { kind: 'shaft', i }; tapShaft(i); render(); return; }
+            if (i === G.shafts.length) buyShaft();
+        });
+
+        /* ---------- side panel ---------- */
+        function stationCard(kind, i) {
+            const st = stationOf(kind, i), { n, cost } = bulk(kind, i);
+            let title, info, next;
+            if (kind === 'shaft') { title = `⛏️ Shaft ${i + 1} — ${ORES[i % ORES.length][0]}`; info = `Mines ${fmt(shaftRate(i))}/s`; next = `→ ${fmt(shaftRate(i, st.lvl + n))}/s`; }
+            else if (kind === 'elev') { title = '🛗 Elevator'; info = `Carries ${fmt(elevCap())} per trip · ${elevTrip().toFixed(1)}s round trip`; next = `→ ${fmt(elevCap(st.lvl + n))} per trip`; }
+            else { title = '🏪 Market'; info = `Sells ${fmt(wareCap())} per trip · ${wareTrip().toFixed(1)}s`; next = `→ ${fmt(wareCap(st.lvl + n))} per trip`; }
+            const ms = [10, 25, 50, 100, 200, 300, 400].find(m => st.lvl < m);
+            return `<h4>${title} <small>Lv ${st.lvl}</small></h4><p>${info}${ms ? ` · ×2 boost at level ${ms}` : ''}</p>
+                <div class="row2"><button class="btn primary" data-up="${kind}:${i ?? 0}" ${G.cash < cost ? 'disabled' : ''}>Upgrade ×${n} · 💰 ${fmt(cost)}<br><small>${next}</small></button></div>
+                ${st.mgr ? '<p style="margin:6px 0 0">🧑‍💼 Manager hired — working automatically</p>' : `<div class="row2" style="margin-top:6px"><button class="btn" data-mgr="${kind}:${i ?? 0}" ${G.cash < mgrCost(kind, i) ? 'disabled' : ''}>🧑‍💼 Hire manager · 💰 ${fmt(mgrCost(kind, i))}</button></div>`}`;
+        }
+        const setHTML = (el, h) => { if (el._h !== h) { el._h = h; el.innerHTML = h; } };
+        function render() {
+            setHTML($('selCard'), stationCard(sel.kind, sel.i));
+            const ns = G.shafts.length;
+            setHTML($('shaftCard'), `<h4>Stations</h4><div class="row2">
+                <button class="btn sm ${sel.kind === 'elev' ? 'sel' : ''}" data-sel="elev">🛗 Elevator ${G.elev.mgr ? '🧑‍💼' : ''}</button>
+                <button class="btn sm ${sel.kind === 'ware' ? 'sel' : ''}" data-sel="ware">🏪 Market ${G.ware.mgr ? '🧑‍💼' : ''}</button></div>
+                <div class="row2" style="margin-top:6px">${G.shafts.map((s, i) => `<button class="btn sm ${sel.kind === 'shaft' && sel.i === i ? 'sel' : ''}" data-sel="shaft:${i}" style="flex:0 0 auto">${i + 1}${s.mgr ? '🧑‍💼' : ''}</button>`).join('')}</div>
+                ${ns < MAXSHAFT ? `<div class="row2" style="margin-top:6px"><button class="btn" id="newShaft" ${G.cash < newShaftCost(ns) ? 'disabled' : ''}>➕ Dig shaft ${ns + 1} (${ORES[ns % ORES.length][0]}) · 💰 ${fmt(newShaftCost(ns))}</button></div>` : ''}`);
+            const g = scGain();
+            setHTML($('prestigeCard'), `<h4>💎 Sell the mine <small>${G.sc} super cash · ×${(1 + G.sc * 0.1).toFixed(1)} income</small></h4>
+                <p>Start a new mine and earn super cash: +10% income each, forever. Earned in this mine: 💰 ${fmt(G.earned)}.</p>
+                <div class="row2"><button class="btn" id="prestigeBtn" ${g < 1 ? 'disabled' : ''}>${g < 1 ? `Earn 💰 ${fmt(2e5 * Math.pow(Math.floor(Math.sqrt(G.earned / 2e5)) + 1, 2))} to sell` : `Sell for ${g} 💎`}</button></div>`);
+            document.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const [k, i] = b.dataset.up.split(':'); upgrade(k, +i); });
+            document.querySelectorAll('[data-mgr]').forEach(b => b.onclick = () => { const [k, i] = b.dataset.mgr.split(':'); hire(k, +i); });
+            document.querySelectorAll('[data-sel]').forEach(b => b.onclick = () => { const [k, i] = b.dataset.sel.split(':'); sel = { kind: k, i: +i || 0 }; render(); });
+            if ($('newShaft')) $('newShaft').onclick = buyShaft;
+            $('prestigeBtn').onclick = prestige;
+            document.querySelectorAll('#amtSeg [data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === amt); b.onclick = () => { amt = b.dataset.v; Arcade.save('arcade.idleminer.amt', amt); render(); }; });
+            hud();
+        }
+        function hud() {
+            Arcade.text('cash', fmt(G.cash));
+            Arcade.text('rate', fmt(Math.max(liveRate(), steadyRate())));
+            Arcade.text('sc', G.sc);
+            $('boostBtn').disabled = G.boostCd > 0;
+            $('boostBtn').textContent = G.boostT > 0 ? `⚡ ×2 · ${Math.ceil(G.boostT)}s` : G.boostCd > 0 ? `⚡ ${Math.ceil(G.boostCd / 60)}m` : '⚡ Rush ×2';
+        }
+        $('boostBtn').onclick = () => { if (G.boostCd > 0) return; G.boostT = 60; G.boostCd = 600; Arcade.sfx('power'); hud(); };
+
+        /* ---------- saving & offline ---------- */
+        function save() { G.last = Date.now(); Arcade.save(KEY, G); }
+        function offline() {
+            const away = Math.min(8 * 3600, (Date.now() - (G.last || Date.now())) / 1000);
+            if (away < 60) return;
+            const boost = G.boostT; G.boostT = 0;
+            const gain = steadyRate() * away;
+            G.boostT = Math.max(0, boost - away); G.boostCd = Math.max(0, G.boostCd - away);
+            if (gain <= 0) return;
+            $('awayText').textContent = `Your managers kept the mine running for ${Arcade.time(away)}${away >= 8 * 3600 ? ' (8h max)' : ''}.`;
+            $('awayCash').textContent = '💰 ' + fmt(gain);
+            $('awayOk').onclick = () => { G.cash += gain; G.earned += gain; G.total += gain; Arcade.hide('awayOv'); Arcade.sfx('coin'); save(); render(); };
+            Arcade.show('awayOv');
+        }
+        window.addEventListener('pagehide', save);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else offline(); });
+        setInterval(save, 10000);
+        let uiT = 0;
+        const loop = Arcade.loop((dt) => {
+            step(dt); draw();
+            uiT += dt;
+            if (uiT > 0.4) { uiT = 0; render(); }
+        });
+        resizeCanvas();
+        offline();
+        render();
+        loop.start();
+        window.__miner = { G, step, tapShaft, tapElev, tapWare, buyShaft, upgrade, hire };
+    })();
+    </script>
+</body>
+</html>

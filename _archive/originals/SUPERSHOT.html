@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrono-Solid Overdrive</title>
+    <style>
+        body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Courier New', Courier, monospace; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        canvas { background: #000; cursor: none; border: 2px solid #333; }
+        #ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; pointer-events: none; }
+        .stat { font-size: 16px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 10px; border: 1px solid #444; }
+        #time-bar { position: absolute; bottom: 0; left: 0; height: 4px; background: #00ff00; width: 0%; transition: width 0.1s; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="stat">SCORE: <span id="sVal">0</span> | BEST: <span id="hVal">0</span></div>
+        <div class="stat">EMPS: <span id="eVal">3</span> | SHIELDS: <span id="shVal">0</span></div>
+    </div>
+    <div id="time-bar"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+                const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sEl = document.getElementById('sVal'), hEl = document.getElementById('hVal');
+        const eEl = document.getElementById('eVal'), shEl = document.getElementById('shVal');
+        const tBar = document.getElementById('time-bar');
+
+        canvas.width = 900; canvas.height = 600;
+
+        // --- LOADING DATA ---
+        // We pull the high score from the browser. If it doesn't exist, we use 0.
+        let hiScore = localStorage.getItem('chronoHighScore') || 0;
+        hEl.innerText = hiScore;
+
+        let score = 0, emps = 3, shields = 0, timeScale = 1.0;
+        let gameActive = false, player = { x: 450, y: 300, px: 450, py: 300, size: 8 };
+        let enemies = [], gems = [];
+
+        function spawn(type) {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            if (side === 0) { x = Math.random() * canvas.width; y = -50; }
+            else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; }
+            else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; }
+            else { x = -50; y = Math.random() * canvas.height; }
+            const speed = type === 'enemy' ? 4 + Math.random() * 3 : 3;
+            const angle = Math.atan2(player.y - y, player.x - x);
+            return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, type, size: type === 'enemy' ? 14 : 10 };
+        }
+
+        window.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            player.px = player.x; player.py = player.y;
+            player.x = e.clientX - rect.left; player.y = e.clientY - rect.top;
+            const dist = Math.hypot(player.x - player.px, player.y - player.py);
+            // Updated min speed to 0.5 as requested
+            timeScale = Math.min(2.5, Math.max(0.5, dist / 12)); 
+            tBar.style.width = (timeScale / 2.5 * 100) + "%";
+        });
+
+        window.addEventListener('keydown', e => { if(e.code === 'Space') useEMP(); });
+        canvas.addEventListener('mousedown', e => { 
+            if (!gameActive) reset(); 
+            else if (e.button === 0 || e.button === 2) useEMP(); 
+        });
+        window.oncontextmenu = (e) => e.preventDefault();
+
+        function useEMP() {
+            if (emps > 0 && gameActive) {
+                emps--; eEl.innerText = emps;
+                enemies = [];
+            }
+        }
+
+        function reset() {
+            score = 0; emps = 3; shields = 0; enemies = []; gems = [];
+            sEl.innerText = "0"; eEl.innerText = "3"; shEl.innerText = "0";
+            gameActive = true; update();
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            if (Math.random() < 0.08 * timeScale) enemies.push(spawn('enemy'));
+            if (Math.random() < 0.02 * timeScale) gems.push(spawn('gem'));
+
+            enemies.forEach((en, i) => {
+                en.x += en.vx * timeScale; en.y += en.vy * timeScale;
+                if (Math.hypot(player.x - en.x, player.y - en.y) < 18) {
+                    if (shields > 0) { shields--; shEl.innerText = shields; enemies.splice(i, 1); }
+                    else { 
+                        gameActive = false;
+                        // --- SAVING DATA ---
+                        if (score > hiScore) { 
+                            hiScore = score; 
+                            hEl.innerText = hiScore; 
+                            localStorage.setItem('chronoHighScore', hiScore);
+                        }
+                    }
+                }
+                if (en.x < -100 || en.x > canvas.width+100 || en.y < -100 || en.y > canvas.height+100) enemies.splice(i, 1);
+            });
+
+            gems.forEach((g, i) => {
+                g.x += g.vx * timeScale; g.y += g.vy * timeScale;
+                if (Math.hypot(player.x - g.x, player.y - g.y) < 20) {
+                    // Shield nerf: 0.95 makes it a 5% chance
+                    if (Math.random() > 0.95) { shields++; shEl.innerText = shields; }
+                    else { score += Math.floor(100 * timeScale); sEl.innerText = score; }
+                    gems.splice(i, 1);
+                }
+            });
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill();
+            if (shields > 0) { ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x, player.y, player.size + 5, 0, Math.PI*2); ctx.stroke(); }
+            enemies.forEach(en => { ctx.fillStyle = '#ff3333'; ctx.fillRect(en.x - 7, en.y - 7, 14, 14); });
+            gems.forEach(g => { ctx.fillStyle = '#00f2ff'; ctx.beginPath(); ctx.arc(g.x, g.y, 6, 0, Math.PI*2); ctx.fill(); });
+
+            if (!gameActive) {
+                ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold 24px Courier New';
+                ctx.fillText(score > 0 ? 'NEURAL COLLAPSE' : 'CHRONO-SOLID', canvas.width/2, canvas.height/2);
+                ctx.font = '16px Courier New'; ctx.fillText('CLICK TO OVERDRIVE', canvas.width/2, canvas.height/2 + 40);
+            }
+        }
+        draw();
+
+    </script>
+</body>
+</html>

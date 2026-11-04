@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wood Blocks · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #e9a85c; --accent-2: #c0814a; --accent-ink: #1f1206; }
+        .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+        .th { display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 12px 8px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; color: var(--text); font: inherit; }
+        .th.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+        .th.locked { opacity: 0.55; cursor: default; }
+        .th canvas { width: 72px; height: 72px; }
+        .th small { color: var(--muted); font-size: 0.72rem; }
+        .th .bar { width: 100%; height: 6px; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Wood Blocks</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+            <span class="chip" id="comboChip">Combo <b id="streak">0</b></span>
+        </div>
+        <div class="actions">
+            <div class="seg" id="modes">
+                <button class="btn sm" data-mode="classic">Classic</button>
+                <button class="btn sm" data-mode="relaxed" title="Tap a piece to rotate it">Relaxed</button>
+            </div>
+            <button class="btn sm" id="newBtn">New</button>
+            <button class="btn sm icon" id="themeBtn" title="Themes">🎨</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad">No moves left</h2>
+                    <div class="big-num" id="finalScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Lines cleared</small><b id="finalLines">0</b></div>
+                        <div><small>Best combo</small><b id="finalCombo">0</b></div>
+                        <div><small>Biggest clear</small><b id="finalMulti">0</b></div>
+                        <div><small>Perfect clears</small><b id="finalPerfect">0</b></div>
+                        <div><small>Best</small><b id="finalBest">0</b></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
+                </div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="themeOv" hidden>
+            <div class="modal">
+                <h2>Themes</h2>
+                <p>Unlock new block sets just by playing.</p>
+                <div class="themes" id="themes"></div>
+                <p class="small muted" id="themeStats" style="margin-top:12px"></p>
+                <div class="actions"><button class="btn primary" id="themeClose">Done</button></div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0">Drag pieces onto the board. Fill a row, column or 3×3 square to clear it. Keep clearing within 3 placements to build a combo. <span id="relaxHint">In Relaxed mode, tap a piece to rotate it.</span></p>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const N = 9, CS = 44, BX = 12, BY = 12, W = BX * 2 + N * CS, METER_Y = BY + N * CS + 14, TRAY_Y = METER_Y + 30, H = TRAY_Y + 150;
+        const COMBO_WINDOW = 3; // placements you get to clear again before a combo breaks
+        const CLEAR_NAMES = ['', '', 'Double!', 'Triple!', 'Quad!', 'Amazing!', 'Incredible!', 'Unbelievable!'];
+        const COMBO_COLS = ['#fde68a', '#fde68a', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#c084fc', '#60a5fa', '#34d399'];
+        const comboCol = (k) => COMBO_COLS[Math.min(COMBO_COLS.length - 1, k)];
+        const WOODS = ['#d9a066', '#c78a52', '#e8c27a', '#b9784a', '#deb27c', '#a86b3c'];
+        // Block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
+        const THEMES = {
+            wood: { name: 'Wood', icon: '🪵', colors: WOODS, bg: '#151021', frame: '#2b1d14', cellA: '#3a281b', cellB: '#33231a', style: 'wood',
+                    need: () => true, req: 'Unlocked' },
+            stone: { name: 'Stone', icon: '🪨', colors: ['#a8a29e', '#9ca3af', '#8b95a5', '#78716c', '#b4b0aa', '#94a3b8'], bg: '#0f1115', frame: '#23272d', cellA: '#2f343b', cellB: '#2a2e35', style: 'stone',
+                    need: (s) => s.lines >= 150, req: 'Clear 150 lines', prog: (s) => s.lines / 150 },
+            neon: { name: 'Neon', icon: '💡', colors: ['#22d3ee', '#f472b6', '#a3e635', '#facc15', '#c084fc', '#fb7185'], bg: '#05030c', frame: '#0d0820', cellA: '#160d2e', cellB: '#120a27', style: 'neon',
+                    need: (s) => s.lines >= 500 || s.best >= 6000, req: 'Clear 500 lines or score 6,000', prog: (s) => Math.max(s.lines / 500, s.best / 6000) },
+        };
+        let themeId = Arcade.load('arcade.wood.theme', 'wood');
+        let totalLines = Number(Arcade.load('arcade.wood.totalLines', 0)) || 0;
+        const T = () => THEMES[themeId] || THEMES.wood;
+        const colOf = (c) => typeof c === 'number' ? T().colors[c % 6] : c;
+        const BASE = [
+            [[1]], [[1, 1]], [[1, 1, 1]], [[1, 1, 1, 1]], [[1, 1, 1, 1, 1]],
+            [[1, 1], [1, 1]], [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+            [[1, 0], [1, 1]], [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[1, 0], [1, 0], [1, 1]],
+            [[1, 1, 1], [0, 1, 0]], [[0, 1, 1], [1, 1, 0]], [[1, 0], [0, 1]], [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        ];
+        const WEIGHT = [3, 4, 4, 3, 2, 4, 1, 4, 2, 3, 3, 2, 1, 1];
+        const rot = (m) => m[0].map((_, i) => m.map(r => r[i]).reverse());
+        const SHAPES = [];
+        BASE.forEach((s, k) => {
+            const seen = new Set();
+            let c = s;
+            for (let i = 0; i < 4; i++) {
+                const key = JSON.stringify(c);
+                if (!seen.has(key)) { seen.add(key); SHAPES.push({ m: c, w: WEIGHT[k] }); }
+                c = rot(c);
+            }
+        });
+        const TOTAL_W = SHAPES.reduce((a, s) => a + s.w, 0);
+
+        const canvas = document.getElementById('c');
+        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles();
+
+        let mode = Arcade.load('arcade.wood.mode', 'classic');
+        let best = Arcade.load('arcade.wood.best', 0);
+        let grid, pieces, score, streak, lines, bestCombo, over, drag = null, clearing = [], popups = [], time = 0;
+        let comboLife = 0, bestMulti = 0, perfects = 0, shake = 0, flash = 0, flashCol = '#fff', beams = [], banner = null, meterPulse = 0;
+
+        function randShape() {
+            let r = Math.random() * TOTAL_W;
+            for (const s of SHAPES) { r -= s.w; if (r <= 0) return s.m; }
+            return SHAPES[0].m;
+        }
+        // colours are 1..6 (not 0..5): the grid uses falsy = empty, so colour 0 would make placed blocks vanish
+        function newPiece() { return { m: randShape(), color: Arcade.randi(1, 6) }; }
+
+        function start() {
+            grid = Array.from({ length: N }, () => Array(N).fill(null));
+            score = 0; streak = 0; lines = 0; bestCombo = 0; over = false; clearing = []; popups = [];
+            comboLife = 0; bestMulti = 0; perfects = 0; shake = 0; flash = 0; beams = []; banner = null;
+            refill();
+            Arcade.hide('overOv');
+            hud();
+            document.querySelectorAll('#modes .btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            document.getElementById('relaxHint').hidden = mode !== 'relaxed';
+        }
+
+        function refill() {
+            // make sure at least one piece of each new set can be placed when possible
+            for (let tries = 0; tries < 12; tries++) {
+                pieces = [newPiece(), newPiece(), newPiece()];
+                if (pieces.some(p => anyFit(p.m))) break;
+            }
+        }
+
+        function hud() {
+            Arcade.text('score', score);
+            Arcade.text('best', Math.max(best, score));
+            Arcade.text('streak', streak > 1 ? '×' + streak : streak);
+            const chip = document.getElementById('comboChip');
+            chip.style.borderColor = streak > 1 ? comboCol(streak) : '';
+            chip.querySelector('b').style.color = streak > 1 ? comboCol(streak) : '';
+        }
+
+        const canPlace = (m, r, c) => m.every((row, i) => row.every((v, j) => !v || (r + i >= 0 && r + i < N && c + j >= 0 && c + j < N && !grid[r + i][c + j])));
+        function anyFit(m) {
+            for (let r = 0; r <= N - m.length; r++) for (let c = 0; c <= N - m[0].length; c++) if (canPlace(m, r, c)) return true;
+            return false;
+        }
+
+        function findClears(g) {
+            const rows = [], cols = [], boxes = [];
+            for (let i = 0; i < N; i++) {
+                if (g[i].every(Boolean)) rows.push(i);
+                if (g.every(r => r[i])) cols.push(i);
+            }
+            for (let br = 0; br < 3; br++) for (let bc = 0; bc < 3; bc++) {
+                let full = true;
+                for (let i = 0; i < 3 && full; i++) for (let j = 0; j < 3; j++) if (!g[br * 3 + i][bc * 3 + j]) { full = false; break; }
+                if (full) boxes.push([br, bc]);
+            }
+            const cells = new Set();
+            rows.forEach(r => { for (let c = 0; c < N; c++) cells.add(r * N + c); });
+            cols.forEach(c => { for (let r = 0; r < N; r++) cells.add(r * N + c); });
+            boxes.forEach(([br, bc]) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.add((br * 3 + i) * N + bc * 3 + j); });
+            return { count: rows.length + cols.length + boxes.length, cells, rows, cols, boxes };
+        }
+
+        function place(idx, r, c) {
+            const p = pieces[idx];
+            let n = 0;
+            p.m.forEach((row, i) => row.forEach((v, j) => { if (v) { grid[r + i][c + j] = p.color; n++; } }));
+            score += n;
+            pieces[idx] = null;
+            const res = findClears(grid);
+            if (res.count) {
+                streak++;
+                comboLife = COMBO_WINDOW;
+                lines += res.count;
+                const unlockedBefore = Object.keys(THEMES).filter(id => THEMES[id].need({ lines: totalLines, best }));
+                totalLines += res.count;
+                Arcade.save('arcade.wood.totalLines', totalLines);
+                for (const id of Object.keys(THEMES)) if (!unlockedBefore.includes(id) && THEMES[id].need({ lines: totalLines, best })) Arcade.toast(`🔓 ${THEMES[id].icon} ${THEMES[id].name} theme unlocked! Tap 🎨`, 'gold', 3000);
+                bestCombo = Math.max(bestCombo, streak);
+                bestMulti = Math.max(bestMulti, res.count);
+                // base: grows with lines cleared at once; combo: +50% per combo step
+                const base = 18 * res.count * res.count;
+                const mult = 1 + (streak - 1) * 0.5;
+                let gain = Math.round(base * mult);
+                const col = comboCol(streak);
+                for (const k of res.cells) {
+                    const rr = Math.floor(k / N), cc = k % N;
+                    clearing.push({ r: rr, c: cc, color: grid[rr][cc], t: 0.35 + ((rr + cc) % 5) * 0.03 });
+                    fx.emit(BX + cc * CS + CS / 2, BY + rr * CS + CS / 2, { n: 3 + Math.min(6, streak), color: [colOf(grid[rr][cc]), '#fff3d6', col], speed: 140 + streak * 25, life: 0.5 + streak * 0.04, gravity: 400 });
+                    grid[rr][cc] = null;
+                }
+                for (const rr of res.rows) beams.push({ kind: 'row', i: rr, t: 0.45, col });
+                for (const cc of res.cols) beams.push({ kind: 'col', i: cc, t: 0.45, col });
+                for (const [br, bc] of res.boxes) beams.push({ kind: 'box', r: br, c: bc, t: 0.45, col });
+                const perfect = grid.every(row => row.every(v => !v));
+                if (perfect) {
+                    perfects++;
+                    const pb = Math.round(300 * mult);
+                    gain += pb;
+                    for (let k = 0; k < 6; k++) fx.emit(BX + Math.random() * N * CS, BY + Math.random() * N * CS, { n: 18, color: ['#fde68a', '#fb923c', '#f472b6', '#60a5fa', '#34d399'], speed: 260, life: 1, gravity: 260 });
+                }
+                score += gain;
+                shake = Math.min(14, 3 + res.count * 2 + streak * 1.5);
+                flash = Math.min(0.5, 0.12 + res.count * 0.06 + streak * 0.04);
+                flashCol = col;
+                meterPulse = 1;
+                popups.push({ x: BX + (c + p.m[0].length / 2) * CS, y: BY + r * CS, text: '+' + gain, t: 1.1, col });
+                const title = perfect ? 'PERFECT CLEAR!' : streak >= 2 ? `COMBO ×${streak}` : CLEAR_NAMES[Math.min(CLEAR_NAMES.length - 1, res.count)];
+                const sub = perfect ? `+${Math.round(300 * mult)} bonus` : streak >= 2 ? (CLEAR_NAMES[Math.min(CLEAR_NAMES.length - 1, res.count)] || '') + `  ${mult.toFixed(1)}× points` : '';
+                if (title) banner = { title, sub, t: 1.4, col: perfect ? '#fde68a' : col };
+                // rising pitch with combo
+                const f = 440 * Math.pow(2, Math.min(streak - 1, 12) / 12);
+                Arcade.tone(f, 0.12, 'triangle', 0.07);
+                Arcade.tone(f * 1.5, 0.16, 'triangle', 0.06, null, 0.08);
+                if (res.count > 1 || streak > 2) Arcade.tone(f * 2, 0.22, 'square', 0.04, f * 3, 0.16);
+                if (perfect) Arcade.sfx('win');
+                if (navigator.vibrate && streak > 2) navigator.vibrate(20 + streak * 5);
+            } else {
+                if (streak > 0) {
+                    comboLife--;
+                    if (comboLife <= 0) {
+                        if (streak > 1) popups.push({ x: W / 2, y: METER_Y - 6, text: 'combo lost', t: 1, col: '#94a3b8', small: true });
+                        streak = 0;
+                    }
+                }
+                Arcade.sfx('pop');
+            }
+            if (mode === 'relaxed') pieces[idx] = newPiece();
+            else if (pieces.every(x => !x)) refill();
+            hud();
+            if (!pieces.some(pc => pc && anyFit(pc.m))) setTimeout(gameOver, 450);
+        }
+
+        function gameOver() {
+            if (over) return;
+            over = true;
+            Arcade.sfx('die');
+            Arcade.report('score', score);
+            const isNew = score > best;
+            if (isNew) {
+                const before = Object.keys(THEMES).filter(id => THEMES[id].need({ lines: totalLines, best }));
+                best = score; Arcade.save('arcade.wood.best', best);
+                for (const id of Object.keys(THEMES)) if (!before.includes(id) && THEMES[id].need({ lines: totalLines, best })) Arcade.toast(`🔓 ${THEMES[id].icon} ${THEMES[id].name} theme unlocked!`, 'gold', 3000);
+            }
+            Arcade.text('finalScore', score);
+            Arcade.text('finalLines', lines);
+            Arcade.text('finalCombo', bestCombo > 1 ? '×' + bestCombo : bestCombo);
+            Arcade.text('finalMulti', bestMulti ? bestMulti + (bestMulti === 1 ? ' line' : ' lines') : '0');
+            Arcade.text('finalPerfect', perfects);
+            Arcade.text('finalBest', best);
+            document.getElementById('newBest').hidden = !isNew;
+            Arcade.show('overOv');
+            hud();
+        }
+
+        /* ---------- Drawing ---------- */
+        function cell(x, y, s, color, alpha, c2, style) {
+            c2 = c2 || ctx;
+            c2.globalAlpha = alpha === undefined ? 1 : alpha;
+            color = colOf(color);
+            const r = s * 0.16;
+            style = style || T().style;
+            if (style === 'neon') {
+                c2.fillStyle = 'rgba(10,6,24,0.9)';
+                c2.beginPath(); c2.roundRect(x + 2, y + 2, s - 4, s - 4, r); c2.fill();
+                c2.shadowColor = color; c2.shadowBlur = s * 0.35;
+                c2.strokeStyle = color; c2.lineWidth = Math.max(1.5, s * 0.08);
+                c2.stroke();
+                c2.shadowBlur = 0;
+                c2.fillStyle = color; c2.globalAlpha *= 0.25;
+                c2.beginPath(); c2.roundRect(x + s * 0.3, y + s * 0.3, s * 0.4, s * 0.4, r * 0.5); c2.fill();
+            } else {
+                c2.fillStyle = color;
+                c2.beginPath(); c2.roundRect(x + 1.5, y + 1.5, s - 3, s - 3, style === 'stone' ? r * 0.6 : r); c2.fill();
+                c2.fillStyle = 'rgba(255,255,255,0.22)';
+                c2.fillRect(x + 4, y + 4, s - 8, s * 0.14);
+                if (style === 'stone') {
+                    c2.fillStyle = 'rgba(0,0,0,0.18)';
+                    for (const [a, b, rr] of [[0.3, 0.45, 0.06], [0.65, 0.35, 0.04], [0.5, 0.7, 0.05], [0.25, 0.75, 0.035]]) { c2.beginPath(); c2.arc(x + s * a, y + s * b, s * rr, 0, Math.PI * 2); c2.fill(); }
+                } else {
+                    c2.strokeStyle = 'rgba(80,40,10,0.25)'; c2.lineWidth = 1;
+                    for (let k = 1; k < 3; k++) { c2.beginPath(); c2.moveTo(x + 5, y + s * k / 3 + 2); c2.lineTo(x + s - 5, y + s * k / 3 - 1); c2.stroke(); }
+                }
+                c2.fillStyle = 'rgba(0,0,0,0.2)';
+                c2.fillRect(x + 3, y + s - 6, s - 6, 3);
+            }
+            c2.globalAlpha = 1;
+        }
+
+        function pieceBox(i) { return { x: 10 + i * ((W - 20) / 3), y: TRAY_Y, w: (W - 20) / 3, h: 140 }; }
+
+        function dragOrigin() {
+            const m = drag.piece.m;
+            const lift = drag.touch ? CS * 1.6 : 0;
+            return { x: drag.x - m[0].length * CS / 2, y: drag.y - m.length * CS / 2 - lift };
+        }
+        function dragCell() {
+            const o = dragOrigin();
+            return { r: Math.round((o.y - BY) / CS), c: Math.round((o.x - BX) / CS) };
+        }
+
+        function render() {
+            ctx.fillStyle = T().bg;
+            ctx.fillRect(0, 0, W, H);
+            ctx.save();
+            if (shake > 0.2) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+            // combo glow around the board
+            if (streak > 1) {
+                const g = 0.35 + 0.25 * Math.sin(time * 6);
+                ctx.shadowColor = comboCol(streak);
+                ctx.shadowBlur = 10 + streak * 3 * g;
+            }
+            // board
+            ctx.fillStyle = T().frame;
+            ctx.beginPath(); ctx.roundRect(BX - 6, BY - 6, N * CS + 12, N * CS + 12, 14); ctx.fill();
+            ctx.shadowBlur = 0;
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+                const alt = (Math.floor(r / 3) + Math.floor(c / 3)) % 2;
+                ctx.fillStyle = alt ? T().cellA : T().cellB;
+                ctx.fillRect(BX + c * CS + 1, BY + r * CS + 1, CS - 2, CS - 2);
+            }
+
+            // preview
+            let preview = null, previewClears = null;
+            if (drag) {
+                const { r, c } = dragCell();
+                if (canPlace(drag.piece.m, r, c)) {
+                    preview = { r, c };
+                    const g2 = grid.map(row => row.slice());
+                    drag.piece.m.forEach((row, i) => row.forEach((v, j) => { if (v) g2[r + i][c + j] = 1; }));
+                    previewClears = findClears(g2).cells;
+                }
+            }
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+                const x = BX + c * CS, y = BY + r * CS;
+                if (grid[r][c]) cell(x, y, CS, grid[r][c]);
+                if (previewClears && previewClears.has(r * N + c)) {
+                    ctx.fillStyle = 'rgba(255,240,200,0.28)';
+                    ctx.fillRect(x + 1, y + 1, CS - 2, CS - 2);
+                }
+            }
+            if (preview) drag.piece.m.forEach((row, i) => row.forEach((v, j) => {
+                if (v) cell(BX + (preview.c + j) * CS, BY + (preview.r + i) * CS, CS, drag.piece.color, 0.45);
+            }));
+            for (const k of clearing) {
+                const s = CS * (0.5 + k.t / 0.7);
+                cell(BX + k.c * CS + (CS - s) / 2, BY + k.r * CS + (CS - s) / 2, s, k.color, Math.min(1, k.t / 0.35));
+            }
+            // light beams sweeping through the cleared lines
+            for (const b of beams) {
+                const a = b.t / 0.45;
+                ctx.globalAlpha = a * 0.75;
+                ctx.fillStyle = b.col;
+                const thick = CS * (0.3 + (1 - a) * 0.9);
+                if (b.kind === 'row') ctx.fillRect(BX - 6, BY + b.i * CS + CS / 2 - thick / 2, N * CS + 12, thick);
+                else if (b.kind === 'col') ctx.fillRect(BX + b.i * CS + CS / 2 - thick / 2, BY - 6, thick, N * CS + 12);
+                else { ctx.lineWidth = 4 + (1 - a) * 6; ctx.strokeStyle = b.col; ctx.strokeRect(BX + b.c * 3 * CS + 2, BY + b.r * 3 * CS + 2, CS * 3 - 4, CS * 3 - 4); }
+            }
+            ctx.globalAlpha = 1;
+            if (flash > 0.01) {
+                ctx.globalAlpha = flash;
+                ctx.fillStyle = flashCol;
+                ctx.fillRect(BX - 6, BY - 6, N * CS + 12, N * CS + 12);
+                ctx.globalAlpha = 1;
+            }
+
+            // combo meter: one pip per placement left before the combo breaks
+            const mw = N * CS, mx = BX;
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            ctx.beginPath(); ctx.roundRect(mx, METER_Y, mw, 16, 8); ctx.fill();
+            if (streak > 0) {
+                const col = comboCol(streak);
+                const pip = (mw - 8 - (COMBO_WINDOW - 1) * 4) / COMBO_WINDOW;
+                for (let k = 0; k < COMBO_WINDOW; k++) {
+                    ctx.fillStyle = k < comboLife ? col : 'rgba(255,255,255,0.08)';
+                    ctx.globalAlpha = k < comboLife ? 0.55 + 0.45 * meterPulse : 1;
+                    ctx.beginPath(); ctx.roundRect(mx + 4 + k * (pip + 4), METER_Y + 4, pip, 8, 4); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                ctx.font = 'bold 11px "Segoe UI", sans-serif';
+                ctx.textAlign = 'left';
+                const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED — CLEAR AGAIN!';
+                ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,16,33,0.9)'; ctx.lineJoin = 'round';
+                ctx.strokeText(label, mx + 10, METER_Y + 12);
+                ctx.fillStyle = '#fff7e6';
+                ctx.fillText(label, mx + 10, METER_Y + 12);
+            } else {
+                ctx.font = '600 10px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                ctx.fillText('CLEAR A LINE TO START A COMBO', mx + mw / 2, METER_Y + 12);
+            }
+
+            // tray
+            for (let i = 0; i < 3; i++) {
+                const b = pieceBox(i), p = pieces[i];
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.beginPath(); ctx.roundRect(b.x + 4, b.y, b.w - 8, b.h - 10, 14); ctx.fill();
+                if (!p || (drag && drag.i === i)) continue;
+                const s = Math.min(26, (b.w - 30) / p.m[0].length, (b.h - 30) / p.m.length);
+                const pw = p.m[0].length * s, ph = p.m.length * s;
+                const ox = b.x + (b.w - pw) / 2, oy = b.y + (b.h - 10 - ph) / 2;
+                const fits = anyFit(p.m);
+                p.m.forEach((row, ri) => row.forEach((v, ci) => { if (v) cell(ox + ci * s, oy + ri * s, s, p.color, fits ? 1 : 0.3); }));
+            }
+            if (drag) {
+                const o = dragOrigin();
+                drag.piece.m.forEach((row, i) => row.forEach((v, j) => { if (v) cell(o.x + j * CS, o.y + i * CS, CS, drag.piece.color, 0.95); }));
+            }
+            fx.draw(ctx);
+            ctx.textAlign = 'center';
+            for (const p of popups) {
+                ctx.globalAlpha = Math.min(1, p.t * 2);
+                ctx.font = p.small ? '600 13px "Segoe UI", sans-serif' : 'bold 22px "Segoe UI", sans-serif';
+                ctx.fillStyle = p.col || '#fde68a';
+                ctx.fillText(p.text, p.x, p.y - (1.1 - p.t) * 30);
+            }
+            ctx.globalAlpha = 1;
+            if (banner) {
+                const age = 1.4 - banner.t;
+                const s = age < 0.18 ? 0.4 + (age / 0.18) * 0.8 : age < 0.3 ? 1.2 - (age - 0.18) / 0.12 * 0.2 : 1;
+                ctx.globalAlpha = Math.min(1, banner.t * 2.5);
+                ctx.save();
+                ctx.translate(BX + N * CS / 2, BY + N * CS / 2 - 10);
+                ctx.scale(s, s);
+                ctx.font = '900 40px "Segoe UI", sans-serif';
+                ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(21,16,33,0.85)'; ctx.lineJoin = 'round';
+                ctx.strokeText(banner.title, 0, 0);
+                ctx.fillStyle = banner.col; ctx.fillText(banner.title, 0, 0);
+                if (banner.sub) {
+                    ctx.font = '800 17px "Segoe UI", sans-serif';
+                    ctx.lineWidth = 6; ctx.strokeText(banner.sub, 0, 30);
+                    ctx.fillStyle = '#fff7e6'; ctx.fillText(banner.sub, 0, 30);
+                }
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+            ctx.restore();
+        }
+
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            clearing = clearing.filter(k => (k.t -= dt) > 0);
+            popups = popups.filter(p => (p.t -= dt) > 0);
+            beams = beams.filter(b => (b.t -= dt) > 0);
+            if (banner && (banner.t -= dt) <= 0) banner = null;
+            shake *= Math.pow(0.002, dt);
+            flash *= Math.pow(0.004, dt);
+            meterPulse *= Math.pow(0.05, dt);
+            fx.update(dt);
+            render();
+        });
+
+        /* ---------- Input ---------- */
+        canvas.addEventListener('pointerdown', (e) => {
+            if (over) return;
+            const p = Arcade.pointer(canvas, e, W, H);
+            for (let i = 0; i < 3; i++) {
+                const b = pieceBox(i);
+                if (pieces[i] && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+                    drag = { i, piece: pieces[i], x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, touch: e.pointerType !== 'mouse' };
+                    canvas.setPointerCapture(e.pointerId);
+                    Arcade.sfx('select');
+                    break;
+                }
+            }
+        });
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            const p = Arcade.pointer(canvas, e, W, H);
+            drag.x = p.x; drag.y = p.y;
+            if (Math.hypot(p.x - drag.sx, p.y - drag.sy) > 8) drag.moved = true;
+        });
+        const release = () => {
+            if (!drag) return;
+            const d = drag;
+            drag = null;
+            if (!d.moved) {
+                if (mode === 'relaxed') { d.piece.m = rot(d.piece.m); Arcade.sfx('click'); }
+                return;
+            }
+            drag = d;
+            const { r, c } = dragCell();
+            drag = null;
+            if (canPlace(d.piece.m, r, c)) place(d.i, r, c);
+            else Arcade.sfx('bad');
+        };
+        canvas.addEventListener('pointerup', release);
+        canvas.addEventListener('pointercancel', () => { drag = null; });
+
+        document.querySelectorAll('#modes .btn').forEach(b => b.onclick = () => {
+            mode = b.dataset.mode; Arcade.save('arcade.wood.mode', mode); start();
+        });
+        document.getElementById('newBtn').onclick = start;
+        function buildThemes() {
+            const host = document.getElementById('themes');
+            host.innerHTML = '';
+            const st = { lines: totalLines, best };
+            for (const [id, th] of Object.entries(THEMES)) {
+                const open = th.need(st);
+                const b = document.createElement('button');
+                b.className = 'th' + (id === themeId ? ' on' : '') + (open ? '' : ' locked');
+                const cv = document.createElement('canvas'); cv.width = 144; cv.height = 144;
+                const g = cv.getContext('2d'); g.scale(2, 2);
+                g.fillStyle = th.frame; g.beginPath(); g.roundRect(0, 0, 72, 72, 10); g.fill();
+                const saved = themeId; themeId = id;
+                [[0, 0], [1, 0], [1, 1], [2, 1], [0, 2], [1, 2], [2, 2]].forEach(([cx, cy], k) => cell(6 + cx * 20, 6 + cy * 20, 20, k % 6, 1, g));
+                themeId = saved;
+                b.appendChild(cv);
+                b.insertAdjacentHTML('beforeend', `<b>${th.icon} ${th.name}</b><small>${open ? (id === themeId ? 'Equipped' : 'Tap to use') : '🔒 ' + th.req}</small>` + (!open && th.prog ? `<div class="bar"><i style="width:${Math.min(100, th.prog(st) * 100).toFixed(0)}%"></i></div>` : ''));
+                b.onclick = () => { if (!open) return; themeId = id; Arcade.save('arcade.wood.theme', id); Arcade.sfx('select'); buildThemes(); };
+                host.appendChild(b);
+            }
+            Arcade.text('themeStats', `All-time lines cleared: ${totalLines} · Best score: ${best}`);
+        }
+        document.getElementById('themeBtn').onclick = () => { buildThemes(); Arcade.show('themeOv'); };
+        document.getElementById('themeClose').onclick = () => Arcade.hide('themeOv');
+        if (!THEMES[themeId] || !THEMES[themeId].need({ lines: totalLines, best })) themeId = 'wood';
+        window.__wood = { get grid() { return grid; }, set pieces(v) { pieces = v; }, place, get streak() { return streak; }, get score() { return score; } }; // for automated tests
+        document.getElementById('againBtn').onclick = start;
+
+        start();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

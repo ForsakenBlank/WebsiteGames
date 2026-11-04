@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crazy Cards · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #dc2626; --accent-2: #facc15; --accent-ink: #fff; --cw: 74px; --ch: 108px; }
+        body.no-scroll { overflow: auto; }
+        .stage { justify-content: space-between; gap: 10px; padding: 10px; }
+        .opps { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; width: 100%; }
+        .opp { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); min-width: 130px; transition: box-shadow 0.2s; }
+        .opp.turn { box-shadow: 0 0 0 2px var(--accent-2), 0 0 24px -6px var(--accent-2); }
+        .opp b { font-size: 0.9rem; }
+        .opp small { color: var(--muted); font-size: 0.72rem; min-height: 1.1em; }
+        .opp .backs { display: flex; height: 44px; }
+        .opp .backs .card { --cw: 30px; --ch: 44px; margin-left: -18px; }
+        .opp .backs .card:first-child { margin-left: 0; }
+        .catch { font-size: 0.7rem; padding: 2px 8px; }
+        .center { display: flex; gap: 22px; align-items: center; justify-content: center; position: relative; }
+        .pile { position: relative; }
+        .colorRing { position: absolute; inset: -10px; border-radius: 18px; border: 4px solid var(--cur, #fff); opacity: 0.9; pointer-events: none; }
+        .dir { font-size: 2rem; color: var(--muted); user-select: none; transition: transform 0.4s; }
+        .card { width: var(--cw); height: var(--ch); border-radius: calc(var(--cw) * 0.13); position: relative; flex: none; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.45); display: grid; place-items: center; font-weight: 900; color: #fff; user-select: none; background: var(--c); overflow: hidden; }
+        .card::before { content: ''; position: absolute; width: 74%; height: 86%; border-radius: 50%; background: #fff; transform: rotate(28deg); }
+        .card .v { position: relative; color: var(--c); font-size: calc(var(--cw) * 0.44); text-shadow: 1px 1px 0 rgba(0,0,0,0.25); line-height: 1; }
+        .card .cn { position: absolute; font-size: calc(var(--cw) * 0.2); color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.4); }
+        .card .cn.tl { top: 4px; left: 6px; } .card .cn.br { bottom: 4px; right: 6px; transform: rotate(180deg); }
+        .card.wild { background: #111; }
+        .card.wild::before { background: conic-gradient(#ef4444 0 25%, #3b82f6 0 50%, #22c55e 0 75%, #facc15 0); }
+        .card.wild .v { color: #fff; text-shadow: 0 0 4px #000, 0 0 4px #000; }
+        .card.back { background: #111827; }
+        .card.back::before { background: #dc2626; width: 70%; height: 82%; }
+        .card.back .v { color: #facc15; font-size: calc(var(--cw) * 0.22); transform: rotate(-28deg); text-shadow: 1px 1px 0 #000; }
+        .deck { cursor: pointer; }
+        .deck.can { box-shadow: 0 0 0 3px var(--accent-2), 0 6px 20px rgba(250,204,21,0.4); }
+        .hand { display: flex; justify-content: center; padding: 24px 10px 6px; min-height: calc(var(--ch) + 30px); max-width: 100%; overflow-x: auto; }
+        .hand .card { margin-left: calc(var(--cw) * -0.3); cursor: pointer; transition: transform 0.15s, margin 0.15s; }
+        .hand .card:first-child { margin-left: 0; }
+        .hand .card.ok { transform: translateY(-14px); }
+        .hand .card.ok:hover { transform: translateY(-26px); z-index: 2; }
+        .hand .card.no { filter: brightness(0.55); cursor: not-allowed; }
+        .hand .card.fresh { animation: pop 0.3s; }
+        .discard .card { animation: land 0.25s ease-out; }
+        @keyframes land { from { transform: scale(1.25) rotate(-8deg); opacity: 0.4; } }
+        @keyframes pop { from { transform: translateY(-40px); opacity: 0; } }
+        .bottom { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .one { font-weight: 900; letter-spacing: 0.05em; }
+        .one.armed { background: #facc15; color: #000; }
+        .log { font-size: 0.85rem; font-weight: 700; min-height: 1.3em; text-align: center; }
+        .picker { display: grid; grid-template-columns: repeat(2, 90px); gap: 10px; justify-content: center; margin-top: 12px; }
+        .picker button { height: 70px; border-radius: 14px; border: 3px solid #fff; cursor: pointer; font-weight: 800; color: #fff; text-shadow: 1px 1px 0 #000; }
+        .setup { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 10px; }
+        @media (max-width: 600px) { :root { --cw: 56px; --ch: 82px; } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Crazy Cards</h1>
+        <div class="stats">
+            <span class="chip accent">Wins <b id="wins">0</b></span>
+            <span class="chip">Played <b id="played">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="newBtn">⟲ New game</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="opps" id="opps"></div>
+        <div class="center">
+            <div class="pile deck" id="deck"></div>
+            <div class="dir" id="dir">⟳</div>
+            <div class="pile discard" id="discard"><div class="colorRing" id="ring"></div></div>
+        </div>
+        <div class="bottom">
+            <div class="log" id="log"></div>
+            <div class="controls">
+                <button class="btn one" id="oneBtn" title="Press when you're about to play your second-last card">ONE!</button>
+                <button class="btn" id="passBtn" hidden>Keep it &amp; pass</button>
+                <span class="small muted" id="youInfo"></span>
+            </div>
+            <div class="hand" id="hand"></div>
+        </div>
+        <div class="overlay fixed" id="setupOv">
+            <div class="modal">
+                <h2>🃏 Crazy Cards</h2>
+                <p class="small">Match the colour or the symbol. Skips, reverses, draw-twos and wilds — and press <b>ONE!</b> before you play down to your last card, or get caught.</p>
+                <div class="setup">
+                    <div class="seg" id="botSeg"><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
+                    <button class="btn sm" id="stackBtn"></button>
+                </div>
+                <div class="actions"><button class="btn primary lg" id="startBtn">Deal</button></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="pickOv" hidden>
+            <div class="modal">
+                <h2>Pick a colour</h2>
+                <div class="picker" id="picker"></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">You win!</h2>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button><button class="btn" id="setupBtn">Settings</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const COL = { r: '#ef4444', b: '#3b82f6', g: '#22c55e', y: '#eab308' };
+        const CNAME = { r: 'Red', b: 'Blue', g: 'Green', y: 'Yellow' };
+        const SYM = { skip: '⊘', rev: '⇄', d2: '+2', wild: '★', d4: '+4' };
+        const cfg = Object.assign({ bots: 2, stack: false }, Arcade.load('arcade.cards.cfg', {}));
+        const stats = Object.assign({ wins: 0, played: 0 }, Arcade.load('arcade.cards.stats', {}));
+        let deck, pile, players, turn, dir, color, pendingDraw, drawnCard, armed, busy, over, timer, vulnerable;
+
+        function makeDeck() {
+            const d = [];
+            for (const c of 'rbgy') {
+                d.push({ c, v: '0' });
+                for (let n = 1; n <= 9; n++) d.push({ c, v: String(n) }, { c, v: String(n) });
+                for (const s of ['skip', 'rev', 'd2']) d.push({ c, v: s }, { c, v: s });
+            }
+            for (let i = 0; i < 4; i++) d.push({ c: 'w', v: 'wild' }, { c: 'w', v: 'd4' });
+            return Arcade.shuffle(d.map((x, i) => ({ ...x, id: i })));
+        }
+        function draw1() {
+            if (!deck.length) {
+                const top = pile.pop();
+                deck = Arcade.shuffle(pile); pile = [top];
+                if (!deck.length) return null;
+                say('Reshuffled the discard pile');
+            }
+            return deck.pop();
+        }
+        function give(p, n) { const got = []; for (let i = 0; i < n; i++) { const c = draw1(); if (c) { p.hand.push(c); got.push(c); } } if (n > 1 && p.you) Arcade.sfx('bad'); return got; }
+        function deal() {
+            clearTimeout(timer);
+            deck = makeDeck(); pile = [];
+            players = [{ name: 'You', you: true, hand: [], said: false }];
+            const names = ['Pip 🦊', 'Bolt 🤖', 'Juno 🐙'];
+            for (let i = 0; i < cfg.bots; i++) players.push({ name: names[i], you: false, hand: [], said: false });
+            for (const p of players) give(p, 7);
+            let first;
+            do { first = draw1(); if (first.c === 'w' || isNaN(+first.v)) { deck.unshift(first); first = null; } } while (!first);
+            pile.push(first); color = first.c;
+            turn = Math.floor(Math.random() * players.length); dir = 1; pendingDraw = 0; drawnCard = null; armed = false; busy = false; over = false; vulnerable = null;
+            Arcade.hide('setupOv'); Arcade.hide('endOv');
+            say(players[turn].you ? 'You start!' : players[turn].name + ' starts');
+            render();
+            schedule();
+        }
+        const top = () => pile[pile.length - 1];
+        function canPlay(card) {
+            const t = top();
+            if (pendingDraw) return cfg.stack && (card.v === t.v) && (card.v === 'd2' || card.v === 'd4');
+            return card.c === 'w' || card.c === color || card.v === t.v;
+        }
+        const nextIdx = (k = 1) => ((turn + dir * k) % players.length + players.length) % players.length;
+        function say(s) { $('log').textContent = s; }
+        function play(p, card, chosen) {
+            p.hand.splice(p.hand.indexOf(card), 1);
+            pile.push(card);
+            color = card.c === 'w' ? chosen : card.c;
+            drawnCard = null;
+            Arcade.tone(card.c === 'w' ? 700 : 520, 0.07, 'triangle', 0.05);
+            let msg = `${p.you ? 'You' : p.name} played ${card.c === 'w' ? (card.v === 'd4' ? 'Wild +4' : 'a Wild') + ' → ' + CNAME[color] : CNAME[card.c] + ' ' + (SYM[card.v] || card.v)}`;
+            // ONE! rule
+            if (p.hand.length === 1) {
+                const said = p.you ? armed : Math.random() < 0.85;
+                if (said) { msg += ' — ONE!'; p.said = true; if (!p.you) Arcade.sfx('select'); }
+                else { p.said = false; vulnerable = p; if (p.you) setTimeout(() => botCatch(p), 900 + Math.random() * 900); else msg += ' (forgot to say ONE!)'; }
+            }
+            armed = false;
+            if (!p.hand.length) { say(msg); render(); return finish(p); }
+            let skip = false;
+            if (card.v === 'skip') { skip = true; msg += ` · ${players[nextIdx()].you ? 'you are' : players[nextIdx()].name + ' is'} skipped`; }
+            if (card.v === 'rev') { dir = -dir; msg += ' · direction reversed'; if (players.length === 2) skip = true; }
+            if (card.v === 'd2' || card.v === 'd4') {
+                pendingDraw += card.v === 'd2' ? 2 : 4;
+                const n = players[nextIdx()];
+                const canStack = cfg.stack && n.hand.some(h => h.v === card.v);
+                if (!canStack) { give(n, pendingDraw); msg += ` · ${n.you ? 'you draw' : n.name + ' draws'} ${pendingDraw}`; pendingDraw = 0; skip = true; n.said = false; }
+            }
+            say(msg);
+            advance(skip);
+        }
+        function advance(skip) {
+            turn = nextIdx(skip ? 2 : 1);
+            render();
+            schedule();
+        }
+        function botCatch(p) {
+            if (over || vulnerable !== p || p.hand.length !== 1) return;
+            if (Math.random() < 0.75) { give(p, 2); say(`Caught! You didn't say ONE! — draw 2`); Arcade.sfx('bad'); }
+            vulnerable = null;
+            render();
+        }
+        function catchBot(i) {
+            const p = players[i];
+            if (vulnerable !== p || p.hand.length !== 1) return;
+            give(p, 2); vulnerable = null;
+            say(`You caught ${p.name}! They draw 2`); Arcade.sfx('coin');
+            render();
+        }
+        function schedule() {
+            clearTimeout(timer);
+            if (over) return;
+            const p = players[turn];
+            if (p.you) {
+                if (pendingDraw && !p.hand.some(canPlay)) { give(p, pendingDraw); say(`You draw ${pendingDraw}`); pendingDraw = 0; return advance(false); }
+                busy = false; render(); return;
+            }
+            busy = true; render();
+            timer = setTimeout(() => botMove(p), 900 + Math.random() * 500);
+        }
+        function botMove(p) {
+            if (over) return;
+            if (vulnerable && vulnerable.you && vulnerable.hand.length === 1 && Math.random() < 0.5) botCatch(vulnerable);
+            let opts = p.hand.filter(canPlay);
+            if (pendingDraw && !opts.length) { give(p, pendingDraw); say(`${p.name} draws ${pendingDraw}`); pendingDraw = 0; return advance(false); }
+            if (!opts.length) {
+                const c = draw1();
+                if (c) p.hand.push(c);
+                if (c && canPlay(c)) { say(`${p.name} drew a card and played it`); return setTimeout(() => play(p, c, bestColor(p)), 500); }
+                say(`${p.name} drew a card`);
+                return advance(false);
+            }
+            const next = players[nextIdx()];
+            const score = (c) => {
+                let s = 0;
+                if (c.c === 'w') s -= 10;                              // save wilds
+                if (next.hand.length <= 2 && ['skip', 'd2', 'd4', 'rev'].includes(c.v)) s += 30;
+                if (c.c === color) s += 5;
+                if (!isNaN(+c.v)) s += +c.v * 0.3;                   // dump high numbers
+                if (c.v === 'd2' || c.v === 'skip') s += 3;
+                return s + Math.random();
+            };
+            opts.sort((a, b) => score(b) - score(a));
+            play(p, opts[0], bestColor(p, opts[0]));
+        }
+        function bestColor(p, except) {
+            const n = { r: 0, b: 0, g: 0, y: 0 };
+            for (const c of p.hand) if (c !== except && c.c !== 'w') n[c.c]++;
+            return Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+        }
+        function youPlay(card) {
+            if (over || busy || !players[turn].you) return;
+            if (drawnCard && card !== drawnCard) { Arcade.toast('Play the card you drew, or keep it and pass', null, 1500); return; }
+            if (!canPlay(card)) { Arcade.sfx('bad'); return; }
+            if (card.c === 'w') {
+                const host = $('picker'); host.innerHTML = '';
+                for (const c of 'rbgy') { const b = document.createElement('button'); b.style.background = COL[c]; b.textContent = CNAME[c]; b.onclick = () => { Arcade.hide('pickOv'); play(players[0], card, c); }; host.appendChild(b); }
+                Arcade.show('pickOv');
+                return;
+            }
+            play(players[0], card);
+        }
+        function youDraw() {
+            const p = players[turn];
+            if (over || busy || !p.you || drawnCard) return;
+            if (pendingDraw) { give(p, pendingDraw); say(`You draw ${pendingDraw}`); pendingDraw = 0; return advance(false); }
+            const c = draw1();
+            if (!c) { say('No cards left to draw'); return advance(false); }
+            p.hand.push(c); p.said = false;
+            Arcade.sfx('click');
+            if (canPlay(c)) { drawnCard = c; say('You drew a playable card — play it or keep it'); render(); }
+            else { say('You drew a card'); advance(false); }
+        }
+        function finish(p) {
+            over = true; clearTimeout(timer);
+            stats.played++;
+            if (p.you) { stats.wins++; Arcade.count('win'); Arcade.addXP(15 + cfg.bots * 8, true); }
+            Arcade.save('arcade.cards.stats', stats);
+            Arcade.sfx(p.you ? 'win' : 'die');
+            const pts = (c) => (c.c === 'w' ? 50 : isNaN(+c.v) ? 20 : +c.v);
+            const scores = players.filter(q => q !== p).map(q => `${q.you ? 'You' : q.name}: ${q.hand.length} cards (${q.hand.reduce((a, c) => a + pts(c), 0)} pts)`);
+            $('endTitle').textContent = p.you ? '🏆 You win!' : `${p.name} wins`;
+            $('endTitle').className = p.you ? 'good' : 'bad';
+            $('endText').textContent = scores.join(' · ');
+            setTimeout(() => Arcade.show('endOv'), 600);
+            render();
+        }
+
+        function cardEl(card, back) {
+            const d = document.createElement('div');
+            if (back) { d.className = 'card back'; d.innerHTML = '<span class="v">CRAZY</span>'; return d; }
+            d.className = 'card' + (card.c === 'w' ? ' wild' : '');
+            d.style.setProperty('--c', COL[card.c] || '#111');
+            const label = SYM[card.v] || card.v;
+            d.innerHTML = `<span class="cn tl">${label}</span><span class="v">${card.v === 'wild' ? '' : label}</span><span class="cn br">${label}</span>`;
+            return d;
+        }
+        function render() {
+            if (!players) return;
+            const opps = $('opps'); opps.innerHTML = '';
+            players.forEach((p, i) => {
+                if (p.you) return;
+                const o = document.createElement('div');
+                o.className = 'opp' + (i === turn && !over ? ' turn' : '');
+                const backs = document.createElement('div'); backs.className = 'backs';
+                for (let k = 0; k < Math.min(p.hand.length, 12); k++) backs.appendChild(cardEl(null, true));
+                o.innerHTML = `<b>${p.name}</b><small>${p.hand.length} card${p.hand.length === 1 ? '' : 's'}${p.hand.length === 1 && p.said ? ' · ONE!' : ''}</small>`;
+                o.appendChild(backs);
+                if (vulnerable === p && p.hand.length === 1) { const b = document.createElement('button'); b.className = 'btn sm danger catch'; b.textContent = 'Catch! They forgot ONE'; b.onclick = () => catchBot(i); o.appendChild(b); }
+                if (over && p.hand.length) { const show = document.createElement('div'); show.className = 'backs'; p.hand.slice(0, 10).forEach(c => { const e = cardEl(c); e.style.setProperty('--cw', '30px'); e.style.setProperty('--ch', '44px'); show.appendChild(e); }); o.appendChild(show); }
+                opps.appendChild(o);
+            });
+            const dk = $('deck'); dk.innerHTML = '';
+            const back = cardEl(null, true); dk.appendChild(back);
+            dk.title = deck.length + ' cards left';
+            const myTurn = players[turn].you && !over && !busy;
+            dk.classList.toggle('can', myTurn && !drawnCard && !players[0].hand.some(canPlay));
+            const ds = $('discard');
+            [...ds.querySelectorAll('.card')].forEach(e => e.remove());
+            const tc = cardEl(top()); ds.appendChild(tc);
+            $('ring').style.setProperty('--cur', COL[color]);
+            $('dir').textContent = dir > 0 ? '⟳' : '⟲';
+            const hand = $('hand'); hand.innerHTML = '';
+            const me = players[0];
+            me.hand.sort((a, b) => ('rbgyw'.indexOf(a.c) - 'rbgyw'.indexOf(b.c)) || String(a.v).localeCompare(String(b.v), undefined, { numeric: true }));
+            for (const card of me.hand) {
+                const e = cardEl(card);
+                const ok = myTurn && canPlay(card) && (!drawnCard || card === drawnCard);
+                e.className += myTurn ? (ok ? ' ok' : ' no') : '';
+                if (card === drawnCard) e.className += ' fresh';
+                e.onclick = () => youPlay(card);
+                hand.appendChild(e);
+            }
+            $('passBtn').hidden = !drawnCard;
+            $('oneBtn').classList.toggle('armed', armed);
+            $('oneBtn').disabled = !(me.hand.length === 2 && myTurn);
+            $('youInfo').textContent = over ? '' : myTurn ? (pendingDraw ? `Stack a +${top().v === 'd4' ? 4 : 2} or draw ${pendingDraw}` : drawnCard ? '' : me.hand.some(canPlay) ? 'Your turn — play a raised card' : 'No match — click the deck to draw') : players[turn].name + ' is thinking…';
+            Arcade.text('wins', stats.wins); Arcade.text('played', stats.played);
+        }
+        $('deck').onclick = youDraw;
+        $('passBtn').onclick = () => { if (!drawnCard) return; drawnCard = null; say('You kept the card'); advance(false); };
+        $('oneBtn').onclick = () => { armed = !armed; if (armed) Arcade.sfx('select'); render(); };
+        function buildSetup() {
+            document.querySelectorAll('#botSeg [data-v]').forEach(b => { b.classList.toggle('active', +b.dataset.v === cfg.bots); b.onclick = () => { cfg.bots = +b.dataset.v; Arcade.save('arcade.cards.cfg', cfg); buildSetup(); }; });
+            $('stackBtn').textContent = (cfg.stack ? '✓' : '✗') + ' Stack +2 / +4 on each other';
+        }
+        $('stackBtn').onclick = () => { cfg.stack = !cfg.stack; Arcade.save('arcade.cards.cfg', cfg); buildSetup(); };
+        $('startBtn').onclick = deal;
+        $('againBtn').onclick = deal;
+        $('setupBtn').onclick = () => { Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
+        $('newBtn').onclick = () => { if (players && !over && !confirm('Abandon this game?')) return; clearTimeout(timer); Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
+        window.addEventListener('keydown', (e) => { if (e.code === 'KeyO' && players && !over) $('oneBtn').click(); if (e.code === 'Space' && players && !over) { e.preventDefault(); youDraw(); } });
+        buildSetup();
+        Arcade.text('wins', stats.wins); Arcade.text('played', stats.played);
+        window.__cards = { get players() { return players; }, get turn() { return turn; }, youPlay, youDraw, canPlay, get over() { return over; }, get drawnCard() { return drawnCard; }, deal, cfg, pass: () => $('passBtn').click(), get busy() { return busy; } };
+    })();
+    </script>
+</body>
+</html>

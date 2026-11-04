@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Essence Farming · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <link rel="stylesheet" href="essence.css">
+</head>
+<body class="no-select" data-tab="farm">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Essence Farming</h1>
+        <nav class="seg nav-seg" id="tabs">
+            <button class="btn sm" data-nav="farm">🌿 Farm</button>
+            <button class="btn sm" data-nav="void">🌀 Void</button>
+            <button class="btn sm" data-nav="research">🔬 Research</button>
+            <button class="btn sm" data-nav="greenhouse">🏡 Greenhouse</button>
+            <button class="btn sm" data-nav="frontier" style="position:relative">🗺️ Frontier<i id="evDot" hidden style="position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)"></i></button>
+            <button class="btn sm" data-nav="ascend">🌸 Ascension</button>
+            <button class="btn sm" data-nav="stats">📊 Stats</button>
+        </nav>
+        <div class="stats">
+            <span class="chip accent">Essence <b id="hEss">0</b></span>
+            <span class="chip">Yield <b id="hYield">0</b></span>
+            <span class="chip" id="dustChip" hidden>Dust <b id="hDust">0</b></span>
+            <span class="chip" id="dmChip" hidden>DM <b id="hDm">0</b></span>
+            <span class="chip" id="aethChip" hidden>✦ <b id="hAeth">0</b></span>
+            <span class="chip gold" id="seedChip" hidden>🌱 <b id="hSeeds">0</b></span>
+            <span class="chip" id="shardChip" hidden>🔷 <b id="hShards">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <!-- ================= FARM ================= -->
+    <div class="page" data-view="farm">
+        <section class="panel hero">
+            <h3>Dark Farm</h3>
+            <div class="big" id="ess">0</div>
+            <div class="sub"><b id="eps">0</b> essence / sec · Void power <b id="vmult">×1.00</b> · Milestones <b id="mpow">×1.00</b><span id="seedLine"></span></div>
+            <div class="row center">
+                <button class="btn primary lg" id="hireBtn">Hire farmer</button>
+                <button class="btn lg" id="buyAllBtn">⚡ Buy all levels</button>
+                <button class="btn lg" id="ghBtn" hidden>🏡 Unlock greenhouse</button>
+            </div>
+            <p class="tiny dim" id="tip"></p>
+        </section>
+        <div class="grid" id="farmers"></div>
+        <div class="danger-zone"><button class="btn sm danger" id="resetBtn">Delete save</button></div>
+    </div>
+
+    <!-- ================= VOID ================= -->
+    <div class="page" data-view="void" hidden>
+        <section class="panel">
+            <div class="row between"><h3 style="margin:0">Void Altar</h3><span class="small muted">Clicks <b id="clicks">0</b> · Orb multiplier <b class="accent" id="omult">×1.00</b> · <b id="pdust">0</b> dust/s passive</span></div>
+            <div class="arena" id="arena" style="margin-top:12px">
+                <div class="orb" id="orb"></div>
+                <div class="orb red" id="red" hidden></div>
+            </div>
+            <p class="tiny dim center" style="margin:10px 0 0">Click the orb to gather dust. Every click strengthens the next. Catch the <span class="bad">red orb</span> before it vanishes for ×15 dust!</p>
+        </section>
+        <div class="grid">
+            <div class="card"><h4>Orb Infusion <span class="lvl">Lv <b id="orbLvl">0</b></span></h4><p>+1 base dust per click. Now <b id="orbGain">1</b> per click.</p><button class="btn primary" id="orbBtn"></button></div>
+            <div class="card" data-shop="crystals"></div>
+            <div class="card" data-shop="autoDust"></div>
+            <div class="card" data-shop="voidFocus"></div>
+            <div class="card" data-shop="harvestChain"></div>
+            <div class="card" id="resCard"><h4>🔬 Research Lab</h4><p>Unlock dark-matter research, farmer EXP and gem upgrades.</p><button class="btn primary" id="resBtn"></button></div>
+        </div>
+    </div>
+
+    <!-- ================= RESEARCH ================= -->
+    <div class="page" data-view="research" hidden>
+        <section class="panel hero">
+            <h3>Essence Condenser</h3>
+            <p class="sub">Compress <b id="cCost">1M</b> essence into <b class="accent" id="cGain">1</b> dark matter</p>
+            <div class="bar" style="max-width:420px;margin:12px auto"><i id="cBar"></i></div>
+            <div class="row center">
+                <button class="btn primary lg" id="condBtn">Condense</button>
+                <button class="btn lg" id="autoBtn">Auto: OFF</button>
+            </div>
+            <p class="tiny dim">The auto-condenser runs every 3 seconds whenever you can afford it. Higher tiers give 10× dark matter for 25× the essence.</p>
+        </section>
+        <div class="grid">
+            <div class="card"><h4>Farmer EXP</h4><p>Farmers slowly gain experience. Each milestone gives ×1.6 output.</p><button class="btn primary" id="expBtn"></button></div>
+            <div class="card"><h4>Higher-tier Conversion <span class="lvl">Tier <b id="tier">0</b></span></h4><p>×25 condenser cost, ×10 dark matter.</p><button class="btn primary" id="tierBtn"></button></div>
+            <div class="card"><h4>Dust Infusion <span class="lvl">Lv <b id="dustLvl">0</b></span></h4><p>×1.6 passive dust and ×1.35 orb dust.</p><button class="btn primary" id="dustBtn"></button></div>
+            <div class="card"><h4>Milestone Tuning <span class="lvl">Lv <b id="mileLvl">0</b></span></h4><p>×1.1 milestone power.</p><button class="btn primary" id="mileBtn"></button></div>
+        </div>
+        <section class="panel">
+            <div class="row between"><h3 style="margin:0">Gem Forge</h3><span class="small"><span style="color:#22d3ee">💎 <b id="dia">0</b></span> · <span style="color:#f43f5e">🔴 <b id="rub">0</b></span></span></div>
+            <p class="tiny dim">Farmers with EXP occasionally find gems while they work.</p>
+            <div class="grid">
+                <div class="card gem-diamond" data-gem="d_up1" data-cur="diamonds"><h4>Refracted Light <span class="lvl">Lv <b data-l></b></span></h4><p>+5% void crystal power</p><button class="btn"></button></div>
+                <div class="card gem-diamond" data-gem="d_up2" data-cur="diamonds"><h4>Hardened Tools <span class="lvl">Lv <b data-l></b></span></h4><p>−1% farmer upgrade cost (max −50%)</p><button class="btn"></button></div>
+                <div class="card gem-ruby" data-gem="r_up1" data-cur="rubies"><h4>Blood Harvest <span class="lvl">Lv <b data-l></b></span></h4><p>+20% EXP milestone power</p><button class="btn"></button></div>
+                <div class="card gem-ruby" data-gem="r_up2" data-cur="rubies"><h4>Eternal Flame <span class="lvl">Lv <b data-l></b></span></h4><p>+25% global yield</p><button class="btn"></button></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ================= GREENHOUSE ================= -->
+    <div class="page" data-view="greenhouse" hidden>
+        <div class="gh">
+            <aside class="panel">
+                <h3>Seeds</h3>
+                <div class="crop-list" id="crops"></div>
+                <hr class="sep">
+                <button class="btn block" id="unlockCropBtn"></button>
+            </aside>
+            <div class="col" style="gap:16px">
+                <section class="panel">
+                    <div class="row between">
+                        <div class="inv" id="inv"></div>
+                        <div class="row" style="gap:6px">
+                            <button class="btn sm" id="plantAllBtn">🌱 Plant all</button>
+                            <button class="btn sm primary" id="harvestAllBtn">🧺 Harvest all</button>
+                            <button class="btn sm" id="expandBtn"></button>
+                        </div>
+                    </div>
+                    <div class="plots" id="plots" style="margin-top:12px"></div>
+                    <p class="tiny dim" style="margin:10px 0 0" id="ghTip">Tap an empty plot to plant the selected seed. Tap a glowing plot to harvest. With <b>Bulk Growth</b> you can tap a growing plot to add more seeds of the same kind.</p>
+                </section>
+                <section class="panel">
+                    <h3 id="upTitle">Wheat upgrades</h3>
+                    <div class="grid" id="ups"></div>
+                </section>
+                <section class="panel">
+                    <h3>🧬 Cross-breeding lab</h3>
+                    <p class="small muted" style="margin-top:0">Pick two parent crops to try for a hybrid (65% chance). Crops growing next to a different crop can also <b>mutate</b> into one when harvested. Every hybrid you own boosts something — and they're kept when you ascend.</p>
+                    <div class="row" style="gap:8px;flex-wrap:wrap">
+                        <select id="breedA" class="field-sel"></select><span>✕</span><select id="breedB" class="field-sel"></select>
+                        <span class="small" id="breedOut"></span>
+                        <button class="btn primary" id="breedBtn">🧬 Cross-breed</button>
+                    </div>
+                    <div class="grid" id="hybrids" style="margin-top:12px"></div>
+                </section>
+                <section class="panel">
+                    <h3>✨ Rare harvests</h3>
+                    <div class="grid wide">
+                        <div class="card gold-card"><h4>🌟 Golden stash · <span id="goldN">0</span></h4><p>Each sells for 10 minutes of yield.</p><div class="row"><button class="btn grow" id="sellGold"></button><button class="btn grow" id="goldEffBtn"></button></div></div>
+                        <div class="card gem-diamond"><h4>💎 Diamond vault · <span id="diamN">0</span></h4><p>Each sells for 30 minutes of yield.</p><div class="row"><button class="btn grow" id="sellDiam"></button><button class="btn grow" id="diamMastBtn"></button></div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FRONTIER ================= -->
+    <div class="page" data-view="frontier" hidden>
+        <section class="panel locked-panel" id="frLocked">
+            <div class="big-ic">🗺️</div>
+            <h3>The Frontier</h3>
+            <p>Beyond the greenhouse lies endless wild land. Claim it tile by tile with <b>Aether ✦</b> — every biome gives its own bonus, the land grows richer the further you go, and ancient ruins hide permanent relics.</p>
+            <button class="btn primary lg" id="frUnlockBtn"></button>
+        </section>
+        <div class="fr" id="frOpen" hidden>
+            <section class="panel fr-map-panel">
+                <div class="row between"><h3 style="margin:0">World map</h3><span class="small muted">✦ <b id="frAeth">0</b> · <b id="frRate">0</b>/s · <b id="frTiles">1</b> tiles claimed</span></div>
+                <div class="fr-map-wrap" id="frWrap"><div class="fr-map" id="frMap"></div></div>
+                <p class="tiny dim" style="margin:8px 0 0">Tap a tile next to your land to see what's there. Farther rings produce more Aether but cost more to claim.</p>
+            </section>
+            <div class="col" style="gap:16px">
+                <section class="panel" id="frEvent" hidden></section>
+                <section class="panel" id="frInfo"></section>
+                <section class="panel">
+                    <h3>🏗️ Projects <span class="dim">· costs Aether</span></h3>
+                    <div class="up-list" id="frProjects"></div>
+                </section>
+                <section class="panel">
+                    <h3>🏺 Relics <span class="dim">· permanent</span></h3>
+                    <div class="relics" id="frRelics"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ASCENSION ================= -->
+    <div class="page" data-view="ascend" hidden>
+        <section class="panel ascend-panel">
+            <div class="asc">
+                <div>
+                    <h3>🌸 Ascension</h3>
+                    <p class="small" style="margin-top:0">Let this farm return to the earth. You lose essence, farmers, the void, research, the greenhouse and the frontier — and gain <b>Soul Seeds</b>. Every <b>unspent</b> seed gives <b id="perSeed">+10%</b> essence forever, or spend seeds on permanent perks below. Relics are always kept.</p>
+                    <div class="minis">
+                        <div class="mini"><small>Soul seeds</small><b id="aSeeds">0</b></div>
+                        <div class="mini"><small>Seed bonus</small><b id="aBonus">×1</b></div>
+                        <div class="mini"><small>Ascensions</small><b id="aCount">0</b></div>
+                        <div class="mini"><small>This run</small><b id="aRun">0</b></div>
+                    </div>
+                </div>
+                <div class="asc-box">
+                    <small>Ascending now gives</small>
+                    <div class="gain" id="aGain">0 🌱</div>
+                    <button class="btn primary lg" id="ascendBtn">Ascend</button>
+                    <small id="aNote"></small>
+                </div>
+            </div>
+        </section>
+        <section class="panel">
+            <h3>✨ Perks <span class="dim">· costs soul seeds</span></h3>
+            <div class="up-list perk-list" id="perks"></div>
+        </section>
+        <section class="panel ascend-panel" id="tPanel">
+            <div class="asc">
+                <div>
+                    <h3>🌌 Transcendence</h3>
+                    <p class="small" style="margin-top:0">The layer above ascension. Transcending resets <b>soul seeds, perks and hybrids</b> on top of everything an ascension resets — but turns the seeds you earned into <b>Eternity Shards 🔷</b> for huge permanent upgrades. Relics and discovered hybrids are kept.</p>
+                    <div class="minis">
+                        <div class="mini"><small>Shards</small><b id="tShards">0</b></div>
+                        <div class="mini"><small>Seeds since last</small><b id="tSeeds">0</b></div>
+                        <div class="mini"><small>Transcendences</small><b id="tCount">0</b></div>
+                    </div>
+                </div>
+                <div class="asc-box">
+                    <small>Transcending now gives</small>
+                    <div class="gain" id="tGain">0 🔷</div>
+                    <button class="btn primary lg" id="tBtn">Transcend</button>
+                    <small id="tNote"></small>
+                </div>
+            </div>
+            <div class="up-list perk-list" id="tUps" style="margin-top:14px"></div>
+        </section>
+    </div>
+
+    <div class="page" data-view="stats" hidden>
+        <section class="panel">
+            <div class="row between"><h3 style="margin:0">📈 Essence per second</h3><span class="small muted" id="chartNote"></span></div>
+            <canvas id="chart" style="width:100%;height:260px;display:block;margin-top:10px"></canvas>
+        </section>
+        <section class="panel">
+            <h3>📊 Records</h3>
+            <div class="grid" id="statGrid"></div>
+        </section>
+    </div>
+
+    <div class="overlay fixed" id="relicOv" hidden>
+        <div class="modal">
+            <h2 class="good">Relic found!</h2>
+            <div class="loot-icon" id="relicIcon">🗿</div>
+            <p id="relicText"></p>
+            <div class="actions"><button class="btn primary" id="relicClose">Wonderful</button></div>
+        </div>
+    </div>
+
+    <script src="../_shared/arcade.js"></script>
+    <script src="game.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const TABS = ['farm', 'void', 'research', 'greenhouse', 'frontier', 'ascend', 'stats'];
+        let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'farm';
+
+        function showTab(t, quiet) {
+            if (!navState()[t]) { if (!quiet) { Arcade.toast('🔒 ' + NAV_HINTS[t], 'bad'); Arcade.sfx('bad'); } return; }
+            tab = t;
+            document.body.dataset.tab = t;
+            document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== t; });
+            if (location.hash.slice(1) !== t) history.replaceState(null, '', '#' + t);
+            if (t === 'greenhouse') buildUps();
+            if (t === 'frontier') frontierDirty = true;
+            if (t === 'stats') chartT = 0;
+            if (t === 'void') setTimeout(() => moveOrb(orb, 54), 0);
+            refreshAll();
+        }
+        document.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => { Arcade.sfx('click'); showTab(b.dataset.nav); });
+        window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (TABS.includes(t) && t !== tab) showTab(t, true); });
+
+        function refreshNav() {
+            const ns = navState();
+            document.querySelectorAll('[data-nav]').forEach(a => {
+                const k = a.dataset.nav;
+                a.classList.toggle('active', k === tab);
+                a.classList.toggle('locked', !ns[k]);
+                a.title = ns[k] ? '' : NAV_HINTS[k];
+                if (k === 'ascend') a.hidden = !ns.ascend && !state.totalSeeds;
+                if (k === 'frontier') a.hidden = !ns.frontier;
+            });
+        }
+
+        /* ================= FARM ================= */
+        let built = -1;
+        function buildFarmers() {
+            const host = $('farmers');
+            host.innerHTML = '';
+            state.farmers.forEach((f, i) => {
+                const card = document.createElement('div');
+                card.className = 'card farmer';
+                card.innerHTML = `<h4>👨‍🌾 Farmer ${i + 1} <span class="lvl">Lv <b data-k="lvl"></b></span></h4>
+                    <div class="stats-line"><span>Bonus <b class="mult" data-k="mult"></b></span><span><b data-k="yield"></b>/s</span></div>
+                    <div class="bar" data-k="expwrap" title="EXP milestone"><i data-k="exp"></i></div>
+                    <button class="btn primary" data-k="btn"></button>`;
+                card.querySelector('[data-k=btn]').onclick = () => { upgradeFarmer(i); refreshAll(); };
+                host.appendChild(card);
+            });
+            built = state.farmers.length;
+        }
+        $('hireBtn').onclick = () => { if (hire()) refreshAll(); };
+        $('buyAllBtn').onclick = () => { const n = buyAllUpgrades(); if (n) Arcade.toast(`Bought ${n} levels`, 'good', 1200); refreshAll(); };
+        $('ghBtn').onclick = () => { if (unlockGreenhouse()) refreshAll(); };
+        let resetArmed = false;
+        $('resetBtn').onclick = () => {
+            if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Tap again to delete EVERYTHING (incl. ascensions)'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Delete save'; }, 3000); return; }
+            localStorage.removeItem(SAVE_KEY); location.reload();
+        };
+
+        function refreshFarm() {
+            if (built !== state.farmers.length) buildFarmers();
+            $('ess').textContent = fmt(state.essence);
+            $('eps').textContent = fmt(totalYield());
+            $('vmult').textContent = '×' + fmt(vBoost());
+            $('mpow').textContent = '×' + fmt(milestonePower());
+            $('seedLine').textContent = state.seeds ? ` · Soul seeds ×${fmt(seedBonus())}` : '';
+            $('hireBtn').textContent = `Hire farmer · ${fmt(state.hireCost)}`;
+            $('hireBtn').disabled = state.essence < state.hireCost;
+            $('buyAllBtn').disabled = !state.farmers.some(f => state.essence >= farmerCost(f));
+            $('ghBtn').hidden = state.ghUnlocked || state.farmers.length < 5;
+            $('ghBtn').textContent = '🏡 Unlock greenhouse · ' + fmt(GH_COST);
+            $('ghBtn').disabled = state.essence < GH_COST;
+            $('tip').textContent = state.farmers.length < 5
+                ? `Hire ${5 - state.farmers.length} more farmer${5 - state.farmers.length > 1 ? 's' : ''} to open the Void.`
+                : `Every 10 levels multiplies a farmer's bonus by ×${tenMilestone().toFixed(1)}, every 25 levels by ×2.5.`;
+            const cards = $('farmers').children;
+            state.farmers.forEach((f, i) => {
+                const c = cards[i];
+                if (!c) return;
+                const q = (k) => c.querySelector(`[data-k=${k}]`);
+                q('lvl').textContent = f.level;
+                q('mult').textContent = '×' + fmt(f.mult * milestonePower() * expBonus(f));
+                q('yield').textContent = fmt(farmerYield(f));
+                q('expwrap').hidden = !state.expUnlocked;
+                if (state.expUnlocked) q('exp').style.width = Math.min(100, (f.exp || 0) / expReq(f) * 100) + '%';
+                const cost = farmerCost(f);
+                const next = 10 - (f.level % 10);
+                q('btn').textContent = `Level up · ${fmt(cost)}` + (next <= 3 ? `  (×${tenMilestone().toFixed(1)} in ${next})` : '');
+                q('btn').disabled = state.essence < cost;
+            });
+        }
+
+        /* ================= VOID ================= */
+        const arena = $('arena'), orb = $('orb'), red = $('red');
+        function moveOrb(el, size) {
+            const r = arena.getBoundingClientRect();
+            if (!r.width) return;
+            el.style.left = Arcade.rand(10, r.width - size - 10) + 'px';
+            el.style.top = Arcade.rand(10, r.height - size - 10) + 'px';
+        }
+        function floater(x, y, text) {
+            const f = document.createElement('div');
+            f.className = 'floater'; f.textContent = text;
+            f.style.left = x + 'px'; f.style.top = y + 'px';
+            arena.appendChild(f);
+            setTimeout(() => f.remove(), 800);
+        }
+        orb.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const g = clickOrb();
+            const r = arena.getBoundingClientRect();
+            floater(e.clientX - r.left, e.clientY - r.top, '+' + fmt(g));
+            Arcade.sfx('pop');
+            moveOrb(orb, 54);
+            refreshAll();
+        });
+        let redSize = 0, redTimer = null;
+        function spawnRed() {
+            if (tab !== 'void') { scheduleRed(); return; }
+            redSize = 56;
+            red.hidden = false;
+            red.style.width = red.style.height = redSize + 'px';
+            moveOrb(red, redSize);
+            clearInterval(redTimer);
+            redTimer = setInterval(() => {
+                redSize -= 2;
+                red.style.width = red.style.height = Math.max(0, redSize) + 'px';
+                if (redSize <= 0) { clearInterval(redTimer); red.hidden = true; scheduleRed(); }
+            }, 75);
+        }
+        function scheduleRed() { setTimeout(spawnRed, Arcade.rand(12000, 30000)); }
+        red.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            clearInterval(redTimer);
+            const g = clickOrb(15);
+            const r = arena.getBoundingClientRect();
+            floater(e.clientX - r.left, e.clientY - r.top, '+' + fmt(g) + '!!');
+            Arcade.sfx('coin');
+            red.hidden = true;
+            scheduleRed();
+            refreshAll();
+        });
+        for (const el of document.querySelectorAll('[data-shop]')) {
+            const k = el.dataset.shop, s = VOID_SHOP[k];
+            el.innerHTML = `<h4>${s.name} <span class="lvl">Lv <b data-l></b></span></h4><p>${s.desc}</p><button class="btn primary"></button>`;
+            el.querySelector('button').onclick = () => { buyVoid(k); refreshAll(); };
+        }
+        $('orbBtn').onclick = () => { infuseOrb(); refreshAll(); };
+        $('resBtn').onclick = () => { if (state.researchUnlocked) { showTab('research'); return; } if (unlockResearch()) refreshAll(); };
+        function refreshVoid() {
+            $('clicks').textContent = state.clicks;
+            $('omult').textContent = '×' + fmt(orbMultiplier());
+            $('pdust').textContent = fmt(passiveDust());
+            $('orbLvl').textContent = state.orbLvl || 0;
+            $('orbGain').textContent = fmt(orbGain());
+            const oc = Math.pow(2, state.orbLvl || 0);
+            $('orbBtn').textContent = 'Infuse · ' + fmt(oc) + ' dust';
+            $('orbBtn').disabled = state.dust < oc;
+            for (const el of document.querySelectorAll('[data-shop]')) {
+                const k = el.dataset.shop, s = VOID_SHOP[k], c = voidCost(k);
+                el.querySelector('[data-l]').textContent = state[k] || 0;
+                const b = el.querySelector('button');
+                b.textContent = `Buy · ${fmt(c)} ${s.cur === 'dust' ? 'dust' : 'essence'}`;
+                b.disabled = state[s.cur] < c;
+            }
+            $('resBtn').textContent = state.researchUnlocked ? 'Enter the lab →' : `Unlock · ${fmt(RESEARCH_COST)} dust`;
+            $('resBtn').disabled = !state.researchUnlocked && state.dust < RESEARCH_COST;
+        }
+
+        /* ================= RESEARCH ================= */
+        let condensing = 0;
+        $('condBtn').onclick = () => {
+            if (condensing || !condense()) { Arcade.sfx('bad'); return; }
+            condensing = performance.now();
+            Arcade.sfx('coin');
+            setTimeout(() => { condensing = 0; refreshAll(); }, 3000);
+            refreshAll();
+        };
+        $('autoBtn').onclick = () => { state.autoCondense = !state.autoCondense; save(); refreshAll(); };
+        $('expBtn').onclick = () => { researchBuy('exp'); refreshAll(); };
+        $('tierBtn').onclick = () => { researchBuy('tier'); refreshAll(); };
+        $('dustBtn').onclick = () => { researchBuy('dust'); refreshAll(); };
+        $('mileBtn').onclick = () => { researchBuy('mile'); refreshAll(); };
+        for (const el of document.querySelectorAll('[data-gem]')) el.querySelector('button').onclick = () => { forgeGem(el.dataset.gem, el.dataset.cur); refreshAll(); };
+        function refreshResearch() {
+            $('cCost').textContent = fmt(condenseCost());
+            $('cGain').textContent = fmt(condenseGain());
+            $('cBar').style.width = (condensing ? Math.min(100, (performance.now() - condensing) / 30) : 0) + '%';
+            $('condBtn').textContent = condensing ? 'Cooling down…' : 'Condense';
+            $('condBtn').disabled = !!condensing || state.essence < condenseCost();
+            $('autoBtn').textContent = 'Auto: ' + (state.autoCondense ? 'ON' : 'OFF');
+            $('autoBtn').classList.toggle('active', state.autoCondense);
+            $('expBtn').textContent = state.expUnlocked ? 'Unlocked ✓' : 'Unlock · 50 DM';
+            $('expBtn').disabled = state.expUnlocked || state.dm < 50;
+            $('tier').textContent = state.dmTier || 0;
+            $('tierBtn').textContent = 'Upgrade · ' + fmt(tierCost()) + ' DM';
+            $('tierBtn').disabled = state.dm < tierCost();
+            $('dustLvl').textContent = state.dustUpLvl || 0;
+            $('dustBtn').textContent = 'Infuse · ' + fmt(dustInfuseCost()) + ' DM';
+            $('dustBtn').disabled = state.dm < dustInfuseCost();
+            $('mileLvl').textContent = state.mileUpLvl || 0;
+            $('mileBtn').textContent = 'Tune · ' + fmt(mileTuneCost()) + ' DM';
+            $('mileBtn').disabled = state.dm < mileTuneCost();
+            $('dia').textContent = fmt(state.diamonds || 0);
+            $('rub').textContent = fmt(state.rubies || 0);
+            for (const el of document.querySelectorAll('[data-gem]')) {
+                const k = el.dataset.gem, cur = el.dataset.cur, c = gemCost(k);
+                el.querySelector('[data-l]').textContent = state[k] || 0;
+                const b = el.querySelector('button');
+                b.textContent = `Forge · ${fmt(c)} ${cur === 'diamonds' ? '💎' : '🔴'}`;
+                b.disabled = state[cur] < c || (k === 'd_up2' && state[k] >= 50);
+            }
+        }
+
+        /* ================= GREENHOUSE ================= */
+        let plotEls = [], cropEls = {}, upEls = [];
+        for (const k of CROP_KEYS) {
+            const b = document.createElement('button');
+            b.className = 'btn';
+            b.innerHTML = `<span class="ic">${CROPS[k].icon}</span><span>${CROPS[k].name}</span><small></small>`;
+            b.onclick = () => {
+                if (!state.unlockedCrops.includes(k)) { Arcade.toast('Unlock this seed first', 'bad'); return; }
+                state.selectedCrop = k; save(); buildUps(); refreshAll(); Arcade.sfx('select');
+            };
+            $('crops').appendChild(b);
+            cropEls[k] = b;
+        }
+        for (let i = 0; i < MAX_PLOTS; i++) {
+            const p = document.createElement('div');
+            p.className = 'plot';
+            p.innerHTML = '<span class="crop"></span><span class="stack"></span><span class="hint"></span><i class="grow"></i>';
+            p.onclick = () => tapPlot(i);
+            $('plots').appendChild(p);
+            plotEls.push(p);
+        }
+        function buildUps() {
+            const host = $('ups');
+            host.innerHTML = '';
+            upEls = CROP_UPGRADES[state.selectedCrop].map((u, i) => {
+                const c = document.createElement('div');
+                c.className = 'card';
+                c.innerHTML = `<h4>${u.name} <span class="lvl">Lv <b data-l></b></span></h4><p data-d></p><button class="btn primary"></button>`;
+                c.querySelector('button').onclick = () => { buyCropUpgrade(state.selectedCrop, i); refreshAll(); };
+                host.appendChild(c);
+                return c;
+            });
+        }
+        function tapPlot(i) {
+            if (!state.ghUnlocked || i >= state.plots) return;
+            const p = state.ghCrops[i];
+            const type = state.selectedCrop;
+            if (!p || p.status === 'empty') { plant(i, type); Arcade.sfx('pop'); }
+            else if (p.status === 'growing') {
+                const maxStack = 1 + state.upgrades.corn[2];
+                if (p.type === type && (p.stack || 1) < maxStack) { p.stack = (p.stack || 1) + 1; Arcade.sfx('pop'); }
+                else Arcade.sfx('bad');
+            } else if (p.status === 'ready') {
+                const o = harvest(i);
+                let msg = `+${fmt(o.crops)} ${CROPS[o.type].icon}` + (o.roll > 1 ? ` (Jack ×${o.roll}!)` : '');
+                if (o.grains) msg += ` · +${fmt(o.grains)} essence`;
+                if (o.rare === 'diamond') msg += ' · 💎 DIAMOND CROP';
+                else if (o.rare === 'gold') msg += ' · 🌟 golden crop';
+                if (o.gem) msg += ' · found a gem 💎';
+                if (o.mutation) msg += ` · 🧬 MUTATION: ${HYBRIDS[o.mutation].icon} ${HYBRIDS[o.mutation].name}${o.freshHybrid ? ' (new!)' : ''}`;
+                Arcade.sfx(o.rare === 'diamond' ? 'win' : o.rare ? 'coin' : 'score');
+                Arcade.toast(msg, 'good', 1600);
+            }
+            save(); refreshAll();
+        }
+        $('harvestAllBtn').onclick = () => {
+            const r = harvestAll();
+            if (!r.n) { Arcade.toast('Nothing is ready yet', null, 1000); return; }
+            Arcade.sfx(r.rares ? 'coin' : 'score');
+            Arcade.toast(`Harvested ${r.n} plots · +${fmt(r.total)} crops` + (r.rares ? ` · ${r.rares} rare!` : ''), 'good', 1500);
+            save(); refreshAll();
+        };
+        $('plantAllBtn').onclick = () => { const n = plantAll(state.selectedCrop); if (n) { Arcade.sfx('pop'); save(); refreshAll(); } };
+        $('expandBtn').onclick = () => { buyPlot(); refreshAll(); };
+        $('unlockCropBtn').onclick = () => { const n = unlockNextCrop(); if (n) { buildUps(); Arcade.toast(CROPS[n].icon + ' ' + CROPS[n].name + ' unlocked!', 'gold'); } refreshAll(); };
+        $('sellGold').onclick = () => { if (!state.goldenCrops) return; const v = goldValue(); addEssence(v); state.goldenCrops = 0; save(); Arcade.toast('+' + fmt(v) + ' essence', 'gold'); Arcade.sfx('coin'); refreshAll(); };
+        $('sellDiam').onclick = () => { if (!state.diamondCrops) return; const v = diamValue(); addEssence(v); state.diamondCrops = 0; save(); Arcade.toast('+' + fmt(v) + ' essence', 'gold'); Arcade.sfx('coin'); refreshAll(); };
+        $('goldEffBtn').onclick = () => { const c = goldEffCost(); if (state.goldenCrops < c) return; state.goldenCrops -= c; state.rareUpgrades.goldEff++; save(); Arcade.sfx('power'); refreshAll(); };
+        $('diamMastBtn').onclick = () => { const c = diamMastCost(); if (state.diamondCrops < c) return; state.diamondCrops -= c; state.rareUpgrades.diamMast++; save(); Arcade.sfx('power'); refreshAll(); };
+
+        function refreshGreenhouse() {
+            for (const k of CROP_KEYS) {
+                const has = state.unlockedCrops.includes(k);
+                cropEls[k].classList.toggle('active', state.selectedCrop === k);
+                cropEls[k].disabled = !has;
+                cropEls[k].querySelector('small').textContent = has ? fmt(state.cropInventory[k]) : '🔒';
+            }
+            const next = CROP_KEYS[state.unlockedCrops.length];
+            $('unlockCropBtn').hidden = !next;
+            if (next) { $('unlockCropBtn').textContent = `Unlock ${CROPS[next].icon} · ${fmt(CROPS[next].cost)}`; $('unlockCropBtn').disabled = state.essence < CROPS[next].cost; }
+            $('inv').innerHTML = state.unlockedCrops.map(k => `<span class="chip">${CROPS[k].icon} <b>${fmt(state.cropInventory[k])}</b></span>`).join('');
+            const ec = plotCost();
+            $('expandBtn').textContent = state.plots >= MAX_PLOTS ? 'All plots open' : `+ Plot · ${fmt(ec)} 🌾`;
+            $('expandBtn').disabled = state.plots >= MAX_PLOTS || state.cropInventory.wheat < ec;
+            const auto = autoHarvesting();
+            $('harvestAllBtn').hidden = auto; $('plantAllBtn').hidden = auto;
+            $('ghTip').innerHTML = auto ? '🤖 <b>Auto-harvesting</b> — plots harvest and replant the selected seed on their own.' : 'Tap an empty plot to plant the selected seed. Tap a glowing plot to harvest. With <b>Bulk Growth</b> you can tap a growing plot to add more seeds of the same kind.';
+            plotEls.forEach((el, i) => {
+                const p = state.ghCrops[i];
+                const locked = i >= state.plots;
+                const status = locked ? 'locked' : p && p.status !== 'empty' ? p.status : 'empty';
+                el.className = 'plot ' + status;
+                el.querySelector('.crop').textContent = status === 'growing' || status === 'ready' ? CROPS[p.type].icon : '';
+                el.querySelector('.stack').textContent = p && (p.stack || 1) > 1 && status !== 'empty' && !locked ? '×' + p.stack : '';
+                el.querySelector('.hint').textContent = status === 'empty' ? 'plant ' + CROPS[state.selectedCrop].icon : status === 'ready' ? 'harvest!' : '';
+                el.querySelector('.grow').style.width = status === 'growing' ? (p.progress / p.time * 100) + '%' : '0';
+            });
+            const crop = state.selectedCrop;
+            $('upTitle').textContent = CROPS[crop].icon + ' ' + CROPS[crop].name + ' upgrades · paid in ' + CROPS[crop].name.toLowerCase();
+            upEls.forEach((c, i) => {
+                const lvl = state.upgrades[crop][i], cost = cropUpgradeCost(crop, i);
+                c.querySelector('[data-l]').textContent = lvl;
+                c.querySelector('[data-d]').textContent = lvl ? CROP_UPGRADES[crop][i].desc(lvl) : 'Next: ' + CROP_UPGRADES[crop][i].desc(1);
+                const b = c.querySelector('button');
+                b.textContent = `Upgrade · ${fmt(cost)} ${CROPS[crop].icon}`;
+                b.disabled = state.cropInventory[crop] < cost;
+            });
+            refreshLab();
+            $('goldN').textContent = fmt(state.goldenCrops);
+            $('diamN').textContent = fmt(state.diamondCrops);
+            $('sellGold').textContent = state.goldenCrops ? 'Sell · ' + fmt(goldValue()) : 'Sell all';
+            $('sellGold').disabled = !state.goldenCrops;
+            $('sellDiam').textContent = state.diamondCrops ? 'Sell · ' + fmt(diamValue()) : 'Sell all';
+            $('sellDiam').disabled = !state.diamondCrops;
+            $('goldEffBtn').textContent = `Efficiency Lv ${state.rareUpgrades.goldEff} · ${goldEffCost()} 🌟`;
+            $('goldEffBtn').disabled = state.goldenCrops < goldEffCost();
+            $('diamMastBtn').textContent = `Mastery Lv ${state.rareUpgrades.diamMast} · ${diamMastCost()} 💎`;
+            $('diamMastBtn').disabled = state.diamondCrops < diamMastCost();
+        }
+
+        /* ---------- Breeding lab ---------- */
+        const hybridEls = {};
+        for (const [k, H] of Object.entries(HYBRIDS)) {
+            const c = document.createElement('div');
+            c.className = 'card';
+            c.innerHTML = `<h4><span data-i></span> <span data-n></span> <span class="lvl">× <b data-c>0</b></span></h4><p data-d></p>`;
+            $('hybrids').appendChild(c);
+            hybridEls[k] = c;
+        }
+        let labKey = '';
+        function refreshLab() {
+            const key = state.unlockedCrops.join(',');
+            if (key !== labKey) {
+                labKey = key;
+                for (const id of ['breedA', 'breedB']) {
+                    const sel = $(id), cur = sel.value;
+                    sel.innerHTML = state.unlockedCrops.map(c => `<option value="${c}">${CROPS[c].icon} ${CROPS[c].name}</option>`).join('');
+                    if (state.unlockedCrops.includes(cur)) sel.value = cur;
+                }
+                if ($('breedA').value === $('breedB').value && state.unlockedCrops.length > 1) $('breedB').value = state.unlockedCrops[1];
+            }
+            const a = $('breedA').value, b = $('breedB').value, h = hybridOf(a, b);
+            const known = h && state.discovered.includes(h);
+            $('breedOut').innerHTML = !h ? '<span class="dim">no known hybrid</span>' : `→ ${known ? HYBRIDS[h].icon + ' ' + HYBRIDS[h].name : '❔ ???'} · costs ${fmt(breedCost(h))} of each`;
+            $('breedBtn').disabled = !h || state.cropInventory[a] < breedCost(h) || state.cropInventory[b] < breedCost(h);
+            for (const [k, H] of Object.entries(HYBRIDS)) {
+                const c = hybridEls[k], seen = state.discovered.includes(k);
+                c.querySelector('[data-i]').textContent = seen ? H.icon : '❔';
+                c.querySelector('[data-n]').textContent = seen ? H.name : '???';
+                c.querySelector('[data-c]').textContent = fmt(hybridCount(k));
+                c.querySelector('[data-d]').textContent = seen ? `${CROPS[H.a].icon} + ${CROPS[H.b].icon} · +${fmt(H.per * Math.pow(hybridCount(k), 0.8) * Math.pow(1.5, tLvl('sprout')) * 100)}% ${H.label}` : `Cross two unlocked crops to discover it`;
+                c.style.opacity = seen ? 1 : 0.55;
+            }
+        }
+        $('breedBtn').onclick = () => {
+            const r = crossBreed($('breedA').value, $('breedB').value);
+            if (r.ok) { Arcade.sfx('win'); Arcade.toast(`🧬 ${HYBRIDS[r.k].icon} ${HYBRIDS[r.k].name}${r.fresh ? ' discovered!' : ' +1'}`, 'gold', 2200); }
+            else { Arcade.sfx('bad'); Arcade.toast(r.why, 'bad', 1400); }
+            refreshAll();
+        };
+
+        /* ================= FRONTIER ================= */
+        let frontierDirty = true, selTile = '0,0', mapKey = '';
+        $('frUnlockBtn').onclick = () => { if (unlockFrontier()) { frontierDirty = true; refreshAll(); } };
+        function buildMap() {
+            const T = state.frontier.tiles;
+            const keys = Object.keys(T).map(k => k.split(',').map(Number));
+            let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+            for (const [x, y] of keys) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+            x0 -= 2; x1 += 2; y0 -= 2; y1 += 2;
+            const map = $('frMap');
+            map.style.gridTemplateColumns = `repeat(${x1 - x0 + 1}, var(--tile))`;
+            map.innerHTML = '';
+            for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+                const k = x + ',' + y, t = T[k];
+                const d = document.createElement('button');
+                d.dataset.k = k;
+                if (t) {
+                    const B = BIOMES[t.b];
+                    d.className = 'tile own';
+                    d.style.setProperty('--bc', B.color);
+                    d.innerHTML = `<span>${B.icon}</span><i>${t.lvl}</i>`;
+                } else if (claimable(x, y)) {
+                    const b = biomeAt(x, y);
+                    d.className = 'tile open';
+                    d.style.setProperty('--bc', BIOMES[b].color);
+                    d.innerHTML = `<span>${BIOMES[b].icon}</span><i>✦${fmt(claimCost(x, y))}</i>`;
+                } else d.className = 'tile fog';
+                if (k === selTile) d.classList.add('sel');
+                d.onclick = () => { if (!t && !claimable(x, y)) return; selTile = k; Arcade.sfx('click'); frontierDirty = true; refreshAll(); };
+                map.appendChild(d);
+            }
+            mapKey = Object.keys(T).length + ':' + selTile;
+        }
+        function refreshFrontier() {
+            const open = !!state.frontier;
+            $('frLocked').hidden = open; $('frOpen').hidden = !open;
+            if (!open) {
+                $('frUnlockBtn').textContent = 'Open the Frontier · ' + fmt(FRONTIER_COST) + ' essence';
+                $('frUnlockBtn').disabled = state.essence < FRONTIER_COST;
+                return;
+            }
+            const F = state.frontier;
+            if (frontierDirty || mapKey !== Object.keys(F.tiles).length + ':' + selTile) {
+                const wrap = $('frWrap'), first = !$('frMap').children.length;
+                buildMap();
+                frontierDirty = false;
+                if (first) { const home = $('frMap').querySelector('[data-k="0,0"]'); if (home) home.scrollIntoView({ block: 'center', inline: 'center' }); }
+            }
+            refreshEvent();
+            // live numbers on open tiles (costs change as Aether arrives)
+            $('frAeth').textContent = fmt(F.aether);
+            $('frRate').textContent = fmt(aetherPerSec());
+            $('frTiles').textContent = Object.keys(F.tiles).length;
+            const [sx, sy] = selTile.split(',').map(Number);
+            const t = F.tiles[selTile];
+            const info = $('frInfo');
+            if (t) {
+                const B = BIOMES[t.b], c = tileUpCost(t, sx, sy);
+                info.innerHTML = `<h3>${B.icon} ${B.name} <span class="dim">· (${sx}, ${sy}) · ring ${ring(sx, sy)}</span></h3>
+                    <div class="minis"><div class="mini"><small>Level</small><b>${t.lvl}/25</b></div><div class="mini"><small>Aether</small><b>${fmt(tileAether(t, sx, sy) * aetherMult())}/s</b></div><div class="mini"><small>Bonus</small><b>${B.bonus ? '+' + Math.round(B.bonus[1] * t.lvl * 100) + '%' : '—'}</b></div></div>
+                    <p class="small muted">${B.bonus ? B.bonus[2] + ' per level.' : 'Your home. Upgrading it boosts its Aether.'} Each level ×1.9 Aether.</p>
+                    <button class="btn primary block" id="tileUp">${t.lvl >= 25 ? 'Max level' : 'Upgrade · ✦' + fmt(c)}</button>`;
+                $('tileUp').disabled = t.lvl >= 25 || F.aether < c;
+                $('tileUp').onclick = () => { if (upgradeTile(sx, sy)) { frontierDirty = true; refreshAll(); } };
+            } else if (claimable(sx, sy)) {
+                const b = biomeAt(sx, sy), B = BIOMES[b], c = claimCost(sx, sy);
+                info.innerHTML = `<h3>${B.icon} ${B.name} <span class="dim">· unclaimed · ring ${ring(sx, sy)}</span></h3>
+                    <p class="small muted">Produces ${fmt(BIOMES[b].aether * (1 + ring(sx, sy) * 0.3) * aetherMult())} Aether/s. ${B.bonus ? B.bonus[2] + ' per level.' : ''}${b === 'ruins' ? ' <b class="gold">Explore it to find a relic!</b>' : ''}</p>
+                    <button class="btn primary block" id="tileClaim">Claim · ✦${fmt(c)}</button>`;
+                $('tileClaim').disabled = F.aether < c;
+                $('tileClaim').onclick = () => {
+                    const r = claimTile(sx, sy);
+                    if (!r) return;
+                    frontierDirty = true;
+                    if (r.found) {
+                        const R = RELICS[r.found];
+                        $('relicIcon').textContent = R.icon;
+                        $('relicText').innerHTML = `<b>${R.name}</b> (now level ${state.relics[r.found]}) — ${R.desc} per level. Relics are kept forever, even when you ascend.`;
+                        Arcade.show('relicOv');
+                    } else Arcade.toast(`Claimed ${BIOMES[r.b].icon} ${BIOMES[r.b].name}!`, 'good', 1400);
+                    refreshAll();
+                };
+            } else { selTile = '0,0'; }
+            // projects
+            const ph = $('frProjects');
+            if (ph.children.length !== Object.keys(PROJECTS).length) {
+                ph.innerHTML = '';
+                for (const k of Object.keys(PROJECTS)) {
+                    const row = document.createElement('div');
+                    row.className = 'up-item';
+                    row.dataset.k = k;
+                    row.innerHTML = `<span class="ic">${PROJECTS[k].icon}</span><b></b><button class="btn sm primary"></button><small></small>`;
+                    row.querySelector('button').onclick = () => { if (buyProject(k)) refreshAll(); };
+                    ph.appendChild(row);
+                }
+            }
+            for (const row of ph.children) {
+                const k = row.dataset.k, P = PROJECTS[k], lv = project(k), maxed = lv >= P.max, c = projectCost(k);
+                row.querySelector('b').textContent = `${P.name} · ${lv}/${P.max}`;
+                row.querySelector('small').textContent = lv ? P.desc(lv) : 'Next: ' + P.desc(1);
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : '✦ ' + fmt(c);
+                b.disabled = maxed || F.aether < c;
+            }
+            renderRelics($('frRelics'));
+        }
+        let evKey = '';
+        function refreshEvent() {
+            const F = state.frontier, ev = F.event && Date.now() < F.event.until ? F.event : null;
+            const box = $('frEvent');
+            const rain = F.rainUntil > Date.now();
+            box.hidden = !ev && !rain;
+            if (!ev && !rain) { evKey = ''; return; }
+            const left = ev ? Math.ceil((ev.until - Date.now()) / 1000) : Math.ceil((F.rainUntil - Date.now()) / 1000);
+            const key = ev ? ev.kind + ':' + ev.until + ':' + (ev.offers || []).map(o => o.done).join() : 'rain';
+            if (key !== evKey) {
+                evKey = key;
+                if (!ev) box.innerHTML = `<h3>🌧️ Gentle rain</h3><p class="small muted">Crops grow 50% faster. <b data-left></b>s left.</p>`;
+                else if (ev.kind === 'storm') box.innerHTML = `<h3>⛈️ Storm!</h3><p class="small muted">Aether production is halved until it passes (<b data-left></b>s). Calm it to bring a gentle rain instead (+50% crop growth for 2 min).</p><button class="btn primary block" id="evAct"></button>`;
+                else if (ev.kind === 'bloom') box.innerHTML = `<h3>🌈 Aether bloom</h3><p class="small muted">A rift of pure Aether opened — grab it before it fades (<b data-left></b>s).</p><button class="btn primary block" id="evAct"></button>`;
+                else if (ev.kind === 'explorer') box.innerHTML = `<h3>🧭 Lost explorer</h3><p class="small muted">An explorer knows the land. Your next claim is <b>free</b> for <b data-left></b>s — pick any open tile.</p>`;
+                else box.innerHTML = `<h3>🧙 Wandering merchant</h3><p class="small muted">Leaving in <b data-left></b>s. Each deal once.</p><div class="up-list">${ev.offers.map(o => `<div class="up-item${o.done ? ' owned' : ''}"><span class="ic">${o.id === 'relic' ? '🏺' : o.id === 'aether' ? '✦' : '🧬'}</span><b>${o.label}</b><button class="btn sm primary" data-offer="${o.id}" ${o.done ? 'disabled' : ''}>${o.done ? 'Sold' : (o.cur === 'aether' ? '✦ ' : '') + fmt(o.cost) + (o.cur === 'essence' ? ' essence' : '')}</button><small>${o.id === 'relic' ? 'A random relic level' : o.id === 'aether' ? 'Trade essence for Aether' : 'Three hybrids of one kind'}</small></div>`).join('')}</div>`;
+                const act = box.querySelector('#evAct');
+                if (act && ev.kind === 'storm') act.onclick = () => { if (calmStorm()) { Arcade.toast('🌧️ The storm turns to a gentle rain', 'good'); evKey = ''; refreshAll(); } };
+                if (act && ev.kind === 'bloom') act.onclick = () => { const n = collectBloom(); if (n) { Arcade.toast('🌈 +✦' + fmt(n), 'gold'); evKey = ''; refreshAll(); } };
+                box.querySelectorAll('[data-offer]').forEach(b => b.onclick = () => { const got = buyOffer(b.dataset.offer); if (got) { Arcade.toast('🧙 You got ' + got, 'gold', 2400); evKey = ''; refreshAll(); } });
+            }
+            const l = box.querySelector('[data-left]'); if (l) l.textContent = left;
+            const act = box.querySelector('#evAct');
+            if (act && ev && ev.kind === 'storm') { const c = Math.ceil(aetherPerSec() * 2 * 40); act.textContent = 'Calm the storm · ✦' + fmt(c); act.disabled = F.aether < c; }
+            if (act && ev && ev.kind === 'bloom') act.textContent = 'Collect ✦' + fmt(aetherPerSec() * 150);
+            box.querySelectorAll('[data-offer]').forEach(b => { const o = ev.offers.find(x => x.id === b.dataset.offer); if (!o.done) b.disabled = (o.cur === 'aether' ? F.aether : state.essence) < o.cost; });
+        }
+
+        function renderRelics(host) {
+            const html = Object.entries(RELICS).map(([k, R]) => {
+                const lv = relic(k);
+                return `<div class="relic${lv ? '' : ' missing'}" title="${R.desc} per level"><span>${lv ? R.icon : '❔'}</span><b>${lv ? R.name : '???'}</b><small>${lv ? 'Lv ' + lv + ' · ' + R.desc : 'Found in ruins'}</small></div>`;
+            }).join('');
+            if (host.innerHTML !== html) host.innerHTML = html;
+        }
+        $('relicClose').onclick = () => Arcade.hide('relicOv');
+
+        /* ================= ASCENSION ================= */
+        const perkRows = [];
+        for (const k of Object.keys(PERKS)) {
+            const row = document.createElement('div');
+            row.className = 'up-item';
+            row.innerHTML = `<span class="ic">${PERKS[k].icon}</span><b></b><button class="btn sm primary"></button><small></small>`;
+            row.querySelector('button').onclick = () => { if (buyPerk(k)) refreshAll(); };
+            $('perks').appendChild(row);
+            perkRows.push({ row, k });
+        }
+        let ascArmed = false;
+        $('ascendBtn').onclick = () => {
+            if (!ascArmed) { ascArmed = true; $('ascendBtn').textContent = 'Tap again to ascend'; setTimeout(() => { ascArmed = false; $('ascendBtn').textContent = 'Ascend'; }, 3000); return; }
+            ascArmed = false; $('ascendBtn').textContent = 'Ascend';
+            const g = ascend();
+            if (g) { built = -1; frontierDirty = true; Arcade.toast(`🌸 Ascended! +${fmt(g)} soul seeds`, 'gold', 3500); refreshAll(); }
+        };
+        function refreshAscend() {
+            $('aSeeds').textContent = fmt(state.seeds);
+            $('perSeed').textContent = '+' + (10 + perk('bloom') * 2) + '%';
+            $('aBonus').textContent = '×' + fmt(seedBonus());
+            $('aCount').textContent = state.ascensions;
+            $('aRun').textContent = fmt(state.runEssence);
+            const g = seedGain();
+            $('aGain').textContent = fmt(g) + ' 🌱';
+            $('ascendBtn').disabled = g <= 0;
+            $('aNote').textContent = g <= 0 ? `Earn ${fmt(ASCEND_MIN)} essence in one run to ascend (${fmt(state.runEssence)} so far)` : `Seeds grow with the essence earned this run. Best run: ${fmt(Math.max(state.bestRun || 0, state.runEssence))}`;
+            for (const { row, k } of perkRows) {
+                const P = PERKS[k], lv = perk(k), maxed = lv >= P.max, c = perkCost(k);
+                row.querySelector('b').textContent = `${P.name} · ${lv}/${P.max}`;
+                row.querySelector('small').textContent = lv ? P.desc(lv) : 'Next: ' + P.desc(1);
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : '🌱 ' + fmt(c);
+                b.disabled = maxed || state.seeds < c;
+            }
+        }
+
+        /* ================= TRANSCENDENCE ================= */
+        const tRows = [];
+        for (const k of Object.keys(TUPS)) {
+            const row = document.createElement('div');
+            row.className = 'up-item';
+            row.innerHTML = `<span class="ic">${TUPS[k].icon}</span><b></b><button class="btn sm primary"></button><small></small>`;
+            row.querySelector('button').onclick = () => { if (buyTUp(k)) refreshAll(); };
+            $('tUps').appendChild(row);
+            tRows.push({ row, k });
+        }
+        let tArmed = false;
+        $('tBtn').onclick = () => {
+            if (!tArmed) { tArmed = true; $('tBtn').textContent = 'Tap again to transcend'; setTimeout(() => { tArmed = false; $('tBtn').textContent = 'Transcend'; }, 3000); return; }
+            tArmed = false; $('tBtn').textContent = 'Transcend';
+            const g = transcend();
+            if (g) { built = -1; frontierDirty = true; Arcade.toast(`🌌 Transcended! +${fmt(g)} eternity shards`, 'gold', 3500); refreshAll(); }
+        };
+        function refreshTranscend() {
+            $('tPanel').hidden = state.ascensions < 2 && !state.totalShards;
+            $('tShards').textContent = fmt(state.shards);
+            $('tSeeds').textContent = fmt(state.seedsSinceT || 0);
+            $('tCount').textContent = state.transcends;
+            const g = shardGain();
+            $('tGain').textContent = fmt(g) + ' 🔷';
+            $('tBtn').disabled = g <= 0;
+            $('tNote').textContent = state.ascensions < TRANSCEND_ASC ? `Ascend ${TRANSCEND_ASC} times first (${state.ascensions}/${TRANSCEND_ASC})`
+                : g <= 0 ? `Earn ${fmt(TRANSCEND_SEEDS)} soul seeds since your last transcendence (${fmt(state.seedsSinceT || 0)})` : 'Shards grow with the soul seeds earned since your last transcendence';
+            for (const { row, k } of tRows) {
+                const P = TUPS[k], lv = tLvl(k), maxed = lv >= P.max, c = tCost(k);
+                row.querySelector('b').textContent = `${P.name} · ${lv}/${P.max}`;
+                row.querySelector('small').textContent = lv ? P.desc(lv) : 'Next: ' + P.desc(1);
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : '🔷 ' + fmt(c);
+                b.disabled = maxed || state.shards < c;
+            }
+        }
+
+        /* ================= STATS ================= */
+        let chartT = 0;
+        function drawChart() {
+            const cv = $('chart'), r = cv.getBoundingClientRect();
+            const dpr = Math.min(2, window.devicePixelRatio || 1);
+            cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+            const g = cv.getContext('2d');
+            g.scale(dpr, dpr);
+            const W = r.width, H = r.height, L = 54, B = 24;
+            const css = getComputedStyle(document.documentElement);
+            const muted = css.getPropertyValue('--muted') || '#8b96b2', line = css.getPropertyValue('--line') || 'rgba(148,163,184,.14)';
+            const pts = state.history.filter(p => p[1] > 0);
+            g.clearRect(0, 0, W, H);
+            g.font = '11px "Segoe UI", sans-serif'; g.fillStyle = muted;
+            if (pts.length < 2) { g.textAlign = 'center'; g.fillText('Collecting data… a point is added every 30 seconds while the game is open.', W / 2, H / 2); return; }
+            const lo = Math.floor(Math.log10(Math.min(...pts.map(p => p[1])))), hi = Math.ceil(Math.log10(Math.max(...pts.map(p => p[1])))) || lo + 1;
+            const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
+            const X = (t) => L + (W - L - 10) * (t1 === t0 ? 1 : (t - t0) / (t1 - t0));
+            const Y = (v) => 8 + (H - B - 8) * (1 - (Math.log10(v) - lo) / Math.max(1, hi - lo));
+            g.strokeStyle = line; g.lineWidth = 1; g.textAlign = 'right'; g.textBaseline = 'middle';
+            const step = Math.max(1, Math.ceil((hi - lo) / 6));
+            for (let e = lo; e <= hi; e += step) { const y = Y(Math.pow(10, e)); g.beginPath(); g.moveTo(L, y); g.lineTo(W - 10, y); g.stroke(); g.fillText(fmt(Math.pow(10, e)), L - 6, y); }
+            g.textAlign = 'center'; g.textBaseline = 'top';
+            for (let k = 0; k <= 4; k++) { const t = t0 + (t1 - t0) * k / 4; g.fillText(new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), X(t), H - B + 6); }
+            const grad = g.createLinearGradient(0, 8, 0, H - B);
+            grad.addColorStop(0, 'rgba(74,222,128,0.35)'); grad.addColorStop(1, 'rgba(74,222,128,0)');
+            g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])));
+            g.lineTo(X(t1), H - B); g.lineTo(X(t0), H - B); g.closePath(); g.fillStyle = grad; g.fill();
+            g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])));
+            g.strokeStyle = '#4ade80'; g.lineWidth = 2; g.stroke();
+            const growth = pts[pts.length - 1][1] / pts[0][1];
+            $('chartNote').textContent = `${pts.length} samples · ×${fmt(growth)} over ${Arcade.time((t1 - t0) / 1000)} · log scale`;
+        }
+        function refreshStats() {
+            if (Date.now() - chartT > 3000) { chartT = Date.now(); drawChart(); }
+            const tiles = state.frontier ? Object.keys(state.frontier.tiles).length : 0;
+            const rows = [
+                ['Essence / sec', fmt(state.totalGain || 0)], ['This run', fmt(state.runEssence)], ['Best run', fmt(Math.max(state.bestRun || 0, state.runEssence))],
+                ['Lifetime essence', fmt(state.lifetimeEssence)], ['Farmers', state.farmers.length], ['Void crystals', state.crystals || 0],
+                ['Soul seeds earned', fmt(state.totalSeeds)], ['Ascensions', state.ascensions], ['Transcendences', state.transcends],
+                ['Eternity shards earned', fmt(state.totalShards)], ['Hybrids discovered', state.discovered.length + ' / ' + Object.keys(HYBRIDS).length],
+                ['Hybrids owned', fmt(Object.values(state.hybrids).reduce((a, b) => a + b, 0))], ['Relic levels', Object.values(state.relics).reduce((a, b) => a + b, 0)],
+                ['Frontier tiles', tiles], ['Frontier events', state.events.seen], ['Golden / diamond crops', fmt(state.goldenCrops) + ' / ' + fmt(state.diamondCrops)],
+            ];
+            const html = rows.map(([k, v]) => `<div class="card"><h4>${k}</h4><p style="font-size:1.25rem;font-weight:800;color:var(--text);margin:0">${v}</p></div>`).join('');
+            if ($('statGrid').innerHTML !== html) $('statGrid').innerHTML = html;
+        }
+        window.addEventListener('resize', () => { chartT = 0; });
+
+        /* ================= LOOP ================= */
+        function refreshAll() {
+            refreshHeader();
+            refreshNav();
+            if (!navState()[tab]) { showTab('farm', true); return; }
+            ({ farm: refreshFarm, void: refreshVoid, research: refreshResearch, greenhouse: refreshGreenhouse, frontier: refreshFrontier, ascend: () => { refreshAscend(); refreshTranscend(); }, stats: refreshStats })[tab]();
+        }
+        setInterval(refreshAll, 150);
+        moveOrb(orb, 54);
+        scheduleRed();
+        showTab(navState()[tab] ? tab : 'farm', true);
+        if (tab === 'void') setTimeout(() => moveOrb(orb, 54), 50);
+        window.__ess = { get state() { return state; }, ascend, seedGain, claimTile, aetherPerSec }; // for automated tests
+    </script>
+</body>
+</html>

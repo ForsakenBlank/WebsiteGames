@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #ef4444; --accent-2: #3b82f6; --accent-ink: #fff; }
+        .layout { flex: 1; min-height: 0; width: 100%; display: flex; gap: 14px; align-items: stretch; justify-content: center; }
+        .layout .canvas-box { flex: 1; min-width: 0; }
+        .side { width: 270px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .turn-card { display: flex; align-items: center; gap: 14px; }
+        .turn-card .who { flex: 1; }
+        .turn-card .who b { display: block; font-size: 1.05rem; }
+        .turn-card .who small { color: var(--muted); }
+        .dice {
+            width: 74px; height: 74px; border-radius: 16px; background: #fff; border: none; cursor: pointer;
+            display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 10px; gap: 2px;
+            box-shadow: inset 0 -5px 0 rgba(0,0,0,0.18), 0 10px 24px -10px var(--pc, #000);
+            transition: transform 0.1s;
+        }
+        .dice:disabled { cursor: default; opacity: 0.85; }
+        .dice.ready { animation: wiggle 1s infinite; }
+        .dice.rolling { animation: roll 0.15s infinite; }
+        .dice i { width: 13px; height: 13px; border-radius: 50%; background: #111827; margin: auto; visibility: hidden; }
+        .dice i.on { visibility: visible; }
+        @keyframes wiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-8deg) scale(1.05); } 20% { transform: rotate(8deg) scale(1.05); } 30% { transform: rotate(0); } }
+        @keyframes roll { 50% { transform: rotate(18deg) scale(0.95); } }
+        .players { display: flex; flex-direction: column; gap: 6px; }
+        .pl { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); font-size: 0.85rem; }
+        .pl.cur { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc) inset; }
+        .pl .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--pc); flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
+        .pl .nm { flex: 1; }
+        .pl .home { color: var(--muted); font-size: 0.78rem; }
+        .pl .place { font-weight: 800; color: var(--gold); }
+        .log { font-size: 0.78rem; color: var(--muted); max-height: 150px; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 2px; }
+        .log div b { color: var(--text); }
+        .tester { border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+        .tester h3 { color: var(--warn) !important; }
+        .tester .row { gap: 5px; }
+        .tester .dv { min-width: 34px; padding: 6px 0; }
+        .setup { width: min(560px, 100%); text-align: left; }
+        .setup h2 { text-align: center; }
+        .setup .sec { margin: 14px 0 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+        .colors { display: flex; gap: 8px; }
+        .colors button { flex: 1; height: 42px; border-radius: 10px; border: 3px solid transparent; cursor: pointer; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .colors button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+        .bots { display: flex; flex-direction: column; gap: 6px; }
+        .bot { display: flex; align-items: center; gap: 10px; }
+        .bot .dot { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+        .bot span { width: 64px; font-weight: 700; font-size: 0.86rem; }
+        .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+        .rules label, .chk { display: flex; gap: 8px; align-items: center; font-size: 0.86rem; cursor: pointer; }
+        .rules input, .chk input { accent-color: var(--accent); width: 16px; height: 16px; }
+        @media (max-width: 820px) {
+            .layout { flex-direction: column; align-items: center; }
+            .side { width: 100%; max-width: 560px; overflow: visible; }
+            body.no-scroll { overflow: auto; height: auto; }
+            .layout .canvas-box { width: 100%; min-height: min(96vw, 560px); flex: none; }
+            .rules { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Ludo</h1>
+        <div class="stats">
+            <span class="chip gold">Wins <b id="winsChip">0</b></span>
+            <span class="chip" id="modeChip" hidden><b>🧪 Tester</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" id="statsBtn" title="Your Ludo stats">📊</button>
+            <button class="btn sm" id="setupBtn">New game</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="layout">
+            <div class="canvas-box"><canvas class="screen" id="c"></canvas></div>
+            <aside class="side">
+                <div class="panel turn-card">
+                    <div class="who"><b id="turnName">—</b><small id="turnHint">Roll the dice</small></div>
+                    <button class="dice" id="dice" title="Roll (Space)"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></button>
+                </div>
+                <div class="panel">
+                    <h3>Players</h3>
+                    <div class="players" id="players"></div>
+                </div>
+                <div class="panel tester" id="testerPanel" hidden>
+                    <h3>🧪 Tester tools</h3>
+                    <div class="col">
+                        <div><span class="tiny muted">Next roll</span>
+                            <div class="row" id="forceRow"></div></div>
+                        <label class="chk"><input type="checkbox" id="tAll"> I control every colour</label>
+                        <label class="chk"><input type="checkbox" id="tTele"> Teleport: click a token, then any square</label>
+                        <div class="row">
+                            <button class="btn sm" id="tAuto" title="Let the AI make this move">🤖 AI move</button>
+                            <button class="btn sm" id="tSkip">⏭ Skip turn</button>
+                            <button class="btn sm" id="tUndo">↶ Undo</button>
+                        </div>
+                        <div class="row">
+                            <button class="btn sm" id="tAllOut">All out</button>
+                            <button class="btn sm" id="tAllHome">All to base</button>
+                            <button class="btn sm" id="tNearWin">Near win</button>
+                        </div>
+                        <label class="small muted">AI speed <input type="range" id="tSpeed" min="0" max="3" value="1" style="accent-color:var(--warn)"></label>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Game log</h3>
+                    <div class="log" id="log"></div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="overlay fixed" id="setupOv" hidden>
+            <div class="modal setup">
+                <h2>Ludo</h2>
+                <p class="center">Race all four tokens home. Roll a 6 to leave base, land on rivals to send them back.</p>
+                <div class="sec">Your colour</div>
+                <div class="colors" id="colorPick"></div>
+                <div class="sec">Opponents</div>
+                <div class="seg" id="botCount">
+                    <button class="btn sm" data-n="1">1 bot</button>
+                    <button class="btn sm" data-n="2">2 bots</button>
+                    <button class="btn sm" data-n="3">3 bots</button>
+                </div>
+                <div class="bots" id="bots" style="margin-top:10px"></div>
+                <div class="sec">Rules</div>
+                <div class="rules">
+                    <label><input type="checkbox" id="rOne"> A 1 can also leave base</label>
+                    <label><input type="checkbox" id="rCapBonus" checked> Extra roll for a capture</label>
+                    <label><input type="checkbox" id="rHomeBonus" checked> Extra roll for reaching home</label>
+                    <label><input type="checkbox" id="rTriple" checked> Three 6s in a row lose the turn</label>
+                    <label><input type="checkbox" id="rSafe" checked> Star & start squares are safe</label>
+                    <label><input type="checkbox" id="rAutoMove" checked> Auto-move when only one choice</label>
+                </div>
+                <div class="sec">Mode</div>
+                <label class="chk"><input type="checkbox" id="rTester"> 🧪 Tester mode — pick dice rolls, move any colour, teleport tokens, undo</label>
+                <div class="actions">
+                    <button class="btn" id="contBtn" hidden>Continue saved game</button>
+                    <button class="btn primary lg" id="startBtn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overlay fixed" id="statsOv" hidden>
+            <div class="modal wide">
+                <h2>📊 Your Ludo stats</h2>
+                <div class="stat-grid" id="statTiles"></div>
+                <div class="sec" style="text-align:left;margin-top:14px">By colour</div>
+                <div class="stat-grid" id="statColours"></div>
+                <div class="sec" style="text-align:left;margin-top:14px">Finishing places</div>
+                <div class="stat-grid" id="statPlaces"></div>
+                <p class="tiny dim">Tester-mode games aren't counted.</p>
+                <div class="actions"><button class="btn primary" id="statsClose">Close</button><button class="btn danger" id="statsReset">Reset stats</button></div>
+            </div>
+        </div>
+
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">You win!</h2>
+                <p id="endText"></p>
+                <div class="stat-grid" id="endPlaces"></div>
+                <div class="actions">
+                    <button class="btn primary lg" id="againBtn">Play again</button>
+                    <button class="btn" id="watchBtn">Watch the rest</button>
+                    <button class="btn ghost" id="newSetupBtn">Change setup</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        /* ---------- Board geometry (15 × 15 cells) ---------- */
+        const CELL = 40, SIZE = CELL * 15;
+        const COLORS = [
+            { name: 'Red', c: '#ef4444', d: '#991b1b', l: '#fecaca' },
+            { name: 'Green', c: '#22c55e', d: '#166534', l: '#bbf7d0' },
+            { name: 'Yellow', c: '#eab308', d: '#854d0e', l: '#fef08a' },
+            { name: 'Blue', c: '#3b82f6', d: '#1e40af', l: '#bfdbfe' },
+        ];
+        const START = [0, 13, 26, 39];
+        const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+        const TRACK = [];
+        {
+            const seg = (pts) => pts.forEach(p => TRACK.push(p));
+            for (let c = 1; c <= 5; c++) TRACK.push([c, 6]);
+            for (let r = 5; r >= 0; r--) TRACK.push([6, r]);
+            seg([[7, 0], [8, 0]]);
+            for (let r = 1; r <= 5; r++) TRACK.push([8, r]);
+            for (let c = 9; c <= 14; c++) TRACK.push([c, 6]);
+            seg([[14, 7], [14, 8]]);
+            for (let c = 13; c >= 9; c--) TRACK.push([c, 8]);
+            for (let r = 9; r <= 14; r++) TRACK.push([8, r]);
+            seg([[7, 14], [6, 14]]);
+            for (let r = 13; r >= 9; r--) TRACK.push([6, r]);
+            for (let c = 5; c >= 0; c--) TRACK.push([c, 8]);
+            seg([[0, 7], [0, 6]]);
+        }
+        const HOME = [
+            [1, 2, 3, 4, 5].map(c => [c, 7]),
+            [1, 2, 3, 4, 5].map(r => [7, r]),
+            [13, 12, 11, 10, 9].map(c => [c, 7]),
+            [13, 12, 11, 10, 9].map(r => [7, r]),
+        ];
+        const BASE = [[0, 0], [9, 0], [9, 9], [0, 9]];
+        const FINISH = [[6.65, 7.5], [7.5, 6.65], [8.35, 7.5], [7.5, 8.35]];
+        const LAST = 56; // 0–50 track, 51–55 home column, 56 finished
+
+        // centre point (in cell units) of where a token at progress p of seat s sits
+        function spot(seat, p, k) {
+            if (p < 0) { const [bx, by] = BASE[seat]; return [bx + 2 + (k % 2) * 2, by + 2 + Math.floor(k / 2) * 2]; }
+            if (p <= 50) { const [c, r] = TRACK[(START[seat] + p) % 52]; return [c + 0.5, r + 0.5]; }
+            if (p < LAST) { const [c, r] = HOME[seat][p - 51]; return [c + 0.5, r + 0.5]; }
+            const [fx, fy] = FINISH[seat];
+            return [fx + ((k % 2) - 0.5) * 0.36 * (seat % 2 ? 1 : 0.6), fy + (Math.floor(k / 2) - 0.5) * 0.36 * (seat % 2 ? 0.6 : 1)];
+        }
+        const absOf = (seat, p) => (p >= 0 && p <= 50 ? (START[seat] + p) % 52 : -1);
+
+        /* ---------- State ---------- */
+        const canvas = document.getElementById('c');
+        const view = Arcade.fitCanvas(canvas, SIZE, SIZE, { max: 2 });
+        const ctx = view.ctx;
+        const $ = (id) => document.getElementById(id);
+        const DIFFS = { easy: 'Easy', normal: 'Normal', hard: 'Hard', expert: 'Expert' };
+        const SPEEDS = [1.8, 1, 0.45, 0.08];
+
+        let setup = Object.assign({ seat: 0, bots: 3, diffs: ['normal', 'normal', 'normal'], one: false, capBonus: true, homeBonus: true, triple: true, safe: true, autoMove: true, tester: false }, Arcade.load('arcade.ludo.setup', {}));
+        const blankStats = () => ({ played: 0, wins: 0, captures: 0, captured: 0, sixes: 0, rolls: 0, homes: 0, places: [0, 0, 0, 0, 0], byColor: [0, 1, 2, 3].map(() => ({ played: 0, wins: 0 })) });
+        let stats = Object.assign(blankStats(), Arcade.load('arcade.ludo.stats', {}));
+        if (!Array.isArray(stats.byColor) || stats.byColor.length !== 4) stats.byColor = blankStats().byColor;
+        if (!Array.isArray(stats.places)) stats.places = [0, 0, 0, 0, 0];
+        const saveStats = () => Arcade.save('arcade.ludo.stats', stats);
+        const counts = () => G && !G.tester;
+        let G = null;          // the game
+        let anim = null;       // token walking animation
+        let busy = false, timerId = 0, time = 0, history = [];
+        let tester = { force: 0, all: false, tele: false, sel: null, speed: 1 };
+        const fx = new Arcade.Particles(300);
+
+        function newGame() {
+            const seats = [setup.seat];
+            const others = [1, 2, 3].map(k => (setup.seat + k) % 4);
+            if (setup.bots === 1) seats.push(others[1]);
+            else if (setup.bots === 2) seats.push(others[0], others[1]);
+            else seats.push(...others);
+            seats.sort((a, b) => ((a - setup.seat + 4) % 4) - ((b - setup.seat + 4) % 4));
+            let bi = 0;
+            G = {
+                players: seats.map(s => ({ seat: s, human: s === setup.seat, ai: s === setup.seat ? null : setup.diffs[bi++] || 'normal', tokens: [-1, -1, -1, -1], place: 0, caps: 0 })),
+                turn: 0, dice: 0, rolled: false, sixes: 0, places: 0, over: false, watching: false,
+                rules: { one: setup.one, capBonus: setup.capBonus, homeBonus: setup.homeBonus, triple: setup.triple, safe: setup.safe, autoMove: setup.autoMove },
+                tester: setup.tester, log: [],
+            };
+            history = [];
+            if (counts()) { stats.played++; stats.byColor[setup.seat].played++; saveStats(); }
+            log(`New game · ${G.players.length} players${G.tester ? ' · tester mode' : ''}`);
+            Arcade.hide('setupOv'); Arcade.hide('endOv');
+            startTurn();
+        }
+
+        const cur = () => G.players[G.turn];
+        const controlled = (pl) => pl.human || (G.tester && tester.all);
+        const pname = (pl) => (pl.human ? 'You' : COLORS[pl.seat].name);
+
+        function save() {
+            if (!G) return;
+            if (G.over && !G.watching) { Arcade.remove('arcade.ludo.game'); return; }
+            const copy = JSON.parse(JSON.stringify(G));
+            copy.rolled = false; copy.dice = 0;
+            Arcade.save('arcade.ludo.game', copy);
+        }
+        function log(msg) {
+            G.log.unshift(msg);
+            G.log.length = Math.min(G.log.length, 60);
+            renderSide();
+        }
+
+        /* ---------- Rules ---------- */
+        function targetOf(pl, k, d) {
+            const p = pl.tokens[k];
+            if (p === LAST) return null;
+            if (p < 0) return d === 6 || (G.rules.one && d === 1) ? 0 : null;
+            return p + d <= LAST ? p + d : null;
+        }
+        function legalMoves(pl, d) {
+            const out = [];
+            const seen = new Set();
+            pl.tokens.forEach((p, k) => {
+                const t = targetOf(pl, k, d);
+                if (t === null) return;
+                const key = p + '>' + t;         // identical tokens (e.g. two in base) are one choice
+                if (seen.has(key)) return;
+                seen.add(key);
+                out.push({ k, from: p, to: t });
+            });
+            return out;
+        }
+        function victimsAt(pl, to) {
+            if (to > 50) return [];
+            const a = absOf(pl.seat, to);
+            if (G.rules.safe && SAFE.has(a)) return [];
+            const v = [];
+            for (const o of G.players) {
+                if (o === pl) continue;
+                o.tokens.forEach((q, k) => { if (absOf(o.seat, q) === a) v.push({ o, k }); });
+            }
+            return v;
+        }
+
+        /* ---------- Turn flow ---------- */
+        function startTurn() {
+            if (!G || (G.over && !G.watching)) return;
+            G.rolled = false; G.dice = G.dice || 0;
+            renderSide();
+            save();
+            const pl = cur();
+            if (pl.place) return nextTurn();
+            if (!controlled(pl) || (G.watching && pl.human)) schedule(() => roll(), 650);
+        }
+        function schedule(fn, ms) {
+            clearTimeout(timerId);
+            timerId = setTimeout(fn, ms * SPEEDS[tester.speed]);
+        }
+        function nextTurn() {
+            G.sixes = 0;
+            if (G.players.filter(p => !p.place).length <= 1) return finishGame();
+            do { G.turn = (G.turn + 1) % G.players.length; } while (cur().place);
+            G.dice = 0;
+            startTurn();
+        }
+
+        function roll() {
+            if (!G || G.rolled || busy || anim || (G.over && !G.watching)) return;
+            const pl = cur();
+            if (G.tester) history.push(JSON.stringify(G));
+            if (history.length > 80) history.shift();
+            busy = true;
+            const diceEl = $('dice');
+            diceEl.classList.add('rolling');
+            const steps = tester.speed === 3 ? 1 : 7;
+            let n = 0;
+            const spin = setInterval(() => {
+                showDice(1 + Math.floor(Math.random() * 6));
+                Arcade.sfx('tick');
+                if (++n < steps) return;
+                clearInterval(spin);
+                diceEl.classList.remove('rolling');
+                const d = G.tester && tester.force ? tester.force : 1 + Math.floor(Math.random() * 6);
+                G.dice = d; G.rolled = true;
+                showDice(d);
+                busy = false;
+                afterRoll(pl, d);
+            }, 55 * SPEEDS[tester.speed] + 10);
+        }
+
+        function afterRoll(pl, d) {
+            if (d === 6) G.sixes++;
+            if (pl.human && counts()) { stats.rolls++; if (d === 6) stats.sixes++; saveStats(); }
+            if (d === 6 && G.rules.triple && G.sixes >= 3) {
+                log(`<b>${pname(pl)}</b> rolled three 6s — turn lost`);
+                Arcade.sfx('bad');
+                renderSide();
+                return schedule(nextTurn, 900);
+            }
+            const moves = legalMoves(pl, d);
+            renderSide();
+            if (!moves.length) {
+                Arcade.sfx('click');
+                return schedule(() => (d === 6 ? startTurn() : nextTurn()), 800);
+            }
+            if (!controlled(pl) || (G.watching && pl.human)) {
+                const m = chooseMove(pl, d, moves, pl.ai || 'hard');
+                return schedule(() => doMove(pl, m), 420);
+            }
+            if (G.rules.autoMove && moves.length === 1 && !tester.tele) schedule(() => doMove(pl, moves[0]), 260);
+        }
+
+        function doMove(pl, m) {
+            if (anim) return;
+            const path = [];
+            if (m.from < 0) path.push(0);
+            else for (let p = m.from + 1; p <= m.to; p++) path.push(p);
+            anim = { pl, k: m.k, path, i: 0, t: 0, from: m.from };
+            G.rolled = 'moving';
+            renderSide();
+        }
+
+        function landed(pl, k) {
+            const to = pl.tokens[k];
+            let bonus = G.dice === 6;
+            const victims = victimsAt(pl, to);
+            if (victims.length) {
+                for (const v of victims) {
+                    v.o.tokens[v.k] = -1;
+                    log(`<b>${pname(pl)}</b> captured ${v.o.human ? 'your' : COLORS[v.o.seat].name} token!`);
+                }
+                pl.caps += victims.length;
+                if (counts()) {
+                    if (pl.human) stats.captures += victims.length;
+                    stats.captured += victims.filter(v => v.o.human).length;
+                    saveStats();
+                }
+                const [x, y] = spot(pl.seat, to, 0);
+                fx.emit(x * CELL, y * CELL, { n: 26, color: [COLORS[pl.seat].c, '#fff', COLORS[victims[0].o.seat].c], speed: 220, life: 0.7 });
+                Arcade.sfx('hit');
+                if (G.rules.capBonus) bonus = true;
+            }
+            if (to === LAST) {
+                if (pl.human && counts()) { stats.homes++; saveStats(); }
+                log(`<b>${pname(pl)}</b> brought a token home (${pl.tokens.filter(p => p === LAST).length}/4)`);
+                const [x, y] = spot(pl.seat, to, k);
+                fx.emit(x * CELL, y * CELL, { n: 20, color: [COLORS[pl.seat].c, '#fde68a'], speed: 160, life: 0.8 });
+                Arcade.sfx('score');
+                if (G.rules.homeBonus) bonus = true;
+                if (pl.tokens.every(p => p === LAST)) {
+                    pl.place = ++G.places;
+                    log(`🏆 <b>${pname(pl)}</b> finished in place ${pl.place}!`);
+                    Arcade.sfx('win');
+                    if (pl.human && !G.over) {
+                        stats.wins += pl.place === 1 ? 1 : 0;
+                        if (counts()) {
+                            stats.places[pl.place]++;
+                            if (pl.place === 1) { stats.byColor[pl.seat].wins++; Arcade.count('win'); }
+                        }
+                        saveStats();
+                    }
+                    if (G.players.filter(p => !p.place).length <= 1) return finishGame();
+                    if (pl.human && !G.tester) return showEnd(false);
+                    return schedule(nextTurn, 600);
+                }
+            }
+            renderSide();
+            if (bonus && !pl.place) {
+                if (G.dice !== 6) G.sixes = 0;
+                G.rolled = false;
+                return schedule(startTurn, 380);
+            }
+            schedule(nextTurn, 380);
+        }
+
+        function finishGame() {
+            const last = G.players.find(p => !p.place);
+            if (last) last.place = ++G.places;
+            G.over = true; G.watching = false;
+            save();
+            showEnd(true);
+        }
+
+        function showEnd(final) {
+            const me = G.players.find(p => p.human);
+            const h = $('endTitle');
+            const ord = ['', '1st', '2nd', '3rd', '4th'];
+            if (me.place === 1) { h.textContent = 'You win!'; h.className = 'good'; Arcade.sfx('win'); }
+            else if (me.place) { h.textContent = `You came ${ord[me.place]}`; h.className = ''; }
+            else { h.textContent = 'Game over'; h.className = 'bad'; }
+            Arcade.text('endText', final ? 'Final standings' : 'You finished! The bots are still racing for the other places.');
+            const host = $('endPlaces');
+            host.innerHTML = '';
+            [...G.players].sort((a, b) => (a.place || 9) - (b.place || 9)).forEach(p => {
+                const d = document.createElement('div');
+                d.innerHTML = `<small style="color:${COLORS[p.seat].c}">${pname(p)}${p.ai ? ' · ' + DIFFS[p.ai] : ''}</small><b>${p.place ? ord[p.place] : '…'}</b>`;
+                host.appendChild(d);
+            });
+            $('watchBtn').hidden = final;
+            Arcade.show('endOv');
+            renderSide();
+        }
+
+        /* ---------- AI ---------- */
+        // chance that some rival can land exactly on absolute square a next turn
+        function threat(pl, a) {
+            if (a < 0 || (G.rules.safe && SAFE.has(a))) return 0;
+            let t = 0;
+            for (const o of G.players) {
+                if (o === pl || o.place) continue;
+                for (const q of o.tokens) {
+                    if (q < 0) {
+                        if (START[o.seat] === a) t += G.rules.one ? 1 / 3 : 1 / 6;
+                        continue;
+                    }
+                    if (q > 50) continue;
+                    const dist = (a - absOf(o.seat, q) + 52) % 52;
+                    if (dist < 1 || q + dist > 50) continue;
+                    if (dist <= 6) t += 1 / 6;
+                    else if (dist <= 12) t += 1 / 36;
+                }
+            }
+            return Math.min(1, t);
+        }
+        function evaluate(pl, m, level) {
+            let s = 0;
+            const fromA = absOf(pl.seat, m.from), toA = absOf(pl.seat, m.to);
+            const victims = victimsAt(pl, m.to);
+            if (m.from < 0) s += level === 'normal' ? 30 : 34;
+            if (m.to === LAST) s += 48;
+            if (m.to > 50 && m.from <= 50) s += 26;
+            if (victims.length) s += 45 + victims.reduce((a, v) => a + Math.max(0, v.o.tokens[v.k]) * (level === 'expert' ? 0.9 : 0.5), 0);
+            s += (m.to - Math.max(0, m.from)) * 0.35;
+            if (level === 'normal') return s + (G.rules.safe && SAFE.has(toA) && m.to <= 50 ? 6 : 0);
+            const before = m.from >= 0 && m.from <= 50 ? threat(pl, fromA) : 0;
+            const after = m.to <= 50 ? threat(pl, toA) : 0;
+            const worth = 1 + Math.max(0, m.to) / 50 * (level === 'expert' ? 1.4 : 0.6);
+            s += before * 30 * worth - after * 36 * worth;
+            if (G.rules.safe && SAFE.has(toA) && m.to <= 50) s += 9;
+            if (level === 'expert') {
+                // hunting: being 1–6 squares behind a rival token sets up a capture next turn
+                if (m.to <= 50) for (const o of G.players) {
+                    if (o === pl) continue;
+                    for (const q of o.tokens) {
+                        if (q < 0 || q > 50) continue;
+                        const dist = (absOf(o.seat, q) - toA + 52) % 52;
+                        if (dist >= 1 && dist <= 6 && !(G.rules.safe && SAFE.has(absOf(o.seat, q)))) s += 4 + q * 0.12;
+                    }
+                }
+                // don't leave a token alone in base forever: spread out progress
+                const outs = pl.tokens.filter(p => p >= 0 && p < LAST).length;
+                if (m.from < 0 && outs === 0) s += 10;
+                // prefer moving tokens about to be overtaken by many rivals
+                s += before * 8;
+            }
+            return s;
+        }
+        function chooseMove(pl, d, moves, level) {
+            if (level === 'easy' && Math.random() < 0.65) return Arcade.pick(moves);
+            const noise = { easy: 18, normal: 10, hard: 3, expert: 0 }[level] ?? 3;
+            let best = moves[0], bs = -Infinity;
+            for (const m of moves) {
+                const s = evaluate(pl, m, level === 'easy' ? 'normal' : level) + (Math.random() - 0.5) * noise;
+                if (s > bs) { bs = s; best = m; }
+            }
+            return best;
+        }
+
+        /* ---------- Drawing ---------- */
+        function drawStar(x, y, r, col) {
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            for (let i = 0; i < 10; i++) {
+                const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+                ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+            }
+            ctx.closePath(); ctx.fill();
+        }
+        function drawBoard() {
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, SIZE, SIZE);
+            // bases
+            BASE.forEach(([bx, by], s) => {
+                const C = COLORS[s];
+                ctx.fillStyle = C.c;
+                ctx.fillRect(bx * CELL, by * CELL, 6 * CELL, 6 * CELL);
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.roundRect((bx + 0.8) * CELL, (by + 0.8) * CELL, 4.4 * CELL, 4.4 * CELL, 18); ctx.fill();
+                for (let k = 0; k < 4; k++) {
+                    const [x, y] = spot(s, -1, k);
+                    ctx.fillStyle = C.l;
+                    ctx.beginPath(); ctx.arc(x * CELL, y * CELL, CELL * 0.62, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = C.c; ctx.lineWidth = 3; ctx.stroke();
+                }
+            });
+            // track
+            ctx.lineWidth = 1;
+            TRACK.forEach(([c, r], i) => {
+                let fill = '#fff';
+                const startSeat = START.indexOf(i);
+                if (startSeat >= 0) fill = COLORS[startSeat].c;
+                ctx.fillStyle = fill;
+                ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                ctx.strokeStyle = '#94a3b8';
+                ctx.strokeRect(c * CELL + 0.5, r * CELL + 0.5, CELL - 1, CELL - 1);
+                if (SAFE.has(i) && startSeat < 0) drawStar(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.32, '#cbd5e1');
+                if (startSeat >= 0) drawStar(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.3, 'rgba(255,255,255,0.75)');
+            });
+            HOME.forEach((cells, s) => cells.forEach(([c, r]) => {
+                ctx.fillStyle = COLORS[s].c;
+                ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                ctx.strokeRect(c * CELL + 0.5, r * CELL + 0.5, CELL - 1, CELL - 1);
+            }));
+            // arrows into each home column
+            const arrows = [[0, 7, 0], [7, 0, 1], [14, 7, 2], [7, 14, 3]];
+            for (const [c, r, s] of arrows) {
+                ctx.save();
+                ctx.translate(c * CELL + CELL / 2, r * CELL + CELL / 2);
+                ctx.rotate([0, Math.PI / 2, Math.PI, -Math.PI / 2][s]);
+                ctx.fillStyle = COLORS[s].c;
+                ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+            // centre
+            const cx = 7.5 * CELL, cy = 7.5 * CELL;
+            const tri = [[[6, 6], [6, 9]], [[6, 6], [9, 6]], [[9, 6], [9, 9]], [[6, 9], [9, 9]]];
+            tri.forEach(([[ax, ay], [bx, by]], s) => {
+                ctx.fillStyle = COLORS[s].c;
+                ctx.beginPath(); ctx.moveTo(ax * CELL, ay * CELL); ctx.lineTo(bx * CELL, by * CELL); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+            });
+        }
+
+        function tokenPos(pl, k) {
+            if (anim && anim.pl === pl && anim.k === k) {
+                const a = anim.i === 0 ? spot(pl.seat, anim.from, k) : spot(pl.seat, anim.path[anim.i - 1], k);
+                const b = spot(pl.seat, anim.path[anim.i], k);
+                const t = Math.min(1, anim.t);
+                return [Arcade.lerp(a[0], b[0], t), Arcade.lerp(a[1], b[1], t) - Math.sin(t * Math.PI) * 0.35, true];
+            }
+            return [...spot(pl.seat, pl.tokens[k], k), false];
+        }
+
+        function render(dt) {
+            drawBoard();
+            const pl = G && cur();
+            const movable = new Set();
+            if (G && G.rolled === true && controlled(pl) && !(G.watching && pl.human) && !anim) for (const m of legalMoves(pl, G.dice)) {
+                pl.tokens.forEach((p, k) => { if (p === m.from) movable.add(pl.seat * 4 + k); });
+            }
+            if (!G) return;
+            // group tokens sharing a square so they fan out
+            const groups = new Map();
+            const items = [];
+            for (const p of G.players) p.tokens.forEach((q, k) => {
+                const [x, y, moving] = tokenPos(p, k);
+                const key = moving || q < 0 || q === LAST ? 'u' + p.seat + k : Math.round(x * 10) + ',' + Math.round(y * 10);
+                const it = { p, k, x, y, moving, key };
+                items.push(it);
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(it);
+            });
+            for (const list of groups.values()) if (list.length > 1) list.forEach((it, i) => {
+                const a = (i / list.length) * Math.PI * 2;
+                it.x += Math.cos(a) * 0.2; it.y += Math.sin(a) * 0.2; it.small = true;
+            });
+            items.sort((a, b) => (a.moving - b.moving) || (a.y - b.y));
+            for (const it of items) {
+                const C = COLORS[it.p.seat];
+                const r = CELL * (it.small ? 0.3 : it.p.tokens[it.k] === LAST ? 0.22 : 0.36);
+                const X = it.x * CELL, Y = it.y * CELL;
+                const can = movable.has(it.p.seat * 4 + it.k);
+                if (can) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.arc(X, Y, r + 5 + Math.sin(time * 7) * 2.5, 0, Math.PI * 2); ctx.stroke();
+                    ctx.strokeStyle = C.d; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+                if (tester.sel && tester.sel.p === it.p && tester.sel.k === it.k) {
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4;
+                    ctx.beginPath(); ctx.arc(X, Y, r + 6, 0, Math.PI * 2); ctx.stroke();
+                }
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath(); ctx.ellipse(X, Y + r * 0.75, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = C.d;
+                ctx.beginPath(); ctx.arc(X, Y + 2, r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = C.c;
+                ctx.beginPath(); ctx.arc(X, Y, r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.beginPath(); ctx.arc(X, Y, r * 0.45, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = C.c;
+                ctx.beginPath(); ctx.arc(X, Y, r * 0.25, 0, Math.PI * 2); ctx.fill();
+            }
+            fx.update(dt); fx.draw(ctx);
+        }
+
+        /* ---------- Side panel ---------- */
+        const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+        function showDice(v) {
+            [...$('dice').children].forEach((el, i) => el.classList.toggle('on', !!v && PIPS[v].includes(i)));
+        }
+        function renderSide() {
+            if (!G) return;
+            const pl = cur();
+            const C = COLORS[pl.seat];
+            document.documentElement.style.setProperty('--accent', C.c);
+            $('dice').style.setProperty('--pc', C.c);
+            Arcade.text('turnName', pl.human ? 'Your turn' : `${C.name}'s turn`);
+            const myTurn = controlled(pl) && !(G.watching && pl.human);
+            let hint = '';
+            if (G.over && !G.watching) hint = 'Game over';
+            else if (!myTurn) hint = (pl.ai ? DIFFS[pl.ai] + ' bot' : 'Bot') + ' is thinking…';
+            else if (!G.rolled) hint = 'Tap the dice to roll';
+            else if (G.rolled === 'moving') hint = 'Moving…';
+            else hint = legalMoves(pl, G.dice).length ? `You rolled ${G.dice} — pick a token` : `Rolled ${G.dice} — no moves`;
+            if (tester.tele && G.tester) hint = tester.sel ? 'Now click a square to place it' : 'Teleport: click any token';
+            Arcade.text('turnHint', hint);
+            const dice = $('dice');
+            dice.disabled = !myTurn || !!G.rolled || (G.over && !G.watching);
+            dice.classList.toggle('ready', !dice.disabled && !busy);
+            if (!G.rolled && !busy) showDice(G.dice || 0);
+            const host = $('players');
+            host.innerHTML = '';
+            const ord = ['', '🥇', '🥈', '🥉', '4th'];
+            for (const p of G.players) {
+                const d = document.createElement('div');
+                d.className = 'pl' + (p === pl && !(G.over && !G.watching) ? ' cur' : '');
+                d.style.setProperty('--pc', COLORS[p.seat].c);
+                const home = p.tokens.filter(q => q === LAST).length, out = p.tokens.filter(q => q >= 0 && q < LAST).length;
+                d.innerHTML = `<span class="dot"></span><span class="nm"></span><span class="home">🏠${home} · 🏃${out}</span>${p.place ? `<span class="place">${ord[p.place]}</span>` : ''}`;
+                d.querySelector('.nm').textContent = p.human ? 'You' : `${COLORS[p.seat].name} · ${DIFFS[p.ai]}`;
+                host.appendChild(d);
+            }
+            $('log').innerHTML = G.log.map(m => `<div>${m}</div>`).join('');
+            $('testerPanel').hidden = !G.tester;
+            $('modeChip').hidden = !G.tester;
+            Arcade.text('winsChip', stats.wins);
+            $('tUndo').disabled = !history.length;
+            $('forceRow').querySelectorAll('.btn').forEach(b => b.classList.toggle('active', +b.dataset.v === tester.force));
+        }
+
+        /* ---------- Input ---------- */
+        function hitToken(px, py, onlyMovable) {
+            const pl = cur();
+            let best = null, bd = 0.5;
+            for (const p of G.players) p.tokens.forEach((q, k) => {
+                if (onlyMovable && (p !== pl || targetOf(p, k, G.dice) === null)) return;
+                const [x, y] = spot(p.seat, q, k);
+                const d = Math.hypot(x - px, y - py);
+                if (d < bd) { bd = d; best = { p, k }; }
+            });
+            return best;
+        }
+        function cellToProgress(seat, c, r) {
+            const [bx, by] = BASE[seat];
+            if (c >= bx && c < bx + 6 && r >= by && r < by + 6) return -1;
+            if (c >= 6 && c <= 8 && r >= 6 && r <= 8) return LAST;
+            const hi = HOME[seat].findIndex(([hc, hr]) => hc === c && hr === r);
+            if (hi >= 0) return 51 + hi;
+            const ti = TRACK.findIndex(([tc, tr]) => tc === c && tr === r);
+            if (ti >= 0) { const p = (ti - START[seat] + 52) % 52; return p <= 50 ? p : null; }
+            return null;
+        }
+        canvas.addEventListener('pointerdown', (e) => {
+            if (!G || anim || busy) return;
+            const pt = Arcade.pointer(canvas, e, SIZE, SIZE);
+            const px = pt.x / CELL, py = pt.y / CELL;
+            if (G.tester && tester.tele) {
+                if (!tester.sel) {
+                    const h = hitToken(px, py, false);
+                    if (h) { tester.sel = h; Arcade.sfx('select'); renderSide(); }
+                    return;
+                }
+                const p = cellToProgress(tester.sel.p.seat, Math.floor(px), Math.floor(py));
+                if (p === null) { Arcade.toast(`${COLORS[tester.sel.p.seat].name} can't stand there`, 'bad'); return; }
+                history.push(JSON.stringify(G));
+                tester.sel.p.tokens[tester.sel.k] = p;
+                if (tester.sel.p.place && p !== LAST) { tester.sel.p.place = 0; }
+                tester.sel = null;
+                Arcade.sfx('pop');
+                renderSide(); save();
+                return;
+            }
+            const pl = cur();
+            if (G.rolled !== true || !controlled(pl)) return;
+            const h = hitToken(px, py, true);
+            if (!h) return;
+            const m = legalMoves(pl, G.dice).find(x => x.from === pl.tokens[h.k]);
+            if (m) { m.k = h.k; doMove(pl, m); Arcade.sfx('select'); }
+        });
+        $('dice').onclick = () => roll();
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && G && !$('dice').disabled) { e.preventDefault(); roll(); }
+            if (G && G.rolled === true && /^Digit[1-4]$/.test(e.code)) {
+                const pl = cur();
+                if (!controlled(pl)) return;
+                const k = +e.code.slice(5) - 1;
+                const m = legalMoves(pl, G.dice).find(x => x.from === pl.tokens[k]);
+                if (m) { m.k = k; doMove(pl, m); }
+            }
+        });
+
+        /* ---------- Loop ---------- */
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            if (anim) {
+                anim.t += dt / (0.13 * Math.max(0.25, SPEEDS[tester.speed]));
+                if (anim.t >= 1) {
+                    anim.pl.tokens[anim.k] = anim.path[anim.i];
+                    Arcade.tone(380 + anim.i * 30, 0.04, 'triangle', 0.035);
+                    anim.i++; anim.t = 0;
+                    if (anim.i >= anim.path.length) {
+                        const a = anim; anim = null;
+                        landed(a.pl, a.k);
+                    }
+                }
+            }
+            render(dt);
+        });
+
+        /* ---------- Setup screen ---------- */
+        function buildSetup() {
+            const cp = $('colorPick');
+            cp.innerHTML = '';
+            COLORS.forEach((C, s) => {
+                const b = document.createElement('button');
+                b.style.background = C.c;
+                b.textContent = C.name;
+                b.className = s === setup.seat ? 'on' : '';
+                b.onclick = () => { setup.seat = s; buildSetup(); };
+                cp.appendChild(b);
+            });
+            document.querySelectorAll('#botCount .btn').forEach(b => {
+                b.classList.toggle('active', +b.dataset.n === setup.bots);
+                b.onclick = () => { setup.bots = +b.dataset.n; buildSetup(); };
+            });
+            const bots = $('bots');
+            bots.innerHTML = '';
+            const others = [1, 2, 3].map(k => (setup.seat + k) % 4);
+            const seats = setup.bots === 1 ? [others[1]] : setup.bots === 2 ? [others[0], others[1]] : others;
+            seats.forEach((s, i) => {
+                const row = document.createElement('div');
+                row.className = 'bot';
+                row.innerHTML = `<span class="dot" style="background:${COLORS[s].c}"></span><span>${COLORS[s].name}</span>`;
+                const seg = document.createElement('div');
+                seg.className = 'seg';
+                for (const [id, name] of Object.entries(DIFFS)) {
+                    const b = document.createElement('button');
+                    b.className = 'btn sm' + (setup.diffs[i] === id ? ' active' : '');
+                    b.textContent = name;
+                    b.onclick = () => { setup.diffs[i] = id; buildSetup(); };
+                    seg.appendChild(b);
+                }
+                row.appendChild(seg);
+                bots.appendChild(row);
+            });
+            const map = { rOne: 'one', rCapBonus: 'capBonus', rHomeBonus: 'homeBonus', rTriple: 'triple', rSafe: 'safe', rAutoMove: 'autoMove', rTester: 'tester' };
+            for (const [id, key] of Object.entries(map)) { $(id).checked = !!setup[key]; $(id).onchange = () => { setup[key] = $(id).checked; }; }
+            const saved = Arcade.load('arcade.ludo.game', null);
+            $('contBtn').hidden = !(saved && saved.players && !saved.over);
+        }
+        function showStats() {
+            const pct = (a, b) => (b ? Math.round(a / b * 100) + '%' : '—');
+            const tile = (l, v) => `<div><small>${l}</small><b>${v}</b></div>`;
+            $('statTiles').innerHTML = [
+                tile('Games', stats.played), tile('Wins', stats.wins), tile('Win rate', pct(stats.wins, stats.played)),
+                tile('Captures', stats.captures), tile('Got captured', stats.captured), tile('Tokens home', stats.homes),
+                tile('Sixes rolled', stats.sixes), tile('Rolls', stats.rolls), tile('Six rate', pct(stats.sixes, stats.rolls)),
+            ].join('');
+            $('statColours').innerHTML = COLORS.map((c, i) => `<div><small style="color:${c.c}">● ${c.name}</small><b>${stats.byColor[i].wins} / ${stats.byColor[i].played}</b><small>${pct(stats.byColor[i].wins, stats.byColor[i].played)} wins</small></div>`).join('');
+            $('statPlaces').innerHTML = ['1st', '2nd', '3rd', '4th'].map((p, i) => tile(p, stats.places[i + 1] || 0)).join('');
+            Arcade.show('statsOv');
+        }
+        $('statsBtn').onclick = showStats;
+        $('statsClose').onclick = () => Arcade.hide('statsOv');
+        $('statsReset').onclick = () => { if (confirm('Reset all Ludo stats?')) { stats = blankStats(); saveStats(); showStats(); renderSide(); } };
+
+        function openSetup() { buildSetup(); Arcade.hide('endOv'); Arcade.show('setupOv'); }
+        $('startBtn').onclick = () => { Arcade.save('arcade.ludo.setup', setup); clearTimeout(timerId); anim = null; tester.sel = null; newGame(); };
+        $('contBtn').onclick = () => {
+            G = Arcade.load('arcade.ludo.game', null);
+            history = [];
+            Arcade.hide('setupOv');
+            log('Game resumed');
+            startTurn();
+        };
+        $('setupBtn').onclick = openSetup;
+        $('newSetupBtn').onclick = openSetup;
+        $('againBtn').onclick = () => { clearTimeout(timerId); anim = null; newGame(); };
+        $('watchBtn').onclick = () => { G.watching = true; Arcade.hide('endOv'); schedule(nextTurn, 300); };
+
+        /* ---------- Tester tools ---------- */
+        const fr = $('forceRow');
+        for (const v of [0, 1, 2, 3, 4, 5, 6]) {
+            const b = document.createElement('button');
+            b.className = 'btn sm dv';
+            b.dataset.v = v;
+            b.textContent = v ? v : '🎲';
+            b.title = v ? `Next rolls are always ${v}` : 'Random rolls';
+            b.onclick = () => { tester.force = v; renderSide(); };
+            fr.appendChild(b);
+        }
+        $('tAll').onchange = () => { tester.all = $('tAll').checked; if (G && !G.rolled && !busy) { clearTimeout(timerId); startTurn(); } renderSide(); };
+        $('tTele').onchange = () => { tester.tele = $('tTele').checked; tester.sel = null; renderSide(); };
+        $('tSpeed').oninput = () => { tester.speed = +$('tSpeed').value; };
+        $('tAuto').onclick = () => {
+            if (!G || anim) return;
+            const pl = cur();
+            if (!G.rolled) { roll(); return; }
+            const moves = legalMoves(pl, G.dice);
+            if (moves.length && G.rolled === true) doMove(pl, chooseMove(pl, G.dice, moves, 'expert'));
+        };
+        $('tSkip').onclick = () => { if (!G || anim) return; clearTimeout(timerId); history.push(JSON.stringify(G)); nextTurn(); };
+        $('tUndo').onclick = () => {
+            if (!history.length || anim) return;
+            clearTimeout(timerId);
+            G = JSON.parse(history.pop());
+            G.rolled = false; G.dice = 0;
+            renderSide();
+            log('Undid a turn');
+            startTurn();
+        };
+        const setAll = (fn) => { if (!G || anim) return; history.push(JSON.stringify(G)); for (const p of G.players) { p.tokens = p.tokens.map(fn); p.place = 0; } G.places = 0; G.over = false; renderSide(); save(); };
+        $('tAllOut').onclick = () => setAll((q, k) => (q < 0 ? 0 : q));
+        $('tAllHome').onclick = () => setAll(() => -1);
+        $('tNearWin').onclick = () => setAll((q, k) => [LAST, LAST, LAST, 52][k]);
+
+        window.addEventListener('resize', () => view.refit());
+        window.__ludo = { get G() { return G; }, legalMoves, chooseMove, TRACK, START, roll, newGame }; // for automated tests
+        loop.start();
+        Arcade.text('winsChip', stats.wins);
+        openSetup();
+    })();
+    </script>
+</body>
+</html>

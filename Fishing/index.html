@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #0891b2; --accent-2: #22d3ee; --accent-ink: #011b22; }
+        .stage { gap: 8px; padding: 8px 10px; }
+        .tbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        #cv { cursor: pointer; }
+        .shop { display: grid; gap: 8px; margin-top: 10px; text-align: left; }
+        .item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+        .item .ic { font-size: 1.6rem; width: 36px; text-align: center; }
+        .item b { display: block; font-size: 0.9rem; }
+        .item small { color: var(--muted); font-size: 0.74rem; }
+        .item .btn { margin-left: auto; white-space: nowrap; }
+        .dex { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 10px; max-height: 56vh; overflow: auto; }
+        .fish { border-radius: 10px; padding: 6px; background: var(--bg-2); border: 1px solid var(--line); font-size: 0.7rem; text-align: center; }
+        .fish .e { font-size: 1.7rem; display: block; }
+        .fish.no .e { filter: brightness(0) opacity(0.35); }
+        .fish.L { border-color: #facc15; } .fish.e2 { border-color: #a855f7; } .fish.r { border-color: #3b82f6; }
+        .areas { display: grid; gap: 6px; margin-top: 10px; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Fishing</h1>
+        <div class="stats">
+            <span class="chip gold">🪙 <b id="coins">0</b></span>
+            <span class="chip accent">Cooler <b id="cooler">0/0</b></span>
+            <span class="chip hide-sm">Caught <b id="caught">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="tbar">
+            <button class="btn sm primary" id="sellBtn">💰 Sell catch</button>
+            <button class="btn sm" id="shopBtn">🛒 Tackle shop</button>
+            <button class="btn sm" id="areaBtn">🗺️ Fishing spots</button>
+            <button class="btn sm" id="dexBtn">📖 Fishdex</button>
+        </div>
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="shopOv" hidden><div class="modal wide"><h2>🛒 Tackle shop</h2><div class="shop" id="shop"></div><div class="actions"><button class="btn" data-close>Close</button></div></div></div>
+            <div class="overlay" id="areaOv" hidden><div class="modal"><h2>🗺️ Fishing spots</h2><p class="small">Better boats reach new waters with deeper, rarer fish.</p><div class="areas" id="areas"></div><div class="actions"><button class="btn" data-close>Close</button></div></div></div>
+            <div class="overlay" id="dexOv" hidden><div class="modal wide"><h2>📖 Fishdex <small id="dexCount"></small></h2><div class="dex" id="dex"></div><div class="actions"><button class="btn" data-close>Close</button></div></div></div>
+            <div class="overlay" id="awayOv" hidden><div class="modal"><h2>🥅 Your nets were busy</h2><p id="awayText"></p><div class="actions"><button class="btn primary" data-close>Nice!</button></div></div></div>
+        </div>
+        <p class="tiny dim center" style="margin:0" id="help">Hold to charge your cast, release to throw. Click to stop the hook at a depth. When a fish bites, hold to keep it inside the green bar.</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 900, H = 560, SURF = 150, TAU = Math.PI * 2;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
+        const c = view.ctx;
+        const fmt = Arcade.fmt;
+        const RAR = { c: ['Common', '#94a3b8', 60, 1], u: ['Uncommon', '#22c55e', 25, 1.6], r: ['Rare', '#3b82f6', 10, 2.4], e: ['Epic', '#a855f7', 4, 3.4], L: ['Legendary', '#facc15', 1, 4.6] };
+        const AREAS = [
+            { id: 'pond', name: 'Village Pond', icon: '🪷', depth: 12, water: ['#0e7490', '#164e63'], boat: 0 },
+            { id: 'lake', name: 'Misty Lake', icon: '🏞️', depth: 25, water: ['#0369a1', '#0c4a6e'], boat: 1 },
+            { id: 'coast', name: 'Coral Coast', icon: '🏝️', depth: 45, water: ['#0891b2', '#155e75'], boat: 2 },
+            { id: 'deep', name: 'Open Ocean', icon: '🌊', depth: 80, water: ['#1d4ed8', '#172554'], boat: 3 },
+            { id: 'abyss', name: 'The Abyss', icon: '🌑', depth: 160, water: ['#1e1b4b', '#020617'], boat: 4 },
+        ];
+        // [name, emoji, rarity, value, minDepth(m), hue, size scale]
+        const FISH = {
+            pond: [['Minnow', '🐟', 'c', 2, 0, 0, 0.6], ['Sunfish', '🐠', 'c', 4, 1, 0, 0.8], ['Frog', '🐸', 'u', 8, 0, 0, 0.8], ['Carp', '🐟', 'u', 12, 4, 40, 1.1], ['Koi', '🐠', 'r', 40, 3, 180, 1], ['Snapping Turtle', '🐢', 'e', 120, 6, 0, 1.2], ['Old Whiskers', '🐟', 'L', 600, 9, 260, 1.7]],
+            lake: [['Trout', '🐟', 'c', 8, 0, 120, 0.9], ['Bass', '🐟', 'c', 10, 2, 300, 1], ['Crayfish', '🦞', 'u', 20, 8, 0, 0.7], ['Pike', '🐟', 'u', 25, 6, 90, 1.3], ['Sturgeon', '🐟', 'r', 90, 14, 200, 1.6], ['Golden Trout', '🐟', 'e', 300, 10, 50, 1], ['Lake Serpent', '🐉', 'L', 2000, 18, 0, 1.6]],
+            coast: [['Mackerel', '🐟', 'c', 20, 0, 160, 0.9], ['Crab', '🦀', 'c', 25, 10, 0, 0.8], ['Clownfish', '🐠', 'u', 45, 5, 0, 0.8], ['Pufferfish', '🐡', 'u', 60, 12, 0, 0.9], ['Octopus', '🐙', 'r', 200, 22, 0, 1.2], ['Swordfish', '🐟', 'e', 700, 25, 220, 1.8], ['Kraken Jr.', '🦑', 'L', 6000, 35, 300, 1.8]],
+            deep: [['Tuna', '🐟', 'c', 60, 5, 210, 1.3], ['Squid', '🦑', 'c', 80, 20, 0, 1], ['Jellyfish', '🪼', 'u', 150, 15, 0, 1], ['Shark', '🦈', 'u', 250, 30, 0, 1.8], ['Anglerfish', '🐡', 'r', 600, 50, 260, 1.1], ['Blue Whale', '🐋', 'e', 2500, 40, 0, 2.4], ['Megalodon', '🦈', 'L', 20000, 65, 330, 2.6]],
+            abyss: [['Lanternfish', '🐟', 'c', 300, 40, 280, 0.8], ['Gulper Eel', '🐍', 'u', 700, 70, 0, 1.2], ['Giant Isopod', '🦐', 'r', 1500, 100, 200, 1.1], ['Vampire Squid', '🦑', 'e', 5000, 110, 300, 1.4], ['Dragonfish', '🐉', 'e', 8000, 130, 180, 1.4], ['Leviathan', '🐳', 'L', 100000, 140, 220, 3]],
+        };
+        const UPG = {
+            rod:  { name: 'Rod', ic: '🎣', desc: (l) => `Reaches ${rodDepth(l)}m deep, casts further`, max: 10, cost: (l) => 40 * Math.pow(2.6, l) },
+            line: { name: 'Line', ic: '🧵', desc: (l) => `Catch bar ${zoneSize(l)}px tall`, max: 10, cost: (l) => 30 * Math.pow(2.4, l) },
+            reel: { name: 'Reel', ic: '⚙️', desc: (l) => `Reels in ${Math.round(reelMult(l) * 100)}% speed`, max: 10, cost: (l) => 35 * Math.pow(2.5, l) },
+            bait: { name: 'Bait', ic: '🪱', desc: (l) => `Bites ${Math.round(biteChance(l) * 100)}% · rarity luck ×${luck(l).toFixed(1)}`, max: 8, cost: (l) => 60 * Math.pow(3, l) },
+            boat: { name: 'Boat', ic: '⛵', desc: (l) => `Reaches ${AREAS[Math.min(4, l)].name} · cooler ${coolerCap(l)}`, max: 4, cost: (l) => [500, 6000, 60000, 600000][l] },
+            net:  { name: 'Fishing net', ic: '🥅', desc: (l) => l ? `Catches ~🪙${fmt(netRate(l) * 60)}/min, even while you're away` : 'Earn coins while idle', max: 10, cost: (l) => 150 * Math.pow(3, l) },
+        };
+        const rodDepth = (l = S.up.rod) => [8, 12, 18, 25, 35, 45, 60, 80, 110, 135, 160][l];
+        const zoneSize = (l = S.up.line) => 64 + l * 12;
+        const reelMult = (l = S.up.reel) => 1 + l * 0.15;
+        const biteChance = (l = S.up.bait) => 0.45 + l * 0.06;
+        const luck = (l = S.up.bait) => 1 + l * 0.25;
+        const coolerCap = (l = S.up.boat) => [10, 15, 20, 30, 40][l];
+        const netRate = (l = S.up.net) => l ? l * l * 0.4 * Math.pow(4, S.up.boat) : 0;
+
+        const S = Object.assign({ coins: 0, caught: 0, up: { rod: 0, line: 0, reel: 0, bait: 0, boat: 0, net: 0 }, area: 'pond', cooler: [], dex: {}, last: Date.now(), legends: 0 }, Arcade.load('arcade.fishing.save', {}) || {});
+        S.up = Object.assign({ rod: 0, line: 0, reel: 0, bait: 0, boat: 0, net: 0 }, S.up);
+        const area = () => AREAS.find(a => a.id === S.area) || AREAS[0];
+        const save = () => { S.last = Date.now(); Arcade.save('arcade.fishing.save', S); };
+        const sprites = {};
+        function spr(e, hue) {
+            const k = e + hue;
+            if (sprites[k]) return sprites[k];
+            const s = document.createElement('canvas'); s.width = s.height = 72;
+            const g = s.getContext('2d');
+            if (hue) g.filter = `hue-rotate(${hue}deg) saturate(1.3)`;
+            g.font = '56px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText(e, 36, 40);
+            return (sprites[k] = s);
+        }
+
+        /* ---------- world ---------- */
+        let state = 'idle', power = 0, powerDir = 1, hook = { x: 0, y: 0, vx: 0, vy: 0, depth: 0 }, fishes = [], hooked = null, reel = null, popup = null, t = 0, bubbles = [], boatX = 150;
+        const pxPerM = () => (H - SURF - 30) / Math.max(rodDepth(), 8);
+        const depthY = (d) => SURF + d * pxPerM();
+        function pickFish(depth) {
+            const list = FISH[S.area].filter(f => f[4] <= depth + 2);
+            const L = luck();
+            const w = list.map(f => RAR[f[2]][2] * (f[2] === 'c' ? 1 : Math.pow(L, RAR[f[2]][3] / 1.5)));
+            let r = Math.random() * w.reduce((a, b) => a + b, 0);
+            for (let i = 0; i < list.length; i++) { r -= w[i]; if (r <= 0) return list[i]; }
+            return list[0];
+        }
+        function spawnFish() {
+            const maxD = Math.min(rodDepth(), area().depth);
+            const d = 0.5 + Math.random() * maxD;
+            const f = pickFish(d);
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            fishes.push({ f, d, x: dir > 0 ? -60 : W + 60, dir, sp: 30 + Math.random() * 50, wob: Math.random() * TAU, tried: false, size: f[6] });
+        }
+        function cast() {
+            state = 'flying';
+            const dist = 160 + power * (200 + S.up.rod * 30);
+            hook = { x: boatX + 40, y: SURF - 40, vx: dist / 0.9, vy: -260, depth: 0, target: null };
+            Arcade.tone(500, 0.12, 'sine', 0.04, 900);
+        }
+        function startReel(fish) {
+            const rr = RAR[fish.f[2]][3];
+            reel = { fish, progress: 0.3, zone: 150, zv: 0, fy: 150, ftarget: 150, ft: 0, diff: rr, size: Math.round((10 + Math.random() * 30) * fish.size * (0.8 + rr * 0.15)) };
+            state = 'reeling';
+            Arcade.sfx('power');
+        }
+        function caught() {
+            const f = reel.fish.f, size = reel.size;
+            const value = Math.round(f[3] * (0.8 + size / (40 * reel.fish.size)) );
+            const key = S.area + ':' + f[0], prev = S.dex[key];
+            S.dex[key] = { n: (prev ? prev.n : 0) + 1, best: Math.max(prev ? prev.best : 0, size) };
+            S.caught++;
+            let note = '';
+            if (S.cooler.length >= coolerCap()) { S.coins += Math.round(value * 0.5); note = 'Cooler full — sold on the spot for half price'; }
+            else S.cooler.push({ name: f[0], e: f[1], hue: f[5], value, r: f[2] });
+            if (f[2] === 'L') { S.legends++; Arcade.count('legendary'); Arcade.sfx('win'); } else Arcade.sfx('coin');
+            Arcade.count('fish');
+            Arcade.addXP(Math.round(RAR[f[2]][3] * 2), true);
+            popup = { f, size, value, isNew: !prev, note, t: 3.2 };
+            reel = null; state = 'idle'; hooked = null;
+            save(); hud();
+        }
+        function lost() {
+            popup = { lostName: reel.fish.f[0], t: 2 };
+            Arcade.sfx('bad');
+            reel = null; state = 'idle'; hooked = null;
+        }
+        function sell() {
+            if (!S.cooler.length) { Arcade.toast('Your cooler is empty', null, 1200); return; }
+            const v = S.cooler.reduce((a, f) => a + f.value, 0);
+            S.coins += v; S.cooler = [];
+            Arcade.sfx('coin'); Arcade.toast(`Sold your catch for 🪙 ${fmt(v)}`, 'gold');
+            save(); hud();
+        }
+
+        let holding = false;
+        function press() {
+            if (anyOpen()) return;
+            holding = true;
+            if (state === 'idle') { state = 'charge'; power = 0; powerDir = 1; }
+            else if (state === 'sinking') { state = 'waiting'; Arcade.tone(700, 0.04, 'triangle', 0.03); }
+            else if (state === 'waiting') { state = 'retrieve'; }
+        }
+        function release() {
+            holding = false;
+            if (state === 'charge') cast();
+        }
+        function step(dt) {
+            t += dt;
+            boatX = 150 + Math.sin(t * 0.6) * 6;
+            if (Math.random() < dt * (1.2 + S.up.bait * 0.15) && fishes.length < 10) spawnFish();
+            for (const fi of fishes) {
+                if (fi === hooked) continue;
+                fi.x += fi.dir * fi.sp * dt; fi.wob += dt * 3;
+                if ((state === 'waiting' || state === 'sinking') && !fi.tried && Math.abs(fi.x - hook.x) < 170 && Math.abs(depthY(fi.d) - hook.y) < 110) fi.d += (hook.depth - fi.d) * Math.min(1, dt * 1.6);
+                const fy = depthY(fi.d) + Math.sin(fi.wob) * 6;
+                // interested in a still hook nearby
+                if ((state === 'waiting' || state === 'sinking') && !fi.tried && Math.abs(fi.x - hook.x) < 34 && Math.abs(fy - hook.y) < 34) {
+                    fi.tried = true;
+                    if (Math.random() < biteChance()) { hooked = fi; state = 'bite'; hook.biteT = 0.9; Arcade.tone(900, 0.06, 'square', 0.05); Arcade.tone(1200, 0.06, 'square', 0.05, null, 0.08); }
+                }
+            }
+            fishes = fishes.filter(f => f === hooked || (f.x > -100 && f.x < W + 100 && f.d <= rodDepth() + 1));
+            if (state === 'charge') { power += powerDir * dt * 1.3; if (power > 1) { power = 1; powerDir = -1; } if (power < 0) { power = 0; powerDir = 1; } }
+            if (state === 'flying') {
+                hook.vy += 600 * dt; hook.x += hook.vx * dt; hook.y += hook.vy * dt;
+                if (hook.y >= SURF) { hook.y = SURF; state = 'sinking'; Arcade.tone(250, 0.1, 'sine', 0.05, 120); for (let i = 0; i < 8; i++) bubbles.push({ x: hook.x + (Math.random() - 0.5) * 20, y: SURF, r: 2 + Math.random() * 3, t: 1 }); }
+                if (hook.x > W - 30) { hook.x = W - 30; hook.vx = 0; }
+            }
+            if (state === 'sinking') {
+                hook.depth = Math.min(rodDepth(), Math.min(area().depth, hook.depth + dt * (4 + rodDepth() * 0.12)));
+                hook.y = depthY(hook.depth);
+                if (hook.depth >= Math.min(rodDepth(), area().depth)) state = 'waiting';
+            }
+            if (state === 'retrieve') {
+                hook.depth = Math.max(0, hook.depth - dt * 18); hook.y = depthY(hook.depth); hook.x += (boatX + 40 - hook.x) * dt * 1.5;
+                if (hook.depth <= 0) state = 'idle';
+            }
+            if (state === 'bite') {
+                hook.biteT -= dt;
+                if (hooked) { hooked.x += (hook.x - hooked.x) * dt * 8; hooked.d = hook.depth; }
+                if (holding) startReel(hooked);
+                else if (hook.biteT <= 0) { popup = { lostName: hooked.f[0], t: 1.6, early: true }; hooked.tried = true; hooked = null; state = 'waiting'; }
+            }
+            if (state === 'reeling') {
+                const R = reel, BAR = 300;
+                R.zv += (holding ? -900 : 700) * dt; R.zv *= Math.pow(0.15, dt);
+                R.zone += R.zv * dt;
+                const zs = zoneSize();
+                if (R.zone < 0) { R.zone = 0; R.zv = Math.abs(R.zv) * 0.3; }
+                if (R.zone > BAR - zs) { R.zone = BAR - zs; R.zv = -Math.abs(R.zv) * 0.3; }
+                R.ft -= dt;
+                if (R.ft <= 0) { R.ft = (1.4 - R.diff * 0.2) * (0.4 + Math.random()); R.ftarget = 10 + Math.random() * (BAR - 20); }
+                R.fy += (R.ftarget - R.fy) * dt * (1 + R.diff * 0.9);
+                const inZone = R.fy > R.zone && R.fy < R.zone + zs;
+                R.progress += (inZone ? 0.22 * reelMult() / (0.6 + R.diff * 0.25) : -0.2 - R.diff * 0.03) * dt;
+                if (inZone && Math.random() < dt * 8) Arcade.tone(300 + R.progress * 500, 0.02, 'square', 0.012);
+                hook.depth = Math.max(0, hook.depth - (inZone ? dt * 3 : 0)); hook.y = depthY(hook.depth);
+                if (hooked) { hooked.x = hook.x; hooked.d = hook.depth; }
+                if (R.progress >= 1) caught();
+                else if (R.progress <= 0) lost();
+            }
+            for (const b of bubbles) { b.y -= 30 * dt; b.t -= dt; }
+            bubbles = bubbles.filter(b => b.t > 0);
+            if (popup) { popup.t -= dt; if (popup.t <= 0) popup = null; }
+            // passive net income
+            if (S.up.net) { S.coins += netRate() * dt; netAcc += dt; if (netAcc > 2) { netAcc = 0; hud(); } }
+        }
+        let netAcc = 0;
+        function draw() {
+            const A = area();
+            const sky = c.createLinearGradient(0, 0, 0, SURF);
+            sky.addColorStop(0, S.area === 'abyss' ? '#0f172a' : '#7dd3fc'); sky.addColorStop(1, S.area === 'abyss' ? '#312e81' : '#e0f2fe');
+            c.fillStyle = sky; c.fillRect(0, 0, W, SURF);
+            if (S.area !== 'abyss') { c.fillStyle = '#fef9c3'; c.beginPath(); c.arc(780, 50, 26, 0, TAU); c.fill(); }
+            c.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 3; i++) { const x = (i * 300 + t * 8) % (W + 200) - 100; c.beginPath(); c.arc(x, 40 + i * 18, 16, 0, TAU); c.arc(x + 20, 34 + i * 18, 20, 0, TAU); c.arc(x + 40, 40 + i * 18, 15, 0, TAU); c.fill(); }
+            // shore / dock on the left
+            c.fillStyle = '#a16207'; c.fillRect(0, SURF - 30, 70, 30); c.fillStyle = '#78350f'; for (let x = 6; x < 70; x += 18) c.fillRect(x, SURF - 30, 6, 60);
+            const wat = c.createLinearGradient(0, SURF, 0, H);
+            wat.addColorStop(0, A.water[0]); wat.addColorStop(1, A.water[1]);
+            c.fillStyle = wat; c.fillRect(0, SURF, W, H - SURF);
+            // light rays
+            c.fillStyle = 'rgba(255,255,255,0.04)';
+            for (let i = 0; i < 5; i++) { const x = (i * 210 + Math.sin(t * 0.3 + i) * 30); c.beginPath(); c.moveTo(x, SURF); c.lineTo(x + 60, SURF); c.lineTo(x + 140, H); c.lineTo(x + 40, H); c.fill(); }
+            // depth markers
+            c.fillStyle = 'rgba(255,255,255,0.35)'; c.font = '600 11px system-ui'; c.textAlign = 'right';
+            const step = rodDepth() > 60 ? 20 : rodDepth() > 25 ? 10 : 5;
+            for (let d = step; d <= rodDepth(); d += step) { const y = depthY(d); c.fillRect(W - 30, y, 14, 1); c.fillText(d + 'm', W - 34, y + 4); }
+            if (area().depth < rodDepth()) { const y = depthY(area().depth); c.fillStyle = 'rgba(68,64,60,0.85)'; c.fillRect(0, y, W, H - y); c.fillStyle = '#d6d3d1'; c.textAlign = 'center'; c.fillText('sea floor · ' + area().depth + 'm', W / 2, y + 16); }
+            // waves
+            c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 2; c.beginPath();
+            for (let x = 0; x <= W; x += 10) { const y = SURF + Math.sin(x / 40 + t * 2) * 3; x ? c.lineTo(x, y) : c.moveTo(x, y); }
+            c.stroke();
+            // fish
+            for (const fi of fishes) {
+                const fy = fi === hooked ? hook.y + 12 : depthY(fi.d) + Math.sin(fi.wob) * 6;
+                const s = 34 * fi.size;
+                c.save(); c.translate(fi.x, fy);
+                if (fi.dir > 0 && fi !== hooked) c.scale(-1, 1);
+                if (fi.f[2] === 'L' || fi.f[2] === 'e') { c.shadowColor = RAR[fi.f[2]][1]; c.shadowBlur = 14; }
+                c.globalAlpha = fi === hooked ? 1 : 0.85;
+                c.drawImage(spr(fi.f[1], fi.f[5]), -s / 2, -s / 2, s, s);
+                c.restore();
+            }
+            c.globalAlpha = 1;
+            for (const b of bubbles) { c.strokeStyle = `rgba(255,255,255,${b.t})`; c.lineWidth = 1; c.beginPath(); c.arc(b.x, b.y, b.r, 0, TAU); c.stroke(); }
+            // boat & angler
+            const by = SURF - 8 + Math.sin(t * 1.4) * 3;
+            c.fillStyle = '#92400e'; c.beginPath(); c.moveTo(boatX - 60, by - 14); c.lineTo(boatX + 60, by - 14); c.lineTo(boatX + 40, by + 12); c.lineTo(boatX - 45, by + 12); c.fill();
+            c.fillStyle = '#b45309'; c.fillRect(boatX - 60, by - 18, 120, 6);
+            if (S.up.boat >= 2) { c.fillStyle = '#f8fafc'; c.beginPath(); c.moveTo(boatX - 10, by - 18); c.lineTo(boatX - 10, by - 80); c.lineTo(boatX + 30, by - 24); c.fill(); }
+            c.font = '34px "Segoe UI Emoji",sans-serif'; c.textAlign = 'center'; c.fillText('🧑', boatX + 10, by - 26);
+            if (S.up.net) { c.font = '18px sans-serif'; c.fillText('🥅', boatX - 40, by - 20); }
+            // rod & line
+            const tipX = boatX + 46, tipY = by - 70;
+            c.strokeStyle = '#78350f'; c.lineWidth = 3; c.beginPath(); c.moveTo(boatX + 18, by - 30); c.lineTo(tipX, tipY); c.stroke();
+            if (state !== 'idle' && state !== 'charge') {
+                c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1;
+                c.beginPath(); c.moveTo(tipX, tipY); c.quadraticCurveTo((tipX + hook.x) / 2, Math.min(tipY, hook.y) + (state === 'reeling' ? 0 : 40), hook.x, hook.y); c.stroke();
+                c.fillStyle = '#ef4444'; c.beginPath(); c.arc(hook.x, Math.min(hook.y, SURF) - (hook.y > SURF ? 2 : 0), 5, 0, TAU); c.fill();
+                if (hook.y > SURF) { c.strokeStyle = '#cbd5e1'; c.lineWidth = 2; c.beginPath(); c.arc(hook.x, hook.y, 5, 0, Math.PI); c.stroke(); c.font = '12px sans-serif'; c.fillText('🪱', hook.x, hook.y + 10); }
+            }
+            c.textAlign = 'center';
+            if (state === 'charge') {
+                c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(boatX - 50, by - 120, 100, 12);
+                c.fillStyle = `hsl(${120 - power * 120},90%,55%)`; c.fillRect(boatX - 50, by - 120, 100 * power, 12);
+                c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.fillText('Release to cast', boatX, by - 128);
+            }
+            if (state === 'sinking') { c.fillStyle = '#fff'; c.font = '700 13px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m — click to stop here`, hook.x, hook.y - 22); }
+            if (state === 'waiting') { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = '600 12px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m · waiting for a bite… (click to reel in)`, Math.min(W - 160, Math.max(160, hook.x)), hook.y - 22); }
+            if (state === 'bite') { c.fillStyle = '#facc15'; c.font = '900 34px system-ui'; c.fillText('!', hook.x, hook.y - 30 + Math.sin(t * 30) * 3); c.font = '800 13px system-ui'; c.fillText('HOLD NOW!', hook.x, hook.y - 60); }
+            if (state === 'reeling') drawReel();
+            if (state === 'idle') { c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = '700 14px system-ui'; c.fillText(`Hold to charge, release to cast · ${area().icon} ${area().name}`, W / 2, SURF + 40); }
+            if (popup) drawPopup();
+        }
+        function drawReel() {
+            const R = reel, BX = W - 120, BY = SURF + 40, BAR = 300, zs = zoneSize();
+            c.fillStyle = 'rgba(2,6,23,0.75)'; c.fillRect(BX - 14, BY - 40, 92, BAR + 60);
+            c.fillStyle = '#0c4a6e'; c.fillRect(BX, BY, 30, BAR);
+            c.fillStyle = 'rgba(74,222,128,0.75)'; c.fillRect(BX, BY + R.zone, 30, zs);
+            c.drawImage(spr(R.fish.f[1], R.fish.f[5]), BX - 2, BY + R.fy - 17, 34, 34);
+            c.fillStyle = '#1e293b'; c.fillRect(BX + 42, BY, 12, BAR);
+            c.fillStyle = R.progress > 0.7 ? '#4ade80' : R.progress > 0.35 ? '#facc15' : '#f87171';
+            c.fillRect(BX + 42, BY + BAR * (1 - R.progress), 12, BAR * R.progress);
+            c.fillStyle = '#fff'; c.font = '800 12px system-ui'; c.textAlign = 'center';
+            c.fillText('HOLD ▲', BX + 26, BY - 22);
+            c.fillStyle = RAR[R.fish.f[2]][1]; c.fillText(RAR[R.fish.f[2]][0], BX + 26, BY + BAR + 16);
+        }
+        function drawPopup() {
+            const p = popup, a = Math.min(1, p.t * 2);
+            c.globalAlpha = a;
+            c.fillStyle = 'rgba(2,6,23,0.85)'; c.beginPath(); c.roundRect ? c.roundRect(W / 2 - 170, 170, 340, p.lostName ? 60 : 150, 16) : c.rect(W / 2 - 170, 170, 340, 150); c.fill();
+            c.textAlign = 'center'; c.fillStyle = '#fff';
+            if (p.lostName) { c.font = '800 16px system-ui'; c.fillText(p.early ? `Too slow! The ${p.lostName} got away` : `The ${p.lostName} escaped!`, W / 2, 205); }
+            else {
+                const col = RAR[p.f[2]][1];
+                c.drawImage(spr(p.f[1], p.f[5]), W / 2 - 160, 180, 80, 80);
+                c.textAlign = 'left';
+                c.fillStyle = col; c.font = '800 12px system-ui'; c.fillText(RAR[p.f[2]][0].toUpperCase() + (p.isNew ? ' · NEW!' : ''), W / 2 - 70, 200);
+                c.fillStyle = '#fff'; c.font = '900 22px system-ui'; c.fillText(p.f[0], W / 2 - 70, 226);
+                c.fillStyle = '#cbd5e1'; c.font = '600 14px system-ui'; c.fillText(`${p.size} cm · 🪙 ${fmt(p.value)}`, W / 2 - 70, 250);
+                if (p.note) { c.fillStyle = '#fca5a5'; c.font = '600 12px system-ui'; c.fillText(p.note, W / 2 - 160, 300); }
+            }
+            c.globalAlpha = 1;
+        }
+        function hud() {
+            Arcade.text('coins', fmt(Math.floor(S.coins)));
+            Arcade.text('cooler', S.cooler.length + '/' + coolerCap());
+            Arcade.text('caught', S.caught);
+            $('sellBtn').textContent = S.cooler.length ? `💰 Sell catch (🪙 ${fmt(S.cooler.reduce((a, f) => a + f.value, 0))})` : '💰 Sell catch';
+        }
+
+        /* ---------- menus ---------- */
+        const anyOpen = () => ['shopOv', 'areaOv', 'dexOv', 'awayOv'].some(id => !$(id).hidden);
+        document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.overlay').hidden = true);
+        function buildShop() {
+            const host = $('shop'); host.innerHTML = '';
+            for (const [k, u] of Object.entries(UPG)) {
+                const l = S.up[k], max = l >= u.max, cost = max ? 0 : Math.round(u.cost(l));
+                const row = document.createElement('div'); row.className = 'item';
+                row.innerHTML = `<span class="ic">${u.ic}</span><span><b>${u.name} · Lv ${l}${max ? ' (max)' : ''}</b><small>${u.desc(l)}${max ? '' : ' → ' + u.desc(l + 1)}</small></span>`;
+                const b = document.createElement('button'); b.className = 'btn sm primary';
+                b.textContent = max ? 'MAX' : '🪙 ' + fmt(cost);
+                b.disabled = max || S.coins < cost;
+                b.onclick = () => { if (S.coins < cost) return; S.coins -= cost; S.up[k]++; Arcade.sfx('power'); if (k === 'boat') Arcade.toast('New fishing spot unlocked: ' + AREAS[S.up.boat].name + '!', 'gold'); save(); buildShop(); hud(); };
+                row.appendChild(b);
+                host.appendChild(row);
+            }
+        }
+        function buildAreas() {
+            const host = $('areas'); host.innerHTML = '';
+            AREAS.forEach((a, i) => {
+                const ok = S.up.boat >= a.boat;
+                const b = document.createElement('button');
+                b.className = 'btn' + (a.id === S.area ? ' primary' : '');
+                b.disabled = !ok;
+                b.innerHTML = `${a.icon} ${a.name} · up to ${a.depth}m ${ok ? '' : '· needs boat Lv ' + a.boat}`;
+                b.onclick = () => { S.area = a.id; fishes = []; state = 'idle'; reel = null; hooked = null; save(); $('areaOv').hidden = true; Arcade.sfx('select'); };
+                host.appendChild(b);
+            });
+        }
+        function buildDex() {
+            const host = $('dex'); host.innerHTML = '';
+            let have = 0, tot = 0;
+            for (const a of AREAS) for (const f of FISH[a.id]) {
+                tot++;
+                const d = S.dex[a.id + ':' + f[0]];
+                if (d) have++;
+                const e = document.createElement('div');
+                e.className = 'fish' + (d ? '' : ' no') + (f[2] === 'L' ? ' L' : f[2] === 'e' ? ' e2' : f[2] === 'r' ? ' r' : '');
+                e.innerHTML = `<span class="e" style="${f[5] ? `filter:hue-rotate(${f[5]}deg) saturate(1.3)` : ''}">${f[1]}</span><b>${d ? f[0] : '???'}</b><br><span style="color:${RAR[f[2]][1]}">${RAR[f[2]][0]}</span><br>${d ? `×${d.n} · best ${d.best}cm` : a.name}`;
+                if (!d) e.querySelector('.e').style.filter = 'brightness(0) opacity(0.35)';
+                host.appendChild(e);
+            }
+            $('dexCount').textContent = `${have}/${tot}`;
+        }
+        $('shopBtn').onclick = () => { buildShop(); $('shopOv').hidden = false; };
+        $('areaBtn').onclick = () => { buildAreas(); $('areaOv').hidden = false; };
+        $('dexBtn').onclick = () => { buildDex(); $('dexOv').hidden = false; };
+        $('sellBtn').onclick = sell;
+        cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); press(); });
+        cv.addEventListener('pointerup', release);
+        cv.addEventListener('pointercancel', release);
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); press(); } if (e.code === 'KeyS' && !anyOpen()) sell(); });
+        window.addEventListener('keyup', (e) => { if (e.code === 'Space') release(); });
+
+        // the net works while you're away (up to 8 hours)
+        const away = Math.min(8 * 3600, (Date.now() - (S.last || Date.now())) / 1000);
+        if (S.up.net && away > 60) {
+            const gain = netRate() * away;
+            S.coins += gain;
+            $('awayText').textContent = `While you were away (${Arcade.time(away)}), your nets brought in 🪙 ${fmt(gain)}.`;
+            $('awayOv').hidden = false;
+        }
+        window.addEventListener('pagehide', save);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+        setInterval(save, 15000);
+        hud();
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__fish = { S, get state() { return state; }, press, release, get reel() { return reel; }, get fishes() { return fishes; } };
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Survivors · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #a855f7; --accent-2: #f43f5e; --accent-ink: #12021f; }
+        .stage { padding: 8px; }
+        .picks { display: grid; gap: 8px; margin-top: 12px; text-align: left; }
+        .pick { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; text-align: left; }
+        .pick:hover, .pick:focus-visible { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg-2)); }
+        .pick .ic { font-size: 1.8rem; width: 40px; text-align: center; flex: none; }
+        .pick b { display: block; }
+        .pick small { color: var(--muted); font-size: 0.78rem; }
+        .pick .lv { margin-left: auto; font-size: 0.7rem; color: var(--accent); white-space: nowrap; }
+        .chars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+        .chars button { padding: 10px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; text-align: left; }
+        .chars button.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .chars button b { font-size: 1.5rem; margin-right: 6px; }
+        .chars small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 3px; }
+        .shop { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; text-align: left; }
+        .shop button { padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.78rem; }
+        .shop button:disabled { opacity: 0.45; cursor: not-allowed; }
+        .shop button b { display: block; font-size: 0.85rem; }
+        .shop button span { color: var(--gold); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Night Survivors</h1>
+        <div class="stats">
+            <span class="chip accent">Time <b id="time">0:00</b></span>
+            <span class="chip">Kills <b id="kills">0</b></span>
+            <span class="chip gold">Gold <b id="gold">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="pauseBtn">⏸</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="startOv">
+                <div class="modal wide">
+                    <h2>🧛 Night Survivors</h2>
+                    <p>Your weapons fire by themselves — just move. Survive until dawn (15:00). Best: <b id="bestT">—</b></p>
+                    <div class="chars" id="chars"></div>
+                    <h4 style="margin:14px 0 2px">Power-ups (kept between runs) · <span class="gold">🪙 <b id="shopGold">0</b></span></h4>
+                    <div class="shop" id="shop"></div>
+                    <div class="actions"><button class="btn primary lg" id="goBtn">Start the night</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="lvlOv" hidden>
+                <div class="modal">
+                    <h2 id="lvlTitle">Level up!</h2>
+                    <div class="picks" id="picks"></div>
+                </div>
+            </div>
+            <div class="overlay" id="pauseOv" hidden>
+                <div class="modal">
+                    <h2>Paused</h2>
+                    <div class="picks" id="build"></div>
+                    <div class="actions"><button class="btn primary" id="resumeBtn">Resume</button><button class="btn danger" id="quitBtn">Give up</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">You fell</h2>
+                    <div class="big-num" id="endTime">0:00</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid" id="endStats"></div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows to move · <kbd>P</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> pick upgrades</span><span class="touch-only">Drag anywhere to move</span></p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 960, H = 600, TAU = Math.PI * 2, WIN = 15 * 60;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
+        const c = view.ctx;
+        const R = Arcade.rand, pick = Arcade.pick, clamp = Arcade.clamp;
+        const sprites = {};
+        function spr(e, size) {
+            const k = e + size;
+            if (sprites[k]) return sprites[k];
+            const s = document.createElement('canvas'); s.width = s.height = size * 2;
+            const g = s.getContext('2d');
+            g.font = `${size * 1.5}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+            g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, size, size * 1.08);
+            return (sprites[k] = s);
+        }
+
+        /* ---------- data ---------- */
+        const CHARS = [
+            { id: 'mage', e: '🧙', name: 'Mage', w: 'wand', desc: 'Magic Wand · +10% might' , might: 0.1 },
+            { id: 'knight', e: '🤺', name: 'Knight', w: 'whip', desc: 'Whip · +30 max HP, +1 armour', hp: 30, armor: 1 },
+            { id: 'rogue', e: '🥷', name: 'Rogue', w: 'knife', desc: 'Throwing Knives · +15% speed', speed: 0.15 },
+            { id: 'cleric', e: '😇', name: 'Cleric', w: 'garlic', desc: 'Holy Aura · +0.5 HP/s regen', regen: 0.5 },
+        ];
+        const WEAPONS = {
+            wand:   { e: '🪄', name: 'Magic Wand', desc: 'Fires at the nearest enemy.', lv: ['Fires at the nearest enemy', '+1 projectile', '+40% damage', '+1 projectile', 'Fires faster', '+1 projectile, pierces'] },
+            whip:   { e: '🗡️', name: 'Whip', desc: 'Slashes horizontally.', lv: ['Slashes to the side', 'Also slashes behind', '+40% damage', '+25% area', '+40% damage', 'Slashes twice'] },
+            knife:  { e: '🔪', name: 'Knives', desc: 'Thrown where you face.', lv: ['Throws a knife where you face', '+1 knife', '+1 knife', '+50% damage', '+1 knife, pierce', '+2 knives'] },
+            garlic: { e: '🧄', name: 'Holy Aura', desc: 'Hurts everything close by.', lv: ['Damages nearby enemies', '+20% area', '+3 damage', '+20% area', '+3 damage', '+30% area, knockback'] },
+            orbit:  { e: '📖', name: 'Spellbooks', desc: 'Books circle around you.', lv: ['A book orbits you', '+1 book', '+30% damage', '+1 book', 'Bigger orbit', '+2 books'] },
+            bolt:   { e: '⚡', name: 'Lightning', desc: 'Strikes random enemies.', lv: ['Strikes a random enemy', '+1 strike', '+50% damage', '+1 strike', 'Strikes faster', '+2 strikes'] },
+            fire:   { e: '🔥', name: 'Fire Flask', desc: 'Leaves burning ground.', lv: ['Drops a burning pool', '+1 flask', 'Burns longer', '+40% damage', '+1 flask', 'Bigger pools'] },
+        };
+        const PASSIVES = {
+            might:  { e: '💪', name: 'Might', desc: '+12% damage' },
+            haste:  { e: '⏩', name: 'Haste', desc: '−8% weapon cooldowns' },
+            wings:  { e: '🪽', name: 'Wings', desc: '+10% move speed' },
+            heart:  { e: '❤️', name: 'Vitality', desc: '+25 max HP and heal 25' },
+            magnet: { e: '🧲', name: 'Magnet', desc: '+35% pickup range' },
+            armor:  { e: '🛡️', name: 'Armour', desc: '−1 damage taken per hit' },
+            regen:  { e: '💚', name: 'Recovery', desc: '+0.4 HP per second' },
+            area:   { e: '🌀', name: 'Reach', desc: '+12% weapon area' },
+        };
+        const MAXLV = 6, SLOTS = 6;
+        const ENEMIES = {
+            bat:      { e: '🦇', hp: 6, sp: 95, dmg: 4, r: 11, xp: 1 },
+            zombie:   { e: '🧟', hp: 16, sp: 42, dmg: 7, r: 13, xp: 1 },
+            skeleton: { e: '💀', hp: 24, sp: 58, dmg: 8, r: 12, xp: 2 },
+            ghost:    { e: '👻', hp: 18, sp: 75, dmg: 7, r: 12, xp: 2, wave: true },
+            spider:   { e: '🕷️', hp: 30, sp: 85, dmg: 9, r: 12, xp: 2 },
+            wolf:     { e: '🐺', hp: 55, sp: 100, dmg: 12, r: 14, xp: 3 },
+            mummy:    { e: '🧌', hp: 140, sp: 40, dmg: 16, r: 18, xp: 5 },
+            vamp:     { e: '🧛', hp: 120, sp: 70, dmg: 14, r: 15, xp: 6 },
+        };
+        const TIMELINE = [[0, ['bat', 'zombie']], [60, ['bat', 'zombie', 'skeleton']], [150, ['skeleton', 'ghost', 'bat']], [240, ['ghost', 'spider', 'zombie']], [360, ['spider', 'wolf', 'skeleton']], [480, ['wolf', 'mummy', 'ghost']], [600, ['wolf', 'vamp', 'mummy', 'spider']], [720, ['vamp', 'mummy', 'wolf']]];
+        const SHOP = {
+            might:  { name: 'Might', desc: '+5% damage', max: 5, cost: 200 },
+            armor:  { name: 'Armour', desc: '+1 armour', max: 3, cost: 300 },
+            hp:     { name: 'Max HP', desc: '+10% health', max: 5, cost: 200 },
+            speed:  { name: 'Speed', desc: '+5% speed', max: 3, cost: 250 },
+            magnet: { name: 'Magnet', desc: '+20% pickup', max: 3, cost: 200 },
+            greed:  { name: 'Greed', desc: '+20% gold', max: 5, cost: 150 },
+            growth: { name: 'Growth', desc: '+5% XP', max: 5, cost: 250 },
+            revive: { name: 'Revival', desc: 'Come back once per run', max: 1, cost: 1500 },
+        };
+        const save = Object.assign({ gold: 0, ups: {}, char: 'mage', best: 0 }, Arcade.load('arcade.survivors.save', {}) || {});
+        const persist = () => Arcade.save('arcade.survivors.save', save);
+        const up = (k) => save.ups[k] || 0;
+
+        /* ---------- state ---------- */
+        let P, enemies, shots, gems, pools, fx, texts, strikes, time, kills, goldRun, running, paused, nextSpawn, bossFlags, cam, pendingLevels;
+        function newRun() {
+            const ch = CHARS.find(x => x.id === save.char) || CHARS[0];
+            const maxHp = Math.round((100 + (ch.hp || 0)) * (1 + up('hp') * 0.1));
+            P = { x: 0, y: 0, r: 13, hp: maxHp, maxHp, lv: 1, xp: 0, next: 5, face: 1, fx: 1, fy: 0, ch,
+                  weapons: [{ id: ch.w, lv: 1, cd: 0.3 }], passives: {}, iframe: 0, revive: up('revive') > 0, hurtT: 0 };
+            enemies = []; shots = []; gems = []; pools = []; strikes = []; texts = []; fx = new Arcade.Particles(600);
+            time = 0; kills = 0; goldRun = 0; running = true; paused = false; nextSpawn = 0; bossFlags = {}; cam = { x: 0, y: 0 }; pendingLevels = 0;
+            hud();
+        }
+        const pv = (k) => P.passives[k] || 0;
+        const might = () => (1 + pv('might') * 0.12 + up('might') * 0.05 + (P.ch.might || 0));
+        const haste = () => Math.max(0.4, 1 - pv('haste') * 0.08);
+        const area = () => 1 + pv('area') * 0.12;
+        const speed = () => 150 * (1 + pv('wings') * 0.1 + up('speed') * 0.05 + (P.ch.speed || 0));
+        const armor = () => pv('armor') + up('armor') + (P.ch.armor || 0);
+        const regen = () => pv('regen') * 0.4 + (P.ch.regen || 0);
+        const magnet = () => 70 * (1 + pv('magnet') * 0.35 + up('magnet') * 0.2);
+        const wlv = (id) => { const w = P.weapons.find(x => x.id === id); return w ? w.lv : 0; };
+
+        /* ---------- spatial grid for enemies ---------- */
+        const CELL = 48;
+        let grid = new Map();
+        function buildGrid() {
+            grid = new Map();
+            for (const e of enemies) { const k = Math.floor(e.x / CELL) + ',' + Math.floor(e.y / CELL); let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(e); }
+        }
+        function near(x, y, r, fn) {
+            const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL), y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
+            for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) { const a = grid.get(gx + ',' + gy); if (a) for (const e of a) if (!e.dead) fn(e); }
+        }
+        function nearest(x, y, maxD = 520) {
+            let best = null, bd = maxD * maxD;
+            for (const e of enemies) { if (e.dead) continue; const d = (e.x - x) ** 2 + (e.y - y) ** 2; if (d < bd) { bd = d; best = e; } }
+            return best;
+        }
+
+        /* ---------- spawning ---------- */
+        function spawnEnemy(type, opts = {}) {
+            const d = ENEMIES[type], a = Math.random() * TAU, dist = Math.hypot(W, H) / 2 + 40;
+            const scale = 1 + time / 240;
+            const e = { type, d, x: P.x + Math.cos(a) * dist, y: P.y + Math.sin(a) * dist, hp: d.hp * scale * (opts.elite ? 8 : opts.boss ? 60 : 1), r: d.r * (opts.elite ? 1.6 : opts.boss ? 2.6 : 1), sp: d.sp * (opts.boss ? 0.8 : 1), dmg: d.dmg * (opts.boss ? 2.5 : opts.elite ? 1.6 : 1) * (1 + time / 900), xp: d.xp * (opts.elite ? 10 : opts.boss ? 60 : 1), elite: opts.elite, boss: opts.boss, hitCd: new Map(), flash: 0, kb: { x: 0, y: 0 }, ph: Math.random() * TAU };
+            e.max = e.hp;
+            enemies.push(e);
+            return e;
+        }
+        function spawning(dt) {
+            nextSpawn -= dt;
+            const rate = 1.2 + time / 25;   // enemies per second
+            const cap = Math.min(380, 40 + time * 0.55);
+            let pool = TIMELINE[0][1];
+            for (const [t, list] of TIMELINE) if (time >= t) pool = list;
+            while (nextSpawn <= 0) {
+                nextSpawn += 1 / rate;
+                if (enemies.length < cap) spawnEnemy(pick(pool));
+            }
+            const minute = Math.floor(time / 60);
+            if (minute >= 1 && !bossFlags['e' + minute]) { bossFlags['e' + minute] = true; spawnEnemy(pick(pool), { elite: true }); texts.push({ x: P.x, y: P.y - 60, t: 2, s: 'An elite approaches!', c: '#facc15', big: true }); }
+            if (time >= 300 && !bossFlags.b5) { bossFlags.b5 = true; spawnEnemy('mummy', { boss: true }); bossWarn(); }
+            if (time >= 600 && !bossFlags.b10) { bossFlags.b10 = true; spawnEnemy('vamp', { boss: true }); bossWarn(); }
+            if (time >= 840 && !bossFlags.b14) { bossFlags.b14 = true; for (let i = 0; i < 2; i++) spawnEnemy('wolf', { boss: true }); bossWarn(); }
+            if (time > 30 && Math.floor(time) % 90 === 0 && !bossFlags['swarm' + Math.floor(time)]) {
+                bossFlags['swarm' + Math.floor(time)] = true;
+                const a = Math.random() * TAU;
+                for (let i = 0; i < 28; i++) { const e = spawnEnemy('bat'); const d = Math.hypot(W, H) / 2 + 30 + i * 6; e.x = P.x + Math.cos(a + (i % 7) * 0.05) * d; e.y = P.y + Math.sin(a + (i % 7) * 0.05) * d; e.sp = 150; }
+            }
+        }
+        function bossWarn() { Arcade.sfx('boom'); texts.push({ x: P.x, y: P.y - 80, t: 2.5, s: '☠ A BOSS HAS ARRIVED ☠', c: '#f87171', big: true }); }
+
+        /* ---------- damage ---------- */
+        function hit(e, dmg, src, kbx = 0, kby = 0) {
+            if (e.dead) return;
+            dmg = Math.round(dmg * might() * (0.9 + Math.random() * 0.2));
+            e.hp -= dmg; e.flash = 0.1;
+            if (!e.boss) { e.kb.x += kbx; e.kb.y += kby; }
+            if (texts.length < 60) texts.push({ x: e.x + R(-6, 6), y: e.y - e.r, t: 0.5, s: dmg, c: '#fff' });
+            if (e.hp <= 0) kill(e);
+        }
+        function kill(e) {
+            e.dead = true; kills++;
+            fx.emit(e.x, e.y, { n: e.boss ? 40 : e.elite ? 20 : 5, speed: 110, color: e.boss ? ['#f87171', '#fff'] : ['#a855f7', '#e9d5ff'], life: 0.4, size: 3 });
+            const g = e.xp * (1 + up('growth') * 0.05);
+            gems.push({ x: e.x, y: e.y, v: g, kind: 'xp' });
+            if (Math.random() < (e.elite || e.boss ? 1 : 0.035)) gems.push({ x: e.x + 8, y: e.y, v: Math.round((e.boss ? 60 : e.elite ? 15 : 1 + Math.random() * 3) * (1 + up('greed') * 0.2)), kind: 'gold' });
+            if (e.elite || e.boss) gems.push({ x: e.x - 8, y: e.y, v: 1, kind: 'chest' });
+            else if (Math.random() < 0.006) gems.push({ x: e.x, y: e.y, v: 30, kind: 'heal' });
+            if (e.boss) Arcade.sfx('boom');
+            else if (kills % 3 === 0) Arcade.tone(180 + Math.random() * 60, 0.03, 'square', 0.015);
+            // too many gems: merge into the nearest one
+            if (gems.length > 450) { const a = gems.shift(); if (a.kind === 'xp') { const b = gems.find(x => x.kind === 'xp'); if (b) b.v += a.v; } else gems.push(a); }
+        }
+        function hurtPlayer(d) {
+            if (P.iframe > 0) return;
+            d = Math.max(1, d - armor());
+            P.hp -= d; P.iframe = 0.35; P.hurtT = 0.2;
+            Arcade.tone(140, 0.06, 'sawtooth', 0.04);
+            if (P.hp <= 0) {
+                if (P.revive) { P.revive = false; P.hp = P.maxHp * 0.5; P.iframe = 2; texts.push({ x: P.x, y: P.y - 40, t: 2, s: 'REVIVED!', c: '#4ade80', big: true }); for (const e of enemies) if (Math.hypot(e.x - P.x, e.y - P.y) < 250 && !e.boss) kill(e); Arcade.sfx('power'); return; }
+                endRun(false);
+            }
+        }
+
+        /* ---------- weapons ---------- */
+        function fireWeapons(dt) {
+            for (const w of P.weapons) {
+                w.cd -= dt;
+                if (w.id === 'garlic') { garlic(w, dt); continue; }
+                if (w.id === 'orbit') { orbit(w, dt); continue; }
+                if (w.cd > 0) continue;
+                const L = w.lv;
+                switch (w.id) {
+                    case 'wand': {
+                        const n = 1 + (L >= 2) + (L >= 4) + (L >= 6), dmg = 14 * (L >= 3 ? 1.4 : 1);
+                        let k = 0;
+                        const targets = enemies.filter(e => !e.dead).sort((a, b) => ((a.x - P.x) ** 2 + (a.y - P.y) ** 2) - ((b.x - P.x) ** 2 + (b.y - P.y) ** 2)).slice(0, n);
+                        for (const t of targets) setTimeout(() => { if (!running) return; const a = Math.atan2(t.y - P.y, t.x - P.x); shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, r: 6, dmg, life: 1.6, pierce: L >= 6 ? 2 : 0, kind: 'wand', hits: new Set() }); }, (k++) * 70);
+                        if (targets.length) Arcade.tone(900, 0.04, 'sine', 0.012, 1300);
+                        w.cd = (L >= 5 ? 0.65 : 0.85) * haste();
+                        break;
+                    }
+                    case 'whip': {
+                        const dmg = 16 * (L >= 3 ? 1.4 : 1) * (L >= 5 ? 1.4 : 1), sc = area() * (L >= 4 ? 1.25 : 1);
+                        const sides = L >= 2 ? [P.face, -P.face] : [P.face];
+                        const doSlash = () => { for (const s of sides) { const sl = { x: P.x + s * 60 * sc, y: P.y - 4, w: 120 * sc, h: 34 * sc, t: 0.18, s }; strikes.push({ kind: 'whip', ...sl }); near(sl.x, sl.y, sl.w / 2 + 20, (e) => { if (Math.abs(e.x - sl.x) < sl.w / 2 + e.r && Math.abs(e.y - sl.y) < sl.h / 2 + e.r) hit(e, dmg, 'whip', s * 40, 0); }); } Arcade.tone(300, 0.05, 'sawtooth', 0.02, 120); };
+                        doSlash();
+                        if (L >= 6) setTimeout(() => running && doSlash(), 180);
+                        w.cd = 1.25 * haste();
+                        break;
+                    }
+                    case 'knife': {
+                        const n = 1 + (L >= 2) + (L >= 3) + (L >= 5) + (L >= 6 ? 2 : 0), dmg = 9 * (L >= 4 ? 1.5 : 1);
+                        const a0 = Math.atan2(P.fy, P.fx);
+                        for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.12; shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 5, dmg, life: 0.9, pierce: L >= 5 ? 1 : 0, kind: 'knife', hits: new Set(), ang: a }); }
+                        Arcade.tone(1200, 0.02, 'square', 0.01);
+                        w.cd = 0.55 * haste();
+                        break;
+                    }
+                    case 'bolt': {
+                        const n = 1 + (L >= 2) + (L >= 4) + (L >= 6 ? 2 : 0), dmg = 26 * (L >= 3 ? 1.5 : 1);
+                        const vis = enemies.filter(e => !e.dead && Math.abs(e.x - P.x) < W / 2 && Math.abs(e.y - P.y) < H / 2);
+                        for (let i = 0; i < n && vis.length; i++) {
+                            const e = vis.splice(Math.floor(Math.random() * vis.length), 1)[0];
+                            strikes.push({ kind: 'bolt', x: e.x, y: e.y, t: 0.25 });
+                            near(e.x, e.y, 40 * area(), (o) => { if (Math.hypot(o.x - e.x, o.y - e.y) < 40 * area() + o.r) hit(o, dmg, 'bolt'); });
+                        }
+                        if (n) Arcade.tone(80, 0.12, 'sawtooth', 0.03, 40);
+                        w.cd = (L >= 5 ? 1.6 : 2.2) * haste();
+                        break;
+                    }
+                    case 'fire': {
+                        const n = 1 + (L >= 2) + (L >= 5), dmg = 5 * (L >= 4 ? 1.4 : 1), dur = L >= 3 ? 4 : 2.8, rad = 46 * area() * (L >= 6 ? 1.35 : 1);
+                        for (let i = 0; i < n; i++) {
+                            const t = enemies.length ? enemies[Math.floor(Math.random() * Math.min(enemies.length, 60))] : null;
+                            const x = t ? t.x : P.x + R(-150, 150), y = t ? t.y : P.y + R(-150, 150);
+                            pools.push({ x, y, r: rad, t: dur, dmg, tick: 0 });
+                        }
+                        w.cd = 3 * haste();
+                        break;
+                    }
+                }
+            }
+        }
+        function garlic(w, dt) {
+            const L = w.lv, rad = 52 * area() * (1 + (L >= 2) * 0.2 + (L >= 4) * 0.2 + (L >= 6) * 0.3), dmg = 5 + (L >= 3) * 3 + (L >= 5) * 3;
+            w.rad = rad;
+            if (w.cd > 0) return;
+            w.cd = 0.4 * haste();
+            near(P.x, P.y, rad + 20, (e) => { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < rad + e.r) { const k = L >= 6 ? 30 : 10; hit(e, dmg, 'garlic', (e.x - P.x) / (d || 1) * k, (e.y - P.y) / (d || 1) * k); } });
+        }
+        function orbit(w, dt) {
+            const L = w.lv, n = 1 + (L >= 2) + (L >= 4) + (L >= 6 ? 2 : 0), rad = (75 + (L >= 5 ? 30 : 0)) * area(), dmg = 10 * (L >= 3 ? 1.3 : 1);
+            w.ang = (w.ang || 0) + dt * 3.2;
+            w.books = [];
+            for (let i = 0; i < n; i++) {
+                const a = w.ang + i * TAU / n, x = P.x + Math.cos(a) * rad, y = P.y + Math.sin(a) * rad;
+                w.books.push([x, y]);
+                near(x, y, 30, (e) => { if (Math.hypot(e.x - x, e.y - y) < 16 + e.r) { const t = e.hitCd.get('orbit') || 0; if (time > t) { e.hitCd.set('orbit', time + 0.45); hit(e, dmg, 'orbit', Math.cos(a) * 25, Math.sin(a) * 25); } } });
+            }
+        }
+
+        /* ---------- level ups ---------- */
+        function choices() {
+            const opts = [];
+            for (const w of P.weapons) if (w.lv < MAXLV) opts.push({ kind: 'w', id: w.id, lv: w.lv + 1 });
+            if (P.weapons.length < SLOTS) for (const id of Object.keys(WEAPONS)) if (!P.weapons.some(w => w.id === id)) opts.push({ kind: 'w', id, lv: 1 });
+            const pk = Object.keys(P.passives);
+            for (const id of Object.keys(PASSIVES)) { const l = pv(id); if (l >= 5) continue; if (!l && pk.length >= SLOTS) continue; opts.push({ kind: 'p', id, lv: l + 1 }); }
+            Arcade.shuffle(opts);
+            // favour upgrading what you already have
+            opts.sort((a, b) => ((b.lv > 1) - (a.lv > 1)) * 0.6 + (Math.random() - 0.5));
+            const out = opts.slice(0, 3);
+            if (!out.length) out.push({ kind: 'gold' }, { kind: 'heal' });
+            return out;
+        }
+        let curChoices = [];
+        function showLevelUp(title) {
+            paused = true;
+            curChoices = choices();
+            $('lvlTitle').textContent = title || 'Level ' + P.lv + '!';
+            const host = $('picks'); host.innerHTML = '';
+            curChoices.forEach((o, i) => {
+                const b = document.createElement('button'); b.className = 'pick';
+                let ic, name, desc, lv = '';
+                if (o.kind === 'w') { const d = WEAPONS[o.id]; ic = d.e; name = d.name; desc = d.lv[o.lv - 1]; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; }
+                else if (o.kind === 'p') { const d = PASSIVES[o.id]; ic = d.e; name = d.name; desc = d.desc; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; }
+                else if (o.kind === 'gold') { ic = '🪙'; name = '50 gold'; desc = 'Everything is maxed!'; }
+                else { ic = '🍗'; name = 'Roast chicken'; desc = 'Heal 50 HP'; }
+                b.innerHTML = `<span class="ic">${ic}</span><span><b>${name}</b><small>${desc}</small></span><span class="lv">${i + 1} · ${lv}</span>`;
+                b.onclick = () => choose(o);
+                host.appendChild(b);
+            });
+            Arcade.show('lvlOv');
+            Arcade.sfx('level');
+        }
+        function choose(o) {
+            if (o.kind === 'w') { const w = P.weapons.find(x => x.id === o.id); if (w) w.lv++; else P.weapons.push({ id: o.id, lv: 1, cd: 0.2 }); }
+            else if (o.kind === 'p') { P.passives[o.id] = (P.passives[o.id] || 0) + 1; if (o.id === 'heart') { P.maxHp += 25; P.hp = Math.min(P.maxHp, P.hp + 25); } }
+            else if (o.kind === 'gold') goldRun += 50;
+            else P.hp = Math.min(P.maxHp, P.hp + 50);
+            Arcade.hide('lvlOv');
+            pendingLevels--;
+            if (pendingLevels > 0) { P.lv++; showLevelUp(); } else paused = false;
+            hud();
+        }
+        function gainXp(v) {
+            P.xp += v;
+            while (P.xp >= P.next) {
+                P.xp -= P.next;
+                P.next = Math.round(5 + P.lv * 6 + Math.pow(P.lv, 1.6));
+                pendingLevels++;
+            }
+            if (pendingLevels > 0 && !paused) { P.lv++; showLevelUp(); }
+        }
+        function openChest() {
+            const ups = P.weapons.filter(w => w.lv < MAXLV);
+            const gold = Math.round(30 * (1 + up('greed') * 0.2));
+            goldRun += gold;
+            if (ups.length) { const w = pick(ups); w.lv++; texts.push({ x: P.x, y: P.y - 50, t: 2, s: `📦 ${WEAPONS[w.id].name} → Lv ${w.lv}  +${gold}🪙`, c: '#facc15', big: true }); }
+            else texts.push({ x: P.x, y: P.y - 50, t: 2, s: `📦 +${gold} gold`, c: '#facc15', big: true });
+            Arcade.sfx('coin');
+        }
+
+        /* ---------- main step ---------- */
+        const keys = {};
+        let stick = null;
+        function step(dt) {
+            if (!running || paused) return;
+            time += dt;
+            if (time >= WIN) return endRun(true);
+            // movement
+            let mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+            if (stick && stick.active) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 6) { mx = dx / Math.max(d, 40); my = dy / Math.max(d, 40); } }
+            const ml = Math.hypot(mx, my);
+            if (ml > 0) { if (ml > 1) { mx /= ml; my /= ml; } P.x += mx * speed() * dt; P.y += my * speed() * dt; P.fx = mx; P.fy = my; if (Math.abs(mx) > 0.1) P.face = Math.sign(mx); }
+            P.iframe = Math.max(0, P.iframe - dt); P.hurtT = Math.max(0, P.hurtT - dt);
+            P.hp = Math.min(P.maxHp, P.hp + regen() * dt);
+            cam.x += (P.x - cam.x) * Math.min(1, dt * 8); cam.y += (P.y - cam.y) * Math.min(1, dt * 8);
+            spawning(dt);
+            buildGrid();
+            fireWeapons(dt);
+            // enemies
+            for (const e of enemies) {
+                if (e.dead) continue;
+                let dx = P.x - e.x, dy = P.y - e.y; const d = Math.hypot(dx, dy) || 1;
+                let vx = dx / d * e.sp, vy = dy / d * e.sp;
+                if (e.d.wave) { const w = Math.sin(time * 3 + e.ph) * 50; vx += -dy / d * w; vy += dx / d * w; }
+                e.x += (vx + e.kb.x * 8) * dt; e.y += (vy + e.kb.y * 8) * dt;
+                e.kb.x *= Math.pow(0.02, dt); e.kb.y *= Math.pow(0.02, dt);
+                e.flash = Math.max(0, e.flash - dt);
+                if (d < e.r + P.r) hurtPlayer(e.dmg);
+                // keep them from piling up into one point
+                near(e.x, e.y, e.r * 2, (o) => { if (o === e) return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy) || 0.01, min = (e.r + o.r) * 0.8; if (od < min) { const push = (min - od) / od * 0.5; e.x += ox * push; e.y += oy * push; } });
+                if (d > 1400 && !e.boss) { const a = Math.random() * TAU; e.x = P.x + Math.cos(a) * 600; e.y = P.y + Math.sin(a) * 600; }
+            }
+            // projectiles
+            for (const s of shots) {
+                s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+                near(s.x, s.y, 30, (e) => { if (s.dead || s.hits.has(e)) return; if (Math.hypot(e.x - s.x, e.y - s.y) < e.r + s.r) { s.hits.add(e); hit(e, s.dmg, s.kind, s.vx / 60, s.vy / 60); if (s.pierce-- <= 0) s.dead = true; } });
+                if (s.life <= 0) s.dead = true;
+            }
+            shots = shots.filter(s => !s.dead);
+            for (const p of pools) {
+                p.t -= dt; p.tick -= dt;
+                if (p.tick <= 0) { p.tick = 0.3; near(p.x, p.y, p.r + 20, (e) => { if (Math.hypot(e.x - p.x, e.y - p.y) < p.r + e.r * 0.5) hit(e, p.dmg, 'fire'); }); }
+                if (Math.random() < 0.3) fx.emit(p.x + R(-p.r, p.r) * 0.7, p.y + R(-p.r, p.r) * 0.5, { n: 1, speed: 30, angle: -Math.PI / 2, spread: 0.6, color: ['#f97316', '#facc15', '#ef4444'], life: 0.5, size: 4 });
+            }
+            pools = pools.filter(p => p.t > 0);
+            enemies = enemies.filter(e => !e.dead);
+            // pickups
+            const mag = magnet();
+            for (const g of gems) {
+                const dx = P.x - g.x, dy = P.y - g.y, d = Math.hypot(dx, dy);
+                if (g.pull || d < mag || (g.kind === 'chest' && d < 30)) { g.pull = true; const sp = 420; g.x += dx / d * sp * dt; g.y += dy / d * sp * dt; }
+                if (d < P.r + 8) {
+                    g.dead = true;
+                    if (g.kind === 'xp') { gainXp(g.v); if (Math.random() < 0.3) Arcade.tone(1400 + Math.random() * 400, 0.03, 'triangle', 0.015); }
+                    else if (g.kind === 'gold') { goldRun += g.v; Arcade.sfx('coin'); }
+                    else if (g.kind === 'heal') { P.hp = Math.min(P.maxHp, P.hp + g.v); Arcade.sfx('power'); }
+                    else openChest();
+                }
+            }
+            gems = gems.filter(g => !g.dead && Math.abs(g.x - P.x) < 2000 && Math.abs(g.y - P.y) < 2000);
+            for (const s of strikes) s.t -= dt;
+            strikes = strikes.filter(s => s.t > 0);
+            for (const t of texts) { t.t -= dt; t.y -= 26 * dt; }
+            texts = texts.filter(t => t.t > 0);
+            fx.update(dt);
+            hud();
+        }
+        function endRun(won) {
+            running = false;
+            const secs = Math.floor(time);
+            const r = Arcade.best('arcade.survivors.best', secs);
+            const bonus = won ? 500 : 0;
+            save.gold += goldRun + bonus;
+            save.best = Math.max(save.best || 0, secs);
+            persist();
+            Arcade.report('minutes', Math.floor(secs / 60));
+            Arcade.report('kills', kills);
+            Arcade.addXP(Math.min(80, Math.floor(secs / 15)), true);
+            Arcade.sfx(won ? 'win' : 'die');
+            $('endTitle').textContent = won ? '🌅 You survived the night!' : 'You fell';
+            $('endTitle').className = won ? 'good' : 'bad';
+            $('endTime').textContent = Arcade.time(secs);
+            $('newBest').hidden = !r.isNew;
+            $('endStats').innerHTML = [['Kills', kills], ['Level', P.lv], ['Gold', '+' + (goldRun + bonus)]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            Arcade.show('endOv');
+            hud();
+        }
+        function hud() {
+            Arcade.text('time', Arcade.time(time || 0));
+            Arcade.text('kills', kills || 0);
+            Arcade.text('gold', save.gold + (running ? goldRun : 0));
+        }
+
+        /* ---------- drawing ---------- */
+        const tileHash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+        function draw() {
+            const ox = W / 2 - cam.x, oy = H / 2 - cam.y;
+            c.fillStyle = '#14251a'; c.fillRect(0, 0, W, H);
+            const T = 64, tx0 = Math.floor((cam.x - W / 2) / T), ty0 = Math.floor((cam.y - H / 2) / T);
+            for (let tx = tx0; tx <= tx0 + W / T + 1; tx++) for (let ty = ty0; ty <= ty0 + H / T + 1; ty++) {
+                const h = tileHash(tx, ty), x = tx * T + ox, y = ty * T + oy;
+                if ((tx + ty) % 2 === 0) { c.fillStyle = 'rgba(255,255,255,0.015)'; c.fillRect(x, y, T, T); }
+                if (h < 0.35) { c.fillStyle = '#1f3a26'; c.fillRect(x + h * 140 % 50, y + h * 300 % 50, 3, 7); c.fillRect(x + h * 140 % 50 + 4, y + h * 300 % 50 + 2, 3, 5); }
+                else if (h > 0.985) c.drawImage(spr('🪦', 16), x + 16, y + 16, 32, 32);
+                else if (h > 0.97) c.drawImage(spr('🌲', 20), x + 8, y + 4, 44, 44);
+                else if (h > 0.96) c.drawImage(spr('🍄', 10), x + 24, y + 24, 18, 18);
+            }
+            for (const p of pools) { const g = c.createRadialGradient(p.x + ox, p.y + oy, 4, p.x + ox, p.y + oy, p.r); g.addColorStop(0, 'rgba(250,204,21,0.45)'); g.addColorStop(1, 'rgba(239,68,68,0.08)'); c.fillStyle = g; c.beginPath(); c.ellipse(p.x + ox, p.y + oy, p.r, p.r * 0.7, 0, 0, TAU); c.fill(); }
+            const gw = P.weapons.find(w => w.id === 'garlic');
+            if (gw && gw.rad) { c.fillStyle = 'rgba(253,224,71,0.08)'; c.strokeStyle = 'rgba(253,224,71,0.3)'; c.beginPath(); c.arc(P.x + ox, P.y + oy, gw.rad, 0, TAU); c.fill(); c.stroke(); }
+            for (const g of gems) {
+                const x = g.x + ox, y = g.y + oy;
+                if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+                if (g.kind === 'xp') { c.fillStyle = g.v >= 20 ? '#ef4444' : g.v >= 5 ? '#22c55e' : '#60a5fa'; c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x + 4, y); c.lineTo(x, y + 6); c.lineTo(x - 4, y); c.fill(); }
+                else c.drawImage(spr(g.kind === 'gold' ? '🪙' : g.kind === 'heal' ? '🍗' : '📦', 12), x - 12, y - 12, 24, 24);
+            }
+            for (const e of enemies) {
+                const x = e.x + ox, y = e.y + oy;
+                if (x < -60 || y < -60 || x > W + 60 || y > H + 60) continue;
+                const s = e.r * 2.2;
+                if (e.elite || e.boss) { c.fillStyle = e.boss ? 'rgba(239,68,68,0.25)' : 'rgba(250,204,21,0.22)'; c.beginPath(); c.arc(x, y, e.r * 1.2, 0, TAU); c.fill(); }
+                c.save();
+                if (e.x > P.x) { c.translate(x, y); c.scale(-1, 1); c.translate(-x, -y); }
+                c.drawImage(spr(e.d.e, 24), x - s / 2, y - s / 2, s, s);
+                c.restore();
+                if (e.flash > 0) { c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.arc(x, y, e.r, 0, TAU); c.fill(); }
+                if (e.boss || e.elite) { c.fillStyle = '#000a'; c.fillRect(x - 24, y - e.r - 12, 48, 5); c.fillStyle = e.boss ? '#ef4444' : '#facc15'; c.fillRect(x - 24, y - e.r - 12, 48 * Math.max(0, e.hp / e.max), 5); }
+            }
+            for (const s of shots) {
+                const x = s.x + ox, y = s.y + oy;
+                if (s.kind === 'wand') { c.fillStyle = '#c4b5fd'; c.shadowColor = '#a855f7'; c.shadowBlur = 10; c.beginPath(); c.arc(x, y, s.r, 0, TAU); c.fill(); c.shadowBlur = 0; }
+                else { c.save(); c.translate(x, y); c.rotate(s.ang); c.fillStyle = '#e2e8f0'; c.beginPath(); c.moveTo(10, 0); c.lineTo(-6, -3); c.lineTo(-6, 3); c.fill(); c.restore(); }
+            }
+            for (const s of strikes) {
+                if (s.kind === 'whip') { c.globalAlpha = s.t / 0.18; c.fillStyle = '#fef3c7'; c.beginPath(); c.ellipse(s.x + ox, s.y + oy, s.w / 2, s.h / 2, 0, 0, TAU); c.fill(); c.globalAlpha = 1; }
+                else { c.globalAlpha = s.t / 0.25; c.strokeStyle = '#fde047'; c.lineWidth = 3; c.shadowColor = '#fde047'; c.shadowBlur = 14; c.beginPath(); let x = s.x + ox, y = -10; c.moveTo(x, y); while (y < s.y + oy) { y += 30; x = s.x + ox + R(-14, 14); c.lineTo(x, Math.min(y, s.y + oy)); } c.stroke(); c.shadowBlur = 0; c.globalAlpha = 1; }
+            }
+            const ow = P.weapons.find(w => w.id === 'orbit');
+            if (ow && ow.books) for (const [x, y] of ow.books) c.drawImage(spr('📖', 14), x + ox - 14, y + oy - 14, 28, 28);
+            fx.draw(c);
+            // player
+            const px = P.x + ox, py = P.y + oy;
+            c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(px, py + 14, 13, 5, 0, 0, TAU); c.fill();
+            c.save(); if (P.face < 0) { c.translate(px, py); c.scale(-1, 1); c.translate(-px, -py); }
+            if (P.iframe > 0 && Math.floor(P.iframe * 20) % 2) c.globalAlpha = 0.5;
+            c.drawImage(spr(P.ch.e, 24), px - 18, py - 20, 36, 36);
+            c.restore(); c.globalAlpha = 1;
+            c.fillStyle = '#000a'; c.fillRect(px - 18, py + 20, 36, 4); c.fillStyle = P.hurtT > 0 ? '#fff' : '#ef4444'; c.fillRect(px - 18, py + 20, 36 * Math.max(0, P.hp / P.maxHp), 4);
+            // night vignette
+            const v = c.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
+            v.addColorStop(0, 'rgba(5,0,20,0)'); v.addColorStop(1, `rgba(5,0,20,${0.55 - Math.min(0.4, time / WIN * 0.5)})`);
+            c.fillStyle = v; c.fillRect(0, 0, W, H);
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            for (const t of texts) { c.globalAlpha = Math.min(1, t.t * 3); c.font = t.big ? '900 20px system-ui' : '700 11px system-ui'; c.fillStyle = t.c; if (t.big) { c.strokeStyle = '#000'; c.lineWidth = 4; c.strokeText(t.s, t.x + ox, t.y + oy); } c.fillText(t.s, t.x + ox, t.y + oy); }
+            c.globalAlpha = 1;
+            // XP bar & HUD
+            c.fillStyle = '#0f172a'; c.fillRect(0, 0, W, 14);
+            c.fillStyle = '#3b82f6'; c.fillRect(0, 0, W * (P.xp / P.next), 14);
+            c.fillStyle = '#fff'; c.font = '800 10px system-ui'; c.fillText('LV ' + P.lv, W / 2, 7);
+            c.font = '900 22px system-ui'; c.fillText(Arcade.time(time), W / 2, 36);
+            let x = 12;
+            for (const w of P.weapons) { c.drawImage(spr(WEAPONS[w.id].e, 12), x, 22, 22, 22); c.font = '700 9px system-ui'; c.fillText(w.lv, x + 20, 42); x += 28; }
+            x = 12;
+            for (const [k, l] of Object.entries(P.passives)) { c.drawImage(spr(PASSIVES[k].e, 12), x, 48, 18, 18); c.font = '700 9px system-ui'; c.fillText(l, x + 18, 64); x += 24; }
+            if (stick && stick.active) { c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 2; c.beginPath(); c.arc(stick.ox, stick.oy, 40, 0, TAU); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.35)'; const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.min(40, Math.hypot(dx, dy)), a = Math.atan2(dy, dx); c.beginPath(); c.arc(stick.ox + Math.cos(a) * d, stick.oy + Math.sin(a) * d, 16, 0, TAU); c.fill(); }
+        }
+
+        /* ---------- menus ---------- */
+        function buildStart() {
+            $('bestT').textContent = save.best ? Arcade.time(save.best) : '—';
+            const ch = $('chars'); ch.innerHTML = '';
+            for (const k of CHARS) {
+                const b = document.createElement('button');
+                b.className = k.id === save.char ? 'on' : '';
+                b.innerHTML = `<b>${k.e}</b>${k.name}<small>${WEAPONS[k.w].e} ${k.desc}</small>`;
+                b.onclick = () => { save.char = k.id; persist(); buildStart(); };
+                ch.appendChild(b);
+            }
+            $('shopGold').textContent = save.gold;
+            const sh = $('shop'); sh.innerHTML = '';
+            for (const [k, d] of Object.entries(SHOP)) {
+                const l = up(k), cost = Math.round(d.cost * (1 + l * 0.6)), maxed = l >= d.max;
+                const b = document.createElement('button');
+                b.disabled = maxed || save.gold < cost;
+                b.innerHTML = `<b>${d.name} ${'●'.repeat(l)}${'○'.repeat(d.max - l)}</b>${d.desc} · ${maxed ? 'MAX' : `<span>🪙 ${cost}</span>`}`;
+                b.onclick = () => { if (save.gold < cost || maxed) return; save.gold -= cost; save.ups[k] = l + 1; persist(); Arcade.sfx('coin'); buildStart(); hud(); };
+                sh.appendChild(b);
+            }
+        }
+        $('goBtn').onclick = () => { Arcade.hide('startOv'); newRun(); };
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); buildStart(); Arcade.show('startOv'); };
+        function setPause(on) {
+            if (!running || !$('lvlOv').hidden) return;
+            paused = on;
+            if (on) {
+                const host = $('build'); host.innerHTML = '';
+                for (const w of P.weapons) host.insertAdjacentHTML('beforeend', `<div class="pick"><span class="ic">${WEAPONS[w.id].e}</span><span><b>${WEAPONS[w.id].name}</b><small>Level ${w.lv} / ${MAXLV}</small></span></div>`);
+                for (const [k, l] of Object.entries(P.passives)) host.insertAdjacentHTML('beforeend', `<div class="pick"><span class="ic">${PASSIVES[k].e}</span><span><b>${PASSIVES[k].name}</b><small>Level ${l} / 5 · ${PASSIVES[k].desc}</small></span></div>`);
+                Arcade.show('pauseOv');
+            } else Arcade.hide('pauseOv');
+        }
+        $('pauseBtn').onclick = () => setPause(!paused);
+        $('resumeBtn').onclick = () => setPause(false);
+        $('quitBtn').onclick = () => { Arcade.hide('pauseOv'); paused = false; endRun(false); };
+
+        const KM = { KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right' };
+        window.addEventListener('keydown', (e) => {
+            if (KM[e.code]) { keys[KM[e.code]] = true; e.preventDefault(); }
+            if (!$('lvlOv').hidden && /^Digit[123]$/.test(e.code)) { const o = curChoices[+e.code.slice(5) - 1]; if (o) choose(o); }
+            if (e.code === 'KeyP' || e.code === 'Escape') setPause(!paused);
+        });
+        window.addEventListener('keyup', (e) => { if (KM[e.code]) keys[KM[e.code]] = false; });
+        window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+        cv.addEventListener('pointerdown', (e) => { const p = Arcade.pointer(cv, e, W, H); stick = { ox: p.x, oy: p.y, x: p.x, y: p.y, active: true }; cv.setPointerCapture(e.pointerId); });
+        cv.addEventListener('pointermove', (e) => { if (!stick) return; const p = Arcade.pointer(cv, e, W, H); stick.x = p.x; stick.y = p.y; });
+        const endStick = () => { stick = null; };
+        cv.addEventListener('pointerup', endStick); cv.addEventListener('pointercancel', endStick);
+        document.addEventListener('visibilitychange', () => { if (document.hidden && running && !paused) setPause(true); });
+
+        newRun(); running = false;
+        buildStart();
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__surv = { get P() { return P; }, get enemies() { return enemies; }, get time() { return time; }, set time(v) { time = v; }, choose, get choices() { return curChoices; }, keys };
+    })();
+    </script>
+</body>
+</html>

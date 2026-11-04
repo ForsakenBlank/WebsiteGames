@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automato · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f59e0b; --accent-2: #22c55e; --accent-ink: #1c1000; }
+        .world { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+        #c { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+        .float { position: absolute; z-index: 10; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); }
+        .stash { top: 12px; left: 12px; width: 200px; max-height: calc(100% - 120px); overflow-y: auto; padding: 12px; }
+        .stash .cash { font-size: 1.5rem; font-weight: 850; color: var(--gold); font-variant-numeric: tabular-nums; }
+        .stash .rp { font-size: 0.85rem; color: var(--accent-2); font-weight: 700; }
+        .items { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-top: 8px; }
+        .items div { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+        .items div b { color: var(--text); margin-left: auto; font-variant-numeric: tabular-nums; }
+        .items i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+        .side { top: 12px; right: 12px; width: 280px; max-height: calc(100% - 120px); display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+        .side .tabs { display: flex; gap: 4px; }
+        .side .tabs .btn { flex: 1; }
+        .side .body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+        .goal { padding: 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .goal.done { opacity: 0.55; }
+        .goal b { font-size: 0.86rem; }
+        .goal small { display: block; color: var(--muted); font-size: 0.74rem; margin: 2px 0 6px; }
+        .tech { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .tech small { color: var(--muted); font-size: 0.72rem; grid-column: 1; }
+        .tech .btn { grid-row: span 2; grid-column: 2; }
+        .tech.owned { border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+        .hotbar { left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px; max-width: calc(100% - 24px); overflow-x: auto; }
+        .slot { position: relative; width: 62px; min-width: 62px; height: 62px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: inherit; font-size: 0.64rem; padding: 4px; }
+        .slot .ic { font-size: 1.3rem; line-height: 1; }
+        .slot .k { position: absolute; top: 3px; left: 6px; font-size: 0.6rem; color: var(--dim); }
+        .slot.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--bg-2)); }
+        .slot.locked { opacity: 0.35; }
+        .slot.poor .nm { color: var(--bad); }
+        .slot.glow { box-shadow: 0 0 0 2px var(--gold), 0 0 16px var(--gold); animation: pulse 0.8s infinite alternate; }
+        .sep-v { width: 1px; background: var(--line); margin: 4px 2px; }
+        .inspector { left: 224px; top: 12px; width: 260px; padding: 12px; }
+        .inspector h4 { margin: 0 0 6px; }
+        .inspector .recipes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 8px 0; }
+        .inspector .recipes .btn { font-size: 0.74rem; padding: 6px; }
+        .guide { left: 50%; top: 12px; transform: translateX(-50%); width: min(460px, calc(100% - 520px)); min-width: 260px; padding: 10px 14px; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); box-shadow: 0 10px 30px -14px var(--gold); font-size: 0.85rem; }
+        .guide b.step { color: var(--gold); }
+        .guide .row { justify-content: space-between; }
+        .tip { position: absolute; z-index: 11; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-2); font-size: 0.78rem; white-space: nowrap; transform: translate(14px, 14px); }
+        .mine-bar { position: absolute; z-index: 12; pointer-events: none; width: 44px; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.6); overflow: hidden; transform: translate(-50%, -30px); }
+        .mine-bar i { display: block; height: 100%; background: var(--good); }
+        /* research tree */
+        .tree-wrap { position: relative; overflow: auto; max-height: 64vh; margin-top: 10px; padding: 6px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+        .tree { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 170px; gap: 18px 46px; padding: 8px; }
+        .tree svg { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+        .tcol { display: flex; flex-direction: column; gap: 12px; }
+        .tcol h5 { margin: 0; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: center; }
+        .tnode { position: relative; z-index: 1; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-2); text-align: left; font: inherit; color: var(--text); cursor: pointer; }
+        .tnode b { display: block; font-size: 0.8rem; }
+        .tnode small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 4px; }
+        .tnode .cost { font-size: 0.72rem; font-weight: 700; color: var(--gold); }
+        .tnode.owned { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--surface)); }
+        .tnode.owned .cost { color: var(--good); }
+        .tnode.avail { border-color: var(--accent); box-shadow: 0 0 14px -6px var(--accent); }
+        .tnode.locked { opacity: 0.45; }
+        @media (max-width: 760px) {
+            .stash { width: 150px; }
+            .side { width: 220px; }
+            .inspector { left: 12px; top: auto; bottom: 96px; }
+            .slot { width: 54px; min-width: 54px; height: 54px; }
+            .guide { top: auto; bottom: 92px; width: calc(100% - 24px); }
+        }
+        .help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; text-align: left; font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
+        .help-grid kbd { align-self: start; justify-self: start; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Automato</h1>
+        <div class="stats">
+            <span class="chip gold">Cash <b id="hCash">$0</b></span>
+            <span class="chip accent">Income <b id="hIncome">$0/min</b></span>
+            <span class="chip good">Research <b id="hRp">0 RP</b></span>
+            <span class="chip" id="powerChip" hidden>⚡ <b id="hPower">0/0W</b></span>
+            <span class="chip">Machines <b id="hCount">0</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="guideBtn" title="Show or hide the step-by-step guide">🧭 Guide</button>
+            <button class="btn sm" id="helpBtn">❔ Help</button>
+            <button class="btn sm danger" id="resetBtn">Reset</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="world" id="world">
+        <canvas id="c"></canvas>
+
+        <aside class="panel float stash">
+            <h3 style="margin:0">Stash</h3>
+            <div class="cash" id="cash">$0</div>
+            <div class="rp" id="rpLine"></div>
+            <div class="items" id="items"></div>
+        </aside>
+
+        <aside class="panel float side">
+            <div class="tabs">
+                <button class="btn sm active" data-tab="goals">📋 Contracts</button>
+                <button class="btn sm" data-tab="tech">🔬 Research</button>
+            </div>
+            <div class="body" id="sideBody"></div>
+        </aside>
+
+        <aside class="panel float guide" id="guide" hidden></aside>
+        <aside class="panel float inspector" id="inspector" hidden></aside>
+
+        <nav class="panel float hotbar" id="hotbar"></nav>
+        <div class="tip" id="tip" hidden></div>
+        <div class="mine-bar" id="mineBar" hidden><i></i></div>
+
+        <div class="overlay" id="treeOv" hidden>
+            <div class="modal wide" style="width:min(1100px,100%)">
+                <h2>🌳 Research tree</h2>
+                <p class="small">Early research costs cash. Later research costs <b class="good">research points (RP)</b> — feed any items into a <b>Research Lab</b> to earn them. Click an available node to research it.</p>
+                <div class="tree-wrap"><div class="tree" id="tree"></div></div>
+                <div class="actions"><button class="btn primary" id="treeClose">Close</button></div>
+            </div>
+        </div>
+
+        <div class="overlay" id="helpOv" hidden>
+            <div class="modal wide">
+                <h2>Automato</h2>
+                <p>Build an automated factory. Mine resources by hand, then let drills and belts do the work. Follow the <b>contracts</b> — the 🧭 guide shows exactly what to do next.</p>
+                <div class="help-grid">
+                    <kbd>Hold click</kbd><span>on wood, stone or ore to mine it by hand (✋ tool)</span>
+                    <kbd>1–9, 0</kbd><span>pick a building from the hotbar · click to place · <b>drag</b> to lay belts in a line</span>
+                    <kbd>R</kbd><span>rotate the building you're placing (or the one under the cursor)</span>
+                    <kbd>Right click</kbd><span>demolish under cursor (full refund) · or press <kbd>X</kbd> for the demolish tool</span>
+                    <kbd>Q</kbd><span>copy the building under the cursor</span>
+                    <kbd>T</kbd><span>open the research tree</span>
+                    <kbd>Esc</kbd><span>back to the hand tool</span>
+                    <kbd>Right-drag / WASD</kbd><span>move the camera · <b>wheel</b> or pinch to zoom</span>
+                </div>
+                <p class="small" style="margin-top:14px">Drills, smelters and assemblers push their output out of the side the <b>arrow</b> points to. Belts carry items into machines, <b>Storage</b> puts them in your stash, the <b>Export Hub</b> sells them and the <b>Research Lab</b> turns them into RP.</p>
+                <p class="small">⚡ <b>Power</b>: electric machines need to sit within 4 tiles of a <b>Power Pole</b>. Poles link up within 6 tiles to <b>Generators</b> (burn wood or coal fed by belt) and <b>Solar Panels</b>.</p>
+                <div class="actions"><button class="btn primary lg" id="helpClose">Let's build</button></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        /* ================= DATA ================= */
+        const T = 48, ORIG = 72, TICK = 0.05;
+        const EXPAND = [0, 14, 30, 48];          // extra tiles on every side per land survey
+        const DV = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+        const ITEMS = {
+            wood:       { n: 'Wood',          c: '#b45309', v: 1 },
+            stone:      { n: 'Stone',         c: '#94a3b8', v: 1 },
+            coal:       { n: 'Coal',          c: '#334155', v: 3 },
+            iron_ore:   { n: 'Iron ore',      c: '#a8a29e', v: 2 },
+            copper_ore: { n: 'Copper ore',    c: '#ea580c', v: 2 },
+            iron:       { n: 'Iron plate',    c: '#e2e8f0', v: 6 },
+            copper:     { n: 'Copper plate',  c: '#fb923c', v: 6 },
+            brick:      { n: 'Brick',         c: '#dc2626', v: 5 },
+            steel:      { n: 'Steel',         c: '#64748b', v: 25 },
+            gear:       { n: 'Gear',          c: '#cbd5e1', v: 16 },
+            wire:       { n: 'Wire',          c: '#facc15', v: 5 },
+            circuit:    { n: 'Circuit',       c: '#22c55e', v: 60 },
+            frame:      { n: 'Frame',         c: '#475569', v: 110 },
+            robot:      { n: 'Robot',         c: '#38bdf8', v: 600 },
+            ai_core:    { n: 'AI core',       c: '#a855f7', v: 450 },
+            android:    { n: 'Android',       c: '#f472b6', v: 2800 },
+        };
+        const RES = {
+            tree:   { item: 'wood',       n: 'Trees' },
+            stone:  { item: 'stone',      n: 'Stone' },
+            iron:   { item: 'iron_ore',   n: 'Iron ore' },
+            copper: { item: 'copper_ore', n: 'Copper ore' },
+            coal:   { item: 'coal',       n: 'Coal' },
+        };
+        const RES_CODES = [null, 'tree', 'stone', 'iron', 'copper', 'coal'];
+        // power: + produces, − consumes (watts)
+        const BUILD = {
+            belt:       { n: 'Belt',          ic: '➡️', cost: { wood: 1 }, desc: 'Carries items · 2 tiles/s' },
+            drill:      { n: 'Drill',         ic: '⛏️', cost: { wood: 8 }, desc: 'Place on a resource · mines every 2s' },
+            smelter:    { n: 'Smelter',       ic: '🔥', cost: { stone: 10, wood: 5 }, desc: 'Ore → plate · 2 stone → brick · 3 iron → steel' },
+            storage:    { n: 'Storage',       ic: '📦', cost: { wood: 5 }, desc: 'Adds items to your stash' },
+            seller:     { n: 'Export Hub',    ic: '💲', cost: { stone: 12 }, desc: 'Sells everything it receives' },
+            splitter:   { n: 'Splitter',      ic: '🔀', cost: { wood: 5, iron: 2 }, desc: 'Sends items left / ahead / right (can filter)', tech: 'splitter' },
+            assembler:  { n: 'Assembler',     ic: '⚙️', cost: { iron: 15, brick: 10 }, desc: 'Crafts parts from a recipe', tech: 'assembler' },
+            fastbelt:   { n: 'Fast belt',     ic: '⏩', cost: { iron: 1, gear: 1 }, desc: 'Carries items · 4 tiles/s', tech: 'fastbelt' },
+            drill2:     { n: 'Drill Mk2',     ic: '🛠️', cost: { iron: 10, gear: 5 }, desc: 'Mines twice as fast', tech: 'drill2' },
+            lab:        { n: 'Research Lab',  ic: '🔬', cost: { wood: 20, stone: 20, iron: 5 }, desc: 'Analyses any item into research points', tech: 'lab' },
+            generator:  { n: 'Generator',     ic: '🔋', cost: { iron: 10, brick: 10 }, desc: 'Burns wood or coal → 60W', tech: 'power', power: 60 },
+            pole:       { n: 'Power Pole',    ic: '🗼', cost: { wood: 2, wire: 2 }, desc: 'Links power within 6 tiles, feeds machines within 4', tech: 'power' },
+            solar:      { n: 'Solar Panel',   ic: '🌞', cost: { iron: 15, wire: 20, circuit: 2 }, desc: 'Always makes 20W', tech: 'solar', power: 20 },
+            drill3:     { n: 'Electric Drill',ic: '🔩', cost: { steel: 6, gear: 8, circuit: 3 }, desc: '4× mining · needs 20W', tech: 'electric', power: -20 },
+            assembler2: { n: 'Assembler Mk2', ic: '🏭', cost: { steel: 10, circuit: 10 }, desc: '2.5× crafting · needs 40W', tech: 'assembler2', power: -40 },
+        };
+        const HOTBAR = ['belt', 'drill', 'smelter', 'storage', 'seller', 'splitter', 'assembler', 'fastbelt', 'drill2', 'lab', 'generator', 'pole', 'solar', 'drill3', 'assembler2'];
+        const HOTKEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '', '', '', '', ''];
+        // tier = column in the tree; cost.cash or cost.rp
+        const TECH = [
+            { id: 'hands', n: 'Power tools', tier: 1, cost: { cash: 60 }, d: 'Mine by hand twice as fast' },
+            { id: 'splitter', n: 'Splitters', tier: 1, cost: { cash: 120 }, d: 'Unlocks the Splitter' },
+            { id: 'lab', n: 'Laboratory', tier: 1, cost: { cash: 200 }, d: 'Unlocks the Research Lab (earns RP)' },
+            { id: 'assembler', n: 'Assembly', tier: 2, cost: { cash: 350 }, d: 'Unlocks the Assembler (gears, wire)' },
+            { id: 'market1', n: 'Trade deals I', tier: 2, cost: { rp: 60 }, d: '+25% export prices', req: ['lab'] },
+            { id: 'survey1', n: 'Land survey I', tier: 2, cost: { rp: 90 }, d: 'Expands the map by 14 tiles on every side · coal appears', req: ['lab'] },
+            { id: 'filter', n: 'Smart splitters', tier: 2, cost: { rp: 80 }, d: 'Splitters can send one item straight ahead', req: ['splitter', 'lab'] },
+            { id: 'fastbelt', n: 'Fast belts', tier: 3, cost: { rp: 140 }, d: 'Double-speed belts', req: ['assembler'] },
+            { id: 'circuit', n: 'Circuitry', tier: 3, cost: { rp: 180 }, d: 'Assembler recipe: circuits', req: ['assembler'] },
+            { id: 'power', n: 'Electricity', tier: 3, cost: { rp: 220 }, d: 'Generators and power poles', req: ['assembler'] },
+            { id: 'drill2', n: 'Drill Mk2', tier: 3, cost: { rp: 260 }, d: 'Twice-as-fast drills', req: ['assembler'] },
+            { id: 'steel', n: 'Steelmaking', tier: 4, cost: { rp: 400 }, d: 'Smelters turn 3 iron plates into steel', req: ['power'] },
+            { id: 'frame', n: 'Structures', tier: 4, cost: { rp: 500 }, d: 'Assembler recipe: frames', req: ['circuit'] },
+            { id: 'solar', n: 'Solar power', tier: 4, cost: { rp: 650 }, d: 'Solar panels: 20W forever', req: ['power', 'circuit'] },
+            { id: 'market2', n: 'Trade deals II', tier: 4, cost: { rp: 700 }, d: '+50% more export prices', req: ['market1'] },
+            { id: 'survey2', n: 'Land survey II', tier: 4, cost: { rp: 800 }, d: 'Expands the map again (+16 each side)', req: ['survey1'] },
+            { id: 'electric', n: 'Electric drills', tier: 5, cost: { rp: 1100 }, d: 'Electric Drill: 4× mining (needs power)', req: ['steel', 'drill2'] },
+            { id: 'assembler2', n: 'Assembler Mk2', tier: 5, cost: { rp: 1400 }, d: '2.5× faster assembler (needs power)', req: ['steel', 'circuit'] },
+            { id: 'robot', n: 'Robotics', tier: 5, cost: { rp: 1600 }, d: 'Assembler recipe: robots', req: ['frame'] },
+            { id: 'survey3', n: 'Land survey III', tier: 6, cost: { rp: 2400 }, d: 'The whole continent (+18 each side)', req: ['survey2'] },
+            { id: 'ai', n: 'Artificial intelligence', tier: 6, cost: { rp: 3000 }, d: 'Assembler recipe: AI cores', req: ['robot', 'assembler2'] },
+            { id: 'market3', n: 'Trade deals III', tier: 6, cost: { rp: 3500 }, d: 'Doubles export prices again', req: ['market2'] },
+            { id: 'android', n: 'Androids', tier: 7, cost: { rp: 6000 }, d: 'Assembler recipe: androids', req: ['ai'] },
+        ];
+        const SMELT = [
+            { in: { iron_ore: 1 }, out: 'iron', n: 1, t: 2 },
+            { in: { copper_ore: 1 }, out: 'copper', n: 1, t: 2 },
+            { in: { stone: 2 }, out: 'brick', n: 1, t: 2.5 },
+            { in: { iron: 3 }, out: 'steel', n: 1, t: 4, tech: 'steel' },
+        ];
+        const ASSEMBLE = {
+            gear:    { in: { iron: 2 }, out: 'gear', n: 1, t: 2 },
+            wire:    { in: { copper: 1 }, out: 'wire', n: 2, t: 1.5 },
+            circuit: { in: { iron: 1, wire: 3 }, out: 'circuit', n: 1, t: 3, tech: 'circuit' },
+            frame:   { in: { gear: 2, brick: 2 }, out: 'frame', n: 1, t: 4, tech: 'frame' },
+            robot:   { in: { frame: 1, circuit: 2 }, out: 'robot', n: 1, t: 6, tech: 'robot' },
+            ai_core: { in: { circuit: 3, wire: 8 }, out: 'ai_core', n: 1, t: 5, tech: 'ai' },
+            android: { in: { robot: 1, ai_core: 1, steel: 4 }, out: 'android', n: 1, t: 8, tech: 'android' },
+        };
+        const FUEL = { wood: 8, coal: 30 }; // seconds of burn
+        // contracts, in the order a new player meets them (ids keep old saves on track)
+        const GOALS = [
+            { id: 'g1', d: 'Mine 10 wood by hand', k: 'gathered', item: 'wood', n: 10, cash: 20 },
+            { id: 'g2', d: 'Mine 10 stone by hand', k: 'gathered', item: 'stone', n: 10, cash: 20 },
+            { id: 'g3', d: 'Build a drill on some trees', k: 'built', item: 'drill', n: 1, cash: 25 },
+            { id: 'g4', d: 'Deliver 25 wood to storage by belt', k: 'stored', item: 'wood', n: 25, cash: 40 },
+            { id: 'g5', d: 'Sell 30 items at an Export Hub', k: 'soldAny', n: 30, cash: 60 },
+            { id: 'g6', d: 'Produce 20 iron plates', k: 'made', item: 'iron', n: 20, cash: 100 },
+            { id: 'g7', d: 'Produce 20 bricks', k: 'made', item: 'brick', n: 20, cash: 100 },
+            { id: 'lab1', d: 'Research Laboratory and earn 40 RP', k: 'rp', n: 40, cash: 120 },
+            { id: 'g8', d: 'Research Assembly and build an assembler', k: 'built', item: 'assembler', n: 1, cash: 150 },
+            { id: 'g9', d: 'Produce 40 gears', k: 'made', item: 'gear', n: 40, cash: 300 },
+            { id: 'g10', d: 'Produce 100 wire', k: 'made', item: 'wire', n: 100, cash: 300 },
+            { id: 'exp1', d: 'Commission a land survey to grow the map', k: 'expand', n: 1, cash: 400 },
+            { id: 'g11', d: 'Produce 25 circuits', k: 'made', item: 'circuit', n: 25, cash: 1200 },
+            { id: 'pow1', d: 'Build a generator and fuel it', k: 'burned', n: 5, cash: 800 },
+            { id: 'st1', d: 'Produce 50 steel', k: 'made', item: 'steel', n: 50, cash: 1500 },
+            { id: 'g12', d: 'Produce 10 frames', k: 'made', item: 'frame', n: 10, cash: 2500 },
+            { id: 'pow2', d: 'Run an electric machine on power', k: 'powered', n: 1, cash: 2500 },
+            { id: 'g13', d: 'Produce 5 robots', k: 'made', item: 'robot', n: 5, cash: 6000 },
+            { id: 'ai1', d: 'Produce 25 AI cores', k: 'made', item: 'ai_core', n: 25, cash: 15000 },
+            { id: 'g14', d: 'Produce 100 robots — factory tycoon!', k: 'made', item: 'robot', n: 100, cash: 50000 },
+            { id: 'and1', d: 'Produce 10 androids', k: 'made', item: 'android', n: 10, cash: 60000 },
+            { id: 'and2', d: 'Produce 250 androids — the machines are alive', k: 'made', item: 'android', n: 250, cash: 500000 },
+        ];
+        const OLD_GOAL_ORDER = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12', 'g13', 'g14'];
+        // step-by-step help for each contract; `hl` picks something on the map to point at
+        const GUIDE = {
+            g1: { t: 'Hold the mouse (or your finger) on a <b>tree</b> to chop wood. The glowing tree is a good start.', hl: () => nearestRes('tree') },
+            g2: { t: 'Now hold on a grey <b>stone</b> deposit to mine stone.', hl: () => nearestRes('stone') },
+            g3: { t: 'Press <kbd>2</kbd> (Drill) and click a <b>tree tile</b>. Drills mine by themselves — the white arrow shows where the wood comes out. <kbd>R</kbd> rotates.', hl: () => nearestRes('tree', true), slot: 'drill' },
+            g4: { t: 'Press <kbd>4</kbd> to place a <b>Storage</b> a few tiles away, then press <kbd>1</kbd> and <b>drag</b> a line of belts from the drill\'s arrow into the storage.', hl: () => nearestBuilding('drill'), slot: 'storage' },
+            g5: { t: 'Place an <b>Export Hub</b> (<kbd>5</kbd>) and belt items into it — every item it receives is sold for cash.', slot: 'seller' },
+            g6: { t: 'Drill <b>iron ore</b> and belt it into a <b>Smelter</b> (<kbd>3</kbd>). Belt the smelter\'s output (arrow) to storage or the export hub.', hl: () => nearestRes('iron', true), slot: 'smelter' },
+            g7: { t: 'Stone into a smelter makes <b>bricks</b> (2 stone each). Drill stone and feed a second smelter.', hl: () => nearestRes('stone', true), slot: 'smelter' },
+            lab1: { t: 'Open <b>🔬 Research</b> and buy <b>Laboratory</b>. Place a Research Lab (<kbd>0</kbd>) and belt any items into it — every item turns into research points.', slot: 'lab', tab: 'tech' },
+            g8: { t: 'Research <b>Assembly</b>, then place an Assembler (<kbd>7</kbd>). Click it to choose a recipe.', slot: 'assembler', tab: 'tech' },
+            g9: { t: 'Set an assembler to <b>Gear</b> and feed it iron plates (2 per gear).', hl: () => nearestBuilding('assembler') },
+            g10: { t: 'Copper ore → smelter → copper plates → an assembler set to <b>Wire</b>.', hl: () => nearestRes('copper', true) },
+            exp1: { t: 'Research <b>Land survey I</b> in the tree (press <kbd>T</kbd>). The map grows and <b>coal</b> appears out there.', tab: 'tech' },
+            g11: { t: 'Research Circuitry. A circuit needs 1 iron plate + 3 wire in one assembler — use a splitter or two belts.', tab: 'tech' },
+            pow1: { t: 'Research Electricity, place a <b>Generator</b> and belt wood or coal into it.', slot: 'generator', tab: 'tech' },
+            st1: { t: 'Research Steelmaking. A smelter fed <b>iron plates</b> (3 each) makes steel.', tab: 'tech' },
+            g12: { t: 'Research Structures. Frames need 2 gears + 2 bricks.', tab: 'tech' },
+            pow2: { t: 'Place <b>Power Poles</b> near your generator (they link within 6 tiles) and put an <b>Electric Drill</b> or <b>Assembler Mk2</b> within 4 tiles of a pole.', slot: 'pole' },
+            g13: { t: 'Research Robotics. Robots need 1 frame + 2 circuits.', tab: 'tech' },
+            ai1: { t: 'Research Artificial intelligence. AI cores need 3 circuits + 8 wire.', tab: 'tech' },
+            g14: { t: 'Scale up: more drills, faster belts, Mk2 assemblers. 100 robots!' },
+            and1: { t: 'Research Androids. Each needs a robot, an AI core and 4 steel.', tab: 'tech' },
+            and2: { t: 'Build the android megafactory.' },
+        };
+
+        /* ================= STATE ================= */
+        const SAVE = 'arcade.automato.save';
+        let S; // persistent state
+        let world; // original 72×72 resource map
+        let B = new Map(); // "x,y" -> building
+
+        function fresh() {
+            return {
+                seed: (Math.random() * 1e9) | 0,
+                cash: 0, rp: 0, inv: { wood: 10 }, tech: {}, goalsDone: [], expand: 0, guideOff: false,
+                stats: { gathered: {}, made: {}, stored: {}, sold: {}, built: {}, soldAny: 0, rp: 0, burned: 0, powered: 0 },
+                cam: { x: ORIG / 2 * T, y: ORIG / 2 * T, z: 1 },
+                buildings: [], seenHelp: false, recentSales: [],
+            };
+        }
+
+        function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+
+        function genWorld(seed) {
+            const r = rng(seed);
+            const w = new Array(ORIG * ORIG).fill(null);
+            const c = ORIG / 2;
+            const blob = (type, cx, cy, rad, dens) => {
+                for (let y = Math.floor(cy - rad); y <= cy + rad; y++) for (let x = Math.floor(cx - rad); x <= cx + rad; x++) {
+                    if (x < 0 || y < 0 || x >= ORIG || y >= ORIG) continue;
+                    const d = Math.hypot(x - cx, y - cy) / rad;
+                    if (d <= 1 && r() < dens * (1 - d * d * 0.6)) w[y * ORIG + x] = type;
+                }
+            };
+            // guaranteed starter patches near spawn
+            blob('tree', c - 5, c - 3, 3.2, 0.75);
+            blob('stone', c + 5, c + 2, 2.6, 0.85);
+            blob('iron', c - 3, c + 8, 2.6, 0.85);
+            blob('copper', c + 9, c - 6, 2.6, 0.85);
+            const kinds = ['tree', 'tree', 'stone', 'iron', 'copper'];
+            for (let i = 0; i < 46; i++) {
+                const k = kinds[(r() * kinds.length) | 0];
+                const a = r() * Math.PI * 2, d = 10 + r() * (ORIG / 2 - 6);
+                blob(k, c + Math.cos(a) * d, c + Math.sin(a) * d, 1.8 + r() * 3.2, 0.7 + r() * 0.25);
+            }
+            // keep the very centre clear
+            for (let y = c - 2; y <= c + 2; y++) for (let x = c - 2; x <= c + 2; x++) w[y * ORIG + x] = null;
+            return w;
+        }
+
+        /* ---- the land beyond the original map: generated on demand from the seed ---- */
+        const MAXE = EXPAND[EXPAND.length - 1], SPAN = ORIG + MAXE * 2;
+        let outer = new Int8Array(SPAN * SPAN).fill(-1);
+        function hash3(x, y, s) {
+            let h = Math.imul(x ^ 0x27d4eb2d, 0x85ebca6b) ^ Math.imul(y + 0x165667b1, 0xc2b2ae35) ^ (s | 0);
+            h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; h = Math.imul(h, 0x297a2d39); h ^= h >>> 15;
+            return (h >>> 0) / 4294967296;
+        }
+        function outerRes(x, y) {
+            const CELL = 9, cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+            for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+                const gx = cx + i, gy = cy + j, s = S.seed;
+                if (hash3(gx, gy, s) > 0.46) continue;
+                const px = gx * CELL + 2 + hash3(gx, gy, s + 1) * 5, py = gy * CELL + 2 + hash3(gx, gy, s + 2) * 5;
+                const far = Math.max(Math.abs(px - ORIG / 2), Math.abs(py - ORIG / 2)) - ORIG / 2;
+                const rad = 1.8 + hash3(gx, gy, s + 3) * 2.6 + Math.max(0, far) * 0.04;
+                const d = Math.hypot(x - px, y - py) / rad;
+                if (d > 1 || hash3(x, y, s + 4) > 0.88 * (1 - d * d * 0.6)) continue;
+                const k = hash3(gx, gy, s + 5) * 7.2;
+                return k < 2 ? 'tree' : k < 3.2 ? 'stone' : k < 4.4 ? 'iron' : k < 5.6 ? 'copper' : 'coal';
+            }
+            return null;
+        }
+        const bounds = () => { const e = EXPAND[S.expand || 0]; return { min: -e, max: ORIG - 1 + e }; };
+        function resAt(x, y) {
+            const b = bounds();
+            if (x < b.min || y < b.min || x > b.max || y > b.max) return null;
+            if (x >= 0 && y >= 0 && x < ORIG && y < ORIG) return world[y * ORIG + x];
+            const i = (y + MAXE) * SPAN + (x + MAXE);
+            if (outer[i] === -1) outer[i] = RES_CODES.indexOf(outerRes(x, y));
+            return RES_CODES[outer[i]];
+        }
+        const key = (x, y) => x + ',' + y;
+        const get = (x, y) => B.get(key(x, y));
+
+        function load() {
+            const saved = Arcade.load(SAVE, {}) || {};
+            S = Object.assign(fresh(), saved);
+            S.stats = Object.assign(fresh().stats, S.stats);
+            // older saves tracked contracts by position — convert to ids
+            if (!Array.isArray(saved.goalsDone) && typeof saved.goal === 'number') S.goalsDone = OLD_GOAL_ORDER.slice(0, saved.goal);
+            delete S.goal;
+            if (S.tech.survey1 && !S.expand) S.expand = (S.tech.survey3 ? 3 : S.tech.survey2 ? 2 : 1);
+            world = genWorld(S.seed);
+            outer = new Int8Array(SPAN * SPAN).fill(-1);
+            B = new Map();
+            for (const b of S.buildings || []) { normalise(b); B.set(key(b.x, b.y), b); }
+            chunks.clear();
+            netDirty = true;
+        }
+        function persist() {
+            S.buildings = [...B.values()].map(b => ({ ...b, item: b.item ? { t: b.item.t, p: b.item.p, f: b.item.f } : null, net: undefined, pw: undefined }));
+            Arcade.save(SAVE, S);
+        }
+        function normalise(b) {
+            b.dir = b.dir || 0;
+            b.ob = b.ob || [];
+            b.inp = b.inp || {};
+            if ((b.type === 'assembler' || b.type === 'assembler2') && !b.recipe) b.recipe = 'gear';
+            if (b.timer === undefined) b.timer = 0;
+        }
+
+        /* ================= HELPERS ================= */
+        const has = (t) => !!S.tech[t];
+        const unlocked = (type) => !BUILD[type].tech || has(BUILD[type].tech);
+        const afford = (cost) => Object.entries(cost).every(([k, v]) => (S.inv[k] || 0) >= v);
+        const pay = (cost) => { for (const [k, v] of Object.entries(cost)) S.inv[k] -= v; };
+        const refund = (cost) => { for (const [k, v] of Object.entries(cost)) S.inv[k] = (S.inv[k] || 0) + v; };
+        const priceMult = () => (has('market1') ? 1.25 : 1) * (has('market2') ? 1.5 : 1) * (has('market3') ? 2 : 1);
+        const bump = (cat, item, n) => { S.stats[cat][item] = (S.stats[cat][item] || 0) + (n || 1); };
+        const costText = (cost) => Object.entries(cost).map(([k, v]) => v + ' ' + ITEMS[k].n.toLowerCase()).join(', ');
+        const isBelt = (t) => t === 'belt' || t === 'fastbelt';
+        const isDrill = (t) => t === 'drill' || t === 'drill2' || t === 'drill3';
+        const isAsm = (t) => t === 'assembler' || t === 'assembler2';
+        const techCostText = (c) => c.cash ? '$' + Arcade.fmt(c.cash) : Arcade.fmt(c.rp) + ' RP';
+        const canAffordTech = (t) => t.cost.cash ? S.cash >= t.cost.cash : S.rp >= t.cost.rp;
+        const techReady = (t) => !(t.req || []).some(r => !has(r));
+
+        /* ================= POWER ================= */
+        // Poles, generators and panels within 6 tiles join one network; consumers within 4 tiles of a node draw from it.
+        let netDirty = true, nets = [], powerInfo = { supply: 0, demand: 0 };
+        function rebuildNets() {
+            netDirty = false;
+            const nodes = [...B.values()].filter(b => b.type === 'pole' || b.type === 'generator' || b.type === 'solar');
+            const parent = nodes.map((_, i) => i);
+            const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+            for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+                const a = nodes[i], b = nodes[j];
+                if ((a.type === 'pole' || b.type === 'pole') && Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= 6) parent[find(i)] = find(j);
+            }
+            const map = new Map();
+            nodes.forEach((n, i) => { const r = find(i); if (!map.has(r)) map.set(r, { nodes: [], users: [] }); map.get(r).nodes.push(n); n.net = map.get(r); });
+            nets = [...map.values()];
+            for (const b of B.values()) {
+                if (!(BUILD[b.type].power < 0)) continue;
+                b.net = null;
+                for (const n of nodes) if (Math.max(Math.abs(n.x - b.x), Math.abs(n.y - b.y)) <= 4) { b.net = n.net; break; }
+                if (b.net) b.net.users.push(b);
+            }
+        }
+        function powerTick(dt) {
+            if (netDirty) rebuildNets();
+            let supplyAll = 0, demandAll = 0, powered = 0;
+            for (const net of nets) {
+                const demand = net.users.reduce((a, u) => a + (u.wants ? -BUILD[u.type].power : 0), 0);
+                let supply = 0;
+                for (const n of net.nodes) {
+                    if (n.type === 'solar') supply += 20;
+                    else if (n.type === 'generator') {
+                        if (n.burn > 0 && demand > 0) { n.burn -= dt; supply += 60; n.active = 0.3; }
+                        else if (n.burn > 0) supply += 60;
+                        if ((!n.burn || n.burn <= 0) && demand > 0) {
+                            const fuel = Object.keys(FUEL).find(f => (n.inp[f] || 0) > 0);
+                            if (fuel) { n.inp[fuel]--; n.burn = FUEL[fuel]; S.stats.burned++; }
+                        }
+                    }
+                }
+                net.sat = demand ? Math.min(1, supply / demand) : 1;
+                net.supply = supply; net.demand = demand;
+                supplyAll += supply; demandAll += demand;
+                for (const u of net.users) { u.pw = net.sat; if (u.pw >= 0.5 && u.wants) powered++; }
+            }
+            for (const b of B.values()) if (BUILD[b.type].power < 0 && !b.net) b.pw = 0;
+            S.stats.powered = Math.max(S.stats.powered || 0, powered);
+            powerInfo = { supply: supplyAll, demand: demandAll };
+        }
+
+        /* ================= SIMULATION ================= */
+        function accept(b, item, d) {
+            if (!b) return false;
+            switch (b.type) {
+                case 'belt': case 'fastbelt':
+                    if (b.item || b.dir === (d + 2) % 4) return false;
+                    b.item = { t: item, p: 0, f: d };
+                    return true;
+                case 'storage':
+                    S.inv[item] = (S.inv[item] || 0) + 1;
+                    bump('stored', item);
+                    return true;
+                case 'seller': {
+                    const v = ITEMS[item].v * priceMult();
+                    S.cash += v;
+                    S.recentSales.push([Date.now(), v]);
+                    bump('sold', item); S.stats.soldAny++;
+                    b.flash = 0.3;
+                    return true;
+                }
+                case 'lab':
+                    if (b.ob.length >= 20) return false;
+                    b.ob.push(item);
+                    return true;
+                case 'generator':
+                    if (!FUEL[item] || (b.inp[item] || 0) >= 10) return false;
+                    b.inp[item] = (b.inp[item] || 0) + 1;
+                    return true;
+                case 'splitter':
+                    if (b.ob.length >= 2) return false;
+                    b.ob.push(item);
+                    return true;
+                case 'smelter': {
+                    if (!SMELT.some(r => r.in[item] && (!r.tech || has(r.tech)))) return false;
+                    if ((b.inp[item] || 0) >= 10 || b.ob.length >= 10) return false;
+                    b.inp[item] = (b.inp[item] || 0) + 1;
+                    return true;
+                }
+                case 'assembler': case 'assembler2': {
+                    const r = ASSEMBLE[b.recipe];
+                    if (!r || !r.in[item]) return false;
+                    if ((b.inp[item] || 0) >= r.in[item] * 3 || b.ob.length >= 10) return false;
+                    b.inp[item] = (b.inp[item] || 0) + 1;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function pushOut(b, d) {
+            if (!b.ob.length) return false;
+            const [dx, dy] = DV[d];
+            if (accept(get(b.x + dx, b.y + dy), b.ob[0], d)) { b.ob.shift(); return true; }
+            return false;
+        }
+
+        // Advances a machine's current job, or starts `recipe` if it is idle and has the inputs.
+        function craft(b, recipe, dt) {
+            if (!b.cur) {
+                if (!recipe || b.ob.length + recipe.n > 10) return;
+                if (!Object.entries(recipe.in).every(([k, v]) => (b.inp[k] || 0) >= v)) return;
+                for (const [k, v] of Object.entries(recipe.in)) b.inp[k] -= v;
+                b.cur = { out: recipe.out, n: recipe.n, t: 0, T: recipe.t };
+            }
+            b.cur.t += dt;
+            b.active = 0.3;
+            if (b.cur.t >= b.cur.T) {
+                for (let i = 0; i < b.cur.n; i++) b.ob.push(b.cur.out);
+                bump('made', b.cur.out, b.cur.n);
+                b.cur = null;
+            }
+        }
+
+        function tick(dt) {
+            powerTick(dt);
+            for (const b of B.values()) {
+                if (b.flash) b.flash = Math.max(0, b.flash - dt);
+                if (b.active) b.active = Math.max(0, b.active - dt);
+                switch (b.type) {
+                    case 'belt': case 'fastbelt': {
+                        if (!b.item) break;
+                        const sp = b.type === 'fastbelt' ? 4 : 2;
+                        b.item.p = Math.min(1, b.item.p + sp * dt);
+                        if (b.item.p >= 1) {
+                            const [dx, dy] = DV[b.dir];
+                            const it = b.item;
+                            b.item = null;
+                            if (!accept(get(b.x + dx, b.y + dy), it.t, b.dir)) b.item = it;
+                        }
+                        break;
+                    }
+                    case 'drill': case 'drill2': case 'drill3': {
+                        const res = resAt(b.x, b.y);
+                        if (!res) break;
+                        b.wants = b.ob.length < 3;
+                        if (b.wants) {
+                            const sp = b.type === 'drill3' ? 4 * (b.pw || 0) : b.type === 'drill2' ? 2 : 1;
+                            b.timer += dt * sp;
+                            if (sp > 0) b.active = 0.3;
+                            if (b.timer >= 2) { b.timer = 0; b.ob.push(RES[res].item); }
+                        }
+                        pushOut(b, b.dir);
+                        break;
+                    }
+                    case 'smelter': {
+                        if (b.cur) craft(b, null, dt);
+                        else { const r = SMELT.find(r => (!r.tech || has(r.tech)) && Object.entries(r.in).every(([k, v]) => (b.inp[k] || 0) >= v)); if (r) craft(b, r, dt); }
+                        pushOut(b, b.dir);
+                        break;
+                    }
+                    case 'assembler': case 'assembler2': {
+                        const r = ASSEMBLE[b.recipe];
+                        const sp = b.type === 'assembler2' ? 2.5 * (b.pw || 0) : 1;
+                        b.wants = !!(b.cur || (r && Object.entries(r.in).every(([k, v]) => (b.inp[k] || 0) >= v)));
+                        if (sp > 0) { if (b.cur) craft(b, null, dt * sp); else if (r && (!r.tech || has(r.tech))) craft(b, r, dt * sp); }
+                        pushOut(b, b.dir);
+                        break;
+                    }
+                    case 'lab': {
+                        if (!b.ob.length) break;
+                        b.timer += dt; b.active = 0.3;
+                        if (b.timer >= 0.8) {
+                            b.timer = 0;
+                            const it = b.ob.shift(), rp = Math.max(0.5, ITEMS[it].v * 0.6);
+                            S.rp += rp; S.stats.rp += rp;
+                        }
+                        break;
+                    }
+                    case 'splitter': {
+                        if (!b.ob.length) break;
+                        if (b.filter && has('filter')) {
+                            // matching items go straight on, everything else to the sides
+                            if (b.ob[0] === b.filter) { pushOut(b, b.dir); break; }
+                            b.rr = b.rr || 0;
+                            const sides = [(b.dir + 3) % 4, (b.dir + 1) % 4];
+                            for (let i = 0; i < 2; i++) if (pushOut(b, sides[(b.rr + i) % 2])) { b.rr = (b.rr + i + 1) % 2; break; }
+                            break;
+                        }
+                        b.rr = b.rr || 0;
+                        const outs = [(b.dir + 3) % 4, b.dir, (b.dir + 1) % 4];
+                        for (let i = 0; i < 3; i++) {
+                            const d = outs[(b.rr + i) % 3];
+                            if (pushOut(b, d)) { b.rr = (b.rr + i + 1) % 3; break; }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        /* ================= GOALS ================= */
+        function goalProgress(g) {
+            if (g.k === 'soldAny') return S.stats.soldAny;
+            if (g.k === 'rp') return Math.floor(S.stats.rp || 0);
+            if (g.k === 'expand') return S.expand || 0;
+            if (g.k === 'burned') return S.stats.burned || 0;
+            if (g.k === 'powered') return S.stats.powered || 0;
+            return (S.stats[g.k] && S.stats[g.k][g.item]) || 0;
+        }
+        const currentGoal = () => GOALS.find(g => !S.goalsDone.includes(g.id));
+        function checkGoals() {
+            let changed = false;
+            for (let g = currentGoal(); g && goalProgress(g) >= g.n; g = currentGoal()) {
+                S.cash += g.cash;
+                S.goalsDone.push(g.id);
+                Arcade.toast(`✅ Contract done: ${g.d} · +$${Arcade.fmt(g.cash)}`, 'gold', 3500);
+                Arcade.sfx('win');
+                Arcade.report('contracts', S.goalsDone.length);
+                changed = true;
+            }
+            if (changed) { if (tab === 'goals') renderSide(); renderGuide(); }
+        }
+
+        /* ================= CAMERA & CANVAS ================= */
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const worldEl = document.getElementById('world');
+        let VW = 0, VH = 0, DPR = 1;
+        function resize() {
+            const r = worldEl.getBoundingClientRect();
+            DPR = Math.min(2, window.devicePixelRatio || 1);
+            VW = r.width; VH = r.height;
+            canvas.width = VW * DPR; canvas.height = VH * DPR;
+        }
+        const toWorld = (sx, sy) => ({ x: (sx - VW / 2) / S.cam.z + S.cam.x, y: (sy - VH / 2) / S.cam.z + S.cam.y });
+        const tileAt = (sx, sy) => { const p = toWorld(sx, sy); return { x: Math.floor(p.x / T), y: Math.floor(p.y / T) }; };
+        function clampCam() {
+            const b = bounds();
+            S.cam.z = Arcade.clamp(S.cam.z, 0.25, 2.2);
+            S.cam.x = Arcade.clamp(S.cam.x, b.min * T, (b.max + 1) * T);
+            S.cam.y = Arcade.clamp(S.cam.y, b.min * T, (b.max + 1) * T);
+        }
+
+        /* ================= TOOLS & INPUT ================= */
+        let tool = 'hand', placeDir = 0, hover = null, mining = null, inspect = null, time = 0;
+        let pointerDown = null, panning = null, lastPlaced = null;
+        const pointers = new Map();
+        let pinch = null;
+
+        function setTool(t) {
+            if (t !== 'hand' && t !== 'demolish' && !unlocked(t)) { Arcade.toast('🔒 Research ' + TECH.find(x => x.id === BUILD[t].tech).n + ' first', 'bad'); Arcade.sfx('bad'); return; }
+            tool = t;
+            renderHotbar();
+            if (t !== 'hand') closeInspector();
+        }
+
+        function canPlace(type, x, y) {
+            const b = bounds();
+            if (x < b.min || y < b.min || x > b.max || y > b.max) return 'Out of bounds — research a land survey';
+            if (get(x, y)) return 'Occupied';
+            if (isDrill(type) && !resAt(x, y)) return 'Drills go on resources';
+            if (!afford(BUILD[type].cost)) return 'Need ' + costText(BUILD[type].cost);
+            return null;
+        }
+
+        function place(type, x, y, dir) {
+            const why = canPlace(type, x, y);
+            if (why) return why;
+            pay(BUILD[type].cost);
+            const b = { type, x, y, dir };
+            normalise(b);
+            B.set(key(x, y), b);
+            bump('built', type);
+            if (BUILD[type].power || type === 'pole') netDirty = true;
+            Arcade.sfx('click');
+            return null;
+        }
+
+        function demolish(x, y) {
+            const b = get(x, y);
+            if (!b) return false;
+            refund(BUILD[b.type].cost);
+            // return carried / buffered items to the stash so nothing is lost
+            if (b.item) S.inv[b.item.t] = (S.inv[b.item.t] || 0) + 1;
+            for (const it of b.ob) S.inv[it] = (S.inv[it] || 0) + 1;
+            for (const [k, v] of Object.entries(b.inp)) S.inv[k] = (S.inv[k] || 0) + v;
+            B.delete(key(x, y));
+            if (BUILD[b.type].power || b.type === 'pole') netDirty = true;
+            if (inspect === b) closeInspector();
+            Arcade.sfx('pop');
+            return true;
+        }
+
+        const local = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        canvas.addEventListener('pointerdown', (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            const p = local(e);
+            pointers.set(e.pointerId, p);
+            if (pointers.size === 2) {
+                pointerDown = null; mining = null;
+                const [a, b] = [...pointers.values()];
+                pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: S.cam.z, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, cam: { ...S.cam } };
+                return;
+            }
+            if (e.button === 2 || e.button === 1) { panning = { sx: p.x, sy: p.y, cx: S.cam.x, cy: S.cam.y, moved: false, right: e.button === 2 }; return; }
+            const t = tileAt(p.x, p.y);
+            pointerDown = { t, sx: p.x, sy: p.y };
+            lastPlaced = null;
+            if (tool === 'hand') {
+                const b = get(t.x, t.y);
+                if (b) openInspector(b);
+                else if (resAt(t.x, t.y)) { mining = { x: t.x, y: t.y, t: 0 }; closeInspector(); }
+                else closeInspector();
+            } else if (tool === 'demolish') demolish(t.x, t.y);
+            else {
+                const why = place(tool, t.x, t.y, placeDir);
+                if (why && why !== 'Occupied') { Arcade.toast(why, 'bad', 1200); Arcade.sfx('bad'); }
+                if (!why) lastPlaced = t;
+            }
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            const p = local(e);
+            if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
+            hover = tileAt(p.x, p.y);
+            hover.sx = p.x; hover.sy = p.y;
+            if (pinch && pointers.size >= 2) {
+                const [a, b] = [...pointers.values()];
+                const d = Math.hypot(a.x - b.x, a.y - b.y);
+                S.cam.z = pinch.z * d / pinch.d;
+                const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+                S.cam.x = pinch.cam.x - (mid.x - pinch.mid.x) / S.cam.z;
+                S.cam.y = pinch.cam.y - (mid.y - pinch.mid.y) / S.cam.z;
+                clampCam();
+                return;
+            }
+            if (panning) {
+                if (Math.hypot(p.x - panning.sx, p.y - panning.sy) > 4) panning.moved = true;
+                S.cam.x = panning.cx - (p.x - panning.sx) / S.cam.z;
+                S.cam.y = panning.cy - (p.y - panning.sy) / S.cam.z;
+                clampCam();
+                return;
+            }
+            if (!pointerDown) return;
+            const t = hover;
+            if (tool === 'hand') {
+                if (mining && (mining.x !== t.x || mining.y !== t.y)) mining = resAt(t.x, t.y) && !get(t.x, t.y) ? { x: t.x, y: t.y, t: 0 } : null;
+            } else if (tool === 'demolish') demolish(t.x, t.y);
+            else if (lastPlaced && (t.x !== lastPlaced.x || t.y !== lastPlaced.y)) {
+                // drag-building: walk tile by tile and aim belts along the drag
+                let cx = lastPlaced.x, cy = lastPlaced.y;
+                let guard = 0;
+                while ((cx !== t.x || cy !== t.y) && guard++ < 50) {
+                    const dx = Math.sign(t.x - cx), dy = Math.sign(t.y - cy);
+                    const step = Math.abs(t.x - cx) >= Math.abs(t.y - cy) ? [dx, 0] : [0, dy];
+                    const dir = DV.findIndex(v => v[0] === step[0] && v[1] === step[1]);
+                    const prev = get(cx, cy);
+                    if (prev && isBelt(prev.type) && isBelt(tool)) prev.dir = dir;
+                    cx += step[0]; cy += step[1];
+                    if (isBelt(tool)) placeDir = dir;
+                    const why = place(tool, cx, cy, placeDir);
+                    if (why && why !== 'Occupied') { Arcade.toast(why, 'bad', 1000); break; }
+                }
+                lastPlaced = { x: cx, y: cy };
+            }
+        });
+
+        const release = (e) => {
+            pointers.delete(e.pointerId);
+            if (pinch) { if (pointers.size < 2) pinch = null; return; }
+            if (panning) {
+                if (panning.right && !panning.moved) {
+                    const p = local(e), t = tileAt(p.x, p.y);
+                    if (!demolish(t.x, t.y) && tool !== 'hand') setTool('hand');
+                }
+                panning = null;
+                return;
+            }
+            pointerDown = null; mining = null; lastPlaced = null;
+        };
+        canvas.addEventListener('pointerup', release);
+        canvas.addEventListener('pointercancel', release);
+        canvas.addEventListener('pointerleave', () => { hover = null; });
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const p = local(e);
+            const before = toWorld(p.x, p.y);
+            S.cam.z *= Math.exp(-e.deltaY * 0.0015);
+            clampCam();
+            const after = toWorld(p.x, p.y);
+            S.cam.x += before.x - after.x; S.cam.y += before.y - after.y;
+            clampCam();
+        }, { passive: false });
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            keys[e.code] = true;
+            if (e.code === 'Escape') { setTool('hand'); closeInspector(); Arcade.hide('helpOv'); Arcade.hide('treeOv'); }
+            else if (e.code === 'KeyR') {
+                const b = hover && get(hover.x, hover.y);
+                if (tool === 'hand' && b && b.type !== 'storage' && b.type !== 'seller') { b.dir = (b.dir + (e.shiftKey ? 3 : 1)) % 4; Arcade.sfx('click'); if (inspect === b) openInspector(b); }
+                else placeDir = (placeDir + (e.shiftKey ? 3 : 1)) % 4;
+            }
+            else if (e.code === 'KeyX') setTool(tool === 'demolish' ? 'hand' : 'demolish');
+            else if (e.code === 'KeyT') openTree();
+            else if (e.code === 'KeyQ' && hover) { const b = get(hover.x, hover.y); if (b) { placeDir = b.dir; setTool(b.type); } }
+            else if (/^Digit[0-9]$/.test(e.code)) { const t = HOTBAR[HOTKEYS.indexOf(e.code.slice(5))]; if (t) setTool(tool === t ? 'hand' : t); }
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        /* ================= UI PANELS ================= */
+        const $ = (id) => document.getElementById(id);
+        let tab = 'goals';
+
+        function renderHotbar() {
+            const bar = $('hotbar');
+            bar.innerHTML = '';
+            const g = currentGoal(), glowSlot = !S.guideOff && g && GUIDE[g.id] && GUIDE[g.id].slot;
+            const mk = (id, ic, nm, k, extraClass, title) => {
+                const b = document.createElement('button');
+                b.className = 'slot ' + (extraClass || '') + (tool === id ? ' on' : '') + (glowSlot === id && tool !== id && unlocked(id) ? ' glow' : '');
+                b.innerHTML = `<span class="k">${k}</span><span class="ic">${ic}</span><span class="nm">${nm}</span>`;
+                b.title = title;
+                b.onclick = () => setTool(tool === id && id !== 'hand' ? 'hand' : id);
+                bar.appendChild(b);
+                return b;
+            };
+            mk('hand', '✋', 'Hand', 'Esc', '', 'Mine and inspect');
+            mk('demolish', '🔨', 'Demolish', 'X', '', 'Remove buildings (full refund)');
+            const sep = document.createElement('div'); sep.className = 'sep-v'; bar.appendChild(sep);
+            HOTBAR.forEach((id, i) => {
+                const d = BUILD[id];
+                const locked = !unlocked(id);
+                // hide far-future machines until their research is at least available
+                if (locked && d.tech && !techReady(TECH.find(t => t.id === d.tech))) return;
+                const el = mk(id, d.ic, d.n, HOTKEYS[i], locked ? 'locked' : !afford(d.cost) ? 'poor' : '', `${d.n} — ${d.desc}\nCost: ${costText(d.cost)}` + (locked ? '\n🔒 needs research' : ''));
+                el.dataset.build = id;
+            });
+        }
+
+        function refreshHotbarAfford() {
+            document.querySelectorAll('[data-build]').forEach(el => {
+                const id = el.dataset.build;
+                el.classList.toggle('poor', unlocked(id) && !afford(BUILD[id].cost));
+                el.classList.toggle('locked', !unlocked(id));
+            });
+        }
+
+        function renderStash() {
+            $('cash').textContent = '$' + Arcade.fmt(S.cash);
+            $('rpLine').textContent = has('lab') || S.rp ? '🔬 ' + Arcade.fmt(S.rp) + ' research points' : '';
+            const host = $('items');
+            const keysShown = Object.keys(ITEMS).filter(k => (S.inv[k] || 0) > 0);
+            const sig = keysShown.join('|');
+            if (host.dataset.sig !== sig) {
+                host.dataset.sig = sig;
+                host.innerHTML = keysShown.map(k => `<div title="${ITEMS[k].n}"><i style="background:${ITEMS[k].c}"></i>${ITEMS[k].n}<b data-i="${k}"></b></div>`).join('') || '<span class="tiny dim">Empty — mine something!</span>';
+            }
+            host.querySelectorAll('[data-i]').forEach(el => { el.textContent = Arcade.fmt(S.inv[el.dataset.i] || 0); });
+        }
+
+        function buyTech(t) {
+            if (has(t.id) || !techReady(t) || !canAffordTech(t)) { Arcade.sfx('bad'); return false; }
+            if (t.cost.cash) S.cash -= t.cost.cash; else S.rp -= t.cost.rp;
+            S.tech[t.id] = true;
+            if (t.id.startsWith('survey')) { S.expand = +t.id.slice(6); chunks.clear(); Arcade.toast('🗺️ The map grew! New land (and coal) to explore.', 'gold', 3000); }
+            Arcade.toast('Researched ' + t.n + '!', 'gold'); Arcade.sfx('level');
+            renderSide(); renderHotbar(); renderGuide(); persist();
+            if (!$('treeOv').hidden) buildTree();
+            return true;
+        }
+
+        function renderSide() {
+            document.querySelectorAll('.side .tabs .btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            const host = $('sideBody');
+            host.innerHTML = '';
+            if (tab === 'goals') {
+                const g = currentGoal();
+                if (g) {
+                    const d = document.createElement('div');
+                    d.className = 'goal';
+                    d.innerHTML = `<b>${g.d}</b><small>Reward: $${Arcade.fmt(g.cash)}</small><div class="bar"><i id="goalBar"></i></div><small id="goalTxt" style="margin:6px 0 0"></small>`;
+                    host.appendChild(d);
+                } else host.insertAdjacentHTML('beforeend', '<div class="goal"><b>All contracts complete! 🎉</b><small>Keep expanding your factory.</small></div>');
+                const done = GOALS.filter(x => S.goalsDone.includes(x.id)).slice(-4).reverse();
+                for (const x of done) host.insertAdjacentHTML('beforeend', `<div class="goal done"><b>✓ ${x.d}</b></div>`);
+                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:6px 2px 0">${S.goalsDone.length}/${GOALS.length} contracts · the 🧭 guide at the top explains each one.</p>`);
+                refreshGoal();
+            } else {
+                const tb = document.createElement('button');
+                tb.className = 'btn primary block'; tb.textContent = '🌳 Open the research tree (T)'; tb.onclick = openTree;
+                host.appendChild(tb);
+                const list = TECH.filter(t => !has(t.id) && techReady(t)).concat(TECH.filter(t => has(t.id)).slice(-3));
+                for (const t of list) {
+                    const owned = has(t.id);
+                    const d = document.createElement('div');
+                    d.className = 'tech' + (owned ? ' owned' : '');
+                    d.innerHTML = `<b class="small">${t.n}</b><button class="btn sm ${owned ? '' : 'primary'}"></button><small>${t.d}</small>`;
+                    const b = d.querySelector('button');
+                    b.textContent = owned ? '✓' : techCostText(t.cost);
+                    b.disabled = owned || !canAffordTech(t);
+                    b.dataset.tech = t.id;
+                    b.onclick = () => buyTech(t);
+                    host.appendChild(d);
+                }
+                if (!has('lab')) host.insertAdjacentHTML('beforeend', '<p class="tiny dim" style="margin:4px 2px 0">Tip: research <b>Laboratory</b> early — most research after the first few costs RP from a Research Lab.</p>');
+            }
+        }
+        function refreshGoal() {
+            const g = currentGoal();
+            if (!g || !$('goalBar')) return;
+            const p = Math.min(g.n, goalProgress(g));
+            $('goalBar').style.width = (p / g.n * 100) + '%';
+            $('goalTxt').textContent = `${Arcade.fmt(p)} / ${Arcade.fmt(g.n)}`;
+        }
+        function refreshTechButtons() {
+            if (tab !== 'tech') return;
+            document.querySelectorAll('[data-tech]').forEach(b => {
+                const t = TECH.find(x => x.id === b.dataset.tech);
+                b.disabled = has(t.id) || !techReady(t) || !canAffordTech(t);
+            });
+        }
+        document.querySelectorAll('.side .tabs .btn').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderSide(); });
+
+        /* ---------- research tree ---------- */
+        function buildTree() {
+            const host = $('tree');
+            host.innerHTML = '';
+            const tiers = [...new Set(TECH.map(t => t.tier))].sort((a, b) => a - b);
+            for (const tr of tiers) {
+                const col = document.createElement('div');
+                col.className = 'tcol';
+                col.style.gridColumn = tr;
+                col.innerHTML = `<h5>Tier ${tr}</h5>`;
+                for (const t of TECH.filter(x => x.tier === tr)) {
+                    const owned = has(t.id), ready = techReady(t);
+                    const n = document.createElement('button');
+                    n.className = 'tnode ' + (owned ? 'owned' : ready ? 'avail' : 'locked');
+                    n.dataset.id = t.id;
+                    n.innerHTML = `<b>${t.n}</b><small>${t.d}</small><span class="cost">${owned ? '✓ Researched' : ready ? techCostText(t.cost) : '🔒 ' + t.req.filter(r => !has(r)).map(r => TECH.find(x => x.id === r).n).join(', ')}</span>`;
+                    n.onclick = () => { if (!owned && ready) buyTech(t); };
+                    col.appendChild(n);
+                }
+                host.appendChild(col);
+            }
+            // connectors between prerequisites
+            requestAnimationFrame(() => {
+                const box = host.getBoundingClientRect();
+                const pos = (id, side) => { const el = host.querySelector(`[data-id="${id}"]`).getBoundingClientRect(); return { x: (side ? el.right : el.left) - box.left, y: el.top + el.height / 2 - box.top }; };
+                let svg = `<svg width="${host.scrollWidth}" height="${host.scrollHeight}">`;
+                for (const t of TECH) for (const r of t.req || []) {
+                    const a = pos(r, 1), b = pos(t.id, 0), mx = (a.x + b.x) / 2;
+                    const col = has(t.id) ? '#22c55e' : has(r) ? '#f59e0b' : 'rgba(148,163,184,0.35)';
+                    svg += `<path d="M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}" stroke="${col}" stroke-width="2" fill="none"/>`;
+                }
+                host.insertAdjacentHTML('afterbegin', svg + '</svg>');
+            });
+        }
+        function openTree() { buildTree(); Arcade.show('treeOv'); }
+        $('treeClose').onclick = () => Arcade.hide('treeOv');
+
+        /* ---------- guide ---------- */
+        function nearestRes(type, free) {
+            const c = { x: Math.floor(S.cam.x / T), y: Math.floor(S.cam.y / T) };
+            let best = null, bd = 1e9;
+            const b = bounds();
+            for (let r = 0; r < 40 && !best; r++) for (let y = c.y - r; y <= c.y + r; y++) for (let x = c.x - r; x <= c.x + r; x++) {
+                if (Math.max(Math.abs(x - c.x), Math.abs(y - c.y)) !== r || x < b.min || y < b.min || x > b.max || y > b.max) continue;
+                if (resAt(x, y) === type && (!free || !get(x, y))) { const d = Math.hypot(x - c.x, y - c.y); if (d < bd) { bd = d; best = { x, y }; } }
+            }
+            return best;
+        }
+        function nearestBuilding(type) {
+            let best = null, bd = 1e9;
+            for (const b of B.values()) if (b.type === type) { const d = Math.hypot(b.x * T - S.cam.x, b.y * T - S.cam.y); if (d < bd) { bd = d; best = b; } }
+            return best;
+        }
+        let guideTarget = null;
+        function renderGuide() {
+            const el = $('guide'), g = currentGoal();
+            $('guideBtn').classList.toggle('active', !S.guideOff);
+            if (S.guideOff || !g || !GUIDE[g.id]) { el.hidden = true; guideTarget = null; renderHotbar(); return; }
+            const G = GUIDE[g.id];
+            el.hidden = false;
+            el.innerHTML = `<div class="row"><b class="step">🧭 ${g.d}</b><button class="btn sm ghost" id="guideHide" title="Hide the guide">✕</button></div><div style="margin-top:4px">${G.t}</div>`;
+            $('guideHide').onclick = () => { S.guideOff = true; renderGuide(); };
+            renderHotbar();
+        }
+        function refreshGuideTarget() {
+            const g = currentGoal();
+            guideTarget = !S.guideOff && g && GUIDE[g.id] && GUIDE[g.id].hl ? GUIDE[g.id].hl() : null;
+        }
+        $('guideBtn').onclick = () => { S.guideOff = !S.guideOff; renderGuide(); refreshGuideTarget(); };
+
+        /* ---------- inspector ---------- */
+        function openInspector(b) {
+            inspect = b;
+            const el = $('inspector');
+            const d = BUILD[b.type];
+            let html = `<h4>${d.ic} ${d.n}</h4><p class="tiny muted" style="margin:0 0 6px">${d.desc}</p>`;
+            if (isAsm(b.type)) {
+                html += '<b class="tiny muted">RECIPE</b><div class="recipes">';
+                for (const [id, r] of Object.entries(ASSEMBLE)) {
+                    const ok = !r.tech || has(r.tech);
+                    if (!ok && r.tech && !techReady(TECH.find(t => t.id === r.tech))) continue;
+                    html += `<button class="btn ${b.recipe === id ? 'active' : ''}" data-r="${id}" ${ok ? '' : 'disabled'} title="${Object.entries(r.in).map(([k, v]) => v + ' ' + ITEMS[k].n).join(' + ')} → ${r.n} ${ITEMS[r.out].n}">${ok ? '' : '🔒 '}${ITEMS[r.out].n}</button>`;
+                }
+                html += '</div>';
+                const r = ASSEMBLE[b.recipe];
+                html += `<p class="tiny" style="margin:0 0 6px">${Object.entries(r.in).map(([k, v]) => v + ' ' + ITEMS[k].n).join(' + ')} → ${r.n} ${ITEMS[r.out].n} · ${r.t}s</p>`;
+            }
+            if (b.type === 'splitter' && has('filter')) {
+                html += `<label class="tiny muted">Send straight ahead: <select id="inspFilter" style="width:100%;margin-top:4px;padding:4px;border-radius:7px;background:var(--bg-2);color:var(--text);border:1px solid var(--line-2)"><option value="">— nothing (split evenly) —</option>${Object.entries(ITEMS).map(([k, it]) => `<option value="${k}" ${b.filter === k ? 'selected' : ''}>${it.n}</option>`).join('')}</select></label>`;
+            }
+            html += '<div class="tiny muted" id="inspBuf" style="margin-top:6px"></div>';
+            html += `<div class="row" style="margin-top:8px">${['storage', 'seller', 'lab', 'generator', 'pole', 'solar'].includes(b.type) ? '' : '<button class="btn sm" id="inspRot">⟳ Rotate</button>'}<button class="btn sm danger" id="inspDel">Demolish</button><button class="btn sm ghost" id="inspClose">✕</button></div>`;
+            el.innerHTML = html;
+            el.hidden = false;
+            el.querySelectorAll('[data-r]').forEach(btn => btn.onclick = () => {
+                if (b.recipe === btn.dataset.r) return;
+                // return mismatched inputs to the stash when switching recipe
+                for (const [k, v] of Object.entries(b.inp)) S.inv[k] = (S.inv[k] || 0) + v;
+                b.inp = {}; b.cur = null; b.recipe = btn.dataset.r;
+                Arcade.sfx('select');
+                openInspector(b);
+            });
+            const flt = $('inspFilter');
+            if (flt) flt.onchange = () => { b.filter = flt.value || null; Arcade.sfx('select'); };
+            const rot = $('inspRot');
+            if (rot) rot.onclick = () => { b.dir = (b.dir + 1) % 4; Arcade.sfx('click'); };
+            $('inspDel').onclick = () => demolish(b.x, b.y);
+            $('inspClose').onclick = closeInspector;
+            refreshInspector();
+        }
+        function refreshInspector() {
+            if (!inspect || $('inspector').hidden) return;
+            const b = inspect, el = $('inspBuf');
+            if (!el) return;
+            const parts = [];
+            if (isDrill(b.type)) parts.push('Mining: ' + (resAt(b.x, b.y) ? RES[resAt(b.x, b.y)].n : 'nothing'));
+            if (BUILD[b.type].power < 0) parts.push(b.net ? `⚡ ${Math.round((b.pw || 0) * 100)}% power` : '🔌 Not connected — put a power pole within 4 tiles');
+            if (b.type === 'generator') parts.push(b.burn > 0 ? `🔥 Burning · ${Math.ceil(b.burn)}s left` : 'Out of fuel — belt in wood or coal', `Fuel: ${b.inp.wood || 0} wood, ${b.inp.coal || 0} coal`);
+            if (b.type === 'pole' || b.type === 'solar' || b.type === 'generator') if (b.net) parts.push(`Network: ${Math.round(b.net.supply || 0)}W made / ${Math.round(b.net.demand || 0)}W used`);
+            if (b.type === 'lab') parts.push(`${b.ob.length} item${b.ob.length === 1 ? '' : 's'} queued · ${Arcade.fmt(S.rp)} RP`);
+            const inp = Object.entries(b.inp).filter(([, v]) => v > 0).map(([k, v]) => v + ' ' + ITEMS[k].n);
+            if (inp.length && b.type !== 'generator') parts.push('In: ' + inp.join(', '));
+            if (b.cur) parts.push(`Making ${ITEMS[b.cur.out].n} ${Math.round(b.cur.t / b.cur.T * 100)}%`);
+            if (b.ob.length && b.type !== 'lab') parts.push('Out: ' + b.ob.length + ' waiting' + (b.ob.length >= 3 ? ' (blocked? check the arrow)' : ''));
+            if (b.item) parts.push('Carrying ' + ITEMS[b.item.t].n);
+            el.textContent = parts.join(' · ') || 'Idle';
+        }
+        function closeInspector() { inspect = null; $('inspector').hidden = true; }
+
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        $('helpClose').onclick = () => { Arcade.hide('helpOv'); S.seenHelp = true; persist(); };
+        let resetArmed = false;
+        $('resetBtn').onclick = () => {
+            if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Really reset?'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Reset'; }, 3000); return; }
+            Arcade.remove(SAVE); window.removeEventListener('beforeunload', persist); location.reload();
+        };
+
+        /* ================= RENDER ================= */
+        function drawResource(c, type, x, y, s) {
+            const cx = x + s / 2, cy = y + s / 2;
+            if (type === 'tree') {
+                c.fillStyle = '#5b3a1a'; c.fillRect(cx - s * 0.06, cy + s * 0.05, s * 0.12, s * 0.3);
+                c.fillStyle = '#166534'; c.beginPath(); c.arc(cx, cy - s * 0.04, s * 0.34, 0, Math.PI * 2); c.fill();
+                c.fillStyle = '#22c55e'; c.beginPath(); c.arc(cx - s * 0.1, cy - s * 0.12, s * 0.16, 0, Math.PI * 2); c.fill();
+                return;
+            }
+            const base = { stone: '#3f4756', iron: '#3b3633', copper: '#3a2a1f', coal: '#16181d' }[type];
+            const spot = { stone: '#94a3b8', iron: '#d6d3d1', copper: '#f97316', coal: '#475569' }[type];
+            c.fillStyle = base;
+            c.beginPath(); c.roundRect(x + s * 0.1, y + s * 0.14, s * 0.8, s * 0.72, s * 0.22); c.fill();
+            c.fillStyle = spot;
+            const h = ((x / s) * 31 + (y / s) * 17) >>> 0;
+            for (let i = 0; i < 5; i++) {
+                const a = ((h >> (i * 3)) & 7) / 8, b2 = ((h >> (i * 3 + 9)) & 7) / 8;
+                c.beginPath(); c.arc(x + s * (0.22 + a * 0.56), y + s * (0.26 + b2 * 0.48), s * 0.06, 0, Math.PI * 2); c.fill();
+            }
+        }
+
+        /* Terrain is pre-drawn into 16×16-tile chunk images (resources never change), so a big
+           zoomed-out factory costs a handful of drawImage calls instead of thousands of paths. */
+        const CH = 16, CPX = 24; // tiles per chunk, pixels per tile in the cache
+        const chunks = new Map();
+        function chunk(cx, cy) {
+            const k = cx + ',' + cy;
+            let c = chunks.get(k);
+            if (c) { chunks.delete(k); chunks.set(k, c); return c; }
+            c = document.createElement('canvas');
+            c.width = c.height = CH * CPX;
+            const g = c.getContext('2d');
+            const b = bounds();
+            for (let j = 0; j < CH; j++) for (let i = 0; i < CH; i++) {
+                const x = cx * CH + i, y = cy * CH + j;
+                if (x < b.min || y < b.min || x > b.max || y > b.max) continue;
+                const fresh = !(x >= 0 && y >= 0 && x < ORIG && y < ORIG);
+                g.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : '#0f1720');
+                g.fillRect(i * CPX, j * CPX, CPX, CPX);
+                const r = resAt(x, y);
+                if (r) drawResource(g, r, i * CPX, j * CPX, CPX);
+            }
+            chunks.set(k, c);
+            while (chunks.size > 90) chunks.delete(chunks.keys().next().value);
+            return c;
+        }
+
+        /* Machines are drawn once per type/direction into sprites and stamped. */
+        const sprites = new Map();
+        function sprite(type, dir) {
+            const k = type + dir;
+            let c = sprites.get(k);
+            if (c) return c;
+            c = document.createElement('canvas');
+            const s = T, scale = 2;
+            c.width = c.height = s * scale;
+            const g = c.getContext('2d');
+            g.scale(scale, scale);
+            const col = { drill: '#ca8a04', drill2: '#ea580c', drill3: '#0891b2', smelter: '#b91c1c', assembler: '#1d4ed8', assembler2: '#4338ca', storage: '#92400e', seller: '#15803d', splitter: '#7c3aed', lab: '#0f766e', generator: '#3f3f46', pole: '#57534e', solar: '#1e3a8a' }[type];
+            g.fillStyle = col;
+            g.beginPath(); g.roundRect(4, 4, s - 8, s - 8, 9); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(8, 7, s - 16, 4);
+            if (type === 'solar') { g.strokeStyle = 'rgba(147,197,253,0.6)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(4 + i * (s - 8) / 4, 6); g.lineTo(4 + i * (s - 8) / 4, s - 6); g.stroke(); } }
+            if (!isDrill(type)) {
+                g.font = `${s * 0.4}px "Segoe UI Emoji", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.fillText(BUILD[type].ic, s / 2, s / 2 + 1);
+            }
+            const arrow = (d) => {
+                g.save(); g.translate(s / 2, s / 2); g.rotate(d * Math.PI / 2);
+                g.fillStyle = '#fff';
+                g.beginPath(); g.moveTo(s * 0.42, 0); g.lineTo(s * 0.26, -s * 0.12); g.lineTo(s * 0.26, s * 0.12); g.closePath(); g.fill();
+                g.restore();
+            };
+            if (!['storage', 'seller', 'lab', 'generator', 'pole', 'solar'].includes(type)) {
+                if (type === 'splitter') { arrow((dir + 3) % 4); arrow((dir + 1) % 4); }
+                arrow(dir);
+            }
+            sprites.set(k, c);
+            return c;
+        }
+
+        function itemPos(b) {
+            const cx = b.x * T + T / 2, cy = b.y * T + T / 2;
+            const p = b.item.p;
+            const [fx, fy] = DV[b.item.f], [ox, oy] = DV[b.dir];
+            if (p < 0.5) { const k = p * 2; return { x: cx - fx * T / 2 * (1 - k), y: cy - fy * T / 2 * (1 - k) }; }
+            const k = (p - 0.5) * 2; return { x: cx + ox * T / 2 * k, y: cy + oy * T / 2 * k };
+        }
+        function drawItem(t, x, y, r, simple) {
+            ctx.fillStyle = ITEMS[t].c;
+            if (simple) { ctx.fillRect(x - r, y - r, r * 2, r * 2); return; }
+            ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            if (t === 'gear') { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, rr = i % 2 ? r : r * 0.72; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); }
+            else if (t.endsWith('ore') || t === 'stone' || t === 'coal') ctx.arc(x, y, r * 0.9, 0, Math.PI * 2);
+            else ctx.roundRect(x - r, y - r * 0.8, r * 2, r * 1.6, 3);
+            ctx.fill(); ctx.stroke();
+        }
+
+        function drawBelt(b) {
+            const x = b.x * T, y = b.y * T, s = T, cx = x + s / 2, cy = y + s / 2, t = b.type;
+            ctx.fillStyle = '#1f2937'; ctx.fillRect(x + 3, y + 3, s - 6, s - 6);
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(b.dir * Math.PI / 2);
+            ctx.fillStyle = t === 'fastbelt' ? '#38bdf8' : '#f59e0b';
+            ctx.fillRect(-s / 2 + 3, -s / 2 + 5, s - 6, 3); ctx.fillRect(-s / 2 + 3, s / 2 - 8, s - 6, 3);
+            if (S.cam.z > 0.45) {
+                ctx.strokeStyle = t === 'fastbelt' ? 'rgba(56,189,248,0.5)' : 'rgba(245,158,11,0.45)'; ctx.lineWidth = 3;
+                const off = ((time * (t === 'fastbelt' ? 4 : 2)) % 1) * (s / 2);
+                ctx.beginPath();
+                for (let k = -s; k < s / 2; k += s / 2) {
+                    const px = k + off;
+                    if (px < -s / 2 + 6 || px > s / 2 - 10) continue;
+                    ctx.moveTo(px, -s * 0.16); ctx.lineTo(px + s * 0.14, 0); ctx.lineTo(px, s * 0.16);
+                }
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawBuilding(b, ghost) {
+            if (isBelt(b.type)) return drawBelt(b);
+            const x = b.x * T, y = b.y * T, s = T, cx = x + s / 2, cy = y + s / 2;
+            ctx.drawImage(sprite(b.type, b.dir || 0), x, y, s, s);
+            if (isDrill(b.type)) {
+                ctx.save(); ctx.translate(cx, cy);
+                if ((b.active || 0) > 0 && !ghost) ctx.rotate(time * 6);
+                ctx.font = `${s * 0.4}px "Segoe UI Emoji", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(BUILD[b.type].ic, 0, 1);
+                ctx.restore();
+            }
+            if (ghost) return;
+            if ((b.active || 0) > 0 && (b.type === 'smelter' || b.type === 'generator')) { ctx.fillStyle = `rgba(251,146,60,${0.3 + 0.2 * Math.sin(time * 12)})`; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, Math.PI * 2); ctx.fill(); }
+            if ((b.flash || 0) > 0) { ctx.fillStyle = `rgba(250,204,21,${b.flash * 2})`; ctx.beginPath(); ctx.roundRect(x + 4, y + 4, s - 8, s - 8, 9); ctx.fill(); }
+            if (b.ob && b.ob.length >= 3 && b.type !== 'splitter' && b.type !== 'lab') { ctx.fillStyle = '#f87171'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
+            if (BUILD[b.type].power < 0) {
+                ctx.font = `${s * 0.26}px "Segoe UI Emoji", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(!b.net ? '🔌' : (b.pw || 0) < 0.5 ? '⚠️' : '⚡', x + 10, y + s - 10);
+            }
+            if (b.type === 'generator' && !(b.burn > 0) && !Object.keys(FUEL).some(f => (b.inp[f] || 0) > 0)) { ctx.fillStyle = '#f87171'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
+        }
+
+        function render() {
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            ctx.fillStyle = '#070b11'; ctx.fillRect(0, 0, VW, VH);
+            const z = S.cam.z, bd = bounds();
+            ctx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (VW / 2 - S.cam.x * z), DPR * (VH / 2 - S.cam.y * z));
+            const tl = toWorld(0, 0), br = toWorld(VW, VH);
+            const x0 = Math.max(bd.min, Math.floor(tl.x / T)), y0 = Math.max(bd.min, Math.floor(tl.y / T));
+            const x1 = Math.min(bd.max, Math.floor(br.x / T)), y1 = Math.min(bd.max, Math.floor(br.y / T));
+
+            if (z < 1.1) {
+                ctx.imageSmoothingEnabled = true;
+                for (let cy = Math.floor(y0 / CH); cy <= Math.floor(y1 / CH); cy++) for (let cx = Math.floor(x0 / CH); cx <= Math.floor(x1 / CH); cx++)
+                    ctx.drawImage(chunk(cx, cy), cx * CH * T, cy * CH * T, CH * T, CH * T);
+            } else {
+                for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+                    const fresh = !(x >= 0 && y >= 0 && x < ORIG && y < ORIG);
+                    ctx.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : '#0f1720');
+                    ctx.fillRect(x * T, y * T, T, T);
+                    const r = resAt(x, y);
+                    if (r) drawResource(ctx, r, x * T, y * T, T);
+                }
+            }
+            ctx.strokeStyle = 'rgba(245,158,11,0.35)'; ctx.lineWidth = 3 / z;
+            ctx.strokeRect(bd.min * T, bd.min * T, (bd.max - bd.min + 1) * T, (bd.max - bd.min + 1) * T);
+
+            const vis = [];
+            for (const b of B.values()) if (b.x >= x0 - 1 && b.x <= x1 + 1 && b.y >= y0 - 1 && b.y <= y1 + 1) vis.push(b);
+            // power lines between linked poles
+            ctx.strokeStyle = 'rgba(250,204,21,0.35)'; ctx.lineWidth = 2;
+            for (const b of vis) if (b.type === 'pole' && b.net) for (const o of b.net.nodes) if (o !== b && o.x * 1e4 + o.y > b.x * 1e4 + b.y && Math.max(Math.abs(o.x - b.x), Math.abs(o.y - b.y)) <= 6) {
+                ctx.beginPath(); ctx.moveTo(b.x * T + T / 2, b.y * T + T * 0.3); ctx.lineTo(o.x * T + T / 2, o.y * T + T * 0.3); ctx.stroke();
+            }
+            for (const b of vis) drawBuilding(b);
+            const simple = z < 0.5;
+            for (const b of vis) if (b.item) { const p = itemPos(b); drawItem(b.item.t, p.x, p.y, T * 0.15, simple); }
+            if (inspect) { ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.5 / z; ctx.strokeRect(inspect.x * T + 2, inspect.y * T + 2, T - 4, T - 4); }
+            if (inspect && (inspect.type === 'pole' || BUILD[inspect.type].power)) {
+                ctx.strokeStyle = 'rgba(250,204,21,0.35)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 2 / z;
+                const r = inspect.type === 'pole' ? 6 : 4;
+                ctx.strokeRect((inspect.x - r) * T, (inspect.y - r) * T, (r * 2 + 1) * T, (r * 2 + 1) * T); ctx.setLineDash([]);
+            }
+            if (guideTarget) {
+                const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+                ctx.strokeStyle = `rgba(251,191,36,${0.5 + pulse * 0.5})`; ctx.lineWidth = (3 + pulse * 2) / z;
+                ctx.beginPath(); ctx.arc(guideTarget.x * T + T / 2, guideTarget.y * T + T / 2, T * (0.65 + pulse * 0.15), 0, Math.PI * 2); ctx.stroke();
+            }
+
+            if (hover) {
+                if (tool !== 'hand' && tool !== 'demolish') {
+                    const why = canPlace(tool, hover.x, hover.y);
+                    ctx.globalAlpha = 0.55;
+                    drawBuilding({ type: tool, x: hover.x, y: hover.y, dir: placeDir }, true);
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = why ? '#f87171' : '#4ade80'; ctx.lineWidth = 2 / z;
+                    ctx.strokeRect(hover.x * T + 1, hover.y * T + 1, T - 2, T - 2);
+                    if (tool === 'pole' || BUILD[tool].power < 0) {
+                        const r = tool === 'pole' ? 6 : 4;
+                        ctx.strokeStyle = 'rgba(250,204,21,0.3)'; ctx.setLineDash([6, 6]);
+                        ctx.strokeRect((hover.x - r) * T, (hover.y - r) * T, (r * 2 + 1) * T, (r * 2 + 1) * T); ctx.setLineDash([]);
+                    }
+                } else {
+                    ctx.strokeStyle = tool === 'demolish' ? '#f87171' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2 / z;
+                    ctx.strokeRect(hover.x * T + 1, hover.y * T + 1, T - 2, T - 2);
+                }
+            }
+        }
+
+        function updateTip() {
+            const tip = $('tip');
+            if (!hover || pointerDown || panning) { tip.hidden = true; return; }
+            let text = '';
+            const b = get(hover.x, hover.y), r = resAt(hover.x, hover.y);
+            if (tool !== 'hand' && tool !== 'demolish') text = `${BUILD[tool].n} · ${costText(BUILD[tool].cost)} · R to rotate`;
+            else if (b) text = BUILD[b.type].n + (tool === 'demolish' ? ' · click to remove' : ' · click to inspect');
+            else if (r && tool === 'hand') text = RES[r].n + ' · hold to mine';
+            if (!text) { tip.hidden = true; return; }
+            tip.hidden = false;
+            tip.textContent = text;
+            tip.style.left = hover.sx + 'px'; tip.style.top = hover.sy + 'px';
+        }
+
+        /* ================= LOOP ================= */
+        let acc = 0, uiT = 0, saveT = 0, guideT = 0;
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            // keyboard panning
+            const pan = 600 * dt / S.cam.z;
+            if (keys.KeyW || keys.ArrowUp) S.cam.y -= pan;
+            if (keys.KeyS || keys.ArrowDown) S.cam.y += pan;
+            if (keys.KeyA || keys.ArrowLeft) S.cam.x -= pan;
+            if (keys.KeyD || keys.ArrowRight) S.cam.x += pan;
+            clampCam();
+
+            acc += dt;
+            let steps = 0;
+            while (acc >= TICK && steps++ < 8) { tick(TICK); acc -= TICK; }
+            if (acc > TICK * 8) acc = 0; // don't spiral after a long pause
+
+            const bar = $('mineBar');
+            if (mining) {
+                mining.t += dt * (has('hands') ? 2 : 1);
+                const p = { x: (mining.x * T + T / 2 - S.cam.x) * S.cam.z + VW / 2, y: (mining.y * T - S.cam.y) * S.cam.z + VH / 2 };
+                bar.hidden = false; bar.style.left = p.x + 'px'; bar.style.top = p.y + 'px';
+                bar.firstElementChild.style.width = Math.min(100, mining.t / 0.7 * 100) + '%';
+                if (mining.t >= 0.7) {
+                    const item = RES[resAt(mining.x, mining.y)].item;
+                    S.inv[item] = (S.inv[item] || 0) + 1;
+                    bump('gathered', item);
+                    mining.t = 0;
+                    Arcade.sfx('tick');
+                }
+            } else bar.hidden = true;
+
+            render();
+            uiT += dt;
+            if (uiT > 0.2) {
+                uiT = 0;
+                checkGoals();
+                renderStash();
+                refreshGoal();
+                refreshTechButtons();
+                refreshHotbarAfford();
+                refreshInspector();
+                updateTip();
+                const now = Date.now();
+                S.recentSales = S.recentSales.filter(s => now - s[0] < 60000);
+                Arcade.text('hCash', '$' + Arcade.fmt(S.cash));
+                Arcade.text('hIncome', '$' + Arcade.fmt(S.recentSales.reduce((a, s) => a + s[1], 0)) + '/min');
+                Arcade.text('hRp', Arcade.fmt(S.rp) + ' RP');
+                Arcade.text('hCount', B.size);
+                $('powerChip').hidden = !nets.length;
+                Arcade.text('hPower', `${Math.round(powerInfo.supply)}/${Math.round(powerInfo.demand)}W`);
+                $('powerChip').className = 'chip' + (powerInfo.demand > powerInfo.supply ? ' bad' : nets.length ? ' good' : '');
+            }
+            guideT += dt;
+            if (guideT > 1) { guideT = 0; refreshGuideTarget(); }
+            saveT += dt;
+            if (saveT > 8) { saveT = 0; persist(); }
+        });
+
+        /* ================= BOOT ================= */
+        load();
+        resize();
+        window.addEventListener('resize', resize);
+        window.addEventListener('beforeunload', persist);
+        renderHotbar();
+        renderSide();
+        renderStash();
+        renderGuide();
+        refreshGuideTarget();
+        if (!S.seenHelp) Arcade.show('helpOv');
+        loop.start();
+        window.__auto = { get S() { return S; }, place, buyTech, TECH, get B() { return B; }, tick, resAt }; // for automated tests
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicken Farming · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <link rel="stylesheet" href="farm.css">
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Chicken Farming</h1>
+        <div class="seg nav-seg" id="tabs">
+            <button class="btn sm" data-tab="farm">🐔 Farm</button>
+            <button class="btn sm" data-tab="market">🛒 Market</button>
+            <button class="btn sm" data-tab="hunt" hidden>🦊 Egg Hunt</button>
+            <button class="btn sm" data-tab="trips">🧭 Expeditions<span class="dotnote" id="tripDot" hidden></span></button>
+            <button class="btn sm" data-tab="golden">🪶 Golden Coop</button>
+            <button class="btn sm" data-tab="stars">⭐ Star Coop</button>
+        </div>
+        <div class="stats">
+            <span class="chip gold">Eggs <b id="hEggs">0</b></span>
+            <span class="chip bad" id="evilChip" hidden>Evil <b id="hEvil">0</b></span>
+            <span class="chip" id="cloverChip" hidden>🍀 <b id="hClovers">0</b></span>
+            <span class="chip" id="featherChip" hidden>🪶 <b id="hFeathers">0</b></span>
+            <span class="chip" id="starChip" hidden>⭐ <b id="hStars">0</b></span>
+            <span class="chip accent">Level <b id="hLevel">0</b></span>
+        </div>
+        <div class="actions">
+            <div class="seg" id="amtSeg" title="How many levels each buy button purchases">
+                <button class="btn sm" data-v="1">×1</button><button class="btn sm" data-v="10">×10</button><button class="btn sm" data-v="100">×100</button><button class="btn sm" data-v="max">Max</button>
+            </div>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <!-- ================= FARM ================= -->
+    <div class="page" data-view="farm">
+        <div class="two">
+            <section class="panel hero">
+                <h3>The Coop</h3>
+                <div class="eggs" id="eggs">0</div>
+                <div class="sub"><b id="eps">0</b> eggs / sec</div>
+                <div class="xp">
+                    <div class="row between tiny muted"><span>Farm level <b id="lvl">0</b></span><span><span id="exp">0</span> / <span id="expReq">0</span> XP</span></div>
+                    <div class="bar"><i id="xpBar"></i></div>
+                </div>
+                <div class="minis">
+                    <div class="mini"><small>Chickens</small><b id="chickens">1</b></div>
+                    <div class="mini"><small>Incubators</small><b id="incubators">0</b></div>
+                    <div class="mini"><small>Eggs / hen</small><b id="epc">1</b></div>
+                </div>
+                <div class="tap-target" id="coop" title="Tap to collect eggs">🐔</div>
+                <p class="tiny dim">Tap (or hold) the hen to collect eggs by hand (<b id="tapEggs">1</b> per tap)<span id="peckNote"></span></p>
+            </section>
+
+            <section class="panel hero" id="arena">
+                <h3>Chicken Arena</h3>
+                <div class="row between small"><b id="foeName">Chicken</b><span class="muted" id="foeLevel">Level 1</span></div>
+                <div class="bar hp big" id="hpWrap" style="margin:8px 0 4px"><i id="hpBar"></i></div>
+                <div class="row between tiny muted"><span id="hpText">10 / 10 HP</span><span id="killText">0 / 5 defeated</span></div>
+                <div style="margin:16px 0 6px"><div class="tap-target" id="foe" title="Tap to attack">🐔</div></div>
+                <p class="small muted" id="arenaNote">Tap the chicken to attack. Defeated chickens drop eggs.</p>
+                <div class="minis" style="margin-bottom:0;grid-template-columns:repeat(4,1fr)">
+                    <div class="mini"><small>Farmer DPS</small><b id="dps">0</b></div>
+                    <div class="mini"><small>Crit</small><b id="crit">8%</b></div>
+                    <div class="mini"><small>Crit dmg</small><b id="critx">×2</b></div>
+                    <div class="mini" title="One trophy every 25 arena levels: +3% farmer damage each"><small>Trophies</small><b id="trophies">0</b></div>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel evil-panel" id="evilPanel" hidden>
+            <h3>😈 The Dark Coop</h3>
+            <div class="minis" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin:0">
+                <div class="mini"><small>Evil chickens</small><b id="evilChickens">0</b></div>
+                <div class="mini"><small>Barn capacity</small><b id="evilCap">0</b></div>
+                <div class="mini"><small>Evil eggs</small><b id="evilEggs">0</b></div>
+                <div class="mini"><small>Evil eggs / sec</small><b id="evilRate">0</b></div>
+                <div class="mini"><small>Turn chance</small><b id="evilChance">0%</b></div>
+                <div class="mini"><small>Breeding / sec</small><b id="evilRepro">+0%</b></div>
+            </div>
+            <div class="bar evil" style="margin-top:10px"><i id="evilBar"></i></div>
+            <p class="tiny dim" style="margin:10px 0 0">Each second a hen may turn evil. Evil hens lay evil eggs (spent in the Evil Market) and are needed to summon arena foes past level 15. The flock breeds towards the <b>Dark Barn</b>'s capacity and can never grow past it.</p>
+        </section>
+
+        <section class="panel">
+            <div class="row between" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0">🤠 Farmers</h3>
+                <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" id="levelAllBtn" title="Spend eggs on the cheapest farmer levels first">⬆ Level all</button><button class="btn sm" id="perksAllBtn" title="Buy every unlocked, affordable perk">⭐ Buy all perks</button><button class="btn primary" id="hireBtn" hidden>Hire</button></div></div>
+            <div id="farmersLocked" class="locked">
+                <div class="big">🔒</div>
+                <p>Legendary farmers fight arena chickens for you, even while you're busy.</p>
+                <p class="small">Reach <b>farm level 20</b>, then buy the <b>Farmers</b> unlock in the <a href="#market">Market</a> for 100K eggs.</p>
+            </div>
+            <div class="farmers" id="farmers" style="margin-top:12px"></div>
+        </section>
+
+        <div class="danger-zone"><button class="btn sm danger" id="resetBtn">Delete save</button></div>
+    </div>
+
+    <!-- ================= MARKET ================= -->
+    <div class="page" data-view="market" hidden>
+        <div class="shop-grid">
+            <section class="panel">
+                <h3>🛒 Market <span class="dim">· costs eggs</span></h3>
+                <div class="up-list" id="normal"></div>
+            </section>
+            <section class="panel evil-panel">
+                <h3>😈 Evil Market <span class="dim">· costs evil eggs</span></h3>
+                <div class="up-list" id="evil"></div>
+            </section>
+            <section class="panel evil-panel" id="genPanel" hidden>
+                <h3>🏭 Generator Chain <span class="dim">· costs evil eggs · endless</span></h3>
+                <p class="tiny dim" style="margin:0 0 8px">Each tier produces the tier below it, all the way down to incubators. A new tier appears once you own the previous one.</p>
+                <div class="up-list" id="gens"></div>
+            </section>
+            <section class="panel">
+                <h3>🐓 Hen Breeds <span class="dim">· one-off · lost on retirement</span></h3>
+                <div class="up-list" id="breeds"></div>
+            </section>
+            <section class="panel">
+                <h3>🪙 Unlocks</h3>
+                <div class="up-list" id="unlocks"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- ================= EGG HUNT ================= -->
+    <div class="page" data-view="hunt" hidden>
+        <section class="panel hunt-panel">
+            <div class="row between"><h3 style="margin:0">🦊 Egg Hunt</h3><span class="tiny muted">Fully manual · nothing is earned while you're away · never resets</span></div>
+            <div class="minis" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
+                <div class="mini"><small>Clovers</small><b id="hCl">0</b></div>
+                <div class="mini"><small>Hunter rank</small><b id="hRank">1</b></div>
+                <div class="mini"><small>Fields cleared</small><b id="hCleared">0</b></div>
+                <div class="mini"><small>Perfect clears</small><b id="hPerfect">0</b></div>
+                <div class="mini" title="From Clover Basket, golden perks, artifacts and star upgrades"><small>Clover bonus</small><b id="hMult">×1</b></div>
+            </div>
+            <div class="row between tiny muted"><span>Rank <b id="hRank2">1</b> → <b id="hRankNext">2</b></span><span id="hXp">0 / 0 XP</span></div>
+            <div class="bar"><i id="hXpBar"></i></div>
+            <p class="small muted" style="margin:10px 0 0">Dig up a field. Every safe tile pays <b>clovers</b>; hidden <b>golden eggs</b> pay a lot more. A number tells you how many foxes touch that tile. Hit a fox and you lose a heart — run out and the hunt ends (you keep what you dug). Clear every safe tile for a big bonus, double if you never got bitten. Spend clovers on perks that make your <b>whole farm</b> stronger.</p>
+        </section>
+        <section class="panel">
+            <h3>🗺️ Fields</h3>
+            <div class="field-grid" id="fieldList"></div>
+        </section>
+        <section class="panel">
+            <div class="row between hunt-hud">
+                <div class="row" style="gap:14px;flex-wrap:wrap"><span id="hHearts" class="hearts" title="Hearts left"></span><span class="small muted">🦊 left <b id="hFoxes">0</b></span><span class="small muted">🍀 this hunt <b id="hEarned">0</b></span></div>
+                <div class="row" style="gap:8px"><button class="btn sm" id="flagBtn" title="Touch devices can also long-press a tile">🚩 Flag mode</button><button class="btn sm" id="huntAgain">New hunt</button></div>
+            </div>
+            <div class="hunt-msg" id="huntMsg"></div>
+            <div class="hunt-wrap"><div class="hunt-board" id="huntBoard"></div></div>
+            <p class="tiny dim" style="text-align:center;margin:8px 0 0">Click to dig · right-click (or long-press) to flag a fox · click a number with enough flags around it to dig the rest</p>
+        </section>
+        <div class="shop-grid">
+            <section class="panel"><h3>🏕️ Hunting skills <span class="dim">· costs clovers</span></h3><div class="up-list" id="huntSkills"></div></section>
+            <section class="panel"><h3>🌾 Farm boosts <span class="dim">· costs clovers · permanent</span></h3><div class="up-list" id="huntFarm"></div></section>
+        </div>
+    </div>
+
+    <!-- ================= EXPEDITIONS ================= -->
+    <div class="page" data-view="trips" hidden>
+        <section class="panel">
+            <h3>🧭 Expeditions</h3>
+            <p class="small muted" style="margin-top:0">Send a flock of hens exploring. They come back with eggs, evil eggs and sometimes an <b>artifact</b> — artifacts are permanent and survive retirement. Only one expedition can run at a time.</p>
+            <div id="tripActive"></div>
+            <div class="trip-grid" id="tripList"></div>
+        </section>
+        <section class="panel">
+            <h3>🏺 Artifacts</h3>
+            <div class="art-grid" id="artList"></div>
+        </section>
+    </div>
+
+    <!-- ================= GOLDEN COOP ================= -->
+    <div class="page" data-view="golden" hidden>
+        <section class="panel golden-panel">
+            <h3>🪶 Retire the farm</h3>
+            <div class="retire">
+                <div>
+                    <p class="small" style="margin-top:0">Hand the farm to the next generation. You lose eggs, chickens, upgrades, farmers and farm level — but earn <b>Golden Feathers</b>. Every unspent feather gives <b>+5% eggs and damage</b>, or spend them on permanent perks below.</p>
+                    <div class="minis" style="grid-template-columns:repeat(3,1fr)">
+                        <div class="mini"><small>Feathers</small><b id="gFeathers">0</b></div>
+                        <div class="mini"><small>Bonus</small><b id="gBonus">+0%</b></div>
+                        <div class="mini"><small>Retirements</small><b id="gRebirths">0</b></div>
+                    </div>
+                </div>
+                <div class="retire-box">
+                    <small>Retiring now gives</small>
+                    <div class="gain" id="gGain">0 🪶</div>
+                    <button class="btn primary lg" id="retireBtn">Retire</button>
+                    <small id="gNote"></small>
+                </div>
+            </div>
+        </section>
+        <section class="panel">
+            <h3>✨ Golden perks <span class="dim">· costs feathers</span></h3>
+            <div class="up-list golden-list" id="goldList"></div>
+        </section>
+    </div>
+
+    <!-- ================= STAR COOP ================= -->
+    <div class="page" data-view="stars" hidden>
+        <section class="panel golden-panel">
+            <h3>⭐ Ascend to the Star Coop</h3>
+            <div class="retire">
+                <div>
+                    <p class="small" style="margin-top:0">The second prestige. Ascending resets <b>everything a retirement resets, plus your golden feathers and golden perks</b> — but pays <b>Star Eggs</b> for powerful permanent upgrades. Artifacts, stats and star upgrades are kept.</p>
+                    <div class="minis" style="grid-template-columns:repeat(3,1fr)">
+                        <div class="mini"><small>Star eggs</small><b id="sStars">0</b></div>
+                        <div class="mini"><small>Feathers this ascension</small><b id="sFeathers">0</b></div>
+                        <div class="mini"><small>Ascensions</small><b id="sAsc">0</b></div>
+                    </div>
+                </div>
+                <div class="retire-box">
+                    <small>Ascending now gives</small>
+                    <div class="gain" id="sGain">0 ⭐</div>
+                    <button class="btn primary lg" id="ascendBtn">Ascend</button>
+                    <small id="sNote"></small>
+                </div>
+            </div>
+        </section>
+        <section class="panel">
+            <h3>🌌 Star upgrades <span class="dim">· costs star eggs · permanent</span></h3>
+            <div class="up-list golden-list" id="starList"></div>
+        </section>
+    </div>
+
+    <div class="overlay fixed" id="upOv" hidden>
+        <div class="modal">
+            <h2 id="upTitle">Upgrades</h2>
+            <p class="small" id="upSub"></p>
+            <div class="modal-list" id="upList"></div>
+            <div class="actions"><button class="btn" id="upClose">Close</button></div>
+        </div>
+    </div>
+    <div class="overlay fixed" id="lootOv" hidden>
+        <div class="modal">
+            <h2 class="good" id="lootTitle">Expedition back!</h2>
+            <div class="loot-icon" id="lootIcon">🌼</div>
+            <div class="stat-grid" id="lootStats"></div>
+            <p id="lootArt"></p>
+            <div class="actions"><button class="btn primary" id="lootClose">Nice!</button><button class="btn" id="lootAgain">🔁 Send again</button></div>
+        </div>
+    </div>
+
+    <script src="../_shared/arcade.js"></script>
+    <script src="game.js"></script>
+    <script src="hunt.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        let builtFarmers = -1, openFarmer = null, lastTrip = null;
+        const TABS = ['farm', 'market', 'hunt', 'trips', 'golden', 'stars'];
+        let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'farm';
+
+        function showTab(t) {
+            tab = t;
+            document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== t; });
+            document.querySelectorAll('#tabs .btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+            if (location.hash.slice(1) !== t) history.replaceState(null, '', '#' + t);
+            refresh();
+        }
+        document.querySelectorAll('#tabs .btn').forEach(b => b.onclick = () => { Arcade.sfx('click'); showTab(b.dataset.tab); });
+        window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (TABS.includes(t) && t !== tab) showTab(t); });
+
+        function floater(target, text, crit) {
+            const r = target.getBoundingClientRect();
+            if (!r.width) return;
+            const f = document.createElement('div');
+            f.className = 'floater' + (crit ? ' crit' : '');
+            f.textContent = text;
+            f.style.left = (r.left + r.width / 2 + Arcade.rand(-30, 30) + window.scrollX) + 'px';
+            f.style.top = (r.top + Arcade.rand(0, 20) + window.scrollY) + 'px';
+            f.style.position = 'absolute';
+            document.body.appendChild(f);
+            setTimeout(() => f.remove(), 900);
+        }
+
+        // hooks called by game.js
+        function onChickenKilled(reward, boss) {
+            if (tab !== 'farm') return;
+            floater($('foe'), '+' + fmt(reward) + ' 🥚');
+            Arcade.sfx(boss ? 'win' : 'coin');
+        }
+        function onFarmerHit(dmg, crit) {
+            if (tab !== 'farm') return;
+            if (crit) floater($('foe'), 'CRIT ' + fmt(dmg), true);
+            $('foe').classList.remove('hit'); void $('foe').offsetWidth; $('foe').classList.add('hit');
+        }
+
+        /* ---------- Farm ---------- */
+        // hold a tap target to keep tapping (about 8 taps a second)
+        function holdable(el, fn) {
+            let timer = null;
+            const stop = () => { clearInterval(timer); timer = null; };
+            el.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); stop(); timer = setInterval(fn, 125); });
+            for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, stop);
+        }
+        function onAutoPeck(n, dmg) {
+            if (tab !== 'farm') return;
+            floater($('coop'), '🐦 +' + fmt(n));
+            $('coop').classList.remove('hit'); void $('coop').offsetWidth; $('coop').classList.add('hit');
+            if (dmg) { floater($('foe'), '🐦 ' + fmt(dmg)); $('foe').classList.remove('hit'); void $('foe').offsetWidth; $('foe').classList.add('hit'); }
+        }
+        function coopTap() {
+            const n = act(() => {
+                const n = tapEggs();
+                gameData.eggs += n; addExp(n); gameData.stats.taps++; gameData.stats.lifetimeEggs += n;
+                levelCheck();
+                return n;
+            });
+            floater($('coop'), '+' + fmt(n));
+            Arcade.sfx('pop');
+            refresh();
+        }
+        function foeTap() {
+            const res = act(() => {
+                const c = gameData.combatData;
+                if (c.currentHp <= 0) { spawnNextChicken(); if (c.currentHp <= 0) return null; }
+                const crit = Math.random() * 100 < critChance();
+                const dmg = tapDamage() * (crit ? critDamage() : 1);
+                damageChicken(dmg, crit);
+                return { dmg, crit };
+            });
+            if (!res) { Arcade.toast('You need evil chickens to summon more foes', 'bad'); return; }
+            floater($('foe'), (res.crit ? 'CRIT ' : '') + fmt(res.dmg), res.crit);
+            $('foe').classList.remove('hit'); void $('foe').offsetWidth; $('foe').classList.add('hit');
+            Arcade.sfx('hit');
+            refresh();
+        }
+        holdable($('coop'), coopTap);
+        holdable($('foe'), foeTap);
+
+        $('hireBtn').onclick = () => { if (hireAllFarmers()) refresh(); };
+        $('levelAllBtn').onclick = () => { levelAllFarmers(); refresh(); };
+        $('perksAllBtn').onclick = () => { buyAllFarmerPerks(); refresh(); };
+
+        function buildFarmers() {
+            const host = $('farmers');
+            host.innerHTML = '';
+            for (let i = 0; i < gameData.AmountOfFarmersUnlocked; i++) {
+                const k = FARMER_KEYS[i], d = farmerData[k];
+                const card = document.createElement('div');
+                card.className = 'card farmer';
+                card.innerHTML = `
+                    <div class="head"><div class="icon">${d.icon}</div><div><div class="name">${d.name}</div><div class="meta">Lv <b data-f="lvl"></b> · <b data-f="dmg"></b> dmg/s</div></div></div>
+                    <div class="btns">
+                        <button class="btn sm primary" data-f="up1"></button>
+                        <button class="btn sm" data-f="upMax"></button>
+                        <button class="btn sm ghost wide" data-f="perks"></button>
+                    </div>`;
+                card.querySelector('[data-f=up1]').onclick = () => { upgradeFarmer(k, 1); refresh(); };
+                card.querySelector('[data-f=upMax]').onclick = () => { upgradeFarmer(k, maxAffordable(k)); refresh(); };
+                card.querySelector('[data-f=perks]').onclick = () => { openFarmer = k; showPerks(); };
+                card.dataset.key = k;
+                host.appendChild(card);
+            }
+            builtFarmers = gameData.AmountOfFarmersUnlocked;
+        }
+
+        function showPerks() {
+            const k = openFarmer, d = farmerData[k], s = gameData.Farmers[k];
+            $('upTitle').textContent = d.icon + ' ' + d.name;
+            $('upSub').textContent = `Level ${s.level} · personal multiplier ×${s.damageMultiplier.toFixed(2)}`;
+            const list = $('upList');
+            list.innerHTML = '';
+            for (const [uk, u] of Object.entries(d.Upgrades)) {
+                const owned = s.UpgradesUnlocked[uk], ready = s.level >= u.levelReq;
+                const effect = u.buffType === 'Damage' ? `+${u.buffAmount * 100}% ${d.name.split(' ')[0]} damage`
+                    : u.buffType === 'AllDamage' ? `+${u.buffAmount * 100}% damage for all farmers`
+                    : u.buffType === 'CritChance' ? `+${u.buffAmount}% crit chance` : `+${u.buffAmount}× crit damage`;
+                const row = document.createElement('div');
+                row.className = 'up-item' + (owned ? ' owned' : !ready ? ' locked-item' : '');
+                row.innerHTML = `<span class="ic">${owned ? '✅' : ready ? '⭐' : '🔒'}</span><b>${u.name}</b><button class="btn sm ${owned ? '' : 'primary'}"></button><small>${effect} · needs Lv ${u.levelReq}</small>`;
+                const b = row.querySelector('button');
+                b.textContent = owned ? 'Owned' : '🥚 ' + fmt(u.cost);
+                b.disabled = owned || !ready || gameData.eggs < u.cost;
+                b.onclick = () => { if (buyFarmerUpgrade(k, uk)) { showPerks(); refresh(); } };
+                list.appendChild(row);
+            }
+            Arcade.show('upOv');
+        }
+        $('upClose').onclick = () => { Arcade.hide('upOv'); openFarmer = null; };
+
+        let resetArmed = false;
+        $('resetBtn').onclick = () => {
+            if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Tap again to delete everything'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Delete save'; }, 3000); return; }
+            deleteSave();
+        };
+
+        /* ---------- Market ---------- */
+        const marketRows = [];
+        function buildMarket() {
+            for (const [hostId, shop, list] of [['normal', 'Normal', Upgrades.Market], ['evil', 'Evil', Upgrades.Evil]]) {
+                const host = $(hostId);
+                for (const u of list) {
+                    const row = document.createElement('div');
+                    row.className = 'up-item';
+                    row.innerHTML = `<span class="ic">${u.icon}</span><b></b><button class="btn sm primary"></button><small></small>`;
+                    row.querySelector('button').onclick = () => { if (buyUpgrade(shop, u.id)) refresh(); };
+                    host.appendChild(row);
+                    marketRows.push({ row, u, shop });
+                }
+            }
+            for (const b of BREEDS) {
+                const row = document.createElement('div');
+                row.className = 'up-item';
+                row.innerHTML = `<span class="ic">${b.icon}</span><b></b><button class="btn sm primary"></button><small></small>`;
+                row.querySelector('button').onclick = () => { if (buyBreed(b.id)) refresh(); };
+                $('breeds').appendChild(row);
+                marketRows.push({ row, breed: b });
+            }
+            for (const key of Object.keys(gameData.Unlocks)) {
+                const row = document.createElement('div');
+                row.className = 'up-item';
+                row.innerHTML = `<span class="ic">${key === 'Hunt' ? '🦊' : '🤠'}</span><b></b><button class="btn sm primary"></button><small></small>`;
+                row.querySelector('button').onclick = () => { if (buyUnlock(key)) refresh(); };
+                $('unlocks').appendChild(row);
+                marketRows.push({ row, key });
+            }
+        }
+        let genShown = 0;
+        function refreshGens() {
+            const host = $('gens');
+            const tiers = genTiersShown();
+            $('genPanel').hidden = gameData.Level < genLevelReq(2) - 10 && !Object.keys(gameData.Gens).length;
+            if (genShown !== tiers.length || host.children.length !== tiers.length) {
+                host.innerHTML = '';
+                for (const t of tiers) {
+                    const row = document.createElement('div');
+                    row.className = 'up-item'; row.dataset.t = t;
+                    row.innerHTML = `<span class="ic">🏭</span><b></b><button class="btn sm primary"></button><small></small>`;
+                    row.querySelector('button').onclick = () => { if (buyGen(t)) refresh(); };
+                    host.appendChild(row);
+                }
+                genShown = tiers.length;
+            }
+            for (const row of host.children) {
+                const t = +row.dataset.t, open = genUnlocked(t), q = quoteFor(genCostAt(t), genBought(t), Infinity, gameData.EvilEggs);
+                row.querySelector('b').textContent = `${genName(t)} · ${fmt(genCount(t))}`;
+                row.querySelector('small').textContent = open ? `Makes ${t === 2 ? 'Incubator Generators' : genName(t - 1) + 's'} at 0.2 per second each · bought ${genBought(t)}`
+                    : `Requires farm level ${genLevelReq(t)} and ${t === 2 ? 'an Incubator Generator' : 'the previous tier'}`;
+                row.className = 'up-item' + (open ? '' : ' locked-item');
+                const b = row.querySelector('button');
+                b.textContent = open ? quoteLabel(q, '😈') : '🔒 Lv ' + genLevelReq(t);
+                b.disabled = !open || !q.n;
+            }
+        }
+        function refreshMarket() {
+            refreshGens();
+            for (const r of marketRows) {
+                const b = r.row.querySelector('button'), title = r.row.querySelector('b'), sub = r.row.querySelector('small');
+                if (r.breed) {
+                    const br = r.breed, owned = !!gameData.Breeds[br.id], locked = gameData.Level < br.lvl, cost = breedCost(br);
+                    const m = 1 + (br.mult - 1) * (1 + 0.25 * sLvl('breedStar'));
+                    title.textContent = `${br.name} · ×${+m.toFixed(2)} eggs`;
+                    sub.textContent = locked ? `Requires farm level ${br.lvl}` : owned ? 'Laying happily' : `Multiplies all egg output by ×${+m.toFixed(2)}`;
+                    r.row.className = 'up-item' + (owned ? ' owned' : locked ? ' locked-item' : '');
+                    b.textContent = owned ? 'Owned' : locked ? '🔒 Lv ' + br.lvl : '🥚 ' + fmt(cost);
+                    b.disabled = owned || locked || gameData.eggs < cost;
+                    continue;
+                }
+                if (r.key) {
+                    const u = gameData.Unlocks[r.key];
+                    const locked = gameData.Level < u.lvlReq;
+                    title.textContent = u.name;
+                    sub.textContent = locked ? `Requires farm level ${u.lvlReq}` : u.desc;
+                    r.row.className = 'up-item' + (u.Unlocked ? ' owned' : locked ? ' locked-item' : '');
+                    b.textContent = u.Unlocked ? 'Unlocked' : locked ? '🔒 Lv ' + u.lvlReq : '🥚 ' + fmt(u.Cost);
+                    b.disabled = u.Unlocked || locked || gameData[u.CostType] < u.Cost;
+                    continue;
+                }
+                const { u, shop } = r;
+                const lvl = gameData.Upgrades[shop][u.id].lvl;
+                const locked = gameData.Level < u.levelReq;
+                const maxed = lvl >= u.maxLevel;
+                const cur = shop === 'Evil' ? gameData.EvilEggs : gameData.eggs;
+                const q = quoteFor(upgCostAt(u), lvl, u.maxLevel, cur);
+                title.textContent = u.maxLevel === Infinity ? `${u.name} · Lv ${lvl}` : `${u.name} · ${lvl}/${u.maxLevel}`;
+                sub.textContent = locked ? `Requires farm level ${u.levelReq}` : u.desc;
+                r.row.className = 'up-item' + (maxed ? ' owned' : locked ? ' locked-item' : '');
+                b.textContent = maxed ? 'MAX' : locked ? '🔒 Lv ' + u.levelReq : quoteLabel(q, shop === 'Evil' ? '😈' : '🥚');
+                b.disabled = maxed || locked || !q.n;
+            }
+        }
+
+        /* ---------- Expeditions ---------- */
+        function refreshTrips() {
+            const g = gameData, x = g.expedition;
+            const act0 = $('tripActive');
+            if (x) {
+                const e = EXPEDITIONS.find(y => y.id === x.id);
+                const left = Math.max(0, x.end - Date.now());
+                const pct = Math.min(100, (1 - left / (x.end - x.start)) * 100);
+                act0.innerHTML = `<div class="trip-run"><span class="ti">${e.icon}</span><div class="grow"><b>${e.name}</b> · ${fmt(x.sent)} hens away<div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div><small class="muted">${left ? Arcade.time(left / 1000) + ' left' : 'Back home!'}</small></div><button class="btn primary" id="collectBtn" ${left ? 'disabled' : ''}>Collect</button></div>`;
+                $('collectBtn').onclick = () => {
+                    const r = collectExpedition();
+                    if (!r) return;
+                    lastTrip = r.e.id;
+                    $('lootIcon').textContent = r.e.icon;
+                    $('lootTitle').textContent = r.e.name + ' trip done!';
+                    $('lootStats').innerHTML = `<div><small>Eggs</small><b>${fmt(r.eggs)}</b></div><div><small>Evil eggs</small><b>${fmt(r.evil)}</b></div>`;
+                    if (r.artifact) { const A = ARTIFACTS[r.artifact]; $('lootArt').innerHTML = `<span class="gold">Found an artifact: ${A.icon} <b>${A.name}</b> (now level ${gameData.artifacts[r.artifact]})</span><br><small>${A.desc} per level</small>`; }
+                    else $('lootArt').textContent = 'No artifact this time.';
+                    Arcade.show('lootOv');
+                    refresh();
+                };
+            } else act0.innerHTML = '';
+            $('tripDot').hidden = !(x && Date.now() >= x.end);
+            const list = $('tripList');
+            list.innerHTML = '';
+            for (const e of EXPEDITIONS) {
+                const locked = g.Level < e.lvl;
+                const d = document.createElement('div');
+                d.className = 'trip' + (locked ? ' locked-item' : '');
+                const mins = expeditionMs(e) / 60000;
+                d.innerHTML = `<div class="ti">${e.icon}</div><b>${e.name}</b>
+                    <small>${mins >= 60 ? (mins / 60).toFixed(1).replace('.0', '') + ' h' : Math.round(mins) + ' min'} · sends ${fmt(expeditionSend(e))} hens</small>
+                    <small>${Math.round(e.art * 100)}% artifact chance${e.evil ? ' · evil eggs' : ''}</small>
+                    <button class="btn sm primary"></button>`;
+                const b = d.querySelector('button');
+                b.textContent = locked ? `🔒 Farm lv ${e.lvl}` : x ? 'Busy' : 'Send';
+                b.disabled = locked || !!x || g.chickens < expeditionSend(e) + 1;
+                b.onclick = () => { if (startExpedition(e.id)) refresh(); };
+                list.appendChild(d);
+            }
+            const al = $('artList');
+            al.innerHTML = '';
+            for (const [id, A] of Object.entries(ARTIFACTS)) {
+                const lv = aLvl(id);
+                const d = document.createElement('div');
+                d.className = 'art' + (lv ? '' : ' missing');
+                d.innerHTML = `<span class="ti">${lv ? A.icon : '❔'}</span><b>${lv ? A.name : '???'}</b><small>${lv ? `Lv ${lv}/${A.max} · ${A.desc} each` : 'Not found yet'}</small>`;
+                al.appendChild(d);
+            }
+        }
+        $('lootClose').onclick = () => Arcade.hide('lootOv');
+        $('lootAgain').onclick = () => { Arcade.hide('lootOv'); if (lastTrip && startExpedition(lastTrip)) refresh(); else Arcade.toast("Can't send that trip right now", 'bad'); };
+
+        /* ---------- Egg Hunt ---------- */
+        const huntCells = [], huntRows = [];
+        let flagMode = false, builtBoard = null, lastPress = 0;
+        const CELL_EMOJI = { flag: '🚩', fox: '🦊', egg: '🥚' };
+        function buildHunt() {
+            for (const [hostId, grp] of [['huntSkills', 'skill'], ['huntFarm', 'farm']]) {
+                for (const p of HUNT_PERKS.filter(x => x.grp === grp)) {
+                    const row = document.createElement('div');
+                    row.className = 'up-item';
+                    row.innerHTML = `<span class="ic">${p.icon}</span><b></b><button class="btn sm primary"></button><small>${p.desc}</small>`;
+                    row.querySelector('button').onclick = () => { if (buyHuntPerk(p.id)) refresh(); };
+                    $(hostId).appendChild(row);
+                    huntRows.push({ row, p });
+                }
+            }
+            const fl = $('fieldList');
+            for (const f of FIELDS) {
+                const d = document.createElement('button');
+                d.className = 'field';
+                d.innerHTML = `<span class="fi">${f.icon}</span><b>${f.name}</b><small>${f.w}×${f.h} · ${f.foxes} foxes</small><small class="fr"></small>`;
+                d.onclick = () => startField(f.id);
+                fl.appendChild(d);
+            }
+            const host = $('huntBoard');
+            host.addEventListener('click', (e) => {
+                const el = e.target.closest('.hcell');
+                if (!el || Date.now() - lastPress < 0) return;
+                if (el._lp) { el._lp = false; return; }
+                huntAct(+el.dataset.i, flagMode ? 'flag' : 'dig');
+            });
+            host.addEventListener('contextmenu', (e) => { e.preventDefault(); const el = e.target.closest('.hcell'); if (el) huntAct(+el.dataset.i, 'flag'); });
+            // long-press = flag (touch)
+            let timer = null;
+            host.addEventListener('pointerdown', (e) => {
+                const el = e.target.closest('.hcell');
+                if (!el || e.pointerType === 'mouse') return;
+                timer = setTimeout(() => { el._lp = true; huntAct(+el.dataset.i, 'flag'); }, 420);
+            });
+            for (const ev of ['pointerup', 'pointercancel', 'pointerleave', 'pointermove']) host.addEventListener(ev, (e) => { if (ev === 'pointermove' && e.pointerType === 'mouse') return; clearTimeout(timer); });
+            $('flagBtn').onclick = () => { flagMode = !flagMode; $('flagBtn').classList.toggle('primary', flagMode); };
+            $('huntAgain').onclick = () => startField(board ? board.fid : 1);
+            window.addEventListener('resize', sizeHunt);
+        }
+// in-page replacement for confirm(): browsers can permanently suppress confirm() dialogs, which made buttons silently do nothing
+        let _armed = null;
+        function sureTwice(msg) {
+            if (_armed === msg) { _armed = null; return true; }
+            _armed = msg; Arcade.toast(msg + ' Click again to confirm.', '', 2500);
+            setTimeout(() => { if (_armed === msg) _armed = null; }, 3000);
+            return false;
+        }
+        function startField(fid) {
+            const f = fieldOf(fid);
+            if (!fieldOpen(f)) return;
+            if (board && !board.over && board.safeRev > 0 && !sureTwice('Abandon the hunt in progress?')) return;
+            if (board && !board.over && board.safeRev > 0) {
+                // walking away counts as a finished hunt (the clovers were already paid out as you dug)
+                act(() => { gameData.hunt.hunts++; });
+            }
+            huntStart(fid);
+            Arcade.sfx('select');
+            builtBoard = null;
+            refresh();
+        }
+        function huntAct(i, kind) {
+            if (!board || board.over) return;
+            let res = null;
+            const el = huntCells[i];
+            if (kind === 'flag') { if (huntFlag(i)) Arcade.sfx('tick'); }
+            else if (board.rev[i] === 1) res = huntChord(i);
+            else res = huntReveal(i);
+            if (res) {
+                if (res.hit) { Arcade.sfx('bad'); $('huntBoard').classList.remove('bite'); void $('huntBoard').offsetWidth; $('huntBoard').classList.add('bite'); }
+                else if (res.eggs) Arcade.sfx('win');
+                else Arcade.sfx('pop');
+                if (res.clovers) floater(el, '+' + fmt(res.clovers) + ' 🍀');
+                if (board.over) endHunt();
+            }
+            refresh();
+        }
+        function endHunt() {
+            const b = board;
+            if (b.won) {
+                Arcade.sfx('win');
+                Arcade.toast(b.hits === 0 ? `🏆 Perfect clear! Bonus +${fmt(b.bonus)} 🍀` : `Field cleared! Bonus +${fmt(b.bonus)} 🍀`, 'gold', 3500);
+            } else { Arcade.sfx('die'); Arcade.toast('Out of hearts — the foxes win this one.', 'bad', 3000); }
+        }
+        function sizeHunt() {
+            if (!board) return;
+            const wrap = $('huntBoard').parentElement;
+            const avail = wrap.clientWidth - 12;
+            if (avail <= 0) return;
+            const cs = Math.max(20, Math.min(42, Math.floor((avail - (board.w - 1) * 3) / board.w)));
+            $('huntBoard').style.setProperty('--cs', cs + 'px');
+        }
+        function buildHuntBoard() {
+            const host = $('huntBoard');
+            host.innerHTML = '';
+            huntCells.length = 0;
+            if (!board) { host.style.gridTemplateColumns = ''; host.innerHTML = '<div class="hunt-empty">Pick a field above to start a hunt.</div>'; builtBoard = 'none'; return; }
+            host.style.gridTemplateColumns = `repeat(${board.w}, var(--cs, 32px))`;
+            for (let i = 0; i < board.n; i++) {
+                const c = document.createElement('button');
+                c.className = 'hcell'; c.dataset.i = i;
+                host.appendChild(c); huntCells.push(c);
+            }
+            builtBoard = board;
+            sizeHunt();
+        }
+        function refreshHunt() {
+            const h = gameData.hunt;
+            $('hCl').textContent = fmt(h.clovers);
+            $('hRank').textContent = h.rank; $('hRank2').textContent = h.rank; $('hRankNext').textContent = h.rank + 1;
+            $('hCleared').textContent = fmt(h.cleared); $('hPerfect').textContent = fmt(h.perfect);
+            $('hMult').textContent = '×' + +huntMult().toFixed(2);
+            $('hXp').textContent = `${fmt(h.xp)} / ${fmt(rankXp(h.rank))} XP`;
+            $('hXpBar').style.width = Math.min(100, h.xp / rankXp(h.rank) * 100) + '%';
+            [...$('fieldList').children].forEach((d, k) => {
+                const f = FIELDS[k], open = fieldOpen(f);
+                d.disabled = !open;
+                d.classList.toggle('on', !!board && board.fid === f.id);
+                d.querySelector('.fr').textContent = open ? `🍀 ${fmt(f.per * huntMult())} / tile` : `🔒 Rank ${f.rank}`;
+            });
+            for (const { row, p } of huntRows) {
+                const lv = hLvl(p.id), maxed = lv >= p.max, q = quoteFor(huntCostAt(p), lv, p.max, h.clovers);
+                row.querySelector('b').textContent = `${p.name} · ${lv}/${p.max}`;
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : quoteLabel(q, '🍀');
+                b.disabled = maxed || !q.n;
+            }
+            if (builtBoard !== board) buildHuntBoard();
+            if (!board) { $('hHearts').textContent = ''; $('hFoxes').textContent = '0'; $('hEarned').textContent = '0'; $('huntMsg').textContent = ''; return; }
+            const b = board;
+            $('hHearts').textContent = '❤️'.repeat(Math.max(0, b.hearts)) + '🖤'.repeat(b.maxHearts - Math.max(0, b.hearts));
+            $('hFoxes').textContent = Math.max(0, huntFoxesLeft());
+            $('hEarned').textContent = fmt(b.earned);
+            $('huntMsg').textContent = b.over ? (b.won ? (b.hits === 0 ? '🏆 Perfect clear!' : '✅ Field cleared!') : '💀 Out of hearts') : !b.placed ? 'Dig anywhere to begin — your first dig is always safe.' : '';
+            for (let i = 0; i < b.n; i++) {
+                const c = huntCells[i];
+                let cls = 'hcell', txt = '';
+                if (b.rev[i] === 1) {
+                    cls += ' open n' + b.num[i] + (b.egg[i] ? ' egg' : '');
+                    txt = b.egg[i] ? '🥚' : (b.num[i] || '');
+                } else if (b.rev[i] === 2) { cls += ' open fox'; txt = '🦊'; }
+                else if (b.over && b.fox[i] && !b.flag[i]) { cls += ' open ghost'; txt = '🦊'; }
+                else if (b.over && b.flag[i] && !b.fox[i]) { cls += ' wrong'; txt = '❌'; }
+                else if (b.flag[i]) { cls += ' flag'; txt = '🚩'; }
+                if (c.className !== cls) c.className = cls;
+                if (c.textContent !== String(txt)) c.textContent = txt;
+            }
+        }
+
+        /* ---------- Golden coop ---------- */
+        const goldRows = [];
+        function buildGolden() {
+            for (const p of GOLDEN) {
+                const row = document.createElement('div');
+                row.className = 'up-item';
+                row.innerHTML = `<span class="ic">${p.icon}</span><b></b><button class="btn sm primary"></button><small>${p.desc}</small>`;
+                row.querySelector('button').onclick = () => { if (buyGolden(p.id)) refresh(); };
+                $('goldList').appendChild(row);
+                goldRows.push({ row, p });
+            }
+        }
+        function refreshGolden() {
+            const g = gameData;
+            $('gFeathers').textContent = fmt(g.feathers);
+            $('gBonus').textContent = '+' + fmt(g.feathers * 5) + '%';
+            $('gRebirths').textContent = g.rebirths;
+            const gain = featherGain();
+            $('gGain').textContent = fmt(gain) + ' 🪶';
+            $('retireBtn').disabled = gain <= 0;
+            $('gNote').textContent = g.Level < RETIRE_LEVEL ? `Reach farm level ${RETIRE_LEVEL} to retire (you're ${g.Level})` : `Based on farm level ${g.Level} and best arena level ${g.stats.bestArena}`;
+            for (const { row, p } of goldRows) {
+                const lv = gLvl(p.id), maxed = lv >= p.max, q = quoteFor(goldCostAt(p), lv, p.max, g.feathers);
+                row.querySelector('b').textContent = `${p.name} · ${lv}/${p.max}`;
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : quoteLabel(q, '🪶');
+                b.disabled = maxed || !q.n;
+            }
+        }
+        /* ---------- Star coop ---------- */
+        const starRows = [];
+        function buildStars() {
+            for (const p of STAR_UPS) {
+                const row = document.createElement('div');
+                row.className = 'up-item';
+                row.innerHTML = `<span class="ic">${p.icon}</span><b></b><button class="btn sm primary"></button><small>${p.desc}</small>`;
+                row.querySelector('button').onclick = () => { if (buyStar(p.id)) refresh(); };
+                $('starList').appendChild(row);
+                starRows.push({ row, p });
+            }
+        }
+        function refreshStars() {
+            const g = gameData;
+            $('sStars').textContent = fmt(g.stars);
+            $('sFeathers').textContent = fmt(g.feathersSinceAscend);
+            $('sAsc').textContent = g.ascensions;
+            const gain = starGain();
+            $('sGain').textContent = fmt(gain) + ' ⭐';
+            $('ascendBtn').disabled = gain <= 0;
+            $('sNote').textContent = g.rebirths < ASCEND_REBIRTHS ? `Retire ${ASCEND_REBIRTHS} times first (${g.rebirths}/${ASCEND_REBIRTHS})`
+                : g.Level < ASCEND_LEVEL ? `Reach farm level ${ASCEND_LEVEL} to ascend (you're ${g.Level})` : 'Based on all the golden feathers you earned since your last ascension';
+            for (const { row, p } of starRows) {
+                const lv = sLvl(p.id), maxed = lv >= p.max, q = quoteFor(goldCostAt(p), lv, p.max, g.stars);
+                row.querySelector('b').textContent = `${p.name} · ${lv}/${p.max}`;
+                row.className = 'up-item' + (maxed ? ' owned' : '');
+                const b = row.querySelector('button');
+                b.textContent = maxed ? 'MAX' : quoteLabel(q, '⭐');
+                b.disabled = maxed || !q.n;
+            }
+        }
+        let ascendArmed = false;
+        $('ascendBtn').onclick = () => {
+            if (!ascendArmed) { ascendArmed = true; $('ascendBtn').textContent = 'Tap again to ascend'; setTimeout(() => { ascendArmed = false; $('ascendBtn').textContent = 'Ascend'; }, 3000); return; }
+            ascendArmed = false; $('ascendBtn').textContent = 'Ascend';
+            const gain = ascend();
+            if (gain) { builtFarmers = -1; Arcade.toast(`Ascended! +${fmt(gain)} star eggs ⭐`, 'gold', 3500); refresh(); }
+        };
+
+        let retireArmed = false;
+        $('retireBtn').onclick = () => {
+            if (!retireArmed) { retireArmed = true; $('retireBtn').textContent = 'Tap again to retire'; setTimeout(() => { retireArmed = false; $('retireBtn').textContent = 'Retire'; }, 3000); return; }
+            retireArmed = false; $('retireBtn').textContent = 'Retire';
+            const gain = retire();
+            if (gain) { builtFarmers = -1; Arcade.toast(`Retired! +${fmt(gain)} golden feathers 🪶`, 'gold', 3500); refresh(); }
+        };
+
+        /* ---------- Refresh ---------- */
+        function refresh() {
+            refreshHeader();
+            const g = gameData, c = g.combatData;
+            $('tabs').querySelector('[data-tab=hunt]').hidden = !g.hunt.unlocked;
+            $('tabs').querySelector('[data-tab=trips]').hidden = g.Level < 20 && !g.stats.expeditions && !g.rebirths;
+            $('tabs').querySelector('[data-tab=golden]').hidden = g.Level < 30 && !g.rebirths;
+            $('tabs').querySelector('[data-tab=stars]').hidden = g.rebirths < 2 && !g.totalStars;
+            if ($('tabs').querySelector(`[data-tab=${tab}]`).hidden) { showTab('farm'); return; }
+            $('tripDot').hidden = !(g.expedition && Date.now() >= g.expedition.end);
+            if (tab === 'market') return refreshMarket();
+            if (tab === 'hunt') return refreshHunt();
+            if (tab === 'trips') return refreshTrips();
+            if (tab === 'golden') return refreshGolden();
+            if (tab === 'stars') return refreshStars();
+
+            $('eggs').textContent = fmt(g.eggs);
+            $('eps').textContent = fmt(eggsPerSec());
+            $('lvl').textContent = g.Level;
+            $('exp').textContent = fmt(g.exp);
+            $('expReq').textContent = fmt(g.expReq);
+            $('xpBar').style.width = Math.min(100, g.exp / g.expReq * 100) + '%';
+            $('chickens').textContent = fmt(g.chickens);
+            $('incubators').textContent = fmt(g.incubators);
+            $('epc').textContent = fmt(g.EggsPerChicken);
+            $('tapEggs').textContent = fmt(tapEggs());
+            $('peckNote').textContent = gLvl('pecker') ? ` · 🐦 Auto-pecker: ${gLvl('pecker')} peck${gLvl('pecker') > 1 ? 's' : ''}/sec` : '';
+
+            // arena
+            const alive = c.currentHp > 0;
+            $('foeName').textContent = c.isBoss ? '🔥 Boss Chicken' : 'Chicken';
+            $('foeLevel').textContent = 'Level ' + c.level;
+            $('foe').textContent = !alive ? '🥚' : c.isBoss ? '🦖' : '🐔';
+            $('foe').classList.toggle('boss', c.isBoss);
+            $('hpWrap').classList.toggle('boss', c.isBoss);
+            $('hpBar').style.width = (alive ? c.currentHp / c.maxHp * 100 : 0) + '%';
+            $('hpText').textContent = alive ? `${fmt(Math.ceil(c.currentHp))} / ${fmt(c.maxHp)} HP` : 'No foe';
+            $('killText').textContent = c.isBoss ? 'Boss fight' : `${c.chickensKilledOnLevel} / 5 defeated`;
+            $('arenaNote').innerHTML = !alive && c.level >= 15
+                ? '<span class="bad">Past level 15 each foe costs one evil chicken to summon.</span>'
+                : `Tap the chicken to attack (<b>${fmt(tapDamage())}</b> dmg). Defeated chickens drop eggs.`;
+            $('dps').textContent = fmt(totalDPS());
+            $('crit').textContent = critChance() + '%';
+            $('critx').textContent = '×' + +critDamage().toFixed(2);
+            $('trophies').textContent = '🏆 ' + trophies();
+
+            // evil
+            $('evilPanel').hidden = g.Level < 15;
+            $('evilChickens').textContent = fmt(Math.floor(g.EvilChickens));
+            $('evilCap').textContent = fmt(evilCap());
+            $('evilEggs').textContent = fmt(g.EvilEggs);
+            $('evilRate').textContent = fmt(evilPerSec());
+            $('evilChance').textContent = evilChance().toFixed(1) + '%';
+            $('evilRepro').textContent = '+' + (evilGrowth() * 100).toFixed(1) + '%';
+            $('evilBar').style.width = Math.min(100, g.EvilChickens / evilCap() * 100) + '%';
+
+            // farmers
+            const unlocked = g.Unlocks.Farmers.Unlocked;
+            $('farmersLocked').hidden = unlocked;
+            if (builtFarmers !== g.AmountOfFarmersUnlocked) buildFarmers();
+            const next = FARMER_KEYS[g.AmountOfFarmersUnlocked];
+            $('hireBtn').hidden = !unlocked || !next;
+            if (next) { $('hireBtn').textContent = `Hire ${farmerData[next].icon} ${farmerData[next].name} · 🥚 ${fmt(farmerData[next].cost)}`; $('hireBtn').disabled = g.eggs < farmerData[next].cost; }
+            for (const card of $('farmers').children) {
+                const k = card.dataset.key, s = g.Farmers[k];
+                const n = maxAffordable(k);
+                card.querySelector('[data-f=lvl]').textContent = s.level;
+                card.querySelector('[data-f=dmg]').textContent = fmt(s.damage);
+                const b1 = card.querySelector('[data-f=up1]'), bm = card.querySelector('[data-f=upMax]');
+                b1.textContent = '+1 · ' + fmt(farmerCost(k, 1));
+                b1.disabled = g.eggs < farmerCost(k, 1);
+                bm.textContent = n > 0 ? `+${n} · ${fmt(farmerCost(k, n))}` : '+Max';
+                bm.disabled = n <= 0;
+                const perks = Object.keys(farmerData[k].Upgrades);
+                const ready = perks.filter(u => !s.UpgradesUnlocked[u] && s.level >= farmerData[k].Upgrades[u].levelReq).length;
+                card.querySelector('[data-f=perks]').textContent = `Perks ${perks.filter(u => s.UpgradesUnlocked[u]).length}/${perks.length}` + (ready ? ` · ${ready} ready ⭐` : '');
+            }
+        }
+
+        buildMarket();
+        buildGolden();
+        buildStars();
+        buildHunt();
+        document.querySelectorAll('#amtSeg .btn').forEach(b => {
+            const v = b.dataset.v === 'max' ? 'max' : +b.dataset.v;
+            b.classList.toggle('active', v === buyAmt);
+            b.onclick = () => { setBuyAmt(v); document.querySelectorAll('#amtSeg .btn').forEach(x => x.classList.toggle('active', x === b)); Arcade.sfx('click'); refresh(); };
+        });
+        showTab(tab);
+    </script>
+</body>
+</html>

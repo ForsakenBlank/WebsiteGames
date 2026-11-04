@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Tap Match - Deluxe</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --slot-bg: #d1d5db;
+            --tile-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --accent: #3b82f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            user-select: none;
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--tile-shadow);
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+
+        .difficulty-menu {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: #64748b;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button.active { background: var(--accent); transform: scale(1.05); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button#extreme-btn.locked { background: #1e293b; color: #475569; }
+        button#extreme-btn.unlocked { background: #dc2626; animation: glow 1.5s infinite alternate; }
+
+        @keyframes glow { from { box-shadow: 0 0 5px #ef4444; } to { box-shadow: 0 0 20px #ef4444; } }
+
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            background: #e5e7eb;
+            border-radius: 20px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tile {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: var(--tile-shadow);
+            transition: transform 0.1s, filter 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tile.blocked { filter: grayscale(1) brightness(0.7); pointer-events: none; }
+
+        #inventory-bar {
+            margin-top: 20px;
+            width: 420px;
+            height: 75px;
+            background: #374151;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .slot {
+            width: 50px;
+            height: 50px;
+            background: var(--slot-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        #status-msg { height: 30px; margin-top: 15px; font-weight: bold; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+    <h1>TAP MATCH</h1>
+
+    <div class="stats-panel">
+        <div>Easy: <span id="win-easy">0</span>/3</div>
+        <div>Medium: <span id="win-medium">0</span>/3</div>
+        <div>Hard: <span id="win-hard">0</span>/3</div>
+        <div style="color: #dc2626; font-weight: bold;">Extreme Wins: <span id="win-extreme">0</span></div>
+    </div>
+
+    <div class="difficulty-menu">
+        <button onclick="setDifficulty('easy')" id="btn-easy">Easy</button>
+        <button onclick="setDifficulty('medium')" id="btn-medium">Medium</button>
+        <button onclick="setDifficulty('hard')" id="btn-hard">Hard</button>
+        <button onclick="setDifficulty('extreme')" id="extreme-btn" class="locked" disabled>EXTREME</button>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div id="inventory-bar">
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        <div class="slot"></div>
+    </div>
+
+    <div id="status-msg"></div>
+    <button onclick="initGame()" style="margin-top: 15px; background: #10b981;">Restart Level</button>
+
+    <script>
+        const allEmojis = ['🍇', '🍉', '🍊', '🍎', '🍓', '🥑', '🍒', '🍍', '🥝', '🍋', '🍑', '🥥', '🥦', '🥕', '🌽'];
+        const settings = {
+            easy: { types: 4, sets: 8 },
+            medium: { types: 6, sets: 10 },
+            hard: { types: 8, sets: 12 },
+            extreme: { types: 12, sets: 18 }
+        };
+
+        let currentDiff = 'easy';
+        let inventory = [];
+        let tiles = [];
+        let wins = JSON.parse(localStorage.getItem('tapMatchWins')) || { easy: 0, medium: 0, hard: 0, extreme: 0 };
+
+        function updateStats() {
+            for (let d in wins) document.getElementById(`win-${d}`).textContent = wins[d];
+            
+            const extremeBtn = document.getElementById('extreme-btn');
+            if (wins.easy >= 3 && wins.medium >= 3 && wins.hard >= 3) {
+                extremeBtn.disabled = false;
+                extremeBtn.className = 'unlocked';
+                extremeBtn.textContent = 'EXTREME';
+            } else {
+                extremeBtn.disabled = true;
+                extremeBtn.className = 'locked';
+                extremeBtn.textContent = 'LOCKED';
+            }
+            localStorage.setItem('tapMatchWins', JSON.stringify(wins));
+        }
+
+        function setDifficulty(diff) {
+            currentDiff = diff;
+            document.querySelectorAll('.difficulty-menu button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${diff}`)?.classList.add('active');
+            if(diff === 'extreme') document.getElementById('extreme-btn').classList.add('active');
+            initGame();
+        }
+
+        function initGame() {
+            const container = document.getElementById('game-container');
+            container.innerHTML = '';
+            inventory = [];
+            document.getElementById('status-msg').textContent = '';
+            updateInventoryUI();
+            
+            const config = settings[currentDiff];
+            let deck = [];
+            const levelEmojis = [...allEmojis].sort(() => 0.5 - Math.random()).slice(0, config.types);
+            
+            for (let i = 0; i < config.sets; i++) {
+                const emoji = levelEmojis[i % levelEmojis.length];
+                deck.push(emoji, emoji, emoji);
+            }
+            deck.sort(() => Math.random() - 0.5);
+
+            tiles = deck.map((emoji, index) => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.textContent = emoji;
+                const x = Math.floor(Math.random() * 330);
+                const y = Math.floor(Math.random() * 430);
+                tile.style.left = x + 'px';
+                tile.style.top = y + 'px';
+                tile.onclick = () => selectTile(tile, emoji);
+                container.appendChild(tile);
+                return { element: tile, x, y, emoji };
+            });
+
+            checkBlocking();
+        }
+
+        function checkBlocking() {
+            tiles.forEach((t1, i) => {
+                let isBlocked = false;
+                for (let j = i + 1; j < tiles.length; j++) {
+                    const t2 = tiles[j];
+                    if (!(t1.x + 55 < t2.x || t1.x > t2.x + 55 || t1.y + 55 < t2.y || t1.y > t2.y + 55)) {
+                        isBlocked = true;
+                        break;
+                    }
+                }
+                t1.element.classList.toggle('blocked', isBlocked);
+            });
+        }
+
+        function selectTile(element, emoji) {
+            if (inventory.length >= 7 || element.classList.contains('blocked')) return;
+
+            const index = tiles.findIndex(t => t.element === element);
+            tiles.splice(index, 1);
+            element.remove();
+
+            inventory.push(emoji);
+            inventory.sort();
+
+            const counts = {};
+            inventory.forEach(e => counts[e] = (counts[e] || 0) + 1);
+            for (let e in counts) {
+                if (counts[e] === 3) inventory = inventory.filter(item => item !== e);
+            }
+
+            updateInventoryUI();
+            checkBlocking();
+            
+            if (tiles.length === 0 && inventory.length === 0) {
+                document.getElementById('status-msg').textContent = "🎉 LEVEL CLEARED!";
+                wins[currentDiff]++;
+                updateStats();
+            } else if (inventory.length >= 7) {
+                document.getElementById('status-msg').textContent = "❌ GAME OVER";
+            }
+        }
+
+        function updateInventoryUI() {
+            const slots = document.querySelectorAll('.slot');
+            slots.forEach((slot, i) => {
+                slot.textContent = inventory[i] || '';
+                slot.style.background = inventory[i] ? 'white' : 'var(--slot-bg)';
+            });
+        }
+
+        updateStats();
+        setDifficulty('easy');
+    </script>
+</body>
+</html>

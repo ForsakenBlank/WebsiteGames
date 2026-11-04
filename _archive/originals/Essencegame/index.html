@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dark Farmer - Farm</title>
+    <style>
+        :root { --bg: #080808; --card: #121212; --text: #e0e0e0; --accent: #2e7d32; --void: #4a148c; --gold: #ffca28; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; user-select: none; }
+        .header { position: fixed; top: 0; width: 100%; background: #000; border-bottom: 1px solid #222; padding: 10px; display: flex; justify-content: space-around; z-index: 100; }
+        .main-ess { font-size: 2.5rem; color: #81c784; font-weight: bold; margin-top: 90px; margin-bottom: 10px; }
+        .farmer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; width: 90%; max-width: 1000px; margin-top: 20px; }
+        .card { background: var(--card); border: 1px solid #222; padding: 15px; border-radius: 12px; text-align: center; }
+        button { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 8px; }
+        button:disabled { opacity: 0.2; cursor: not-allowed; }
+        .nav-btn { padding: 15px; width: 200px; margin: 10px; background: var(--void); color: white; border: none; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>Yield/Sec: <b id="eps">0</b></div>
+        <div>Void Power: <b id="v-mult">1.00</b>x</div>
+        <div>Dust: <b id="dust-stat">0</b></div>
+    </div>
+    <h1 class="main-ess" id="ess-display">0 Essence</h1>
+    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+        <button onclick="hire()" id="h-btn" style="width:200px">Hire Farmer (<span id="h-cost">0</span>)</button>
+        
+        <!-- NEW BUY ALL BUTTON -->
+        <button onclick="buyAllUpgrades()" id="buy-all-btn" style="flex: 1; background: #616161;">
+            Buy All Upgrades
+        </button>
+        <button onclick="location.href='void.html'" class="nav-btn" id="v-nav" style="display:none;">Enter Void</button>
+        <button id="gh-unlock-btn" onclick="unlockGH()" style="background:#2e7d32; border: 2px solid #ffca28;">
+        Unlock Greenhouse (Cost: 100 Q Essence)
+        </button>
+    </div>
+
+    <div class="farmer-grid" id="grid"></div>
+
+    <script src="game.js"></script>
+    <script>
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            state.farmers.forEach((f, i) => {
+                let expBar = state.expUnlocked ? `
+                    <div style="width:100%; background:#222; height:10px; margin-top:5px; border-radius:5px; overflow:hidden;">
+                        <div id="bar-${i}" style="width:0%; background:#2196f3; height:100%;"></div>
+                    </div>
+                    <small>EXP Milestone: <b id="mlvl-${i}">${f.m_lvl || 0}</b></small>
+                ` : '';
+
+                grid.innerHTML += `
+                    <div class="card">
+                        <b>Farmer ${i+1}</b><br>
+                        Lvl: <span id="lvl-${i}">${f.level}</span><br>
+                        <span style="color: #ff9900; font-weight:bold;" id="bonus-${i}">Bonus: x${f.mult}</span><br>
+                        <div style="font-size: 0.85rem; margin: 5px 0;">Yield: <span id="yield-${i}">0</span>/s</div>
+                        ${expBar}
+                        <button id="up-btn-${i}" onclick="upgradeFarmer(${i})">Lvl Up (<span id="cost-${i}">${format(f.cost)}</span>)</button>
+                    </div>`;
+            });
+        }
+
+        setInterval(() => {
+            if (!state) return;
+
+            // 1. GLOBAL MULTIPLIERS (Fetch from game.js state)
+            let vBoost = Math.pow(1.15, state.crystals || 0);
+            if (state.d_up1 > 0) vBoost *= (1 + (state.d_up1 * 0.05));
+            
+            let globalRubyBoost = 1 + ((state.r_up2 || 0) * 0.25);
+            let milestonePower = (1 + ((state.voidFocus || 0) * 0.12)) * (state.milestoneMod || 1);
+            
+            let ghEssenceMult = 1;
+            if (state.upgrades?.wheat?.[2] > 0) ghEssenceMult += (state.upgrades.wheat[2] * 0.1);
+
+            let totalGain = 0;
+
+            // 2. FARMER CARD UI SYNC
+            state.farmers.forEach((f, i) => {
+                const upBtn = document.getElementById(`up-btn-${i}`);
+                const costEl = document.getElementById(`cost-${i}`);
+                
+                if (upBtn && costEl) {
+                    let costReduction = 1 - ((state.d_up2 || 0) * 0.01);
+                    let discountedCost = f.cost * costReduction;
+
+                    upBtn.disabled = state.essence < discountedCost;
+                    costEl.innerText = format(discountedCost);
+
+                    let expBonus = f.m_lvl ? Math.pow(2, f.m_lvl) : 1; 
+                    if (state.r_up1 > 0) expBonus *= (1 + (state.r_up1 * 0.2));
+                    
+                    let individualYield = f.level * (f.mult * milestonePower * expBonus) * vBoost * globalRubyBoost * ghEssenceMult;
+                    totalGain += individualYield;
+
+                    document.getElementById(`lvl-${i}`).innerText = f.level;
+                    document.getElementById(`bonus-${i}`).innerText = "Bonus: x" + (f.mult * milestonePower * expBonus).toFixed(1);
+                    document.getElementById(`yield-${i}`).innerText = format(individualYield);
+
+                    if (state.expUnlocked) {
+                        let req = 10 * Math.pow(2, f.m_lvl || 0);
+                        let perc = Math.min(100, ((f.exp || 0) / req) * 100);
+                        let bar = document.getElementById(`bar-${i}`);
+                        if (bar) bar.style.width = perc + "%";
+                        let ml = document.getElementById(`mlvl-${i}`);
+                        if (ml) ml.innerText = f.m_lvl || 0;
+                    }
+                }
+            });
+
+            // 3. HEADER & BUTTON SYNC
+            document.getElementById('ess-display').innerText = format(state.essence) + " Essence";
+            document.getElementById('eps').innerText = format(totalGain);
+            document.getElementById('dust-stat').innerText = format(state.dust);
+            document.getElementById('v-mult').innerText = vBoost.toFixed(2);
+
+            const hBtn = document.getElementById('h-btn');
+            if (hBtn) {
+                hBtn.disabled = state.essence < state.hireCost;
+                document.getElementById('h-cost').innerText = format(state.hireCost);
+            }
+
+            // Greenhouse & Void Nav Logic
+            const vNav = document.getElementById('v-nav');
+            if (vNav) vNav.style.display = state.farmers.length >= 5 ? 'block' : 'none';
+            
+            const ghBtn = document.getElementById('gh-unlock-btn');
+            if (ghBtn) {
+                ghBtn.style.display = state.ghUnlocked ? 'none' : 'block';
+                ghBtn.disabled = state.essence < 1e20;
+            }
+
+            // Show Greenhouse Nav if unlocked
+            if (state.ghUnlocked && !document.getElementById('gh-nav-btn')) {
+                const navDiv = document.querySelector('.header') || document.body;
+                const btn = document.createElement('button');
+                btn.id = 'gh-nav-btn';
+                btn.className = 'nav-btn';
+                btn.style.background = '#1b5e20';
+                btn.innerText = 'Greenhouse';
+                btn.onclick = () => location.href = 'greenhouse.html';
+                document.querySelector('div[style*="display:flex"]').appendChild(btn);
+            }
+
+            const baBtn = document.getElementById('buy-all-btn');
+            if (baBtn) {
+                let red = 1 - ((state.d_up2 || 0) * 0.01);
+                baBtn.disabled = !state.farmers.some(f => state.essence >= (f.cost * red));
+            }
+
+        }, 100);
+
+        function unlockGH() {
+            if (state.essence >= 1e20) {
+                state.essence -= 1e20;
+                state.ghUnlocked = true;
+                save();
+            }
+        }
+
+        window.onload = renderGrid;
+    </script>
+
+</body>
+</html>

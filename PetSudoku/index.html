@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Sudoku · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #fb923c; --accent-2: #f472b6; --accent-ink: #2a1205; --bw: 480px; }
+        .play { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 14px; }
+        .board {
+            --n: 9;
+            width: var(--bw); height: var(--bw);
+            display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr);
+            background: var(--surface); border: 3px solid var(--line-2); border-color: color-mix(in srgb, var(--accent) 45%, var(--line-2));
+            border-radius: 14px; overflow: hidden; box-shadow: var(--shadow), 0 0 60px -30px var(--accent);
+            touch-action: manipulation;
+        }
+        .cell {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+            font-size: calc(var(--bw) / var(--n) * 0.56); line-height: 1; cursor: pointer;
+            transition: background 0.08s;
+            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font);
+        }
+        .cell.br { border-right: 2.5px solid color-mix(in srgb, var(--accent) 40%, var(--line-2)); }
+        .cell.bb { border-bottom: 2.5px solid color-mix(in srgb, var(--accent) 40%, var(--line-2)); }
+        .cell.last-c { border-right: 0; }
+        .cell.last-r { border-bottom: 0; }
+        .cell.given { background: var(--bg-2); }
+        .cell.peer { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+        .cell.given.peer { background: color-mix(in srgb, var(--accent) 7%, var(--bg-2)); }
+        .cell.same { background: color-mix(in srgb, var(--accent) 24%, var(--surface)); }
+        .cell.sel { background: color-mix(in srgb, var(--accent) 38%, var(--surface)); box-shadow: inset 0 0 0 2px var(--accent); }
+        .cell.wrong { background: color-mix(in srgb, var(--bad) 30%, var(--surface)); }
+        .cell.wrong .v { animation: shake 0.35s; }
+        .cell.user .v { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+        .cell.num .v { font-family: var(--font); font-weight: 800; font-size: 0.8em; color: var(--text); }
+        .cell.num.user .v { color: var(--accent); filter: none; }
+        .cell.num.wrong .v { color: var(--bad); }
+        .cell.pop .v { animation: popIn 0.25s cubic-bezier(.2, 1.4, .4, 1); }
+        .notes { position: absolute; inset: 2px; display: grid; pointer-events: none; }
+        .notes span { display: flex; align-items: center; justify-content: center; font-size: calc(var(--bw) / var(--n) * 0.2); opacity: 0.9; }
+        .cell.num .notes span { font-family: var(--font); color: var(--muted); font-weight: 700; }
+        .cell.won { animation: winWave 0.6s ease-out both; }
+        @keyframes winWave { 0% { background: color-mix(in srgb, var(--good) 45%, var(--surface)); } 100% { } }
+
+        .palette { display: grid; grid-template-columns: repeat(var(--n, 9), 1fr); gap: 6px; width: var(--bw); }
+        .pal { position: relative; padding: 6px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: calc(var(--bw) / var(--n) * 0.42); min-height: 0; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", var(--font); }
+        .pal small { font-family: var(--font); font-size: 0.68rem; color: var(--muted); font-weight: 700; }
+        .pal.done { opacity: 0.3; }
+        .pal.num { font-family: var(--font); font-weight: 800; }
+        .tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: var(--bw); }
+        .tools .btn { flex: 1; min-width: 74px; }
+        .tools .btn small { color: var(--muted); font-weight: 600; }
+        .tools .btn.active small { color: var(--text); }
+
+        .levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; text-align: left; }
+        .lvl { display: flex; flex-direction: column; gap: 2px; padding: 10px 11px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; color: var(--text); font: inherit; text-align: left; transition: border-color 0.12s, transform 0.12s; }
+        .lvl:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .lvl .top { display: flex; align-items: center; gap: 7px; }
+        .lvl .top span { font-size: 1.4rem; }
+        .lvl small { color: var(--muted); font-size: 0.72rem; }
+        .lvl .meter { display: flex; gap: 2px; margin-top: 3px; }
+        .lvl .meter i { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-3); }
+        .lvl .meter i.on { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+        .lvl .rec { color: var(--gold); font-weight: 700; font-size: 0.72rem; min-height: 1em; }
+        .themes { margin-top: 10px; }
+        .resume { margin-top: 12px; }
+        .hint-box { width: min(var(--bw, 520px), 100%); display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); box-shadow: 0 10px 30px -14px var(--gold); font-size: 0.86rem; line-height: 1.45; text-align: left; animation: popIn 0.22s; }
+        .hint-box .hb-ic { font-size: 1.3rem; line-height: 1.1; }
+        .hint-box button { margin-left: auto; flex: none; }
+        .cell.hintzone { box-shadow: inset 0 0 0 2px var(--gold); }
+        .gen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 30; pointer-events: none; }
+        .gen span { padding: 10px 18px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-weight: 700; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Pet Sudoku</h1>
+        <div class="stats">
+            <span class="chip accent">Level <b id="lvlName">—</b></span>
+            <span class="chip">Time <b id="timer">0:00</b></span>
+            <span class="chip bad" id="mistakeChip">Mistakes <b id="mistakes">0</b></span>
+            <span class="chip gold">Hints <b id="hintsLeft">0</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="menuBtn">☰ Levels</button>
+            <button class="btn sm icon" id="pauseBtn" title="Pause (P)">⏸</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="play" id="play">
+        <div class="board" id="board"></div>
+        <div class="palette" id="palette"></div>
+        <div class="tools">
+            <button class="btn" id="undoBtn" title="Undo (Ctrl+Z)">↶ <small>Undo</small></button>
+            <button class="btn" id="eraseBtn" title="Erase (Backspace)">⌫ <small>Erase</small></button>
+            <button class="btn" id="notesBtn" title="Notes (N)">✏️ <small>Notes off</small></button>
+            <button class="btn" id="fillBtn" title="Fill every empty square with the pets it could still be (F). Notes clean themselves up as you place pets.">🪄 <small>Fill notes</small></button>
+            <button class="btn" id="hintBtn" title="Hint (H)">💡 <small>Hint</small></button>
+        </div>
+        <div class="hint-box" id="hintBox" hidden><span class="hb-ic">💡</span><span id="hintText"></span><button class="btn sm" id="hintClose">Got it</button></div>
+        <div class="gen" id="gen" hidden><span>🐾 Building puzzle…</span></div>
+
+        <div class="overlay fixed" id="menuOv">
+            <div class="modal wide">
+                <h2>Pet Sudoku</h2>
+                <p>Sudoku with pets. Every row, column and box must contain each pet exactly once.</p>
+                <div class="seg themes" id="themes"></div>
+                <div class="levels" id="levels"></div>
+                <div class="actions">
+                    <button class="btn primary resume" id="resumeBtn" hidden>▶ Resume game</button>
+                    <button class="btn" id="closeMenu" hidden>Close</button>
+                </div>
+                <p class="tiny dim" style="margin-top:12px"><span class="desktop-only">Click a cell, then a pet (or press <kbd>1</kbd>–<kbd>9</kbd>) · <kbd>Arrows</kbd> move · <kbd>N</kbd> notes · <kbd>H</kbd> hint · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span><span class="touch-only">Tap a cell, then a pet. Use ✏️ for notes.</span></p>
+            </div>
+        </div>
+
+        <div class="overlay fixed" id="pauseOv" hidden>
+            <div class="modal">
+                <h2>Paused</h2>
+                <p>The board is hidden while paused.</p>
+                <div class="actions"><button class="btn primary lg" id="unpauseBtn">Resume</button></div>
+            </div>
+        </div>
+
+        <div class="overlay fixed" id="winOv" hidden>
+            <div class="modal">
+                <h2 class="good">Solved!</h2>
+                <div class="big-num" id="winTime">0:00</div>
+                <div class="new-best" id="winBest" hidden>★ New best time ★</div>
+                <p id="winLevel"></p>
+                <div class="stat-grid">
+                    <div><small>Mistakes</small><b id="winMistakes">0</b></div>
+                    <div><small>Hints used</small><b id="winHints">0</b></div>
+                    <div><small>Best time</small><b id="winBestTime">—</b></div>
+                    <div><small>Wins here</small><b id="winCount">0</b></div>
+                </div>
+                <div class="actions">
+                    <button class="btn primary" id="nextBtn">Next level ▶</button>
+                    <button class="btn" id="againBtn">Same level again</button>
+                    <button class="btn ghost" id="winMenuBtn">Levels</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overlay fixed" id="loseOv" hidden>
+            <div class="modal">
+                <h2 class="bad">Out of lives</h2>
+                <p id="loseText">Too many mistakes on this puzzle.</p>
+                <div class="actions">
+                    <button class="btn primary" id="retryBtn">Retry this puzzle</button>
+                    <button class="btn" id="newSameBtn">New puzzle</button>
+                    <button class="btn ghost" id="loseMenuBtn">Levels</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        /* ---------- Content ---------- */
+        const THEMES = {
+            pets: { name: '🐶 Pets', set: ['🐶', '🐱', '🐰', '🐹', '🦊', '🐼', '🐨', '🐸', '🐵'] },
+            farm: { name: '🐮 Farm', set: ['🐮', '🐷', '🐔', '🐴', '🐑', '🦆', '🐐', '🦃', '🐝'] },
+            ocean: { name: '🐠 Ocean', set: ['🐠', '🐙', '🐬', '🐳', '🦀', '🐢', '🦈', '🦑', '🐚'] },
+            wild: { name: '🦁 Wild', set: ['🦁', '🐯', '🐘', '🦒', '🦓', '🦏', '🐊', '🦛', '🦘'] },
+            numbers: { name: '123 Numbers', set: ['1', '2', '3', '4', '5', '6', '7', '8', '9'], num: true },
+        };
+        // clues: target number of starting pets (0 = remove as many as possible).
+        // logic: 'singles' = guaranteed solvable with basic deduction; 'hard' = needs more than basic deduction.
+        // lives: mistakes allowed (null = unlimited). blind: mistakes are not revealed.
+        const LEVELS = [
+            { id: 'hatchling', icon: '🐣', name: 'Hatchling', size: 4, clues: 8, logic: 'singles', hints: 99, lives: null, desc: '4×4 · learn the rules' },
+            { id: 'kitten', icon: '🐱', name: 'Kitten', size: 4, clues: 5, hints: 3, lives: null, desc: '4×4 · fewer clues' },
+            { id: 'puppy', icon: '🐶', name: 'Puppy', size: 6, clues: 18, logic: 'singles', hints: 3, lives: null, desc: '6×6 · gentle' },
+            { id: 'bunny', icon: '🐰', name: 'Bunny', size: 6, clues: 12, hints: 3, lives: null, desc: '6×6 · sparse' },
+            { id: 'hamster', icon: '🐹', name: 'Hamster', size: 9, clues: 46, logic: 'singles', hints: 3, lives: null, desc: '9×9 · very easy' },
+            { id: 'fox', icon: '🦊', name: 'Fox', size: 9, clues: 38, logic: 'singles', hints: 3, lives: null, desc: '9×9 · easy' },
+            { id: 'panda', icon: '🐼', name: 'Panda', size: 9, clues: 32, logic: 'singles', hints: 3, lives: null, desc: '9×9 · medium' },
+            { id: 'owl', icon: '🦉', name: 'Owl', size: 9, clues: 28, hints: 2, lives: null, desc: '9×9 · tricky' },
+            { id: 'wolf', icon: '🐺', name: 'Wolf', size: 9, clues: 26, logic: 'hard', hints: 2, lives: null, desc: '9×9 · hard' },
+            { id: 'bear', icon: '🐻', name: 'Bear', size: 9, clues: 24, logic: 'hard', hints: 1, lives: 5, desc: '9×9 · very hard · 5 lives' },
+            { id: 'tiger', icon: '🐯', name: 'Tiger', size: 9, clues: 22, logic: 'hard', pick: 2, hints: 1, lives: 3, desc: '9×9 · expert · 3 lives' },
+            { id: 'dragon', icon: '🐲', name: 'Dragon', size: 9, clues: 0, logic: 'hard', pick: 4, hints: 0, lives: 3, desc: '9×9 · minimal clues · 3 lives' },
+            { id: 'phoenix', icon: '🔥', name: 'Phoenix', size: 9, clues: 0, logic: 'hard', pick: 4, hints: 0, lives: null, blind: true, desc: '9×9 · minimal · blind (no mistake checking)' },
+        ];
+        const SHAPE = { 4: [2, 2], 6: [2, 3], 9: [3, 3] };
+
+        /* ---------- Geometry ---------- */
+        const geoCache = {};
+        function geometry(n) {
+            if (geoCache[n]) return geoCache[n];
+            const [br, bc] = SHAPE[n];
+            const N2 = n * n;
+            const R = new Int8Array(N2), C = new Int8Array(N2), B = new Int8Array(N2);
+            const units = [];
+            for (let i = 0; i < N2; i++) { R[i] = Math.floor(i / n); C[i] = i % n; B[i] = Math.floor(R[i] / br) * (n / bc) + Math.floor(C[i] / bc); }
+            for (let k = 0; k < n; k++) {
+                units.push([...Array(N2).keys()].filter(i => R[i] === k));
+                units.push([...Array(N2).keys()].filter(i => C[i] === k));
+                units.push([...Array(N2).keys()].filter(i => B[i] === k));
+            }
+            const peers = [];
+            for (let i = 0; i < N2; i++) {
+                const p = [];
+                for (let j = 0; j < N2; j++) if (j !== i && (R[j] === R[i] || C[j] === C[i] || B[j] === B[i])) p.push(j);
+                peers.push(p);
+            }
+            return (geoCache[n] = { n, br, bc, N2, R, C, B, units, peers, full: (1 << n) - 1 });
+        }
+
+        const popcount = (m) => { let c = 0; while (m) { m &= m - 1; c++; } return c; };
+
+        /* ---------- Solver ---------- */
+        // Counts solutions up to `limit` (fills `out` with the first one found). Bitmask backtracking with MRV.
+        function solve(grid, G, limit, randomize, out) {
+            const { n, N2, R, C, B, full } = G;
+            const rows = new Int32Array(n), cols = new Int32Array(n), boxes = new Int32Array(n);
+            const g = Int8Array.from(grid);
+            for (let i = 0; i < N2; i++) {
+                const v = g[i];
+                if (!v) continue;
+                const bit = 1 << (v - 1);
+                if ((rows[R[i]] | cols[C[i]] | boxes[B[i]]) & bit) return 0;
+                rows[R[i]] |= bit; cols[C[i]] |= bit; boxes[B[i]] |= bit;
+            }
+            let found = 0;
+            function rec() {
+                let best = -1, bestMask = 0, bestCount = 99;
+                for (let i = 0; i < N2; i++) {
+                    if (g[i]) continue;
+                    const m = full & ~(rows[R[i]] | cols[C[i]] | boxes[B[i]]);
+                    const c = popcount(m);
+                    if (c === 0) return;
+                    if (c < bestCount) { best = i; bestMask = m; bestCount = c; if (c === 1) break; }
+                }
+                if (best < 0) { if (!found && out) out.set(g); found++; return; }
+                const digits = [];
+                for (let d = 0; d < n; d++) if (bestMask & (1 << d)) digits.push(d);
+                if (randomize) Arcade.shuffle(digits);
+                const r = R[best], c = C[best], b = B[best];
+                for (const d of digits) {
+                    const bit = 1 << d;
+                    g[best] = d + 1; rows[r] |= bit; cols[c] |= bit; boxes[b] |= bit;
+                    rec();
+                    g[best] = 0; rows[r] &= ~bit; cols[c] &= ~bit; boxes[b] &= ~bit;
+                    if (found >= limit) return;
+                }
+            }
+            rec();
+            return found;
+        }
+
+        // True if the puzzle can be finished using only naked singles and hidden singles.
+        function singlesSolvable(grid, G) {
+            const { n, N2, R, C, B, units, full } = G;
+            const g = Int8Array.from(grid);
+            for (;;) {
+                const rows = new Int32Array(n), cols = new Int32Array(n), boxes = new Int32Array(n);
+                let empty = 0;
+                for (let i = 0; i < N2; i++) if (g[i]) { const bit = 1 << (g[i] - 1); rows[R[i]] |= bit; cols[C[i]] |= bit; boxes[B[i]] |= bit; } else empty++;
+                if (!empty) return true;
+                const cand = new Int32Array(N2);
+                let progress = false;
+                for (let i = 0; i < N2; i++) {
+                    if (g[i]) continue;
+                    cand[i] = full & ~(rows[R[i]] | cols[C[i]] | boxes[B[i]]);
+                    if (!cand[i]) return false;
+                    if (popcount(cand[i]) === 1) { g[i] = Math.log2(cand[i]) + 1; progress = true; }
+                }
+                if (progress) continue;
+                for (const u of units) {
+                    for (let d = 0; d < n; d++) {
+                        const bit = 1 << d;
+                        let pos = -1, cnt = 0;
+                        for (const i of u) { if (g[i] === d + 1) { cnt = -1; break; } if (!g[i] && (cand[i] & bit)) { pos = i; cnt++; } }
+                        if (cnt === 1) { g[pos] = d + 1; progress = true; }
+                    }
+                    if (progress) break;
+                }
+                if (!progress) return false;
+            }
+        }
+
+        // The hardest levels build a few candidates and keep the one with the fewest clues.
+        function generate(level) {
+            let best = null;
+            for (let k = 0; k < (level.pick || 1); k++) {
+                const g = generateOne(level);
+                if (!best || g.clues < best.clues) best = g;
+            }
+            return best;
+        }
+
+        function generateOne(level) {
+            const G = geometry(level.size);
+            const { N2 } = G;
+            let last = null;
+            for (let attempt = 0; attempt < 30; attempt++) {
+                const sol = new Int8Array(N2);
+                solve(new Int8Array(N2), G, 1, true, sol);
+                const puz = Int8Array.from(sol);
+                let clues = N2;
+                // remove symmetric pairs for a classic look
+                const order = Arcade.shuffle([...Array(Math.ceil(N2 / 2)).keys()]);
+                for (const i of order) {
+                    if (level.clues && clues <= level.clues) break;
+                    const j = N2 - 1 - i;
+                    const a = puz[i], b = puz[j];
+                    puz[i] = 0; puz[j] = 0;
+                    let ok = solve(puz, G, 2) === 1;
+                    if (ok && level.logic === 'singles') ok = singlesSolvable(puz, G);
+                    if (!ok) { puz[i] = a; puz[j] = b; continue; }
+                    clues -= i === j ? 1 : 2;
+                }
+                // symmetric removal gets stuck early; finish with single cells
+                if (!level.clues || clues > level.clues) {
+                    for (const i of Arcade.shuffle([...Array(N2).keys()])) {
+                        if (level.clues && clues <= level.clues) break;
+                        if (!puz[i]) continue;
+                        const v = puz[i];
+                        puz[i] = 0;
+                        let ok = solve(puz, G, 2) === 1;
+                        if (ok && level.logic === 'singles') ok = singlesSolvable(puz, G);
+                        if (ok) clues--; else puz[i] = v;
+                    }
+                }
+                if (level.logic === 'hard' && singlesSolvable(puz, G)) {
+                    // dig a little deeper until basic deduction is no longer enough
+                    for (const i of Arcade.shuffle([...Array(N2).keys()])) {
+                        if (!puz[i]) continue;
+                        const v = puz[i];
+                        puz[i] = 0;
+                        if (solve(puz, G, 2) === 1) {
+                            clues--;
+                            if (!singlesSolvable(puz, G)) break;
+                        } else puz[i] = v;
+                    }
+                }
+                last = { puzzle: Array.from(puz), solution: Array.from(sol), clues: puz.filter(v => v).length };
+                if (level.logic === 'hard' && singlesSolvable(puz, G)) continue;
+                return last;
+            }
+            return last;
+        }
+
+        /* ---------- State ---------- */
+        const SAVE_KEY = 'arcade.petdoku.current', STATS_KEY = 'arcade.petdoku.stats';
+        let theme = Arcade.load('arcade.petdoku.theme', 'pets');
+        if (!THEMES[theme]) theme = 'pets';
+        let stats = Arcade.load(STATS_KEY, {}) || {};
+        let game = null;          // { level, puzzle, solution, values, notes[], mistakes, hintsUsed, time, undo[] }
+        let sel = -1, notesMode = false, paused = false, ended = false;
+        let G = null;
+
+        const boardEl = document.getElementById('board'), palEl = document.getElementById('palette');
+        const levelOf = (id) => LEVELS.find(l => l.id === id) || LEVELS[0];
+        const symbol = (v) => THEMES[theme].set[v - 1];
+
+        function persist() {
+            if (!game || ended) { Arcade.remove(SAVE_KEY); return; }
+            Arcade.save(SAVE_KEY, {
+                level: game.level.id, puzzle: game.puzzle, solution: game.solution, values: game.values,
+                notes: game.notes, mistakes: game.mistakes, hintsUsed: game.hintsUsed, time: game.time,
+            });
+        }
+
+        function start(level, data) {
+            G = geometry(level.size);
+            game = {
+                level, puzzle: data.puzzle, solution: data.solution,
+                values: data.values || data.puzzle.slice(),
+                notes: data.notes || new Array(G.N2).fill(0),
+                mistakes: data.mistakes || 0, hintsUsed: data.hintsUsed || 0, time: data.time || 0, undo: [],
+            };
+            sel = -1; ended = false; paused = false; notesMode = false;
+            Arcade.hide('menuOv'); Arcade.hide('winOv'); Arcade.hide('loseOv'); Arcade.hide('pauseOv');
+            layout();
+            render(true);
+            persist();
+        }
+
+        function newGame(level) {
+            Arcade.show('gen');
+            Arcade.hide('menuOv'); Arcade.hide('winOv'); Arcade.hide('loseOv');
+            setTimeout(() => {
+                const data = generate(level);
+                Arcade.hide('gen');
+                start(level, data);
+                Arcade.sfx('level');
+            }, 30);
+        }
+
+        /* ---------- Layout ---------- */
+        function layout() {
+            const play = document.getElementById('play').getBoundingClientRect();
+            const n = G ? G.n : 9;
+            const avail = Math.min(play.width - 28, play.height - 28 - 150, 620);
+            const bw = Math.max(240, Math.floor(avail / n) * n);
+            document.documentElement.style.setProperty('--bw', bw + 'px');
+            boardEl.style.setProperty('--n', n);
+            palEl.style.setProperty('--n', n);
+        }
+        window.addEventListener('resize', layout);
+
+        /* ---------- Rendering ---------- */
+        function render(full) {
+            if (!game) return;
+            const { n, br, bc, N2, R, C, peers } = G;
+            const num = !!THEMES[theme].num;
+            if (full || boardEl.children.length !== N2) {
+                boardEl.innerHTML = '';
+                for (let i = 0; i < N2; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'cell';
+                    d.dataset.i = i;
+                    d.addEventListener('pointerdown', (e) => { e.preventDefault(); select(i); });
+                    d.addEventListener('animationend', (e) => {
+                        if (e.animationName === 'popIn') d.classList.remove('pop');
+                        if (e.animationName === 'winWave') { d.classList.remove('won'); d.style.animationDelay = ''; }
+                    });
+                    boardEl.appendChild(d);
+                }
+            }
+            const selV = sel >= 0 ? game.values[sel] : 0;
+            const peerSet = sel >= 0 ? new Set(peers[sel]) : null;
+            for (let i = 0; i < N2; i++) {
+                const d = boardEl.children[i];
+                const v = game.values[i];
+                const given = game.puzzle[i] !== 0;
+                const wrong = !given && v && v !== game.solution[i] && !game.level.blind;
+                let cls = 'cell';
+                if ((C[i] + 1) % bc === 0 && C[i] < n - 1) cls += ' br';
+                if ((R[i] + 1) % br === 0 && R[i] < n - 1) cls += ' bb';
+                if (C[i] === n - 1) cls += ' last-c';
+                if (R[i] === n - 1) cls += ' last-r';
+                if (given) cls += ' given'; else if (v) cls += ' user';
+                if (num) cls += ' num';
+                if (i === sel) cls += ' sel';
+                else if (selV && v === selV) cls += ' same';
+                else if (peerSet && peerSet.has(i)) cls += ' peer';
+                if (wrong) cls += ' wrong';
+                // keep one-shot animation classes (pop / won) until their animation ends
+                for (const t of ['pop', 'won']) if (d.classList.contains(t)) cls += ' ' + t;
+                if (d.className !== cls) d.className = cls;
+                const key = v + ':' + (v ? 0 : game.notes[i]) + ':' + theme;
+                if (d.dataset.k !== key) {
+                    d.dataset.k = key;
+                    if (v) d.innerHTML = `<span class="v">${symbol(v)}</span>`;
+                    else if (game.notes[i]) {
+                        const cols = n === 6 ? 3 : Math.sqrt(n);
+                        let h = `<div class="notes" style="grid-template-columns:repeat(${cols},1fr)">`;
+                        for (let k = 1; k <= n; k++) h += `<span>${game.notes[i] & (1 << (k - 1)) ? symbol(k) : ''}</span>`;
+                        d.innerHTML = h + '</div>';
+                    } else d.innerHTML = '';
+                }
+            }
+            // palette with remaining counts
+            const counts = new Array(n + 1).fill(0);
+            for (let i = 0; i < N2; i++) if (game.values[i] && (game.level.blind || game.values[i] === game.solution[i])) counts[game.values[i]]++;
+            if (full || palEl.children.length !== n) {
+                palEl.innerHTML = '';
+                for (let k = 1; k <= n; k++) {
+                    const b = document.createElement('button');
+                    b.className = 'btn pal';
+                    b.addEventListener('pointerdown', (e) => { e.preventDefault(); input(k); });
+                    palEl.appendChild(b);
+                }
+            }
+            for (let k = 1; k <= n; k++) {
+                const b = palEl.children[k - 1];
+                const left = n - counts[k];
+                const html = `${symbol(k)}<small>${left > 0 ? left : '✓'}</small>`;
+                if (b.innerHTML !== html) b.innerHTML = html;
+                b.className = 'btn pal' + (left <= 0 ? ' done' : '') + (num ? ' num' : '') + (selV === k ? ' active' : '');
+            }
+            hud();
+        }
+
+        function hud() {
+            if (!game) return;
+            const L = game.level;
+            Arcade.text('lvlName', L.icon + ' ' + L.name);
+            Arcade.text('mistakes', L.blind ? '—' : (L.lives ? `${game.mistakes} / ${L.lives}` : game.mistakes));
+            const hl = Math.max(0, L.hints - game.hintsUsed);
+            Arcade.text('hintsLeft', L.hints >= 99 ? '∞' : hl);
+            document.getElementById('hintBtn').disabled = hl <= 0 || ended;
+            document.getElementById('undoBtn').disabled = !game.undo.length || ended;
+            const nb = document.getElementById('notesBtn');
+            nb.classList.toggle('active', notesMode);
+            nb.querySelector('small').textContent = notesMode ? 'Notes on' : 'Notes off';
+            Arcade.text('timer', Arcade.time(game.time));
+        }
+
+        /* ---------- Input ---------- */
+        function select(i) {
+            if (!game || ended || paused) return;
+            sel = i;
+            Arcade.sfx('click');
+            render();
+        }
+
+        function pushUndo(i) { game.undo.push({ i, v: game.values[i], notes: game.notes.slice() }); if (game.undo.length > 300) game.undo.shift(); }
+
+        function input(k) {
+            if (!game || ended || paused) return;
+            if (sel < 0) {
+                // no cell selected: highlight that pet everywhere
+                const first = game.values.findIndex(v => v === k);
+                if (first >= 0) { sel = first; render(); }
+                return;
+            }
+            if (game.puzzle[sel]) { Arcade.sfx('bad'); return; }
+            if (notesMode) {
+                if (game.values[sel]) return;
+                pushUndo(sel);
+                game.notes[sel] ^= 1 << (k - 1);
+                Arcade.sfx('tick');
+                render(); persist();
+                return;
+            }
+            if (game.values[sel] === k) return;
+            pushUndo(sel);
+            place(sel, k);
+        }
+
+        function place(i, k, fromHint) {
+            game.values[i] = k;
+            game.notes[i] = 0;
+            const correct = k === game.solution[i];
+            const d = boardEl.children[i];
+            if (correct || game.level.blind) {
+                // tidy notes in the same row / column / box
+                for (const p of G.peers[i]) game.notes[p] &= ~(1 << (k - 1));
+                Arcade.sfx(fromHint ? 'power' : 'pop');
+                if (d) { d.classList.remove('pop'); void d.offsetWidth; d.classList.add('pop'); }
+                checkUnits(i);
+            } else {
+                game.mistakes++;
+                Arcade.sfx('bad');
+                const L = game.level;
+                if (L.lives && game.mistakes >= L.lives) {
+                    render(); persist();
+                    lose();
+                    return;
+                }
+            }
+            render();
+            persist();
+            if (game.values.every(v => v)) finish();
+        }
+
+        function checkUnits(i) {
+            if (game.level.blind) return;
+            const solved = (u) => u.every(j => game.values[j] === game.solution[j]);
+            for (const u of G.units) {
+                if (!u.includes(i) || !solved(u)) continue;
+                u.forEach((j, n) => {
+                    const d = boardEl.children[j];
+                    if (!d) return;
+                    d.style.animationDelay = (n * 0.03) + 's';
+                    d.classList.remove('won'); void d.offsetWidth; d.classList.add('won');
+                });
+            }
+        }
+
+        function erase() {
+            if (!game || ended || sel < 0 || game.puzzle[sel]) return;
+            if (!game.values[sel] && !game.notes[sel]) return;
+            pushUndo(sel);
+            game.values[sel] = 0; game.notes[sel] = 0;
+            Arcade.sfx('click');
+            render(); persist();
+        }
+
+        function undo() {
+            if (!game || ended || !game.undo.length) return;
+            const u = game.undo.pop();
+            game.values[u.i] = u.v;
+            game.notes = u.notes;
+            sel = u.i;
+            Arcade.sfx('select');
+            render(); persist();
+        }
+
+        /* ---------- Notes & explaining hints ---------- */
+        // pets a square could still hold, judged only by correctly placed pets
+        function candMask(i) {
+            let m = G.full;
+            for (const p of G.peers[i]) { const v = game.values[p]; if (v && (v === game.solution[p] || game.level.blind)) m &= ~(1 << (v - 1)); }
+            return m;
+        }
+        const bitsOf = (m) => { const out = []; for (let k = 1; k <= G.n; k++) if (m & (1 << (k - 1))) out.push(k); return out; };
+        function unitLabel(u) { const k = Math.floor(u / 3) + 1; return ['row', 'column', 'box'][u % 3] + ' ' + k; }
+        function fillNotes() {
+            if (!game || ended) return;
+            pushUndo(sel >= 0 ? sel : 0);
+            for (let i = 0; i < G.N2; i++) if (!game.values[i]) game.notes[i] = candMask(i);
+            Arcade.sfx('power');
+            Arcade.toast('🪄 Notes filled — they tidy themselves as you place pets', 'good', 1600);
+            render(); persist();
+        }
+        /** The simplest step a person could spot right now. */
+        function findStep() {
+            const empty = (i) => game.values[i] !== game.solution[i];
+            // a square with only one possible pet
+            let best = null;
+            for (let i = 0; i < G.N2; i++) {
+                if (!empty(i)) continue;
+                const m = candMask(i);
+                if (bitsOf(m).length === 1) return { i, k: bitsOf(m)[0], kind: 'naked' };
+            }
+            // a pet that fits only one square of a row, column or box
+            for (let u = 0; u < G.units.length; u++) {
+                const cells = G.units[u];
+                for (let k = 1; k <= G.n; k++) {
+                    if (cells.some(i => game.values[i] === k && game.values[i] === game.solution[i])) continue;
+                    const spots = cells.filter(i => empty(i) && (candMask(i) & (1 << (k - 1))));
+                    if (spots.length === 1) return { i: spots[0], k, kind: 'hidden', u };
+                }
+            }
+            for (let i = 0; i < G.N2; i++) {
+                if (!empty(i)) continue;
+                const c = bitsOf(candMask(i)).length;
+                if (!best || c < best.c) best = { i, c };
+            }
+            return best ? { i: best.i, k: game.solution[best.i], kind: 'deep' } : null;
+        }
+        function showHint(html, zone) {
+            for (const el of boardEl.children) el.classList.remove('hintzone');
+            for (const j of zone || []) boardEl.children[j] && boardEl.children[j].classList.add('hintzone');
+            document.getElementById('hintText').innerHTML = html;
+            document.getElementById('hintBox').hidden = false;
+        }
+        function hideHint() { document.getElementById('hintBox').hidden = true; for (const el of boardEl.children) el.classList.remove('hintzone'); }
+
+        function hint() {
+            if (!game || ended) return;
+            const L = game.level;
+            if (game.hintsUsed >= L.hints) { Arcade.toast('No hints left on this level', 'bad'); return; }
+            game.hintsUsed++;
+            // fix a wrong pet first
+            const wrong = game.values.findIndex((v, i) => v && v !== game.solution[i]);
+            if (wrong >= 0 && !L.blind) {
+                pushUndo(wrong);
+                const v = game.values[wrong];
+                game.values[wrong] = 0;
+                sel = wrong;
+                render(); persist();
+                showHint(`The ${symbol(v)} you placed here doesn't fit the finished puzzle, so I took it off. Try working out this square again.`, [wrong]);
+                return;
+            }
+            const st = findStep();
+            if (!st) return;
+            const { i, k } = st;
+            const pet = symbol(k);
+            let text, zone;
+            if (st.kind === 'naked') {
+                const others = bitsOf(G.full & ~(1 << (k - 1))).map(symbol).join(' ');
+                text = `This square can only be <b>${pet}</b>. Its row, column and box already contain ${others} — so ${pet} is the only pet left.`;
+                zone = G.peers[i];
+            } else if (st.kind === 'hidden') {
+                text = `<b>${pet}</b> has to go here. In ${unitLabel(st.u)}, every other empty square already sees a ${pet} in its row, column or box — this is the only spot left for it.`;
+                zone = G.units[st.u];
+            } else {
+                const opts = bitsOf(candMask(i)).map(symbol).join(' or ');
+                text = `No simple step is left, so this one needs look-ahead. This square could be ${opts}; every choice except <b>${pet}</b> runs into a dead end later. So it's ${pet}.`;
+                zone = G.peers[i];
+            }
+            pushUndo(i);
+            sel = i;
+            place(i, k, true);
+            showHint(text, zone);
+        }
+
+        function finish() {
+            if (game.level.blind) {
+                const wrong = game.values.filter((v, i) => v !== game.solution[i]).length;
+                if (wrong) {
+                    Arcade.toast(`Not quite — ${wrong} ${wrong === 1 ? 'pet is' : 'pets are'} in the wrong place`, 'bad', 2600);
+                    Arcade.sfx('bad');
+                    return;
+                }
+            } else if (!game.values.every((v, i) => v === game.solution[i])) return;
+            ended = true;
+            sel = -1;
+            const L = game.level;
+            const st = stats[L.id] || { wins: 0, best: 0 };
+            st.wins++;
+            const t = Math.max(1, Math.floor(game.time));
+            const isBest = !st.best || t < st.best;
+            if (isBest) st.best = t;
+            stats[L.id] = st;
+            Arcade.save(STATS_KEY, stats);
+            Arcade.count('win');
+            hideHint();
+            Arcade.remove(SAVE_KEY);
+            render();
+            for (let i = 0; i < G.N2; i++) { const d = boardEl.children[i]; d.style.animationDelay = ((G.R[i] + G.C[i]) * 0.04) + 's'; d.classList.add('won'); }
+            Arcade.sfx('win');
+            setTimeout(() => {
+                Arcade.text('winTime', Arcade.time(t));
+                Arcade.text('winLevel', `${L.icon} ${L.name} · ${L.desc}`);
+                Arcade.text('winMistakes', L.blind ? '—' : game.mistakes);
+                Arcade.text('winHints', game.hintsUsed);
+                Arcade.text('winBestTime', Arcade.time(st.best));
+                Arcade.text('winCount', st.wins);
+                document.getElementById('winBest').hidden = !isBest || st.wins === 1;
+                const idx = LEVELS.indexOf(L);
+                document.getElementById('nextBtn').hidden = idx >= LEVELS.length - 1;
+                Arcade.show('winOv');
+            }, 900);
+        }
+
+        function lose() {
+            ended = true;
+            Arcade.sfx('die');
+            Arcade.text('loseText', `${game.level.lives} mistakes on ${game.level.icon} ${game.level.name}. Retry the same puzzle or try a fresh one.`);
+            Arcade.remove(SAVE_KEY);
+            setTimeout(() => Arcade.show('loseOv'), 500);
+        }
+
+        /* ---------- Menu ---------- */
+        function buildMenu() {
+            const th = document.getElementById('themes');
+            th.innerHTML = '';
+            for (const [id, t] of Object.entries(THEMES)) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (id === theme ? ' active' : '');
+                b.textContent = t.name;
+                b.onclick = () => { theme = id; Arcade.save('arcade.petdoku.theme', id); Arcade.sfx('select'); buildMenu(); if (game) render(true); };
+                th.appendChild(b);
+            }
+            const host = document.getElementById('levels');
+            host.innerHTML = '';
+            LEVELS.forEach((L, idx) => {
+                const st = stats[L.id];
+                const b = document.createElement('button');
+                b.className = 'lvl';
+                const meter = Array.from({ length: 13 }, (_, k) => `<i class="${k <= idx ? 'on' : ''}"></i>`).join('');
+                b.innerHTML = `<div class="top"><span>${L.icon}</span><b>${L.name}</b></div><small>${L.desc}</small><div class="meter">${meter}</div><div class="rec">${st && st.wins ? `★ ${Arcade.time(st.best)} · ${st.wins} win${st.wins > 1 ? 's' : ''}` : ''}</div>`;
+                b.onclick = () => { Arcade.sfx('select'); newGame(L); };
+                host.appendChild(b);
+            });
+            const saved = Arcade.load(SAVE_KEY, null);
+            const canResume = (game && !ended) || (saved && saved.puzzle);
+            document.getElementById('resumeBtn').hidden = !canResume;
+            document.getElementById('closeMenu').hidden = !(game && !ended);
+        }
+
+        function openMenu() {
+            buildMenu();
+            Arcade.show('menuOv');
+        }
+
+        function resume() {
+            if (game && !ended) { Arcade.hide('menuOv'); return; }
+            const s = Arcade.load(SAVE_KEY, null);
+            if (!s) return;
+            start(levelOf(s.level), s);
+        }
+
+        function setPaused(on) {
+            if (!game || ended) return;
+            paused = on;
+            boardEl.style.visibility = on ? 'hidden' : '';
+            palEl.style.visibility = on ? 'hidden' : '';
+            if (on) Arcade.show('pauseOv'); else Arcade.hide('pauseOv');
+        }
+
+        /* ---------- Wiring ---------- */
+        document.getElementById('undoBtn').onclick = undo;
+        document.getElementById('eraseBtn').onclick = erase;
+        document.getElementById('notesBtn').onclick = () => { notesMode = !notesMode; Arcade.sfx('select'); hud(); };
+        document.getElementById('hintBtn').onclick = hint;
+        document.getElementById('fillBtn').onclick = fillNotes;
+        document.getElementById('hintClose').onclick = hideHint;
+        boardEl.addEventListener('pointerdown', () => { if (!document.getElementById('hintBox').hidden) hideHint(); }, true);
+        document.getElementById('menuBtn').onclick = openMenu;
+        document.getElementById('closeMenu').onclick = () => Arcade.hide('menuOv');
+        document.getElementById('resumeBtn').onclick = resume;
+        document.getElementById('pauseBtn').onclick = () => setPaused(!paused);
+        document.getElementById('unpauseBtn').onclick = () => setPaused(false);
+        document.getElementById('nextBtn').onclick = () => newGame(LEVELS[Math.min(LEVELS.length - 1, LEVELS.indexOf(game.level) + 1)]);
+        document.getElementById('againBtn').onclick = () => newGame(game.level);
+        document.getElementById('winMenuBtn').onclick = () => { Arcade.hide('winOv'); openMenu(); };
+        document.getElementById('loseMenuBtn').onclick = () => { Arcade.hide('loseOv'); openMenu(); };
+        document.getElementById('newSameBtn').onclick = () => newGame(game.level);
+        document.getElementById('retryBtn').onclick = () => start(game.level, { puzzle: game.puzzle, solution: game.solution });
+
+        window.addEventListener('keydown', (e) => {
+            if (!game) return;
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); undo(); return; }
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.code === 'KeyP' || e.code === 'Escape') { if (!document.getElementById('menuOv').hidden) return; setPaused(!paused); return; }
+            if (paused || ended) return;
+            const n = G.n;
+            const k = parseInt(e.key, 10);
+            if (k >= 1 && k <= n) { input(k); return; }
+            if (e.code === 'KeyN') { notesMode = !notesMode; hud(); return; }
+            if (e.code === 'KeyH') { hint(); return; }
+            if (e.code === 'KeyF') { fillNotes(); return; }
+            if (e.code === 'Backspace' || e.code === 'Delete' || e.key === '0') { erase(); return; }
+            const mv = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1], KeyW: [-1, 0], KeyS: [1, 0], KeyA: [0, -1], KeyD: [0, 1] }[e.code];
+            if (mv) {
+                e.preventDefault();
+                if (sel < 0) sel = 0;
+                else {
+                    const r = (G.R[sel] + mv[0] + n) % n, c = (G.C[sel] + mv[1] + n) % n;
+                    sel = r * n + c;
+                }
+                render();
+            }
+        });
+
+        setInterval(() => {
+            if (!game || ended || paused || document.hidden) return;
+            if (!document.getElementById('menuOv').hidden || !document.getElementById('gen').hidden) return;
+            game.time += 1;
+            Arcade.text('timer', Arcade.time(game.time));
+            if (game.time % 5 === 0) persist();
+        }, 1000);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
+        window.addEventListener('beforeunload', persist);
+
+        // Start: resume a saved game behind the menu if there is one.
+        const saved = Arcade.load(SAVE_KEY, null);
+        if (saved && saved.puzzle && levelOf(saved.level).size === Math.sqrt(saved.puzzle.length)) start(levelOf(saved.level), saved);
+        else { G = geometry(9); layout(); }
+        openMenu();
+    })();
+    </script>
+</body>
+</html>

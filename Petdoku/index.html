@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Petdoku · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        /* Petdoku: dark arcade look with chunky casual-game controls */
+        :root {
+            --accent: #f472b6; --accent-2: #fb923c; --accent-ink: #2a0717;
+            --ink: var(--text); --bw: 280px; --gap: 5px;
+        }
+        html, body { overflow-x: hidden; }
+        body {
+            background: radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--bg);
+            font-family: "Nunito", "Segoe UI Rounded", "Arial Rounded MT Bold", "Segoe UI", system-ui, sans-serif;
+        }
+        button { font-family: inherit; }
+        .pbtn {
+            appearance: none; border: none; cursor: pointer; font-weight: 900; color: #fff; letter-spacing: 0.02em;
+            border-radius: 16px; padding: 12px 22px; font-size: 1rem;
+            background: var(--c1, #ec4899);
+            box-shadow: 0 5px 0 var(--c3, #9d174d), 0 10px 18px -8px rgba(0,0,0,0.6);
+            transition: transform 0.08s, box-shadow 0.08s;
+        }
+        .pbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--c3, #9d174d); }
+        .pbtn:disabled { filter: grayscale(0.8) opacity(0.6); cursor: default; }
+        .pbtn.green { --c1: #22c55e; --c3: #15803d; }
+        .pbtn.blue { --c1: #3b82f6; --c3: #1e40af; }
+        .pbtn.gold { --c1: #f59e0b; --c3: #b45309; }
+        .pbtn.white { --c1: var(--surface-2); --c3: #0b1020; color: var(--text); }
+        .pbtn.lg { font-size: 1.2rem; padding: 15px 28px; border-radius: 20px; }
+
+        /* top bar */
+        .pbar { display: flex; align-items: center; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 12px 6px; }
+        .rbtn { width: 46px; height: 46px; padding: 0; border-radius: 14px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; flex: none; text-decoration: none; }
+        .ptitle { flex: 1; text-align: center; line-height: 1.1; }
+        .ptitle b { display: block; font-size: 1.35rem; font-weight: 900; color: var(--text); }
+        .ptitle small { font-weight: 800; color: var(--muted); font-size: 0.8rem; }
+        .infobar { display: flex; justify-content: center; gap: 8px; padding: 2px 12px 8px; flex-wrap: wrap; }
+        .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; font-weight: 900; color: var(--text); font-size: 0.92rem; }
+        .pill .hearts { letter-spacing: 1px; color: #f87171; }
+        .pill .hearts .lost { color: var(--surface-3); }
+
+        /* board: separate solid tiles with slightly rounded corners and gaps between them — no outlines */
+        .play { position: relative; flex: 1; min-height: 0; width: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 4px 12px; }
+        .board-card { padding: 0; background: none; }
+        .board {
+            --n: 8;
+            width: var(--bw); height: var(--bw);
+            display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr);
+            gap: var(--gap); touch-action: none;
+        }
+        .cell {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            background: var(--rc); cursor: pointer;
+            border-radius: calc(var(--bw) / var(--n) * 0.16);
+            font-size: calc(var(--bw) / var(--n) * 0.6); line-height: 1;
+            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+            transition: transform 0.08s, filter 0.12s;
+        }
+        @media (hover: hover) { .cell:hover { filter: brightness(1.1); } }
+        .cell:active { transform: scale(0.94); }
+        .cell .x { display: block; width: 62%; height: 62%; overflow: visible; filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.85)) drop-shadow(0 1px 1px rgba(0,0,0,0.5)); }
+        .cell .x path { stroke: #fff; stroke-width: 24; stroke-linecap: round; fill: none; }
+        .cell .pet { filter: drop-shadow(0 2px 1px rgba(0,0,0,0.3)); animation: petIn 0.3s cubic-bezier(.2, 1.6, .4, 1); }
+        @keyframes petIn { from { transform: scale(0.2) rotate(-25deg); } to { transform: none; } }
+        .cell.bad { box-shadow: inset 0 0 0 3px #ef4444; background: repeating-linear-gradient(45deg, var(--rc), var(--rc) 6px, color-mix(in srgb, #ef4444 45%, var(--rc)) 6px, color-mix(in srgb, #ef4444 45%, var(--rc)) 12px); }
+        .cell.bad .pet { animation: shake 0.35s; }
+        .cell.hinted { box-shadow: inset 0 0 0 3px #fff, 0 0 14px 2px var(--gold); }
+        .cell.hintzone { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9); filter: brightness(1.12); }
+        .cell.hinted.hintzone { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 3px var(--gold); }
+        .hint-box { width: min(var(--bw), 100%); display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 16px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); box-shadow: 0 10px 30px -14px var(--gold); color: var(--text); font-weight: 700; font-size: 0.86rem; line-height: 1.4; text-align: left; animation: popIn 0.22s; }
+        .hint-box .hb-ic { font-size: 1.4rem; line-height: 1; }
+        .hint-box b { color: var(--gold); }
+        .hint-box button { margin-left: auto; flex: none; }
+        .cell.won { animation: winWave 0.8s ease-out both; }
+        @keyframes winWave { 0% { filter: brightness(1.6); transform: scale(0.85); } 100% { filter: none; transform: none; } }
+        .rules { font-size: 0.82rem; color: var(--muted); text-align: center; max-width: var(--bw); margin: 0; font-weight: 700; }
+        .rules b { color: var(--text); }
+
+        /* bottom toolbar */
+        .toolbar { display: flex; justify-content: center; align-items: flex-end; gap: clamp(8px, 3vw, 18px); padding: 6px 10px max(14px, env(safe-area-inset-bottom)); }
+        .tool { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: var(--muted); font-weight: 900; font-size: 0.72rem; position: relative; }
+        .tool .ic { width: 56px; height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 5px 0 #0b1020; transition: transform 0.08s, box-shadow 0.08s; }
+        .tool:active .ic { transform: translateY(4px); box-shadow: 0 1px 0 #0b1020; }
+        .tool:disabled { opacity: 0.4; cursor: default; }
+        .tool.on .ic { background: #f59e0b; border-color: transparent; box-shadow: 0 5px 0 #b45309; }
+        .tool.mode .ic { width: 70px; height: 70px; font-size: 2rem; border-radius: 22px; background: #ec4899; border-color: transparent; box-shadow: 0 6px 0 #9d174d; color: #fff; }
+        .tool.mode.pet .ic { background: #3b82f6; box-shadow: 0 6px 0 #1e40af; }
+        .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
+        .badge.ok { background: #22c55e; }
+
+        /* screens */
+        .screen { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg); }
+        .screen[hidden] { display: none !important; }
+        .home-head { text-align: center; padding: max(16px, env(safe-area-inset-top)) 16px 6px; position: relative; }
+        .logo { font-size: 2.6rem; font-weight: 900; color: var(--text); letter-spacing: 0.01em; line-height: 1; }
+        .logo span { color: var(--accent); }
+        .home-head p { margin: 8px 0 0; color: var(--muted); font-weight: 700; font-size: 0.9rem; }
+        .home-head .corner { position: absolute; top: max(14px, env(safe-area-inset-top)); }
+        .home-head .corner.l { left: 12px; } .home-head .corner.r { right: 12px; display: flex; gap: 6px; }
+        @media (max-width: 520px) { .home-head { padding-top: calc(max(16px, env(safe-area-inset-top)) + 54px); } .logo { font-size: 2.3rem; } }
+        .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px 14px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .dtab { flex: none; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 84px; padding: 9px 10px 8px; border-radius: 18px; border: 1px solid var(--line-2); cursor: pointer; background: var(--surface); color: var(--text); font-weight: 900; font-size: 0.82rem; box-shadow: 0 4px 0 #0b1020; }
+        .dtab span { font-size: 1.6rem; line-height: 1.1; }
+        .dtab small { font-size: 0.68rem; color: var(--muted); font-weight: 800; }
+        .dtab.on { background: #ec4899; border-color: transparent; color: #fff; box-shadow: 0 4px 0 #9d174d; }
+        .dtab.on small { color: rgba(255,255,255,0.85); }
+        .dinfo { margin: 0 14px; padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+        .dinfo .big { font-size: 2.2rem; }
+        .dinfo b { color: var(--text); font-size: 1.05rem; }
+        .dinfo small { display: block; color: var(--muted); font-weight: 700; font-size: 0.78rem; }
+        .dinfo .grow { flex: 1; }
+        .chapters { padding: 6px 14px 120px; }
+        .chapter h4 { margin: 16px 4px 10px; color: var(--text); font-size: 0.95rem; font-weight: 900; display: flex; justify-content: space-between; }
+        .chapter h4 small { color: var(--muted); font-weight: 800; }
+        .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 8px; }
+        .lv { position: relative; aspect-ratio: 1; border-radius: 18px; border: none; cursor: pointer; font-weight: 900; font-size: 1.15rem; color: #fff; background: #3b82f6; box-shadow: 0 5px 0 #1e40af; max-width: 64px; justify-self: center; width: 100%; }
+        .lv.done { background: #22c55e; box-shadow: 0 5px 0 #15803d; }
+        .lv.cur { background: #ec4899; box-shadow: 0 5px 0 #9d174d, 0 0 0 5px rgba(236,72,153,0.25); animation: bob 1.2s ease-in-out infinite; }
+        .lv.locked { background: var(--surface-2); color: var(--dim); box-shadow: 0 5px 0 #0b1020; cursor: default; }
+        .lv .st { position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%); font-size: 0.66rem; letter-spacing: -1px; white-space: nowrap; }
+        .lv .size { position: absolute; top: -6px; right: -8px; font-size: 0.6rem; background: var(--surface-3); color: var(--text); border-radius: 999px; padding: 1px 5px; }
+        @keyframes bob { 50% { transform: translateY(-4px); } }
+        .home-foot { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px max(16px, env(safe-area-inset-bottom)); display: flex; justify-content: center; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg) 95%, transparent) 35%); z-index: 2; }
+        .home-foot .pbtn { width: min(420px, 100%); }
+
+        /* popups */
+        .pop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(5, 8, 18, 0.72); backdrop-filter: blur(6px); animation: fadeIn 0.18s; }
+        .pop[hidden] { display: none !important; }
+        .card { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line-2); border-radius: 26px; padding: 22px 20px 20px; text-align: center; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8); animation: popIn 0.28s cubic-bezier(.2, 1.5, .4, 1); position: relative; }
+        .card h2 { margin: 0; font-size: 1.8rem; font-weight: 900; color: var(--text); }
+        .card p { color: var(--muted); font-weight: 700; margin: 6px 0; }
+        .ribbon { margin: -40px auto 6px; width: max-content; padding: 8px 26px; border-radius: 14px; background: #ec4899; color: #fff; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 0 #9d174d; }
+        .ribbon.sad { background: #64748b; box-shadow: 0 5px 0 #334155; }
+        .stars { font-size: 3rem; letter-spacing: 6px; margin: 6px 0 4px; }
+        .stars i { font-style: normal; display: inline-block; filter: grayscale(1) opacity(0.3); }
+        .stars i.on { filter: none; animation: starIn 0.5s cubic-bezier(.2, 1.8, .4, 1) both; }
+        .stars i:nth-child(2) { transform: translateY(-10px); }
+        @keyframes starIn { from { transform: scale(0) rotate(-90deg); } }
+        .card .sgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
+        .card .sgrid div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 4px; }
+        .card .sgrid small { display: block; color: var(--muted); font-size: 0.66rem; font-weight: 800; text-transform: uppercase; }
+        .card .sgrid b { color: var(--text); font-size: 1.05rem; }
+        .card .acts { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .card .row2 { display: flex; gap: 10px; }
+        .card .row2 .pbtn { flex: 1; }
+        .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+        .theme { border: 1px solid var(--line-2); border-radius: 16px; padding: 10px; background: var(--bg-2); cursor: pointer; font-weight: 900; color: var(--text); }
+        .theme span { display: block; font-size: 1.6rem; }
+        .theme.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+        .opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); font-weight: 800; color: var(--text); font-size: 0.9rem; cursor: pointer; }
+        .opt small { display: block; color: var(--muted); font-weight: 700; font-size: 0.74rem; }
+        .opt input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+        .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; text-align: left; }
+        .howto div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+        .howto b { display: block; color: var(--text); font-size: 0.84rem; }
+        .gen { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(5, 8, 18, 0.5); }
+        .gen[hidden] { display: none !important; }
+        .gen span { padding: 14px 22px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-2); font-weight: 900; color: var(--text); }
+        .gen span i { display: inline-block; font-style: normal; animation: bob 0.6s ease-in-out infinite; }
+        .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 85; overflow: hidden; }
+        .confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 3px; animation: fall linear forwards; }
+        @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <!-- ================= GAME ================= -->
+    <div class="pbar">
+        <button class="pbtn white rbtn" id="backBtn" title="Levels">‹</button>
+        <div class="ptitle"><b id="lvlTitle">Level 1</b><small id="diffLabel">🐱 Kitten · 6×6</small></div>
+        <button class="pbtn white rbtn" id="restartBtn" title="New map for this level">⟲</button>
+        <button class="pbtn white rbtn" id="setBtn" title="Settings">⚙</button>
+    </div>
+    <div class="infobar">
+        <span class="pill">⏱ <span id="timer">0:00</span></span>
+        <span class="pill" id="livesPill"><span class="hearts" id="lives"></span></span>
+        <span class="pill">🐾 <span id="petCount">0/6</span></span>
+    </div>
+    <main class="play" id="play">
+        <div class="board-card"><div class="board" id="board"></div></div>
+        <div class="hint-box" id="hintBox" hidden><span class="hb-ic">💡</span><span id="hintText"></span><button class="pbtn white sm" id="hintClose">Got it</button></div>
+        <p class="rules">One pet in every <b>row</b>, <b>column</b> and <b>colour</b>. Pets can't <b>touch</b>, not even corners.</p>
+    </main>
+    <div class="toolbar">
+        <button class="tool" id="undoBtn"><span class="ic">↶</span>Undo</button>
+        <button class="tool" id="clearBtn"><span class="ic">🧹</span>Clear</button>
+        <button class="tool mode" id="modeBtn"><span class="ic" id="modeIc">✕</span><span id="modeTxt">Tap: mark</span></button>
+        <button class="tool" id="autoBtn"><span class="ic">⚡</span>Auto ✕</button>
+        <button class="tool" id="hintBtn"><span class="ic">💡</span>Hint<span class="badge" id="hintBadge">3</span></button>
+    </div>
+
+    <!-- ================= LEVEL MAP ================= -->
+    <div class="screen" id="homeScr">
+        <div class="home-head">
+            <a class="pbtn white rbtn corner l" href="../GameIndex.html" title="Back to the arcade">⌂</a>
+            <div class="corner r">
+                <button class="pbtn white rbtn" data-mute title="Sound">🔊</button>
+                <button class="pbtn white rbtn" id="homeSetBtn" title="Settings">⚙</button>
+            </div>
+            <div class="logo">Pet<span>doku</span> 🐾</div>
+            <p>Place one pet per row, column &amp; colour</p>
+        </div>
+        <div class="tabs" id="tabs"></div>
+        <div class="dinfo" id="dinfo"></div>
+        <div class="chapters" id="chapters"></div>
+        <div class="home-foot"><button class="pbtn lg" id="playBtn">▶ Play level 1</button></div>
+    </div>
+
+    <!-- ================= POPUPS ================= -->
+    <div class="pop" id="winPop" hidden>
+        <div class="card">
+            <div class="ribbon">Level complete!</div>
+            <div class="stars" id="winStars"><i>⭐</i><i>⭐</i><i>⭐</i></div>
+            <p id="winSub"></p>
+            <div class="sgrid">
+                <div><small>Time</small><b id="winTime">0:00</b></div>
+                <div><small>Mistakes</small><b id="winMistakes">0</b></div>
+                <div><small>Hints</small><b id="winHints">0</b></div>
+            </div>
+            <p class="small" id="winBest"></p>
+            <div class="acts">
+                <button class="pbtn green lg" id="nextBtn">Next level ▶</button>
+                <div class="row2">
+                    <button class="pbtn white" id="winMapBtn">☰ Levels</button>
+                    <button class="pbtn white" id="replayBtn">⟲ Replay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pop" id="losePop" hidden>
+        <div class="card">
+            <div class="ribbon sad">Out of lives</div>
+            <div class="stars">💔</div>
+            <p id="loseText"></p>
+            <p class="small">You'll get a brand-new map for this level.</p>
+            <div class="acts">
+                <button class="pbtn lg" id="retryBtn">Try again</button>
+                <button class="pbtn white" id="loseMapBtn">☰ Levels</button>
+            </div>
+        </div>
+    </div>
+    <div class="pop" id="restartPop" hidden>
+        <div class="card">
+            <h2>New map?</h2>
+            <p>This level will be rebuilt with a fresh layout. Your timer, mistakes and hints carry on.</p>
+            <div class="acts row2">
+                <button class="pbtn white" id="restartNo">Cancel</button>
+                <button class="pbtn" id="restartYes">New map</button>
+            </div>
+        </div>
+    </div>
+    <div class="pop" id="setPop" hidden>
+        <div class="card">
+            <h2>Settings</h2>
+            <div class="themes" id="themes"></div>
+            <label class="opt"><span>Auto ✕<small>Mark cells a new pet rules out</small></span><input type="checkbox" id="optAuto"></label>
+            <label class="opt"><span>Show timer<small>Hide it for a calmer game</small></span><input type="checkbox" id="optTimer"></label>
+            <div class="howto">
+                <div><b>👆 Tap</b>mark ✕ (or place a pet in 🐾 mode)</div>
+                <div><b>👆👆 Double-tap</b>always places a pet</div>
+                <div><b>✋ Hold</b>also places a pet</div>
+                <div><b>👉 Drag</b>mark lots of ✕ at once</div>
+            </div>
+            <div class="acts"><button class="pbtn" id="setClose">Done</button></div>
+        </div>
+    </div>
+    <div class="gen" id="gen" hidden><span><i>🐾</i> Building your map…</span></div>
+    <div class="confetti" id="confetti"></div>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        /* ---------- Content ---------- */
+        // solid, clearly different colours — a region is simply the tiles of one colour
+        const REGION_COLORS = ['#e53935', '#1e88e5', '#fdd835', '#2e7d32', '#8e24aa', '#fb8c00', '#00e5ff', '#ff80ab', '#6d4c41', '#b2ff59', '#455a64', '#d500f9', '#cfd8dc', '#00897b']; // spread across hue AND lightness so no two look alike
+        const THEMES = {
+            pets: { name: 'Pets', icon: '🐶', set: ['🐶', '🐱', '🐰', '🐹', '🦊', '🐼', '🐨', '🐸', '🐵', '🐷', '🐮', '🐯', '🐻', '🐭'] },
+            farm: { name: 'Farm', icon: '🐮', set: ['🐮', '🐷', '🐔', '🐴', '🐑', '🦆', '🐐', '🦃', '🐝', '🐶', '🐱', '🐭', '🐇', '🐓'] },
+            ocean: { name: 'Ocean', icon: '🐠', set: ['🐠', '🐙', '🐬', '🐳', '🦀', '🐢', '🦈', '🦑', '🐚', '🦞', '🐡', '🦭', '🪼', '🐋'] },
+            wild: { name: 'Wild', icon: '🦁', set: ['🦁', '🐯', '🐘', '🦒', '🦓', '🦏', '🐊', '🦛', '🦘', '🦍', '🐻', '🦌', '🐺', '🦅'] },
+        };
+        /*
+         * grade = the hardest reasoning step the puzzle needs (see grade() below):
+         *   1 last spot in a row/column/colour · 2 a colour stuck in one line (or a line in one colour)
+         *   3 "this cell would wipe out a whole row/column/colour" · 4 groups of 2–3 colours sharing lines
+         *   5 deeper what-if chains · 6 beyond all of that
+         * lives: wrong pets allowed (null = unlimited). blind: rule breaks aren't highlighted.
+         * size: board size at level 1 — it grows as you climb the levels.
+         */
+        const DIFFS = [
+            { id: 'kitten', icon: '🐱', name: 'Kitten', grade: [1, 2], hints: 99, lives: null, size: 5, desc: 'Gentle — only simple steps' },
+            { id: 'puppy', icon: '🐶', name: 'Puppy', grade: [2, 2], hints: 5, lives: null, size: 5, desc: 'Spot colours stuck in a line' },
+            { id: 'bunny', icon: '🐰', name: 'Bunny', grade: [2, 3], hints: 4, lives: null, size: 6, desc: 'A little look-ahead' },
+            { id: 'hamster', icon: '🐹', name: 'Hamster', grade: [3, 3], hints: 3, lives: null, size: 6, desc: 'Look-ahead needed' },
+            { id: 'fox', icon: '🦊', name: 'Fox', grade: [3, 4], hints: 3, lives: null, size: 7, desc: 'Colour groups appear' },
+            { id: 'owl', icon: '🦉', name: 'Owl', grade: [4, 4], hints: 2, lives: null, size: 7, desc: 'Colour groups needed' },
+            { id: 'wolf', icon: '🐺', name: 'Wolf', grade: [4, 5], hints: 2, lives: 5, size: 8, desc: 'Hard · 5 lives' },
+            { id: 'bear', icon: '🐻', name: 'Bear', grade: [5, 6], hints: 1, lives: 3, size: 8, desc: 'Very hard · 3 lives' },
+            { id: 'tiger', icon: '🐯', name: 'Tiger', grade: [5, 6], hints: 0, lives: 1, size: 9, desc: 'Expert · no hints · 1 life' },
+            { id: 'dragon', icon: '🐲', name: 'Dragon', grade: [6, 6], hints: 0, lives: 1, blind: true, size: 9, desc: 'Nightmare · 1 life · no warnings' },
+        ];
+        const CHAPTER = 20;
+        const CHAPTER_NAMES = ['Sunny Garden', 'Puppy Park', 'Bunny Hills', 'Fishbowl Bay', 'Kitty Castle', 'Pony Prairie', 'Hamster Heights', 'Parrot Jungle', 'Frosty Den', 'Starlight Zoo'];
+
+        /* ---------- Puzzle engine ---------- */
+        // cells are indexed r*n+c; reg[i] = colour region of cell i
+        function units(n, reg) {
+            const rows = [], cols = [], regs = Array.from({ length: n }, () => []);
+            for (let k = 0; k < n; k++) { rows.push([]); cols.push([]); }
+            for (let i = 0; i < n * n; i++) { rows[(i / n) | 0].push(i); cols[i % n].push(i); regs[reg[i]].push(i); }
+            return [...rows, ...cols, ...regs];
+        }
+        function neighbours(n, i) {
+            const r = (i / n) | 0, c = i % n, out = [];
+            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                if (!dr && !dc) continue;
+                const rr = r + dr, cc = c + dc;
+                if (rr >= 0 && cc >= 0 && rr < n && cc < n) out.push(rr * n + cc);
+            }
+            return out;
+        }
+        // all cells a pet on i rules out
+        function blocked(n, reg, i) {
+            const r = (i / n) | 0, c = i % n, out = new Set(neighbours(n, i));
+            for (let k = 0; k < n; k++) { out.add(r * n + k); out.add(k * n + c); }
+            for (let j = 0; j < n * n; j++) if (reg[j] === reg[i]) out.add(j);
+            out.delete(i);
+            return [...out];
+        }
+
+        // Exact solver: finds up to `limit` solutions (arrays of pet cells). Branches on the tightest unit.
+        function solveAll(n, reg, limit) {
+            const U = units(n, reg), sols = [];
+            const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
+            function rec(avail, done, pets) {
+                if (sols.length >= limit) return;
+                let best = null, bestCnt = 1e9;
+                for (let u = 0; u < U.length; u++) {
+                    if (done[u]) continue;
+                    let cnt = 0;
+                    for (const i of U[u]) if (avail[i]) cnt++;
+                    if (cnt === 0) return;
+                    if (cnt < bestCnt) { bestCnt = cnt; best = u; if (cnt === 1) break; }
+                }
+                if (best === null) { sols.push(pets.slice()); return; }
+                for (const i of U[best]) {
+                    if (!avail[i]) continue;
+                    const a = avail.slice();
+                    a[i] = 0;
+                    for (const j of block[i]) a[j] = 0;
+                    const d = done.slice();
+                    const r = (i / n) | 0, c = i % n;
+                    d[r] = 1; d[n + c] = 1; d[2 * n + reg[i]] = 1;
+                    pets.push(i);
+                    rec(a, d, pets);
+                    pets.pop();
+                    if (sols.length >= limit) return;
+                }
+            }
+            rec(new Uint8Array(n * n).fill(1), new Uint8Array(3 * n), []);
+            return sols;
+        }
+
+        function randomPlacement(n) {
+            const cols = [];
+            const used = new Array(n).fill(false);
+            function rec(r) {
+                if (r === n) return true;
+                for (const c of Arcade.shuffle([...Array(n).keys()])) {
+                    if (used[c] || (r && Math.abs(c - cols[r - 1]) <= 1)) continue;
+                    used[c] = true; cols[r] = c;
+                    if (rec(r + 1)) return true;
+                    used[c] = false;
+                }
+                return false;
+            }
+            rec(0);
+            return cols.map((c, r) => r * n + c);
+        }
+
+        function connectedWithout(n, reg, g, skip) {
+            const cells = [];
+            for (let i = 0; i < n * n; i++) if (reg[i] === g && i !== skip) cells.push(i);
+            if (!cells.length) return false;
+            const seen = new Set([cells[0]]), st = [cells[0]];
+            while (st.length) {
+                const i = st.pop(), r = (i / n) | 0, c = i % n;
+                for (const [rr, cc] of [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]) {
+                    if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+                    const j = rr * n + cc;
+                    if (j !== skip && reg[j] === g && !seen.has(j)) { seen.add(j); st.push(j); }
+                }
+            }
+            return seen.size === cells.length;
+        }
+
+        const orth = (n, i) => {
+            const r = (i / n) | 0, c = i % n, out = [];
+            if (r > 0) out.push(i - n); if (r < n - 1) out.push(i + n); if (c > 0) out.push(i - 1); if (c < n - 1) out.push(i + 1);
+            return out;
+        };
+        // Moves cell q into a neighbouring colour if that keeps its old colour in one piece.
+        function tryMove(n, reg, q, seeds) {
+            if (seeds.has(q)) return false;
+            const nb = Arcade.shuffle(orth(n, q).map(j => reg[j]).filter(g => g !== reg[q]));
+            if (!nb.length || !connectedWithout(n, reg, reg[q], q)) return false;
+            reg[q] = nb[0];
+            return true;
+        }
+
+        /*
+         * Builds colour regions around a hidden solution, then reshapes them until that solution is the
+         * only one. skew (0–1) controls how uneven region sizes are: lots of tiny colours make a puzzle
+         * gentle, evenly sized colours make it hard.
+         */
+        function makePuzzle(n, skew = 0.5, deadline = Infinity) {
+            for (let attempt = 0; attempt < 12; attempt++) {
+                const sol = randomPlacement(n);
+                const seeds = new Set(sol);
+                const reg = new Int8Array(n * n).fill(-1);
+                sol.forEach((i, g) => reg[i] = g);
+                const weight = sol.map(() => Math.pow(Math.random(), 1 + skew * 5) + 0.02);
+                const frontier = sol.map(i => new Set(orth(n, i)));
+                let left = n * n - n;
+                while (left) {
+                    let tot = 0;
+                    for (let g = 0; g < n; g++) if (frontier[g].size) tot += weight[g];
+                    let r = Math.random() * tot, g = 0;
+                    for (; g < n; g++) { if (!frontier[g].size) continue; r -= weight[g]; if (r <= 0) break; }
+                    if (g >= n) g = frontier.findIndex(f => f.size);
+                    const cell = Arcade.pick([...frontier[g]]);
+                    frontier[g].delete(cell);
+                    if (reg[cell] !== -1) continue;
+                    reg[cell] = g; left--;
+                    for (const j of orth(n, cell)) if (reg[j] === -1) frontier[g].add(j);
+                }
+                let ok = false;
+                for (let it = 0; it < 900 && performance.now() < deadline; it++) {
+                    const sols = solveAll(n, reg, 2);
+                    if (sols.length === 1) { ok = true; break; }
+                    const other = sols.find(s => s.some(i => !seeds.has(i)));
+                    let moved = false;
+                    for (const q of Arcade.shuffle(other.filter(i => !seeds.has(i)))) if (tryMove(n, reg, q, seeds)) { moved = true; break; }
+                    if (!moved) {
+                        for (let k = 0; k < 30 && !moved; k++) {
+                            const q = Arcade.pick(other);
+                            const near = Arcade.pick(neighbours(n, q).concat(q));
+                            moved = tryMove(n, reg, near, seeds);
+                        }
+                    }
+                    if (!moved) break;
+                }
+                if (ok) return { n, reg: Array.from(reg), sol: sol.slice().sort((a, b) => a - b) };
+                if (performance.now() > deadline) return null;
+            }
+            return null;
+        }
+
+        /* Logical grader: solves like a person would and reports the hardest step it needed (6 = stuck). */
+        function grade(n, reg) {
+            const U = units(n, reg);
+            const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
+            const avail = new Uint8Array(n * n).fill(1), pet = new Uint8Array(n * n);
+            const done = new Uint8Array(3 * n);
+            const unitsOf = (i) => [(i / n) | 0, n + i % n, 2 * n + reg[i]];
+            let placed = 0, hardest = 1;
+            const place = (i, a, d, p) => { p[i] = 1; a[i] = 0; for (const j of block[i]) a[j] = 0; for (const u of unitsOf(i)) d[u] = 1; };
+            const cands = (u, a) => U[u].filter(i => a[i]);
+            function quick(a, d, p, withConfine) {
+                for (let changed = true; changed;) {
+                    changed = false;
+                    for (let u = 0; u < U.length; u++) {
+                        if (d[u]) continue;
+                        const cs = cands(u, a);
+                        if (!cs.length) return false;
+                        if (cs.length === 1) { place(cs[0], a, d, p); changed = true; }
+                    }
+                    if (!changed && withConfine && confine(a, d)) changed = true;
+                }
+                return true;
+            }
+            function confine(a, d) {
+                let any = false;
+                for (let u = 0; u < U.length; u++) {
+                    if (d[u]) continue;
+                    const cs = cands(u, a);
+                    if (!cs.length) continue;
+                    for (const kind of [0, 1, 2]) {
+                        if (kind === Math.floor(u / n)) continue;
+                        const key = (i) => kind === 0 ? (i / n) | 0 : kind === 1 ? n + i % n : 2 * n + reg[i];
+                        const k = key(cs[0]);
+                        if (!cs.every(i => key(i) === k) || d[k]) continue;
+                        for (const j of U[k]) if (a[j] && !cs.includes(j)) { a[j] = 0; any = true; }
+                    }
+                }
+                return any;
+            }
+            function step() {
+                for (let u = 0; u < U.length; u++) {
+                    if (done[u]) continue;
+                    const cs = cands(u, avail);
+                    if (!cs.length) return -1;
+                    if (cs.length === 1) { place(cs[0], avail, done, pet); placed++; return 1; }
+                }
+                if (confine(avail, done)) return 2;
+                let any = false;
+                for (let i = 0; i < n * n; i++) {
+                    if (!avail[i]) continue;
+                    const mine = unitsOf(i);
+                    for (let u = 0; u < U.length && avail[i]; u++) {
+                        if (done[u] || mine.includes(u)) continue;
+                        if (U[u].every(j => !avail[j] || j === i || block[i].includes(j))) { avail[i] = 0; any = true; }
+                    }
+                }
+                if (any) return 3;
+                for (const k of [2, 3]) {
+                    for (const [fromBase, toKind] of [[2 * n, 0], [2 * n, 1], [0, 2], [n, 2]]) {
+                        const groups = [];
+                        for (let u = fromBase; u < fromBase + n; u++) if (!done[u]) groups.push(u);
+                        const key = (i) => toKind === 0 ? (i / n) | 0 : toKind === 1 ? n + i % n : 2 * n + reg[i];
+                        const combos = (start, pick) => pick.length === k ? [pick.slice()] : groups.slice(start).flatMap((g, x) => combos(start + x + 1, [...pick, g]));
+                        for (const set of combos(0, [])) {
+                            const lines = new Set(), mine = new Set();
+                            for (const u of set) for (const i of U[u]) if (avail[i]) { lines.add(key(i)); mine.add(i); }
+                            if (lines.size !== k) continue;
+                            let hit = false;
+                            for (const l of lines) for (const j of U[l]) if (avail[j] && !mine.has(j)) { avail[j] = 0; hit = true; }
+                            if (hit) return 4;
+                        }
+                    }
+                }
+                for (let i = 0; i < n * n; i++) {
+                    if (!avail[i]) continue;
+                    const a = avail.slice(), d = done.slice(), p = pet.slice();
+                    place(i, a, d, p);
+                    if (!quick(a, d, p, true)) { avail[i] = 0; return 5; }
+                }
+                return 0;
+            }
+            while (placed < n) {
+                const s = step();
+                if (s === -1) return 7;
+                if (s === 0) return 6;
+                hardest = Math.max(hardest, s);
+            }
+            return hardest;
+        }
+
+        function generateFor(n, d) {
+            const [lo, hi] = d.grade;
+            let best = null, bestDist = 1e9;
+            const t0 = performance.now();
+            const di = DIFFS.indexOf(d);
+            for (let k = 0; k < 60; k++) {
+                const skew = Arcade.clamp(1 - di / (DIFFS.length - 1) + (Math.random() - 0.5) * 0.4, 0, 1);
+                const p = makePuzzle(n, skew, t0 + 4000);
+                if (!p) { if (performance.now() - t0 > 4000) break; continue; }
+                p.grade = grade(n, p.reg);
+                const dist = p.grade < lo ? lo - p.grade : p.grade > hi ? p.grade - hi : 0;
+                if (dist < bestDist) { best = p; bestDist = dist; }
+                if (!dist || performance.now() - t0 > 1500) break;
+            }
+            return best;
+        }
+
+        /* ---------- Progress ---------- */
+        // keys kept from the previous version so levels already reached carry over
+        const CUR_KEY = 'arcade.petdoku.q.current', STATS_KEY = 'arcade.petdoku.q.stats';
+        const levelKey = (d) => 'arcade.petdoku.q.level.' + d.id;
+        const starsKey = (d) => 'arcade.petdoku.q.stars.' + d.id;
+        let theme = Arcade.load('arcade.petdoku.theme', 'pets');
+        if (!THEMES[theme]) theme = 'pets';
+        let diff = DIFFS.find(d => d.id === Arcade.load('arcade.petdoku.q.diff', 'kitten')) || DIFFS[0];
+        let stats = Arcade.load(STATS_KEY, {}) || {};
+        let opts = Object.assign({ autoX: !!Arcade.load('arcade.petdoku.q.autox', false), timer: true, petMode: false }, Arcade.load('arcade.petdoku.opts', {}));
+        let game = null, ended = false;
+        const $ = (id) => document.getElementById(id);
+        const boardEl = $('board');
+
+        const levelOf = (d) => Arcade.load(levelKey(d), 1);      // the next unbeaten level
+        const starsOf = (d) => Arcade.load(starsKey(d), {});
+
+        // Map size climbs with the level; every 10th level is a bonus big map.
+        function sizeFor(lv, d) {
+            let n = d.size + Math.floor((lv - 1) / 12);
+            let label = '';
+            if (lv % 10 === 0) { n += 2; label = 'Bonus big map'; }
+            else if (lv % 10 === 5 && lv > 5) { n = Math.max(5, n - 1); label = 'Quick map'; }
+            return [Arcade.clamp(n, 5, 13), label];
+        }
+        const saveOpts = () => Arcade.save('arcade.petdoku.opts', opts);
+
+        function persist() {
+            if (!game || ended) { Arcade.remove(CUR_KEY); return; }
+            const { n, reg, sol, cells, time, mistakes, hintsUsed, level } = game;
+            Arcade.save(CUR_KEY, { diff: game.diff.id, n, reg, sol, cells, time, mistakes, hintsUsed, level });
+        }
+
+        function start(d, data) {
+            game = {
+                diff: d, level: data.level, n: data.n, reg: data.reg, sol: data.sol,
+                cells: data.cells || new Array(data.n * data.n).fill(0), // 0 empty · 1 ✕ · 2 pet
+                time: data.time || 0, mistakes: data.mistakes || 0, hintsUsed: data.hintsUsed || 0, undo: [],
+            };
+            game.solSet = new Set(game.sol);
+            ended = false;
+            ['winPop', 'losePop', 'restartPop'].forEach(Arcade.hide);
+            Arcade.hide('homeScr');
+            layout();
+            render(true);
+            persist();
+        }
+
+        /**
+         * Builds a fresh map. `keep` carries the timer/mistakes/hints over (restart mid-level), so a
+         * new layout never resets the lives you've lost — and restarting can't be used to peek.
+         */
+        function newLevel(d, lv, keep) {
+            diff = d;
+            Arcade.save('arcade.petdoku.q.diff', d.id);
+            lv = lv || levelOf(d);
+            const [n, label] = sizeFor(lv, d);
+            Arcade.show('gen');
+            ['winPop', 'losePop', 'restartPop'].forEach(Arcade.hide);
+            setTimeout(() => {
+                const p = generateFor(n, d);
+                Arcade.hide('gen');
+                start(d, { ...p, level: lv, ...(keep || {}) });
+                if (label && !keep) Arcade.toast(`${label} — ${n}×${n}!`, 'gold', 1400);
+                Arcade.sfx('level');
+            }, 40);
+        }
+
+        /* ---------- Layout & rendering ---------- */
+        function layout() {
+            const play = $('play').getBoundingClientRect();
+            const n = game ? game.n : 8;
+            const avail = Math.min(play.width - 40, play.height - 60, 620);
+            const bw = Math.max(220, Math.floor(avail / n) * n);
+            document.documentElement.style.setProperty('--bw', bw + 'px');
+            boardEl.style.setProperty('--n', n);
+        }
+        window.addEventListener('resize', () => { if (game) layout(); });
+
+        function conflicts() {
+            const { n, reg, cells } = game;
+            const pets = [];
+            cells.forEach((v, i) => { if (v === 2) pets.push(i); });
+            const bad = new Set();
+            for (let a = 0; a < pets.length; a++) for (let b = a + 1; b < pets.length; b++) {
+                const i = pets[a], j = pets[b];
+                const ri = (i / n) | 0, ci = i % n, rj = (j / n) | 0, cj = j % n;
+                if (ri === rj || ci === cj || reg[i] === reg[j] || (Math.abs(ri - rj) <= 1 && Math.abs(ci - cj) <= 1)) { bad.add(i); bad.add(j); }
+            }
+            return { pets, bad };
+        }
+
+        const X_SVG = '<svg class="x" viewBox="0 0 100 100"><path d="M16 16L84 84M84 16L16 84"/></svg>';
+
+        function render(full) {
+            if (!game) return;
+            const { n, reg, cells } = game;
+            if (full || boardEl.children.length !== n * n) {
+                boardEl.innerHTML = '';
+                for (let i = 0; i < n * n; i++) {
+                    const d = document.createElement('div');
+                    d.dataset.i = i;
+                    d.className = 'cell';
+                    d.style.setProperty('--rc', REGION_COLORS[reg[i] % REGION_COLORS.length]);
+                    d.addEventListener('animationend', (e) => { if (e.animationName === 'winWave') d.classList.remove('won'); });
+                    boardEl.appendChild(d);
+                }
+            }
+            const { bad, pets } = conflicts();
+            for (let i = 0; i < n * n; i++) {
+                const d = boardEl.children[i];
+                const v = cells[i];
+                const html = v === 2 ? `<span class="pet">${THEMES[theme].set[reg[i] % 14]}</span>` : v === 1 ? X_SVG : '';
+                if (d.dataset.v !== v + theme) { d.dataset.v = v + theme; d.innerHTML = html; }
+                d.classList.toggle('bad', !game.diff.blind && bad.has(i));
+            }
+            $('petCount').textContent = `${pets.length}/${n}`;
+            hud();
+        }
+
+        function hud() {
+            if (!game) return;
+            const d = game.diff;
+            $('lvlTitle').textContent = 'Level ' + game.level;
+            $('diffLabel').textContent = `${d.icon} ${d.name} · ${game.n}×${game.n}`;
+            $('livesPill').hidden = !d.lives;
+            if (d.lives) {
+                const left = Math.max(0, d.lives - game.mistakes);
+                $('lives').innerHTML = '❤'.repeat(left) + `<span class="lost">${'❤'.repeat(d.lives - left)}</span>`;
+            }
+            const hl = Math.max(0, d.hints - game.hintsUsed);
+            const badge = $('hintBadge');
+            badge.textContent = d.hints >= 99 ? '∞' : hl;
+            badge.className = 'badge' + (hl > 0 ? ' ok' : '');
+            $('hintBtn').disabled = hl <= 0 || ended;
+            $('undoBtn').disabled = !game.undo.length || ended;
+            $('autoBtn').classList.toggle('on', opts.autoX);
+            $('modeBtn').classList.toggle('pet', opts.petMode);
+            $('modeIc').textContent = opts.petMode ? THEMES[theme].set[0] : '✕';
+            $('modeTxt').textContent = opts.petMode ? 'Tap: pet' : 'Tap: mark';
+            $('timer').textContent = Arcade.time(game.time);
+            $('timer').parentElement.hidden = !opts.timer;
+        }
+
+        /* ---------- Moves ---------- */
+        function snapshot() { game.undo.push(game.cells.slice()); if (game.undo.length > 400) game.undo.shift(); }
+
+        function setCell(i, v) {
+            const prev = game.cells[i];
+            if (prev === v) return;
+            game.cells[i] = v;
+            if (v === 2) {
+                const d = game.diff;
+                if (d.lives && !game.solSet.has(i)) {
+                    game.mistakes++;
+                    Arcade.sfx('bad');
+                    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+                    // a wrong pet is taken straight back off so the board never shows where it can't go
+                    game.cells[i] = 0;
+                    const el = boardEl.children[i];
+                    if (el) { el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); setTimeout(() => el.classList.remove('bad'), 450); }
+                    if (game.mistakes >= d.lives) { render(); persist(); lose(); return; }
+                    Arcade.toast(d.blind ? 'Wrong! ' : `Wrong! ${d.lives - game.mistakes} ${d.lives - game.mistakes === 1 ? 'life' : 'lives'} left`, 'bad', 1200);
+                    return;
+                }
+                Arcade.sfx('pop');
+                if (opts.autoX) for (const j of blocked(game.n, game.reg, i)) if (game.cells[j] === 0) game.cells[j] = 1;
+            }
+        }
+
+        function afterMove() {
+            render();
+            persist();
+            checkWin();
+        }
+
+        function starsFor() {
+            const bad = game.mistakes + game.hintsUsed;
+            return bad === 0 ? 3 : bad <= 2 ? 2 : 1;
+        }
+
+        function checkWin() {
+            const { pets, bad } = conflicts();
+            if (pets.length !== game.n || bad.size) return;
+            ended = true;
+            const d = game.diff, n = game.n, t = Math.max(1, game.time);
+            const st = stats[d.id] || { wins: 0, sizes: {} };
+            st.wins++;
+            const prevBest = st.sizes[n];
+            const isBest = !prevBest || t < prevBest;
+            if (isBest) st.sizes[n] = t;
+            stats[d.id] = st;
+            Arcade.save(STATS_KEY, stats);
+            Arcade.count('win');
+            $('hintBox').hidden = true;
+            const stars = starsFor();
+            const sm = starsOf(d);
+            sm[game.level] = Math.max(sm[game.level] || 0, stars);
+            Arcade.save(starsKey(d), sm);
+            if (game.level >= levelOf(d)) Arcade.save(levelKey(d), game.level + 1);
+            Arcade.remove(CUR_KEY);
+            for (let i = 0; i < n * n; i++) { const el = boardEl.children[i]; el.style.animationDelay = (((i / n) | 0) + i % n) * 0.035 + 's'; el.classList.add('won'); }
+            Arcade.sfx('win');
+            hud();
+            setTimeout(() => {
+                [...$('winStars').children].forEach((s, k) => { s.className = k < stars ? 'on' : ''; s.style.animationDelay = (0.2 + k * 0.25) + 's'; });
+                $('winSub').textContent = `${d.icon} ${d.name} · level ${game.level} · ${n}×${n}`;
+                $('winTime').textContent = Arcade.time(t);
+                $('winMistakes').textContent = game.mistakes;
+                $('winHints').textContent = game.hintsUsed;
+                $('winBest').textContent = isBest && prevBest ? `🏆 New best time for ${n}×${n}!` : `Best ${n}×${n}: ${Arcade.time(st.sizes[n])}`;
+                Arcade.show('winPop');
+                confetti();
+                [0, 1, 2].slice(0, stars).forEach(k => setTimeout(() => Arcade.tone(660 + k * 220, 0.14, 'triangle', 0.07), 250 + k * 250));
+            }, 900);
+        }
+
+        function confetti() {
+            const host = $('confetti');
+            host.innerHTML = '';
+            const cols = ['#ff5fa2', '#ffb020', '#4ade80', '#60c3ff', '#bdb2ff', '#fde047'];
+            for (let k = 0; k < 70; k++) {
+                const i = document.createElement('i');
+                i.style.left = Math.random() * 100 + 'vw';
+                i.style.background = Arcade.pick(cols);
+                i.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+                i.style.animationDelay = Math.random() * 0.5 + 's';
+                i.style.transform = `rotate(${Math.random() * 360}deg)`;
+                host.appendChild(i);
+            }
+            setTimeout(() => { host.innerHTML = ''; }, 4000);
+        }
+
+        function lose() {
+            ended = true;
+            Arcade.sfx('die');
+            $('loseText').textContent = `${game.diff.lives} wrong ${game.diff.lives === 1 ? 'pet' : 'pets'} on ${game.diff.icon} ${game.diff.name} level ${game.level}.`;
+            Arcade.remove(CUR_KEY);
+            setTimeout(() => Arcade.show('losePop'), 600);
+        }
+
+        function undo() {
+            if (!game || ended || !game.undo.length) return;
+            game.cells = game.undo.pop();
+            Arcade.sfx('click');
+            render(); persist();
+        }
+
+        function clearBoard() {
+            if (!game || ended || game.cells.every(v => !v)) return;
+            snapshot();
+            game.cells = game.cells.map(() => 0);
+            Arcade.sfx('select');
+            render(); persist();
+        }
+
+        /* ---------- Hints that explain the reasoning ---------- */
+        const COLOUR_NAMES = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink', 'brown', 'lime', 'peach', 'grey', 'violet', 'teal'];
+        /** "row 3", "column 2" or "the <b>red</b> colour" (capitalised when it starts a sentence). */
+        function unitName(u, cap) {
+            const n = game.n;
+            const s = u < n ? 'row ' + (u + 1) : u < 2 * n ? 'column ' + (u - n + 1) : 'the <b>' + COLOUR_NAMES[(u - 2 * n) % COLOUR_NAMES.length] + '</b> colour';
+            return cap ? s[0].toUpperCase() + s.slice(1) : s;
+        }
+        const cellName = (i) => `row ${((i / game.n) | 0) + 1}, column ${i % game.n + 1}`;
+        /**
+         * Finds the simplest logical step from the current board (the player's pets and ✕s are trusted —
+         * wrong ones are fixed first). Returns { place | cross, zone, text } or null.
+         */
+        function findStep() {
+            const { n, reg, cells } = game;
+            const U = units(n, reg);
+            const unitsOf = (i) => [(i / n) | 0, n + i % n, 2 * n + reg[i]];
+            const avail = new Uint8Array(n * n).fill(1), done = new Uint8Array(3 * n);
+            for (let i = 0; i < n * n; i++) {
+                if (cells[i] === 1) avail[i] = 0;
+                if (cells[i] === 2) { avail[i] = 0; for (const j of blocked(n, reg, i)) avail[j] = 0; for (const u of unitsOf(i)) done[u] = 1; }
+            }
+            const free = (u) => U[u].filter(i => avail[i]);
+            // 1. a row, column or colour with a single free square
+            for (let u = 0; u < U.length; u++) {
+                if (done[u]) continue;
+                const f = free(u);
+                if (f.length === 1) return {
+                    place: f[0], zone: U[u],
+                    text: `${unitName(u, true)} has only <b>one square left</b> that can hold a pet — every other square is crossed out, touches a pet, or shares a row, column or colour with one. So its pet goes here.`,
+                };
+            }
+            // 2. a unit whose free squares all sit inside one other unit
+            for (let u = 0; u < U.length; u++) {
+                if (done[u]) continue;
+                const f = free(u);
+                if (!f.length) continue;
+                for (const k of unitsOf(f[0])) {
+                    if (k === u || done[k] || Math.floor(k / n) === Math.floor(u / n)) continue;
+                    if (!f.every(i => unitsOf(i).includes(k))) continue;
+                    const out = free(k).filter(i => !f.includes(i));
+                    if (!out.length) continue;
+                    return {
+                        cross: out, zone: f,
+                        text: `All the free squares of ${unitName(u)} are in ${unitName(k)}. Its pet has to be in ${unitName(k)}, so <b>no other square there can have a pet</b> — they get crossed out.`,
+                    };
+                }
+            }
+            // 3. a square that would leave some unit with no room at all
+            for (let i = 0; i < n * n; i++) {
+                if (!avail[i]) continue;
+                const bl = new Set(blocked(n, reg, i));
+                const mine = unitsOf(i);
+                for (let u = 0; u < U.length; u++) {
+                    if (done[u] || mine.includes(u)) continue;
+                    const f = free(u);
+                    if (f.length && f.every(j => bl.has(j))) return {
+                        cross: [i], zone: f,
+                        text: `If a pet went on ${cellName(i)}, it would touch or line up with <b>every free square of ${unitName(u)}</b>, leaving that ${u >= 2 * n ? 'colour' : 'line'} with no pet. So this square must stay empty.`,
+                    };
+                }
+            }
+            // 4. two or three colours squeezed into the same number of rows/columns (and the reverse)
+            for (const k of [2, 3]) {
+                for (const [fromBase, toBase] of [[2 * n, 0], [2 * n, n], [0, 2 * n], [n, 2 * n]]) {
+                    const groups = [];
+                    for (let u = fromBase; u < fromBase + n; u++) if (!done[u] && free(u).length) groups.push(u);
+                    const combos = (start, pick) => pick.length === k ? [pick.slice()] : groups.slice(start).flatMap((g, x) => combos(start + x + 1, [...pick, g]));
+                    const keyOf = (i) => toBase === 0 ? (i / n) | 0 : toBase === n ? n + i % n : 2 * n + reg[i];
+                    for (const set of combos(0, [])) {
+                        const lines = new Set(), mineCells = new Set();
+                        for (const u of set) for (const i of free(u)) { lines.add(keyOf(i)); mineCells.add(i); }
+                        if (lines.size !== k) continue;
+                        const out = [];
+                        for (const l of lines) for (const j of U[l]) if (avail[j] && !mineCells.has(j)) out.push(j);
+                        if (!out.length) continue;
+                        const names = set.map(unitName).join(k === 2 ? ' and ' : ', ');
+                        const lineNames = [...lines].map(unitName).join(' and ');
+                        return {
+                            cross: out, zone: [...mineCells],
+                            text: `${names[0].toUpperCase() + names.slice(1)} only have free squares in ${lineNames}. Those ${k} pets will use up those ${k} ${toBase === 2 * n ? 'colours' : 'lines'}, so <b>every other square in them is out</b>.`,
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function clearHintMarks() {
+            for (const el of boardEl.children) el.classList.remove('hinted', 'hintzone');
+        }
+        function showHint(text, target, zone) {
+            render();
+            clearHintMarks();
+            for (const i of zone || []) boardEl.children[i] && boardEl.children[i].classList.add('hintzone');
+            for (const i of [].concat(target)) boardEl.children[i] && boardEl.children[i].classList.add('hinted');
+            $('hintText').innerHTML = text;
+            $('hintBox').hidden = false;
+        }
+        function hideHint() { $('hintBox').hidden = true; clearHintMarks(); }
+
+        function hint() {
+            if (!game || ended) return;
+            const d = game.diff;
+            if (game.hintsUsed >= d.hints) { Arcade.toast('No hints left', 'bad'); return; }
+            const { cells, solSet } = game;
+            snapshot();
+            game.hintsUsed++;
+            Arcade.sfx('select');
+            const wrongPet = cells.findIndex((v, i) => v === 2 && !solSet.has(i));
+            const wrongX = cells.findIndex((v, i) => v === 1 && solSet.has(i));
+            if (wrongPet >= 0) {
+                cells[wrongPet] = 0;
+                showHint(`The pet on ${cellName(wrongPet)} is in the wrong place — it would block the only spot left for another row, column or colour. I took it off.`, wrongPet);
+            } else if (wrongX >= 0) {
+                cells[wrongX] = 0;
+                showHint(`The ✕ on ${cellName(wrongX)} was a mistake — a pet actually belongs there. I removed the ✕.`, wrongX);
+            } else {
+                const step = findStep();
+                if (step && step.place !== undefined) { setCell(step.place, 2); showHint(step.text, step.place, step.zone); }
+                else if (step) { for (const i of step.cross) if (!cells[i]) cells[i] = 1; showHint(step.text, step.cross, step.zone); }
+                else {
+                    const open = game.sol.filter(i => cells[i] !== 2);
+                    const size = (i) => cells.filter((v, j) => !v && game.reg[j] === game.reg[i]).length;
+                    open.sort((a, b) => size(a) - size(b));
+                    const target = open[0];
+                    setCell(target, 2);
+                    const zone = game.sol.length ? units(game.n, game.reg)[2 * game.n + game.reg[target]] : [];
+                    showHint(`No simple step is left here, so this one needs look-ahead: try a pet anywhere else in ${unitName(2 * game.n + game.reg[target])} and you eventually run out of room somewhere. Its pet goes here.`, target, zone);
+                }
+            }
+            persist();
+            checkWin();
+        }
+
+        /* ---------- Pointer: tap = mark (or pet), double-tap / hold = pet, drag = ✕ many ---------- */
+        let press = null, lastTap = { i: -1, t: 0 };
+        const HOLD_MS = 380, DOUBLE_MS = 320;
+        const cellAt = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest && el.closest('.cell') ? +el.closest('.cell').dataset.i : -1; };
+
+        boardEl.addEventListener('pointerdown', (e) => {
+            if (!game || ended) return;
+            const i = cellAt(e);
+            if (i < 0) return;
+            e.preventDefault();
+            boardEl.setPointerCapture(e.pointerId);
+            const now = performance.now();
+            if (!opts.petMode && lastTap.i === i && now - lastTap.t < DOUBLE_MS) {
+                // second tap: undo the ✕ from the first tap and toggle a pet instead
+                const before = lastTap.prev;
+                lastTap = { i: -1, t: 0 };
+                if (game.undo.length) game.cells = game.undo.pop();
+                snapshot();
+                setCell(i, before === 2 ? 0 : 2);
+                press = null;
+                afterMove();
+                return;
+            }
+            press = { i, start: now, dragging: false, painted: new Set([i]), held: false, prev: game.cells[i] };
+            press.timer = setTimeout(() => {
+                if (!press || press.dragging) return;
+                press.held = true;
+                snapshot();
+                setCell(i, game.cells[i] === 2 ? 0 : 2);
+                if (navigator.vibrate) navigator.vibrate(15);
+                afterMove();
+            }, HOLD_MS);
+        });
+        boardEl.addEventListener('pointermove', (e) => {
+            if (!press || press.held || ended) return;
+            const i = cellAt(e);
+            if (i < 0 || press.painted.has(i)) return;
+            if (!press.dragging) {
+                press.dragging = true;
+                clearTimeout(press.timer);
+                snapshot();
+                press.mode = game.cells[press.i] === 1 ? 0 : 1; // drag from a ✕ erases ✕s, otherwise paints them
+                if (game.cells[press.i] !== 2) game.cells[press.i] = press.mode;
+            }
+            press.painted.add(i);
+            if (game.cells[i] !== 2) game.cells[i] = press.mode;
+            Arcade.sfx('tick');
+            render();
+        });
+        const release = () => {
+            if (!press) return;
+            clearTimeout(press.timer);
+            const p = press;
+            press = null;
+            if (ended || p.held) return;
+            if (p.dragging) { persist(); return; }
+            snapshot();
+            const v = game.cells[p.i];
+            if (opts.petMode) {
+                // pet mode: tap toggles a pet (a ✕ is cleared first)
+                setCell(p.i, v === 2 ? 0 : v === 1 ? 0 : 2);
+                if (v !== 2 && v !== 1) { afterMove(); return; }
+            } else {
+                game.cells[p.i] = v === 0 ? 1 : 0;
+                lastTap = { i: p.i, t: performance.now(), prev: v };
+            }
+            Arcade.sfx('click');
+            afterMove();
+        };
+        boardEl.addEventListener('pointerup', release);
+        boardEl.addEventListener('pointercancel', () => { if (press) clearTimeout(press.timer); press = null; });
+        boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        /* ---------- Level map ---------- */
+        function buildHome() {
+            const tabs = $('tabs');
+            tabs.innerHTML = '';
+            for (const d of DIFFS) {
+                const b = document.createElement('button');
+                b.className = 'dtab' + (d === diff ? ' on' : '');
+                b.innerHTML = `<span>${d.icon}</span>${d.name}<small>Lv ${levelOf(d)}</small>`;
+                b.onclick = () => { diff = d; Arcade.save('arcade.petdoku.q.diff', d.id); Arcade.sfx('select'); buildHome(); };
+                tabs.appendChild(b);
+            }
+            const on = tabs.querySelector('.on');
+            if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+            const cur = levelOf(diff), sm = starsOf(diff), st = stats[diff.id];
+            const totalStars = Object.values(sm).reduce((a, b) => a + b, 0);
+            $('dinfo').innerHTML = `<span class="big">${diff.icon}</span><div class="grow"><b>${diff.name}</b><small>${diff.desc}</small><small>${diff.hints >= 99 ? 'Unlimited hints' : diff.hints + ' hints per level'}${diff.lives ? ' · ' + diff.lives + ' ❤' : ''}</small></div><div style="text-align:right"><b>⭐ ${totalStars}</b><small>${st && st.wins ? st.wins + ' solved' : 'New!'}</small></div>`;
+            const host = $('chapters');
+            host.innerHTML = '';
+            const chapters = Math.ceil(cur / CHAPTER) + (cur % CHAPTER === 0 ? 1 : 0);
+            for (let ch = chapters - 1; ch >= 0; ch--) {
+                const wrap = document.createElement('div');
+                wrap.className = 'chapter';
+                const from = ch * CHAPTER + 1, to = from + CHAPTER - 1;
+                let got = 0;
+                for (let l = from; l <= to; l++) got += sm[l] || 0;
+                wrap.innerHTML = `<h4>${CHAPTER_NAMES[ch % CHAPTER_NAMES.length]}${ch >= CHAPTER_NAMES.length ? ' ' + (Math.floor(ch / CHAPTER_NAMES.length) + 1) : ''} <small>Levels ${from}–${to} · ⭐ ${got}/${CHAPTER * 3}</small></h4>`;
+                const grid = document.createElement('div');
+                grid.className = 'levels';
+                for (let l = from; l <= to; l++) {
+                    const b = document.createElement('button');
+                    const done = l < cur, isCur = l === cur, locked = l > cur;
+                    b.className = 'lv' + (done ? ' done' : isCur ? ' cur' : ' locked');
+                    const [n, label] = sizeFor(l, diff);
+                    const s = sm[l] || 0;
+                    b.innerHTML = locked ? '🔒' : `${l}${done || s ? `<span class="st">${'⭐'.repeat(s)}${'☆'.repeat(3 - s)}</span>` : ''}${label && !locked ? `<span class="size">${n}×${n}</span>` : ''}`;
+                    b.title = `Level ${l} · ${n}×${n}`;
+                    b.onclick = () => { if (!locked) playLevel(l); else Arcade.sfx('bad'); };
+                    grid.appendChild(b);
+                }
+                wrap.appendChild(grid);
+                host.appendChild(wrap);
+            }
+            const saved = Arcade.load(CUR_KEY, null);
+            const resuming = saved && saved.diff === diff.id;
+            $('playBtn').textContent = resuming ? `▶ Continue level ${saved.level}` : `▶ Play level ${cur}`;
+        }
+        function playLevel(l) {
+            Arcade.sfx('select');
+            const saved = Arcade.load(CUR_KEY, null);
+            if (saved && saved.diff === diff.id && saved.level === l && saved.reg) start(diff, saved);
+            else newLevel(diff, l);
+        }
+        function openHome() { buildHome(); Arcade.show('homeScr'); }
+        $('playBtn').onclick = () => {
+            const saved = Arcade.load(CUR_KEY, null);
+            playLevel(saved && saved.diff === diff.id ? saved.level : levelOf(diff));
+        };
+
+        /* ---------- Settings ---------- */
+        function buildSettings() {
+            const th = $('themes');
+            th.innerHTML = '';
+            for (const [id, t] of Object.entries(THEMES)) {
+                const b = document.createElement('button');
+                b.className = 'theme' + (id === theme ? ' on' : '');
+                b.innerHTML = `<span>${t.set.slice(0, 3).join('')}</span>${t.name}`;
+                b.onclick = () => { theme = id; Arcade.save('arcade.petdoku.theme', id); Arcade.sfx('select'); buildSettings(); render(); };
+                th.appendChild(b);
+            }
+            $('optAuto').checked = opts.autoX;
+            $('optTimer').checked = opts.timer;
+        }
+        $('optAuto').onchange = () => { opts.autoX = $('optAuto').checked; saveOpts(); hud(); };
+        $('optTimer').onchange = () => { opts.timer = $('optTimer').checked; saveOpts(); hud(); };
+        const openSettings = () => { buildSettings(); Arcade.show('setPop'); };
+        $('setBtn').onclick = openSettings;
+        $('homeSetBtn').onclick = openSettings;
+        $('setClose').onclick = () => Arcade.hide('setPop');
+
+        /* ---------- Wiring ---------- */
+        $('undoBtn').onclick = undo;
+        $('clearBtn').onclick = clearBoard;
+        $('hintBtn').onclick = hint;
+        $('hintClose').onclick = hideHint;
+        boardEl.addEventListener('pointerdown', () => { if (!$('hintBox').hidden) hideHint(); }, true);
+        $('autoBtn').onclick = () => { opts.autoX = !opts.autoX; saveOpts(); Arcade.sfx('select'); Arcade.toast(opts.autoX ? 'Auto ✕ on' : 'Auto ✕ off', '', 900); hud(); };
+        $('modeBtn').onclick = () => { opts.petMode = !opts.petMode; saveOpts(); Arcade.sfx('select'); hud(); };
+        $('backBtn').onclick = () => { persist(); openHome(); };
+        $('restartBtn').onclick = () => { if (game && !ended) Arcade.show('restartPop'); };
+        $('restartNo').onclick = () => Arcade.hide('restartPop');
+        // restarting always builds a NEW map, and keeps the mistakes already made
+        $('restartYes').onclick = () => newLevel(game.diff, game.level, { time: game.time, mistakes: game.mistakes, hintsUsed: game.hintsUsed });
+        $('nextBtn').onclick = () => newLevel(game.diff, game.level + 1);
+        $('replayBtn').onclick = () => newLevel(game.diff, game.level);
+        $('winMapBtn').onclick = () => { Arcade.hide('winPop'); openHome(); };
+        $('loseMapBtn').onclick = () => { Arcade.hide('losePop'); openHome(); };
+        // losing always builds a NEW map for the level, so a failed attempt can't be replayed from memory
+        $('retryBtn').onclick = () => newLevel(game.diff, game.level);
+        window.addEventListener('keydown', (e) => {
+            if (!game) return;
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); undo(); }
+            else if (e.code === 'KeyH' && !e.ctrlKey) hint();
+            else if (e.code === 'KeyM') $('modeBtn').click();
+        });
+
+        setInterval(() => {
+            if (!game || ended || document.hidden) return;
+            if (!$('homeScr').hidden || !$('gen').hidden || !$('setPop').hidden) return;
+            game.time += 1;
+            $('timer').textContent = Arcade.time(game.time);
+            if (game.time % 5 === 0) persist();
+        }, 1000);
+        window.addEventListener('pagehide', persist);
+
+        // expose the engine for testing
+        window.__petdoku = { makePuzzle, grade, solveAll, generateFor, DIFFS, sizeFor, get game() { return game; } };
+
+        const saved = Arcade.load(CUR_KEY, null);
+        const sd = saved && DIFFS.find(d => d.id === saved.diff);
+        if (sd && saved.reg) { diff = sd; start(sd, saved); }
+        openHome();
+    })();
+    </script>
+</body>
+</html>

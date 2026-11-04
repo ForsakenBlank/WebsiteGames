@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Void Altar</title>
+    <style>
+        :root { --bg: #050505; --void: #4a148c; --text: #b39ddb; }
+        body { background: var(--bg); color: var(--text); font-family: monospace; text-align: center; padding: 20px; }
+        .stats { background: #111; padding: 15px; border-bottom: 2px solid var(--void); margin-bottom: 20px; font-size: 1.2rem; }
+        .orb-box { width: 300px; height: 180px; background: #000; border: 1px solid #333; position: relative; margin: 20px auto; border-radius: 15px; overflow: hidden; }
+        #orb { width: 45px; height: 45px; background: radial-gradient(circle, #9c27b0, #4a148c); border-radius: 50%; position: absolute; cursor: pointer; box-shadow: 0 0 15px #9c27b0; }
+        button { background: var(--void); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 5px; }
+        button:disabled { opacity: 0.2; }
+    </style>
+</head>
+<body>
+    <!-- Persistent Stats -->
+    <div class="stats">
+        Essence: <b id="ess-display">0</b> | Dust: <b id="dust-stat">0</b> | Corn Multiplier: <b id="corn-dust">0</b>
+    </div>
+
+    <h1>VOID ALTAR</h1>
+
+    <div style="margin-bottom: 10px; color: #ff4081; font-weight: bold;">
+        Clicks: <span id="click-count">0</span> | 
+        Multiplier: <span id="mult-display">1.00</span>x
+    </div>
+
+    <!-- The Interactive Orb Box (Update: Added Red Orb) -->
+    <div class="orb-box">
+        <div id="orb" onclick="clickOrb()"></div>
+        <div id="red-orb" onclick="clickRedOrb()" style="display:none; width: 45px; height: 45px; background: radial-gradient(circle, #ff1744, #880e4f); border-radius: 50%; position: absolute; cursor: pointer; box-shadow: 0 0 15px #ff1744; z-index: 10;"></div>
+    </div>
+
+    <!-- Upgrade Grid -->
+    <div class="grid">
+        <!-- Orb Upgrade -->
+        <div class="card">
+            <b>Orb Infusion (Lvl <span id="orb-lvl-display">0</span>)</b><br>
+            <small>Current Gain: <span id="orb-gain">1</span> Dust/Click</small>
+            <button id="orb-up-btn" onclick="buyOrbUpgrade()">
+                Upgrade Cost: <span id="orb-cost">1</span> D
+            </button>
+        </div>
+
+        <!-- Crystal -->
+        <div class="card">
+            <b>Void Crystal</b><br>
+            <small>Global 1.15x Boost</small>
+            <button id="c-btn" onclick="buy('crystals', 'essence', 2.8, 500)">
+                Cost: <span id="c-cost"></span> E
+            </button>
+        </div>
+
+        <!-- Dust Well -->
+        <div class="card">
+            <b>Dust Well (Lvl <span id="dwl">0</span>)</b><br>
+            <small>Passive Dust Income</small>
+            <button id="d-btn" onclick="buy('autoDust', 'dust', 2.2, 50)">
+                Cost: <span id="d-cost"></span> D
+            </button>
+        </div>
+        
+        <!-- Void Focus -->
+        <div class="card">
+            <b>Void Focus (Lvl <span id="vfl">0</span>)</b><br>
+            <small>Stronger Milestones</small>
+            <button id="vf-btn" onclick="buy('voidFocus', 'dust', 5.0, 1000)">
+                Cost: <span id="vf-cost"></span> D
+            </button>
+        </div>
+
+        <!-- Harvest Chain -->
+        <div class="card">
+            <b>Harvest Chain (Lvl <span id="hcl">0</span>)</b><br>
+            <small>XP gives Essence bursts</small>
+            <button id="hc-btn" onclick="buy('harvestChain', 'dust', 6.0, 5000)">
+                Cost: <span id="hc-cost"></span> D
+            </button>
+        </div>
+
+        <!-- Research Unlock -->
+        <div class="card" id="res-lock-card">
+            <b>Unlock Research</b><br>
+            <button onclick="unlockResearch()" id="url-btn">Cost: 300K Dust</button>
+        </div>
+        
+        <div id="res-nav-container" style="display:none;">
+            <div class="card" style="border: 2px solid #01579b;">
+                <b>Research Unlocked</b><br>
+                <button onclick="location.href='research.html'" style="background: #01579b;">Enter Research Lab</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <button onclick="location.href='index.html'" style="background:#222; width:250px; margin-top:30px; font-weight:bold;">
+        Return to Farm
+    </button>
+
+    <script src="game.js"></script>
+
+    <script>
+        // Core Purchase Logic
+        function buy(key, currency, scale, base) {
+            let cost = base * Math.pow(scale, state[key] || 0);
+            if (state[currency] >= cost) {
+                state[currency] -= cost;
+                state[key] = (state[key] || 0) + 1;
+                save();
+                refreshVoidUI(); 
+            }
+        }
+
+        function buyOrbUpgrade() {
+            let cost = Math.pow(2, state.orbLvl || 0);
+            if (state.dust >= cost) {
+                state.dust -= cost;
+                state.orbLvl = (state.orbLvl || 0) + 1;
+                save();
+                refreshVoidUI();
+            }
+        }
+
+        function unlockResearch() {
+            if (state.dust >= 300000) {
+                state.dust -= 300000;
+                state.researchUnlocked = true;
+                save();
+                refreshVoidUI();
+            }
+        }
+
+        state.clicks = state.clicks || 0;
+        state.multiplier = state.multiplier || 1;
+
+        function clickOrb() { 
+            // 1. Calculate Multiplier (from previous steps)
+            state.clicks = (state.clicks || 0) + 1;
+            state.multiplier = Math.pow(1.01, state.clicks - 1);
+
+            // 2. Base Gain
+            let gain = (1 + (state.orbLvl || 0)) * state.multiplier;
+
+            // 3. APPLY DUSTY CORN BONUS
+            let cornBonus = 1;
+            if (state.upgrades.corn[1] > 0) { // Assuming index 1 is 'Dusty Corn'
+                let readyCornCount = state.ghCrops.filter(p => p && p.type === 'corn' && p.status === 'ready').length;
+                // Each ready corn gives +5% bonus per upgrade level
+                cornBonus += (readyCornCount * (state.upgrades.corn[1] * 0.05));
+            }
+            
+            state.dust += (gain * cornBonus); 
+
+            moveOrb(); 
+            save();
+            refreshVoidUI();
+        }
+        refreshVoidUI();
+
+
+        function spawnRedOrb() {
+            const red = document.getElementById('red-orb');
+            let size = 45;
+            red.style.display = 'block';
+            red.style.width = size + 'px';
+            red.style.height = size + 'px';
+            red.style.left = Math.random() * 250 + "px";
+            red.style.top = Math.random() * 130 + "px";
+
+            const shrinker = setInterval(() => {
+                size -= 2;
+                red.style.width = size + 'px';
+                red.style.height = size + 'px';
+                
+                if (size <= 0) {
+                    clearInterval(shrinker);
+                    red.style.display = 'none';
+                }
+            }, 75); // Shrinks every 50ms
+        }
+
+        function clickRedOrb() {
+            const red = document.getElementById('red-orb');
+            let baseGain = 1 + (state.orbLvl || 0);
+            state.dust += (baseGain * state.multiplier) * 15;
+            red.style.display = 'none';
+            save();
+            refreshVoidUI();
+        }
+
+        // Update refreshVoidUI to include the new labels
+        // Add these lines inside your refreshVoidUI() function:
+        document.getElementById('click-count').innerText = state.clicks;
+        document.getElementById('mult-display').innerText = state.multiplier.toFixed(2);
+
+
+        function moveOrb() { 
+            const o = document.getElementById('orb');
+            if(o) {
+                o.style.left = Math.random() * 250 + "px"; 
+                o.style.top = Math.random() * 130 + "px"; 
+            }
+        }
+
+        // UI SYNC
+        function refreshVoidUI() {
+            if (!state) return;
+
+            // Inside refreshVoidUI()
+            let currentCornBonus = 1;
+            if (state.upgrades.corn[1] > 0) {
+                let readyCorn = state.ghCrops.filter(p => p && p.type === 'corn' && p.status === 'ready').length;
+                currentCornBonus += (readyCorn * (state.upgrades.corn[1] * 0.05));
+            }
+            // Display it somewhere in your stats bar
+            document.getElementById('corn-dust').title = `${currentCornBonus.toFixed(2)}x`;
+
+
+            document.getElementById('click-count').innerText = state.clicks
+            document.getElementById('mult-display').innerText = state.multiplier.toFixed(2);
+
+            // Stats
+            document.getElementById('ess-display').innerText = format(state.essence);
+            document.getElementById('dust-stat').innerText = format(state.dust);
+            
+            // Orb Info
+            const orbLvl = state.orbLvl || 0;
+            const orbCost = Math.pow(2, orbLvl);
+            document.getElementById('orb-cost').innerText = format(orbCost);
+            document.getElementById('orb-gain').innerText = format(1 + orbLvl);
+            document.getElementById('orb-lvl-display').innerText = orbLvl;
+            document.getElementById('orb-up-btn').disabled = state.dust < orbCost;
+
+            // Costs
+            const cc = 500 * Math.pow(2.8, state.crystals || 0);
+            const dc = 50 * Math.pow(2.2, state.autoDust || 0);
+            const vfc = 1000 * Math.pow(5.0, state.voidFocus || 0);
+            const hcc = 5000 * Math.pow(6.0, state.harvestChain || 0);
+
+            // Update Labels
+            document.getElementById('c-cost').innerText = format(cc);
+            document.getElementById('d-cost').innerText = format(dc);
+            document.getElementById('vf-cost').innerText = format(vfc);
+            document.getElementById('hc-cost').innerText = format(hcc);
+            
+            document.getElementById('dwl').innerText = state.autoDust || 0;
+            document.getElementById('vfl').innerText = state.voidFocus || 0;
+            document.getElementById('hcl').innerText = state.harvestChain || 0;
+
+            // Enable/Disable
+            document.getElementById('c-btn').disabled = state.essence < cc;
+            document.getElementById('d-btn').disabled = state.dust < dc;
+            document.getElementById('vf-btn').disabled = state.dust < vfc;
+            document.getElementById('hc-btn').disabled = state.dust < hcc;
+
+            // Research Unlock Logic
+            const hasRes = state.researchUnlocked || false;
+            document.getElementById('res-lock-card').style.display = hasRes ? 'none' : 'block';
+            document.getElementById('res-nav-container').style.display = hasRes ? 'block' : 'none';
+            if(!hasRes) document.getElementById('url-btn').disabled = state.dust < 12500;
+        }
+
+        setInterval(refreshVoidUI, 100);
+        window.onload = moveOrb;
+    </script>
+</body>
+
+
+</html>

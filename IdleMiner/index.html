@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Miner · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f59e0b; --accent-2: #ea580c; --accent-ink: #1c1003; --earth: #2a1c10; }
+        .stage { flex-direction: row; align-items: stretch; gap: 14px; padding: 12px; }
+
+        /* ---- mine view ---- */
+        .mine { flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; border-radius: 18px;
+            border: 1px solid var(--line-2); background: var(--earth); box-shadow: var(--shadow); scroll-behavior: smooth; }
+        .mine canvas { display: block; width: 100%; cursor: pointer; }
+        .mine-hud { position: sticky; top: 10px; z-index: 2; height: 0; display: flex; justify-content: space-between; padding: 0 12px; pointer-events: none; }
+        .mine-hud > div { pointer-events: auto; display: flex; gap: 6px; }
+        .glass { background: rgba(15, 10, 5, 0.62); backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.12); color: #fef3c7;
+            border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .glass b { font-variant-numeric: tabular-nums; color: #fff; }
+        .glass.rush { color: #fde047; border-color: rgba(253, 224, 71, 0.5); }
+        .jump { cursor: pointer; }
+        .jump:hover { border-color: rgba(253, 224, 71, 0.6); }
+
+        /* ---- side panel ---- */
+        .side { width: 340px; flex: none; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 2px; }
+        .pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+        .pcard h3 { margin: 0 0 10px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+        .pcard h3 .seg { padding: 2px; gap: 2px; border-radius: 9px; }
+        .pcard h3 .seg .btn { padding: 3px 8px; font-size: 0.72rem; letter-spacing: 0; text-transform: none; }
+
+        .st-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .st-icon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 1.5rem; flex: none;
+            background: linear-gradient(145deg, color-mix(in srgb, var(--tint, var(--accent)) 38%, var(--surface-2)), var(--surface-2));
+            border: 1px solid color-mix(in srgb, var(--tint, var(--accent)) 45%, transparent); }
+        .st-name { font-weight: 800; font-size: 1.02rem; line-height: 1.2; }
+        .st-sub { color: var(--muted); font-size: 0.76rem; }
+        .lv { margin-left: auto; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 4px 10px; text-align: center; line-height: 1.05; }
+        .lv small { display: block; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .lv b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+        .cmp { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; }
+        .cmp div small { display: block; font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .cmp div b { font-size: 0.98rem; font-variant-numeric: tabular-nums; }
+        .cmp .arrow { color: var(--dim); font-weight: 800; }
+        .cmp .next b { color: var(--good); }
+        .cmp .extra { grid-column: 1 / -1; font-size: 0.72rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+
+        .ms { margin-bottom: 12px; }
+        .ms-top { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+        .ms-top b { color: var(--gold); }
+        .ms .bar { height: 7px; }
+        .ms .bar > i { background: linear-gradient(90deg, #f59e0b, #fde047); }
+
+        .upbtn { width: 100%; display: flex; justify-content: space-between; padding: 12px 14px; font-size: 0.95rem; border-radius: 12px; }
+        .upbtn span:last-child { font-variant-numeric: tabular-nums; }
+        .mgr { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 9px 10px; border-radius: 12px; background: var(--bg-2); border: 1px dashed var(--line-2); font-size: 0.8rem; }
+        .mgr.on { border-style: solid; border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+        .mgr .face { font-size: 1.3rem; }
+        .mgr .txt { flex: 1; line-height: 1.25; }
+        .mgr .txt small { display: block; color: var(--muted); font-size: 0.7rem; }
+
+        .flow { display: flex; flex-direction: column; gap: 8px; }
+        .flow-row { display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 8px; align-items: center; font-size: 0.8rem; }
+        .flow-row .bar { grid-column: 2 / -1; height: 6px; }
+        .flow-row .val { font-variant-numeric: tabular-nums; font-weight: 700; }
+        .flow-row.bottle .val { color: var(--bad); }
+        .flow-row.bottle .bar > i { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .flow-tip { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+        .flow-tip b { color: var(--text); }
+
+        .list { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+        .li { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; border: 1px solid transparent;
+            background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+        .li:hover { background: var(--surface-2); }
+        .li.on { background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+        .li .dot { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 0.95rem; font-weight: 800; color: #111; }
+        .li .nm { font-size: 0.82rem; font-weight: 700; line-height: 1.15; }
+        .li .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 0.7rem; }
+        .li .rt { font-size: 0.74rem; color: var(--muted); text-align: right; line-height: 1.15; font-variant-numeric: tabular-nums; }
+        .li .rt b { color: var(--text); display: block; }
+        .dig { margin-top: 8px; }
+
+        .pres-num { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+        .pres-num b { font-size: 1.5rem; color: #67e8f9; font-variant-numeric: tabular-nums; }
+        .pres-num span { color: var(--muted); font-size: 0.8rem; }
+        .pcard .note { font-size: 0.74rem; color: var(--muted); margin: 0 0 10px; }
+        .pres .bar > i { background: linear-gradient(90deg, #06b6d4, #a5f3fc); }
+
+        @media (max-width: 860px) {
+            .stage { flex-direction: column; }
+            .side { width: auto; max-height: 46vh; }
+        }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Idle Miner</h1>
+        <div class="stats">
+            <span class="chip gold">💰 <b id="cash">0</b></span>
+            <span class="chip accent">⏱ <b id="rate">0</b>/s</span>
+            <span class="chip hide-sm" style="--gold:#67e8f9">💎 <b id="sc">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="boostBtn">⚡ Rush ×2</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="mine" id="mineBox">
+            <div class="mine-hud">
+                <div><span class="glass">⛏️ <b id="hudShafts">1</b> shafts</span><span class="glass rush" id="hudRush" hidden>⚡ Rush <b id="hudRushT">0</b>s</span></div>
+                <div><span class="glass jump" id="jumpTop" title="Back to the surface">⬆ Surface</span></div>
+            </div>
+            <canvas id="cv"></canvas>
+        </div>
+        <aside class="side">
+            <section class="pcard" id="selCard"></section>
+            <section class="pcard">
+                <h3>Mine throughput <span id="flowAuto" class="dim" style="letter-spacing:0;text-transform:none"></span></h3>
+                <div class="flow" id="flow"></div>
+            </section>
+            <section class="pcard">
+                <h3>Shafts</h3>
+                <div class="list" id="list"></div>
+                <div class="dig" id="dig"></div>
+            </section>
+            <section class="pcard pres" id="prestigeCard"></section>
+        </aside>
+        <div class="overlay fixed" id="awayOv" hidden>
+            <div class="modal">
+                <h2>⛏️ Welcome back!</h2>
+                <p id="awayText"></p>
+                <div class="big-num" id="awayCash">0</div>
+                <div class="actions"><button class="btn primary lg" id="awayOk">Collect</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const fmt = (n) => Arcade.fmt(n);
+        const W = 760, SURF = 210, ROW = 124, TH = 92, FIRST = SURF + 34;
+        const cv = $('cv'), box = $('mineBox');
+        const c = cv.getContext('2d');
+        // name, ore colour, highlight colour
+        const ORES = [['Coal', '#3f4654', '#7b8494'], ['Copper', '#c2410c', '#fb923c'], ['Iron', '#8f9bb0', '#e2e8f0'], ['Silver', '#cbd5e1', '#ffffff'], ['Gold', '#eab308', '#fef08a'],
+            ['Ruby', '#e11d48', '#fda4af'], ['Sapphire', '#2563eb', '#93c5fd'], ['Emerald', '#059669', '#6ee7b7'], ['Amethyst', '#9333ea', '#d8b4fe'], ['Diamond', '#67e8f9', '#ecfeff']];
+        const MAXSHAFT = 30;
+        const KEY = 'arcade.idleminer.save';
+        const MILESTONES = [10, 25, 50, 100, 200, 300, 400];
+        const def = () => ({ cash: 25, shafts: [{ lvl: 1, mgr: false, stock: 0 }], elev: { lvl: 1, mgr: false }, ware: { lvl: 1, mgr: false }, surface: 0, sc: 0, earned: 0, total: 0, last: Date.now(), boostT: 0, boostCd: 0 });
+        const G = Object.assign(def(), Arcade.load(KEY, {}) || {});
+        let amt = Arcade.load('arcade.idleminer.amt', '1');
+        let sel = { kind: 'shaft', i: 0 };
+
+        /* ---------- economy (unchanged from v1 so saves carry over) ---------- */
+        const mult = () => (1 + G.sc * 0.1) * (G.boostT > 0 ? 2 : 1);
+        const milestone = (L) => Math.pow(2, MILESTONES.filter(m => L >= m).length);
+        const shaftRate = (i, L = G.shafts[i].lvl) => 2.5 * Math.pow(9, i) * L * milestone(L) * mult();
+        const shaftCost = (i, L) => 9 * Math.pow(9, i) * Math.pow(1.13, L - 1);
+        const newShaftCost = (i) => 250 * Math.pow(26, i - 1);
+        const mgrCost = (kind, i) => (kind === 'shaft' ? 60 * Math.pow(9, i) : 120 * Math.pow(3, G.shafts.length - 1));
+        const elevCap = (L = G.elev.lvl) => 60 * Math.pow(1.22, L - 1) * milestone(L);
+        const elevSpeed = (L = G.elev.lvl) => 1 + Math.min(4, L * 0.04);
+        const elevCost = (L) => 30 * Math.pow(1.17, L - 1);
+        const wareCap = (L = G.ware.lvl) => 60 * Math.pow(1.22, L - 1) * milestone(L);
+        const wareSpeed = (L = G.ware.lvl) => 1 + Math.min(4, L * 0.04);
+        const wareCost = (L) => 30 * Math.pow(1.17, L - 1);
+        const elevTrip = (L) => (2.2 + G.shafts.length * 0.9) / elevSpeed(L);
+        const wareTrip = (L) => 4 / wareSpeed(L);
+        const costFor = (kind, i, L) => kind === 'shaft' ? shaftCost(i, L) : kind === 'elev' ? elevCost(L) : wareCost(L);
+        const stationOf = (kind, i) => kind === 'shaft' ? G.shafts[i] : kind === 'elev' ? G.elev : G.ware;
+        function bulk(kind, i) {
+            const st = stationOf(kind, i);
+            let n = 0, cost = 0;
+            const lim = amt === 'max' ? 1000 : +amt;
+            while (n < lim) { const k = costFor(kind, i, st.lvl + n); if (amt === 'max' && cost + k > G.cash) break; cost += k; n++; }
+            if (amt === 'max' && n === 0) { n = 1; cost = costFor(kind, i, st.lvl); }
+            return { n, cost };
+        }
+        function upgrade(kind, i) {
+            const { n, cost } = bulk(kind, i);
+            if (G.cash < cost) { Arcade.sfx('bad'); return; }
+            const st = stationOf(kind, i), before = milestone(st.lvl);
+            G.cash -= cost; st.lvl += n;
+            Arcade.sfx('coin');
+            const at = stationPos(kind, i);
+            pops.push({ x: at.x, y: at.y, t: 0, text: `Lv ${st.lvl}`, col: '#fde68a' });
+            if (milestone(st.lvl) > before) { Arcade.toast(`⭐ Level ${st.lvl} milestone — ×2 boost!`, 'gold'); Arcade.sfx('level'); sparks(at.x, at.y, '#fde047', 26); }
+            render();
+        }
+        function hire(kind, i) {
+            const st = stationOf(kind, i), cost = mgrCost(kind, i);
+            if (st.mgr || G.cash < cost) return;
+            G.cash -= cost; st.mgr = true;
+            Arcade.sfx('power');
+            const at = stationPos(kind, i);
+            pops.push({ x: at.x, y: at.y, t: 0, text: 'Manager hired!', col: '#86efac' });
+            render();
+        }
+        function buyShaft() {
+            const i = G.shafts.length, cost = newShaftCost(i);
+            if (i >= MAXSHAFT || G.cash < cost) return;
+            G.cash -= cost; G.shafts.push({ lvl: 1, mgr: false, stock: 0 });
+            Arcade.sfx('level');
+            Arcade.report('shafts', G.shafts.length);
+            sel = { kind: 'shaft', i };
+            resizeCanvas(); render();
+            const y = FIRST + i * ROW;
+            sparks(W * 0.6, y + TH / 2, ORES[i % ORES.length][2], 40);
+            scrollToY(y - 120);
+        }
+        const scGain = () => Math.floor(Math.sqrt(G.earned / 2e5));
+        function prestige() {
+            const g = scGain();
+            if (g < 1) return;
+            if (!confirm(`Sell this mine for ${g} super cash? Shafts, levels, managers and cash reset. Each super cash adds +10% income forever.`)) return;
+            const keep = { sc: G.sc + g, total: G.total };
+            Object.assign(G, def(), keep);
+            anims = freshAnims();
+            sel = { kind: 'shaft', i: 0 };
+            Arcade.sfx('win'); Arcade.toast(`+${g} 💎 super cash — income now ×${(1 + G.sc * 0.1).toFixed(1)}`, 'gold', 3500);
+            resizeCanvas(); render(); scrollToY(0);
+        }
+
+        /* ---------- simulation ---------- */
+        const freshAnims = () => ({ shafts: [], elev: { state: 'idle', t: 0, y: 0, load: 0, at: -1 }, ware: { state: 'idle', t: 0, load: 0 } });
+        let anims = freshAnims();
+        const SHAFT_CYCLE = 4;
+        const pops = [];               // floating text
+        const parts = new Arcade.Particles(500);
+        function shaftAnim(i) { return anims.shafts[i] || (anims.shafts[i] = { working: false, t: 0 }); }
+        function tapShaft(i) { const a = shaftAnim(i); if (!a.working) { a.working = true; a.t = 0; Arcade.tone(500, 0.04, 'square', 0.03); } }
+        function tapElev() { if (anims.elev.state === 'idle') { anims.elev.state = 'down'; anims.elev.t = 0; anims.elev.load = 0; anims.elev.at = -1; Arcade.tone(400, 0.04, 'square', 0.03); } }
+        function tapWare() { if (anims.ware.state === 'idle' && G.surface > 0) { anims.ware.state = 'go'; anims.ware.t = 0; anims.ware.load = Math.min(G.surface, wareCap()); G.surface -= anims.ware.load; Arcade.tone(600, 0.04, 'square', 0.03); } }
+        let incomeWin = [];
+        function step(dt) {
+            G.boostT = Math.max(0, G.boostT - dt); G.boostCd = Math.max(0, G.boostCd - dt);
+            G.shafts.forEach((s, i) => {
+                const a = shaftAnim(i);
+                if (s.mgr && !a.working) { a.working = true; a.t = 0; }
+                if (a.working) {
+                    a.t += dt;
+                    if (a.t >= SHAFT_CYCLE) { s.stock += shaftRate(i) * SHAFT_CYCLE; a.working = false; a.t = 0; }
+                }
+            });
+            const E = anims.elev, trip = elevTrip(), n = G.shafts.length;
+            if (G.elev.mgr && E.state === 'idle') { E.state = 'down'; E.t = 0; E.load = 0; E.at = -1; }
+            if (E.state !== 'idle') {
+                E.t += dt;
+                const half = trip / 2;
+                if (E.state === 'down') {
+                    const k = Math.min(1, E.t / half);
+                    E.y = k * n;
+                    const reached = Math.min(n - 1, Math.floor(k * n - 0.0001));
+                    while (E.at < reached) { E.at++; const s = G.shafts[E.at], take = Math.min(s.stock, elevCap() - E.load); s.stock -= take; E.load += take; }
+                    if (E.t >= half) { E.state = 'up'; E.t = 0; }
+                } else if (E.state === 'up') {
+                    E.y = n * (1 - Math.min(1, E.t / half));
+                    if (E.t >= half) { G.surface += E.load; E.load = 0; E.state = 'idle'; E.y = 0; }
+                }
+            }
+            const Wk = anims.ware;
+            if (G.ware.mgr && Wk.state === 'idle' && G.surface > 0) tapWare();
+            if (Wk.state !== 'idle') {
+                Wk.t += dt;
+                if (Wk.t >= wareTrip()) {
+                    G.cash += Wk.load; G.earned += Wk.load; G.total += Wk.load;
+                    incomeWin.push([performance.now(), Wk.load]);
+                    if (Wk.load > 0) {
+                        if (Math.random() < 0.4) Arcade.tone(1300, 0.05, 'triangle', 0.02);
+                        pops.push({ x: MKT_X + 10, y: SURF - 120, t: 0, text: '+💰' + fmt(Wk.load), col: '#fde047', big: true });
+                        sparks(MKT_X, SURF - 70, '#fde047', 10);
+                    }
+                    Wk.load = 0; Wk.state = 'idle';
+                }
+            }
+        }
+        // the three stages of the mine, in ore per second once everything runs by itself
+        function throughput() {
+            const prodAll = G.shafts.reduce((a, s, i) => a + shaftRate(i), 0);
+            const prod = G.shafts.reduce((a, s, i) => a + (s.mgr ? shaftRate(i) : 0), 0);
+            return { prodAll, prod, el: elevCap() / elevTrip(), wa: wareCap() / wareTrip() };
+        }
+        function steadyRate() {
+            const t = throughput();
+            return Math.min(t.prod, G.elev.mgr ? t.el : 0, G.ware.mgr ? t.wa : 0);
+        }
+        function liveRate() {
+            const now = performance.now();
+            incomeWin = incomeWin.filter(([t]) => now - t < 20000);
+            return incomeWin.reduce((a, [, v]) => a + v, 0) / 20;
+        }
+
+        /* ---------- drawing helpers ---------- */
+        let H = 600, rock = null, ss = 1; // ss = backing-store pixels per logical px (matches the on-screen size so the art stays sharp)
+        const EX = 64, EW = 86;                         // elevator shaft
+        const TX0 = EX + EW + 10, TX1 = W - 16;         // tunnel span
+        const BIN_X = EX + EW + 70, MKT_X = W - 120;    // surface stockpile and market
+        const rnd = Arcade.seeded('idle-miner');
+        const clouds = Array.from({ length: 5 }, (_, i) => ({ x: rnd() * W, y: 26 + rnd() * 60, s: 0.6 + rnd() * 0.7, v: 4 + rnd() * 6 }));
+
+        function rr(x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+        function pill(x, y, text, o = {}) {
+            c.font = `${o.weight || 700} ${o.size || 12}px system-ui, "Segoe UI", sans-serif`;
+            const w = c.measureText(text).width + (o.padX || 10) * 2, h = (o.size || 12) + 10;
+            const px = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+            c.fillStyle = o.bg || 'rgba(12, 8, 4, 0.72)';
+            rr(px, y - h / 2, w, h, h / 2); c.fill();
+            if (o.border) { c.strokeStyle = o.border; c.lineWidth = 1.5; c.stroke(); }
+            c.fillStyle = o.col || '#fef3c7'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillText(text, px + w / 2, y + 0.5);
+            c.textBaseline = 'alphabetic';
+            return w;
+        }
+        function mix(a, b, t) {
+            const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+            const ch = (s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
+            return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+        }
+        function sparks(x, y, col, n) { parts.emit(x, y, { n: n || 12, color: [col, '#ffffff'], speed: 140, life: 0.7, size: 3.5, gravity: 260, shape: 'circle' }); }
+        function stationPos(kind, i) {
+            if (kind === 'shaft') return { x: (TX0 + TX1) / 2, y: FIRST + i * ROW + 30 };
+            if (kind === 'elev') return { x: EX + EW / 2, y: SURF - 120 };
+            return { x: MKT_X, y: SURF - 130 };
+        }
+
+        // The rock face is drawn once into an offscreen canvas and redrawn only when the mine gets deeper.
+        const STRATA = ['#6b4a2b', '#5a3e27', '#4b3526', '#3f2f29', '#35292c', '#2d2430', '#262033', '#1f1b30', '#1a172a', '#141222'];
+        function buildRock() {
+            rock = document.createElement('canvas');
+            rock.width = Math.round(W * ss); rock.height = Math.round(H * ss);
+            const r = rock.getContext('2d'), R = Arcade.seeded('rock');
+            r.scale(ss, ss);
+            const depth = H - SURF;
+            for (let y = 0; y < depth; y += 6) {
+                const k = Math.min(STRATA.length - 1.001, (y / ROW) * 0.55), a = Math.floor(k);
+                r.fillStyle = mix(STRATA[a], STRATA[a + 1], k - a);
+                r.fillRect(0, SURF + y, W, 6);
+            }
+            // soft layer lines
+            for (let y = SURF + 40; y < H; y += 46 + R() * 50) {
+                r.strokeStyle = 'rgba(0,0,0,0.18)'; r.lineWidth = 2 + R() * 3;
+                r.beginPath(); r.moveTo(0, y);
+                for (let x = 0; x <= W; x += 40) r.lineTo(x, y + Math.sin(x * 0.012 + y) * 6 + (R() - 0.5) * 4);
+                r.stroke();
+            }
+            // speckles and pebbles
+            for (let i = 0; i < depth * 2.2; i++) {
+                const x = R() * W, y = SURF + R() * depth, s = 1 + R() * 2.5;
+                r.fillStyle = R() < 0.5 ? 'rgba(0,0,0,0.22)' : 'rgba(255,235,200,0.06)';
+                r.fillRect(x, y, s, s);
+            }
+            for (let i = 0; i < depth / 14; i++) {
+                const x = R() * W, y = SURF + 20 + R() * depth, rx = 3 + R() * 9;
+                r.fillStyle = `rgba(${R() < 0.5 ? '0,0,0,0.2' : '255,240,220,0.07'})`;
+                r.beginPath(); r.ellipse(x, y, rx, rx * (0.5 + R() * 0.3), R() * 3, 0, Math.PI * 2); r.fill();
+            }
+            // ore flecks hinting at what is below each tunnel
+            for (let i = 0; i < MAXSHAFT + 1; i++) {
+                const y0 = FIRST + i * ROW;
+                if (y0 > H) break;
+                const col = ORES[i % ORES.length][1];
+                for (let k = 0; k < 14; k++) {
+                    r.fillStyle = col; r.globalAlpha = 0.25 + R() * 0.3;
+                    r.beginPath(); r.arc(TX0 + R() * (W - TX0), y0 - 12 + R() * (ROW - TH) * 0.6, 1.5 + R() * 2.5, 0, Math.PI * 2); r.fill();
+                }
+                r.globalAlpha = 1;
+            }
+            // bedrock
+            const bed = r.createLinearGradient(0, H - 40, 0, H);
+            bed.addColorStop(0, 'rgba(0,0,0,0)'); bed.addColorStop(1, 'rgba(0,0,0,0.6)');
+            r.fillStyle = bed; r.fillRect(0, H - 40, W, 40);
+        }
+
+        function drawSky(t) {
+            const sky = c.createLinearGradient(0, 0, 0, SURF);
+            sky.addColorStop(0, '#5ba7e8'); sky.addColorStop(0.7, '#a8d8f5'); sky.addColorStop(1, '#f5e6c8');
+            c.fillStyle = sky; c.fillRect(0, 0, W, SURF);
+            // sun
+            const sg = c.createRadialGradient(W - 220, 50, 4, W - 220, 50, 70);
+            sg.addColorStop(0, 'rgba(255,248,220,0.95)'); sg.addColorStop(0.25, 'rgba(255,236,170,0.6)'); sg.addColorStop(1, 'rgba(255,236,170,0)');
+            c.fillStyle = sg; c.fillRect(W - 300, 0, 160, 130);
+            // clouds
+            for (const cl of clouds) {
+                const x = ((cl.x + t * cl.v) % (W + 160)) - 80;
+                c.fillStyle = 'rgba(255,255,255,0.85)';
+                c.beginPath();
+                c.ellipse(x, cl.y, 34 * cl.s, 11 * cl.s, 0, 0, Math.PI * 2);
+                c.ellipse(x + 16 * cl.s, cl.y - 8 * cl.s, 20 * cl.s, 12 * cl.s, 0, 0, Math.PI * 2);
+                c.ellipse(x - 14 * cl.s, cl.y - 5 * cl.s, 16 * cl.s, 9 * cl.s, 0, 0, Math.PI * 2);
+                c.fill();
+            }
+            // two layers of hills
+            const hill = (base, amp, f, col, off) => {
+                c.fillStyle = col; c.beginPath(); c.moveTo(0, SURF);
+                for (let x = 0; x <= W; x += 12) c.lineTo(x, base - Math.sin(x * f + off) * amp - Math.sin(x * f * 2.3 + off) * amp * 0.35);
+                c.lineTo(W, SURF); c.fill();
+            };
+            hill(SURF - 52, 18, 0.009, '#8fb59a', 1.2);
+            hill(SURF - 30, 12, 0.014, '#6d9c62', 4.1);
+            // ground
+            c.fillStyle = '#5d8a3a'; c.fillRect(0, SURF - 16, W, 16);
+            c.fillStyle = '#4b7a2c';
+            for (let x = 4; x < W; x += 9) { c.beginPath(); c.moveTo(x, SURF - 15); c.lineTo(x + 3, SURF - 22 - (x * 7 % 5)); c.lineTo(x + 6, SURF - 15); c.fill(); }
+            c.fillStyle = '#7a5530'; c.fillRect(0, SURF, W, 6);
+            // trees
+            for (const tx of [W - 26, BIN_X + 150]) {
+                c.fillStyle = '#5b3a1e'; c.fillRect(tx - 3, SURF - 34, 6, 20);
+                c.fillStyle = '#3f7d3a'; c.beginPath(); c.arc(tx, SURF - 44, 16, 0, Math.PI * 2); c.fill();
+                c.fillStyle = '#4d9446'; c.beginPath(); c.arc(tx - 5, SURF - 49, 9, 0, Math.PI * 2); c.fill();
+            }
+            // road
+            c.fillStyle = '#9c8466'; c.fillRect(BIN_X + 40, SURF - 16, MKT_X - BIN_X - 60, 8);
+            c.fillStyle = 'rgba(255,255,255,0.35)';
+            for (let x = BIN_X + 50; x < MKT_X - 30; x += 26) c.fillRect(x, SURF - 13, 12, 2);
+        }
+
+        function drawHeadframe(t) {
+            const E = anims.elev, moving = E.state !== 'idle';
+            const cx = EX + EW / 2, topY = SURF - 150;
+            // legs
+            c.strokeStyle = '#7c8794'; c.lineWidth = 6; c.lineCap = 'round';
+            c.beginPath(); c.moveTo(EX - 8, SURF - 2); c.lineTo(cx - 8, topY + 10); c.moveTo(EX + EW + 8, SURF - 2); c.lineTo(cx + 8, topY + 10); c.stroke();
+            c.lineWidth = 3; c.strokeStyle = '#5f6b78';
+            for (let k = 1; k < 4; k++) {
+                const y = SURF - k * 34, wHalf = (EW / 2 + 8) * (1 - k * 0.22);
+                c.beginPath(); c.moveTo(cx - wHalf, y); c.lineTo(cx + wHalf, y - 30); c.moveTo(cx + wHalf, y); c.lineTo(cx - wHalf, y - 30); c.stroke();
+            }
+            c.lineCap = 'butt';
+            // wheel
+            const ang = moving ? t * (E.state === 'down' ? 4 : -4) : 0;
+            c.save(); c.translate(cx, topY);
+            c.fillStyle = '#334155'; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = '#cbd5e1'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 20, 0, Math.PI * 2); c.stroke();
+            c.rotate(ang); c.lineWidth = 2;
+            for (let k = 0; k < 6; k++) { c.rotate(Math.PI / 3); c.beginPath(); c.moveTo(0, 0); c.lineTo(18, 0); c.stroke(); }
+            c.restore();
+            c.fillStyle = '#e2e8f0'; c.beginPath(); c.arc(cx, topY, 4, 0, Math.PI * 2); c.fill();
+            // winch house
+            c.fillStyle = '#9a3412'; rr(EX - 52, SURF - 50, 44, 40, 4); c.fill();
+            c.fillStyle = '#7c2d12'; c.beginPath(); c.moveTo(EX - 56, SURF - 50); c.lineTo(EX - 30, SURF - 66); c.lineTo(EX - 4, SURF - 50); c.fill();
+            c.fillStyle = moving ? '#fde68a' : '#57534e'; c.fillRect(EX - 42, SURF - 40, 12, 10);
+            // label
+            pill(cx + 30, topY + 2, `🛗 Elevator · Lv ${G.elev.lvl}`, { size: 11 });
+        }
+
+        function drawElevator(t) {
+            const E = anims.elev;
+            const top = SURF - 4, bot = H - 20;
+            // shaft
+            const g = c.createLinearGradient(EX, 0, EX + EW, 0);
+            g.addColorStop(0, '#0b0704'); g.addColorStop(0.5, '#1a120a'); g.addColorStop(1, '#0b0704');
+            c.fillStyle = g; c.fillRect(EX, top, EW, bot - top);
+            c.fillStyle = '#4a3420';
+            for (let y = top + 30; y < bot; y += 60) c.fillRect(EX, y, EW, 5);     // cross beams
+            c.fillStyle = '#6b7280'; c.fillRect(EX + 6, top, 3, bot - top); c.fillRect(EX + EW - 9, top, 3, bot - top);   // guide rails
+            c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(EX, top, EW, bot - top);
+            // cage
+            const cy = SURF - 58 + E.y * ROW;
+            const cx = EX + EW / 2;
+            c.strokeStyle = '#94a3b8'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx, SURF - 150); c.lineTo(cx, cy); c.stroke();
+            c.fillStyle = '#475569'; rr(EX + 11, cy, EW - 22, 54, 5); c.fill();
+            c.fillStyle = '#1e293b'; rr(EX + 15, cy + 4, EW - 30, 46, 3); c.fill();
+            c.strokeStyle = '#64748b'; c.lineWidth = 1.5;
+            for (let x = EX + 22; x < EX + EW - 16; x += 9) { c.beginPath(); c.moveTo(x, cy + 4); c.lineTo(x, cy + 50); c.stroke(); }
+            // load inside the cage
+            if (E.load > 0) {
+                const h = Math.min(30, 6 + Math.log10(1 + E.load) * 4);
+                c.fillStyle = '#a16207'; rr(EX + 18, cy + 50 - h, EW - 36, h, 3); c.fill();
+                c.fillStyle = '#facc15';
+                for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(EX + 24 + k * 9, cy + 50 - h, 4, Math.PI, 0); c.fill(); }
+            }
+            c.fillStyle = '#f59e0b'; c.fillRect(EX + 11, cy - 3, EW - 22, 4);
+            if (E.load > 0) pill(cx, cy + 66, fmt(E.load), { align: 'center', size: 10 });
+            if (!G.elev.mgr && E.state === 'idle') tapHint(cx, cy - 16, t);
+        }
+
+        function drawSurface(t) {
+            // stockpile bin
+            const bx = BIN_X, by = SURF - 16;
+            c.fillStyle = '#6b4423'; rr(bx - 34, by - 30, 68, 30, 4); c.fill();
+            c.fillStyle = '#8b5a2b'; for (let k = 0; k < 3; k++) c.fillRect(bx - 34, by - 28 + k * 10, 68, 3);
+            if (G.surface > 0) {
+                const h = Math.min(26, 4 + Math.log10(1 + G.surface) * 3.4);
+                c.fillStyle = '#ca8a04'; c.beginPath(); c.ellipse(bx, by - 30, 30, h, 0, Math.PI, 0); c.fill();
+                c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.ellipse(bx - 8, by - 30 - h * 0.5, 9, h * 0.3, -0.3, 0, Math.PI * 2); c.fill();
+            }
+            pill(bx, by - 66, '📦 ' + fmt(G.surface), { align: 'center', size: 11 });
+
+            // market building
+            const mx = MKT_X, my = SURF - 16;
+            c.fillStyle = '#d6b88a'; rr(mx - 62, my - 78, 124, 78, 4); c.fill();
+            c.fillStyle = '#b45309'; c.beginPath(); c.moveTo(mx - 72, my - 78); c.lineTo(mx, my - 112); c.lineTo(mx + 72, my - 78); c.fill();
+            for (let k = 0; k < 8; k++) { c.fillStyle = k % 2 ? '#fef3c7' : '#dc2626'; c.beginPath(); c.moveTo(mx - 64 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 56); c.arc(mx - 56 + k * 16, my - 56, 8, 0, Math.PI); c.fill(); }
+            c.fillStyle = '#7c2d12'; rr(mx - 14, my - 38, 28, 38, 3); c.fill();
+            c.fillStyle = '#93c5fd'; rr(mx - 50, my - 40, 26, 20, 3); c.fill(); rr(mx + 24, my - 40, 26, 20, 3); c.fill();
+            c.fillStyle = '#422006'; rr(mx - 40, my - 104, 80, 18, 4); c.fill();
+            c.fillStyle = '#fde68a'; c.font = '800 11px system-ui'; c.textAlign = 'center'; c.fillText('MARKET', mx, my - 91);
+            pill(mx, my - 130, `🏪 Market · Lv ${G.ware.lvl}`, { align: 'center', size: 11 });
+
+            // truck
+            const Wk = anims.ware, wt = Wk.state === 'idle' ? 0 : Math.min(1, Wk.t / wareTrip());
+            const goingOut = wt < 0.5, k = goingOut ? wt * 2 : 2 - wt * 2;
+            const ease = k * k * (3 - 2 * k);
+            const x0 = bx + 56, x1 = mx - 96, tx = x0 + (x1 - x0) * ease, ty = SURF - 19;
+            const face = Wk.state === 'idle' ? 1 : goingOut ? 1 : -1;
+            c.save(); c.translate(tx, ty); c.scale(face, 1);
+            c.fillStyle = '#15803d'; rr(-30, -24, 40, 18, 3); c.fill();             // bed
+            c.fillStyle = '#16a34a'; rr(10, -30, 22, 24, 4); c.fill();              // cab
+            c.fillStyle = '#bae6fd'; rr(16, -27, 12, 9, 2); c.fill();
+            if (Wk.load > 0 && goingOut) {
+                c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(-10, -24, 18, 8, 0, Math.PI, 0); c.fill();
+            }
+            const spin = Wk.state === 'idle' ? 0 : t * 12;
+            for (const wx of [-20, 20]) {
+                c.fillStyle = '#111827'; c.beginPath(); c.arc(wx, -4, 7, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = '#9ca3af'; c.lineWidth = 2; c.beginPath(); c.moveTo(wx + Math.cos(spin) * 4, -4 + Math.sin(spin) * 4); c.lineTo(wx - Math.cos(spin) * 4, -4 - Math.sin(spin) * 4); c.stroke();
+            }
+            c.restore();
+            if (G.ware.mgr) managerBadge(mx + 60, my - 30);
+            else if (Wk.state === 'idle' && G.surface > 0) tapHint(tx, SURF - 70, t);
+            if (G.elev.mgr) managerBadge(EX - 30, SURF - 76);
+        }
+
+        function managerBadge(x, y) {
+            c.fillStyle = 'rgba(12,8,4,0.75)'; c.beginPath(); c.arc(x, y, 14, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = '#86efac'; c.lineWidth = 2; c.stroke();
+            c.font = '15px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🧑‍💼', x, y + 1); c.textBaseline = 'alphabetic';
+        }
+        function tapHint(x, y, t) {
+            const s = 1 + Math.sin(t * 5) * 0.06;
+            c.save(); c.translate(x, y); c.scale(s, s);
+            pill(0, 0, '👆 Tap', { align: 'center', bg: '#fbbf24', col: '#1c1003', weight: 800, size: 12 });
+            c.restore();
+        }
+
+        function miner(x, y, o) {
+            const { walk = 0, swing = null, carry = null, dir = 1 } = o;
+            c.save(); c.translate(x, y); c.scale(dir, 1);
+            const step = Math.sin(walk * 9);
+            // legs
+            c.strokeStyle = '#1e3a8a'; c.lineWidth = 4; c.lineCap = 'round';
+            c.beginPath(); c.moveTo(-2, -10); c.lineTo(-3 + step * 4, 0); c.moveTo(2, -10); c.lineTo(3 - step * 4, 0); c.stroke();
+            // body
+            c.fillStyle = '#2563eb'; rr(-6, -24, 12, 15, 3); c.fill();
+            c.fillStyle = '#f97316'; c.fillRect(-6, -22, 12, 3);            // hi-vis stripe
+            // head + helmet + lamp
+            c.fillStyle = '#f2c79a'; c.beginPath(); c.arc(0, -29, 5.5, 0, Math.PI * 2); c.fill();
+            c.fillStyle = '#facc15'; c.beginPath(); c.arc(0, -31, 6.5, Math.PI, 0); c.fill(); c.fillRect(-7.5, -31.5, 15, 2);
+            c.fillStyle = '#fffbeb'; c.beginPath(); c.arc(5.5, -33, 1.8, 0, Math.PI * 2); c.fill();
+            // pickaxe
+            if (swing !== null) {
+                c.save(); c.translate(4, -20); c.rotate(-1.6 + swing * 2.1);
+                c.strokeStyle = '#78350f'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, 0); c.lineTo(15, 0); c.stroke();
+                c.strokeStyle = '#cbd5e1'; c.lineWidth = 3; c.beginPath(); c.moveTo(15, -6); c.quadraticCurveTo(19, 0, 15, 6); c.stroke();
+                c.restore();
+            }
+            if (carry) {
+                c.fillStyle = '#92400e'; c.beginPath(); c.arc(-7, -22, 6, 0, Math.PI * 2); c.fill();
+                c.fillStyle = carry; c.beginPath(); c.arc(-7, -25, 3, 0, Math.PI * 2); c.fill();
+            }
+            c.lineCap = 'butt';
+            c.restore();
+        }
+
+        function drawShaft(s, i, t) {
+            const y = FIRST + i * ROW, [oreName, oreCol, oreHi] = ORES[i % ORES.length];
+            const x0 = TX0, x1 = TX1, w = x1 - x0;
+            // tunnel cavity
+            c.save();
+            c.beginPath(); c.roundRect(x0, y, w, TH, [6, 26, 10, 6]); c.clip();
+            const g = c.createLinearGradient(0, y, 0, y + TH);
+            g.addColorStop(0, '#1c130b'); g.addColorStop(1, '#2a1c10');
+            c.fillStyle = g; c.fillRect(x0, y, w, TH);
+            // lantern light pools
+            for (let lx = x0 + 120; lx < x1 - 60; lx += 190) {
+                const flick = 0.92 + Math.sin(t * 7 + lx) * 0.04 + Math.sin(t * 13 + lx * 2) * 0.03;
+                const lg = c.createRadialGradient(lx, y + 22, 2, lx, y + 30, 110 * flick);
+                lg.addColorStop(0, 'rgba(255,190,100,0.30)'); lg.addColorStop(1, 'rgba(255,190,100,0)');
+                c.fillStyle = lg; c.fillRect(lx - 120, y, 240, TH);
+            }
+            // timber supports
+            for (let px = x0 + 30; px < x1 - 70; px += 95) {
+                c.fillStyle = '#5b3a1e'; c.fillRect(px, y + 10, 7, TH - 10); c.fillRect(px - 4, y + 6, 15, 7);
+                c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(px + 5, y + 10, 2, TH - 10);
+            }
+            c.fillStyle = '#6b4423'; c.fillRect(x0, y + 4, w, 5);
+            // rails
+            const fy = y + TH - 8;
+            c.fillStyle = '#3b2a1a'; for (let rx = x0 + 6; rx < x1 - 40; rx += 16) c.fillRect(rx, fy - 1, 9, 5);
+            c.fillStyle = '#9ca3af'; c.fillRect(x0, fy - 3, w - 40, 2);
+            c.fillStyle = '#0f0a06'; c.fillRect(x0, y + TH - 3, w, 3);
+            // ore vein
+            const vx = x1 - 64, R = Arcade.seeded('vein' + i);
+            c.fillStyle = mix(STRATA[Math.min(9, Math.floor(i * 0.55))], '#000000', 0.25);
+            c.beginPath(); c.moveTo(vx + 14, y); c.quadraticCurveTo(vx - 10, y + TH / 2, vx + 10, y + TH); c.lineTo(x1, y + TH); c.lineTo(x1, y); c.fill();
+            for (let k = 0; k < 16; k++) {
+                const ox = vx + 10 + R() * 50, oy = y + 6 + R() * (TH - 14), sz = 4 + R() * 7;
+                c.fillStyle = oreCol;
+                c.beginPath(); c.moveTo(ox, oy - sz); c.lineTo(ox + sz * 0.9, oy - sz * 0.2); c.lineTo(ox + sz * 0.5, oy + sz); c.lineTo(ox - sz * 0.7, oy + sz * 0.6); c.lineTo(ox - sz * 0.8, oy - sz * 0.4); c.closePath(); c.fill();
+                c.fillStyle = oreHi; c.globalAlpha = 0.55;
+                c.beginPath(); c.moveTo(ox, oy - sz); c.lineTo(ox + sz * 0.9, oy - sz * 0.2); c.lineTo(ox + sz * 0.1, oy - sz * 0.1); c.closePath(); c.fill();
+                c.globalAlpha = 1;
+            }
+            for (let k = 0; k < 3; k++) {                        // twinkles
+                const ph = (t * 0.7 + k * 0.37 + i * 0.13) % 1;
+                if (ph > 0.25) continue;
+                const sx = vx + 16 + ((k * 37 + i * 11) % 44), sy = y + 12 + ((k * 23 + i * 7) % (TH - 24)), a = Math.sin(ph / 0.25 * Math.PI);
+                c.fillStyle = `rgba(255,255,255,${a})`;
+                c.beginPath(); c.moveTo(sx, sy - 5 * a); c.lineTo(sx + 1.3, sy); c.lineTo(sx, sy + 5 * a); c.lineTo(sx - 1.3, sy); c.fill();
+                c.beginPath(); c.moveTo(sx - 5 * a, sy); c.lineTo(sx, sy + 1.3); c.lineTo(sx + 5 * a, sy); c.lineTo(sx, sy - 1.3); c.fill();
+            }
+            // stockpile crate by the elevator
+            const cx = x0 + 34, cyb = y + TH - 8;
+            if (s.stock > 0) {
+                const h = Math.min(30, 4 + Math.log10(1 + s.stock) * 3.5);
+                c.fillStyle = oreCol; c.beginPath(); c.ellipse(cx, cyb - 22, 22, h, 0, Math.PI, 0); c.fill();
+                c.fillStyle = oreHi; c.globalAlpha = 0.35; c.beginPath(); c.ellipse(cx - 6, cyb - 22 - h * 0.5, 6, h * 0.3, -0.4, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+            }
+            c.fillStyle = '#7c4a1e'; rr(cx - 24, cyb - 22, 48, 22, 3); c.fill();
+            c.fillStyle = '#5b3416'; c.fillRect(cx - 24, cyb - 14, 48, 3); c.fillRect(cx - 3, cyb - 22, 6, 22);
+            // hanging lanterns
+            for (let lx = x0 + 120; lx < x1 - 60; lx += 190) {
+                c.strokeStyle = '#1f1408'; c.lineWidth = 1; c.beginPath(); c.moveTo(lx, y + 9); c.lineTo(lx, y + 16); c.stroke();
+                c.fillStyle = '#ffd27a'; c.beginPath(); c.arc(lx, y + 20, 4, 0, Math.PI * 2); c.fill();
+            }
+            // miners walk from the crate to the vein, swing, and carry ore back
+            const a = shaftAnim(i), ph = a.working ? a.t / SHAFT_CYCLE : 0;
+            const nMiners = Math.min(3, 1 + Math.floor(s.lvl / 10));
+            const mx0 = x0 + 70, mx1 = vx - 2;
+            for (let m = 0; m < nMiners; m++) {
+                const p = (ph + m * 0.29) % 1;
+                let x, o;
+                if (!a.working) { x = mx0 + 14 + m * 26; o = { walk: 0 }; }
+                else if (p < 0.3) { x = mx0 + (mx1 - mx0) * (p / 0.3); o = { walk: t + m, dir: 1 }; }
+                else if (p < 0.6) {
+                    x = mx1 - m * 6;
+                    const sw = ((p - 0.3) / 0.3 * 3) % 1;
+                    o = { swing: sw < 0.6 ? sw / 0.6 : 1 - (sw - 0.6) / 0.4, dir: 1 };
+                    if (sw > 0.55 && sw < 0.62 && Math.random() < 0.5) parts.emit(x + 18, fy - 22, { n: 3, color: [oreCol, oreHi, '#78716c'], speed: 90, life: 0.4, size: 3, gravity: 300, angle: -Math.PI * 0.7, spread: 1.4 });
+                }
+                else { x = mx1 - (mx1 - mx0) * ((p - 0.6) / 0.4); o = { walk: t + m, dir: -1, carry: oreHi }; }
+                miner(x, fy - 2, o);
+            }
+            c.restore();
+            // rim
+            c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 3; c.beginPath(); c.roundRect(x0, y, w, TH, [6, 26, 10, 6]); c.stroke();
+            // labels
+            const lbW = pill(x0 + 10, y - 13, `${i + 1} · ${oreName}`, { weight: 800, size: 11, bg: 'rgba(12,8,4,0.82)' });
+            pill(x0 + 16 + lbW, y - 13, `Lv ${s.lvl}`, { size: 10, bg: 'rgba(12,8,4,0.6)', col: '#fde68a' });
+            pill(x1, y - 13, `${fmt(shaftRate(i))}/s`, { align: 'right', size: 10, bg: 'rgba(12,8,4,0.6)', col: '#d1fae5' });
+            if (s.stock > 0) pill(cx, cyb - 58, fmt(s.stock), { align: 'center', size: 10 });
+            if (s.mgr) managerBadge(x0 + 78, y + 20);
+            else if (!a.working) tapHint((x0 + x1) / 2, y + TH / 2 - 6, t);
+            if (sel.kind === 'shaft' && sel.i === i) selRing(x0 - 3, y - 3, w + 6, TH + 6, 14);
+        }
+
+        function selRing(x, y, w, h, r) {
+            c.save();
+            c.shadowColor = 'rgba(251,191,36,0.6)'; c.shadowBlur = 10;
+            c.strokeStyle = '#fbbf24'; c.lineWidth = 2.5;
+            rr(x, y, w, h, r); c.stroke();
+            c.restore();
+        }
+
+        function drawNextSlot(t) {
+            const i = G.shafts.length;
+            if (i >= MAXSHAFT) return;
+            const y = FIRST + i * ROW, can = G.cash >= newShaftCost(i);
+            c.save();
+            c.setLineDash([9, 7]); c.lineWidth = 2;
+            c.strokeStyle = can ? 'rgba(253,224,71,0.85)' : 'rgba(255,240,220,0.25)';
+            rr(TX0, y, TX1 - TX0, TH, 14); c.stroke();
+            c.restore();
+            c.fillStyle = can ? 'rgba(253,224,71,0.06)' : 'rgba(0,0,0,0.12)'; rr(TX0, y, TX1 - TX0, TH, 14); c.fill();
+            const cxm = (TX0 + TX1) / 2;
+            c.font = '800 14px system-ui'; c.textAlign = 'center'; c.fillStyle = can ? '#fde68a' : 'rgba(255,240,220,0.55)';
+            c.fillText(`⛏️ Dig shaft ${i + 1} — ${ORES[i % ORES.length][0]}`, cxm, y + TH / 2 - 4);
+            const s = can ? 1 + Math.sin(t * 4) * 0.04 : 1;
+            c.save(); c.translate(cxm, y + TH / 2 + 18); c.scale(s, s);
+            pill(0, 0, '💰 ' + fmt(newShaftCost(i)), { align: 'center', bg: can ? '#fbbf24' : 'rgba(0,0,0,0.4)', col: can ? '#1c1003' : '#a8a29e', weight: 800 });
+            c.restore();
+        }
+
+        function draw(t) {
+            c.clearRect(0, 0, W, H);
+            drawSky(t);
+            c.drawImage(rock, 0, 0, W, H);
+            // only draw tunnels that are on screen
+            const top = box.scrollTop * W / cv.clientWidth, bottom = top + box.clientHeight * W / cv.clientWidth;
+            G.shafts.forEach((s, i) => { const y = FIRST + i * ROW; if (y + ROW > top && y - 40 < bottom) drawShaft(s, i, t); });
+            drawNextSlot(t);
+            drawElevator(t);
+            drawHeadframe(t);
+            drawSurface(t);
+            if (sel.kind === 'elev') selRing(EX - 6, SURF - 200, EW + 12, H - SURF + 180, 12);
+            if (sel.kind === 'ware') selRing(BIN_X - 44, SURF - 150, MKT_X - BIN_X + 120, 140, 14);
+            parts.draw(c);
+            for (const p of pops) {
+                const k = p.t / 1.4;
+                c.globalAlpha = Math.max(0, 1 - k * k);
+                c.font = `900 ${p.big ? 16 : 13}px system-ui`; c.textAlign = 'center';
+                c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.55)'; c.strokeText(p.text, p.x, p.y - k * 40);
+                c.fillStyle = p.col; c.fillText(p.text, p.x, p.y - k * 40);
+            }
+            c.globalAlpha = 1;
+        }
+
+        function resizeCanvas() {
+            H = FIRST + Math.max(4, G.shafts.length + 1) * ROW + 30;
+            const dpr = window.devicePixelRatio || 1;
+            const shown = cv.clientWidth || W;
+            ss = Math.max(1, Math.min(3, shown * dpr / W, 15000 / H));
+            cv.width = Math.round(W * ss); cv.height = Math.round(H * ss);
+            cv.style.aspectRatio = W + ' / ' + H;
+            c.setTransform(ss, 0, 0, ss, 0, 0);
+            c.imageSmoothingQuality = 'high';
+            buildRock();
+            Arcade.text('hudShafts', G.shafts.length);
+        }
+        function scrollToY(y) { box.scrollTop = Math.max(0, y * cv.clientWidth / W); }
+
+        cv.addEventListener('click', (e) => {
+            const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+            if (x >= EX - 10 && x <= EX + EW + 10 && y > SURF - 200) { sel = { kind: 'elev' }; tapElev(); render(); return; }
+            if (y < SURF + 4 && x > BIN_X - 50) { sel = { kind: 'ware' }; tapWare(); render(); return; }
+            const i = Math.floor((y - FIRST + (ROW - TH) / 2) / ROW);
+            if (i >= 0 && i < G.shafts.length) { sel = { kind: 'shaft', i }; tapShaft(i); render(); return; }
+            if (i === G.shafts.length) buyShaft();
+        });
+        $('jumpTop').onclick = () => scrollToY(0);
+
+        /* ---------- side panel ---------- */
+        const TINT = { shaft: '#f59e0b', elev: '#94a3b8', ware: '#22c55e' };
+        function selCard() {
+            const { kind, i } = sel, st = stationOf(kind, i), { n, cost } = bulk(kind, i);
+            let icon, title, sub, now, next, unit, extra = '';
+            if (kind === 'shaft') {
+                const [ore] = ORES[i % ORES.length];
+                icon = '⛏️'; title = `Shaft ${i + 1}`; sub = ore + ' seam';
+                now = fmt(shaftRate(i)); next = fmt(shaftRate(i, st.lvl + n)); unit = 'ore / s';
+                extra = `Stockpile: <b>${fmt(st.stock)}</b> waiting for the elevator`;
+            } else if (kind === 'elev') {
+                icon = '🛗'; title = 'Elevator'; sub = 'Hauls ore to the surface';
+                now = fmt(elevCap()); next = fmt(elevCap(st.lvl + n)); unit = 'per trip';
+                extra = `Round trip <b>${elevTrip().toFixed(1)}s</b> → ${elevTrip(st.lvl + n).toFixed(1)}s · ${fmt(elevCap() / elevTrip())}/s`;
+            } else {
+                icon = '🏪'; title = 'Market'; sub = 'Trucks ore to the buyer';
+                now = fmt(wareCap()); next = fmt(wareCap(st.lvl + n)); unit = 'per trip';
+                extra = `Trip <b>${wareTrip().toFixed(1)}s</b> → ${wareTrip(st.lvl + n).toFixed(1)}s · ${fmt(wareCap() / wareTrip())}/s`;
+            }
+            const prevM = [0, ...MILESTONES].filter(m => st.lvl >= m).pop(), nextM = MILESTONES.find(m => st.lvl < m);
+            const msPct = nextM ? (st.lvl - prevM) / (nextM - prevM) * 100 : 100;
+            const mCost = mgrCost(kind, i);
+            return `<h3>Selected <span class="seg" id="amtSeg">${[['1', '×1'], ['10', '×10'], ['max', 'Max']].map(([v, l]) => `<button class="btn ${amt === v ? 'active' : ''}" data-v="${v}">${l}</button>`).join('')}</span></h3>
+                <div class="st-head" style="--tint:${TINT[kind]}"><div class="st-icon">${icon}</div><div><div class="st-name">${title}</div><div class="st-sub">${sub}</div></div>
+                    <div class="lv"><small>Level</small><b>${st.lvl}</b></div></div>
+                <div class="cmp"><div><small>Now · ${unit}</small><b>${now}</b></div><span class="arrow">→</span><div class="next"><small>+${n} level${n > 1 ? 's' : ''}</small><b>${next}</b></div><div class="extra">${extra}</div></div>
+                <div class="ms"><div class="ms-top"><span>${nextM ? `Next ×2 boost at <b>Lv ${nextM}</b>` : '<b>All boosts unlocked</b>'}</span><span>×${milestone(st.lvl)}</span></div><div class="bar"><i style="width:${msPct}%"></i></div></div>
+                <button class="btn primary upbtn" id="upBtn" ${G.cash < cost ? 'disabled' : ''}><span>Upgrade ×${n}</span><span>💰 ${fmt(cost)}</span></button>
+                ${st.mgr
+                    ? `<div class="mgr on"><span class="face">🧑‍💼</span><div class="txt"><b>Manager on duty</b><small>Works automatically, even while you're away</small></div></div>`
+                    : `<div class="mgr"><span class="face">🧑‍💼</span><div class="txt"><b>No manager</b><small>Tap it in the mine to work once</small></div><button class="btn sm" id="mgrBtn" ${G.cash < mCost ? 'disabled' : ''}>Hire · 💰 ${fmt(mCost)}</button></div>`}`;
+        }
+        function flowCard() {
+            const t = throughput();
+            const rows = [
+                ['⛏️', 'Mining', G.shafts.some(s => s.mgr) ? t.prod : t.prodAll, G.shafts.every(s => s.mgr)],
+                ['🛗', 'Elevator', t.el, G.elev.mgr],
+                ['🏪', 'Market', t.wa, G.ware.mgr],
+            ];
+            const max = Math.max(...rows.map(r => r[2]), 1), min = Math.min(...rows.map(r => r[2]));
+            const slow = rows.find(r => r[2] === min);
+            const tips = { Mining: 'upgrade or hire managers for your shafts', Elevator: 'upgrade the elevator', Market: 'upgrade the market' };
+            return rows.map(([ic, nm, v, auto]) => `<div class="flow-row ${v === min ? 'bottle' : ''}"><span>${ic}</span><span>${nm}${auto ? '' : ' <span class="dim tiny">· manual</span>'}</span><span class="val">${fmt(v)}/s</span>
+                <div class="bar"><i style="width:${Math.max(3, v / max * 100)}%"></i></div></div>`).join('')
+                + `<div class="flow-tip">Bottleneck: <b>${slow[1]}</b> — ${tips[slow[1]]}.</div>`;
+        }
+        function listCard() {
+            const rows = [
+                `<button class="li ${sel.kind === 'elev' ? 'on' : ''}" data-sel="elev"><span class="dot" style="background:#cbd5e1">🛗</span><span class="nm">Elevator<small>Lv ${G.elev.lvl}${G.elev.mgr ? ' · 🧑‍💼' : ''}</small></span><span class="rt"><b>${fmt(elevCap())}</b>per trip</span></button>`,
+                `<button class="li ${sel.kind === 'ware' ? 'on' : ''}" data-sel="ware"><span class="dot" style="background:#86efac">🏪</span><span class="nm">Market<small>Lv ${G.ware.lvl}${G.ware.mgr ? ' · 🧑‍💼' : ''}</small></span><span class="rt"><b>${fmt(wareCap())}</b>per trip</span></button>`,
+                ...G.shafts.map((s, i) => `<button class="li ${sel.kind === 'shaft' && sel.i === i ? 'on' : ''}" data-sel="shaft:${i}"><span class="dot" style="background:${ORES[i % ORES.length][2]}">${i + 1}</span>
+                    <span class="nm">${ORES[i % ORES.length][0]}<small>Lv ${s.lvl}${s.mgr ? ' · 🧑‍💼' : ' · manual'}</small></span><span class="rt"><b>${fmt(shaftRate(i))}</b>/s</span></button>`),
+            ];
+            return rows.join('');
+        }
+        function digCard() {
+            const ns = G.shafts.length;
+            if (ns >= MAXSHAFT) return '<p class="note" style="margin:0">Every seam is dug. Sell the mine for super cash to go again.</p>';
+            return `<button class="btn block" id="newShaft" ${G.cash < newShaftCost(ns) ? 'disabled' : ''}>⛏️ Dig shaft ${ns + 1} · ${ORES[ns % ORES.length][0]} · 💰 ${fmt(newShaftCost(ns))}</button>`;
+        }
+        function prestigeCard() {
+            const g = scGain(), nextAt = 2e5 * Math.pow(g + 1, 2), prevAt = 2e5 * g * g;
+            const pct = Math.min(100, (G.earned - prevAt) / (nextAt - prevAt) * 100);
+            return `<h3>💎 Sell the mine</h3>
+                <div class="pres-num"><b>${G.sc}</b><span>super cash · income ×${(1 + G.sc * 0.1).toFixed(1)}</span></div>
+                <p class="note">Each super cash adds +10% income forever. Earned this mine: 💰 ${fmt(G.earned)}</p>
+                <div class="ms"><div class="ms-top"><span>Next 💎 at 💰 ${fmt(nextAt)}</span><span>${g} ready</span></div><div class="bar"><i style="width:${Math.max(0, pct)}%"></i></div></div>
+                <button class="btn block ${g >= 1 ? 'primary' : ''}" id="prestigeBtn" ${g < 1 ? 'disabled' : ''}>${g < 1 ? 'Not enough earned yet' : `Sell for ${g} 💎`}</button>`;
+        }
+        const setHTML = (el, h) => { if (el._h !== h) { el._h = h; el.innerHTML = h; return true; } return false; };
+        function render() {
+            if (setHTML($('selCard'), selCard())) {
+                $('upBtn').onclick = () => upgrade(sel.kind, sel.i || 0);
+                if ($('mgrBtn')) $('mgrBtn').onclick = () => hire(sel.kind, sel.i || 0);
+                document.querySelectorAll('#amtSeg [data-v]').forEach(b => { b.onclick = () => { amt = b.dataset.v; Arcade.save('arcade.idleminer.amt', amt); render(); }; });
+            }
+            setHTML($('flow'), flowCard());
+            Arcade.text('flowAuto', G.elev.mgr && G.ware.mgr && G.shafts.every(s => s.mgr) ? 'fully automatic' : '');
+            if (setHTML($('list'), listCard())) {
+                document.querySelectorAll('[data-sel]').forEach(b => b.onclick = () => {
+                    const [k, i] = b.dataset.sel.split(':');
+                    sel = { kind: k, i: +i || 0 }; render();
+                    scrollToY(k === 'shaft' ? FIRST + sel.i * ROW - 140 : 0);
+                });
+            }
+            if (setHTML($('dig'), digCard()) && $('newShaft')) $('newShaft').onclick = buyShaft;
+            if (setHTML($('prestigeCard'), prestigeCard())) $('prestigeBtn').onclick = prestige;
+            hud();
+        }
+        function hud() {
+            Arcade.text('cash', fmt(G.cash));
+            Arcade.text('rate', fmt(Math.max(liveRate(), steadyRate())));
+            Arcade.text('sc', G.sc);
+            $('boostBtn').disabled = G.boostCd > 0;
+            $('boostBtn').textContent = G.boostT > 0 ? `⚡ ×2 · ${Math.ceil(G.boostT)}s` : G.boostCd > 0 ? `⚡ ${Math.ceil(G.boostCd / 60)}m` : '⚡ Rush ×2';
+            $('hudRush').hidden = !(G.boostT > 0);
+            Arcade.text('hudRushT', Math.ceil(G.boostT));
+        }
+        $('boostBtn').onclick = () => { if (G.boostCd > 0) return; G.boostT = 60; G.boostCd = 600; Arcade.sfx('power'); hud(); };
+
+        /* ---------- saving & offline ---------- */
+        function save() { G.last = Date.now(); Arcade.save(KEY, G); }
+        function offline() {
+            const away = Math.min(8 * 3600, (Date.now() - (G.last || Date.now())) / 1000);
+            if (away < 60) return;
+            const boost = G.boostT; G.boostT = 0;
+            const gain = steadyRate() * away;
+            G.boostT = Math.max(0, boost - away); G.boostCd = Math.max(0, G.boostCd - away);
+            if (gain <= 0) return;
+            $('awayText').textContent = `Your managers kept the mine running for ${Arcade.time(away)}${away >= 8 * 3600 ? ' (8h max)' : ''}.`;
+            $('awayCash').textContent = '💰 ' + fmt(gain);
+            $('awayOk').onclick = () => { G.cash += gain; G.earned += gain; G.total += gain; Arcade.hide('awayOv'); Arcade.sfx('coin'); save(); render(); };
+            Arcade.show('awayOv');
+        }
+        window.addEventListener('pagehide', save);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else offline(); });
+        setInterval(save, 10000);
+        let uiT = 0;
+        const loop = Arcade.loop((dt, now) => {
+            step(dt);
+            parts.update(dt);
+            for (let k = pops.length - 1; k >= 0; k--) { pops[k].t += dt; if (pops[k].t > 1.4) pops.splice(k, 1); }
+            draw(now);
+            uiT += dt;
+            if (uiT > 0.4) { uiT = 0; render(); }
+        });
+        resizeCanvas();
+        let lastShown = cv.clientWidth;
+        new ResizeObserver(() => { if (Math.abs(cv.clientWidth - lastShown) > 8) { lastShown = cv.clientWidth; resizeCanvas(); } }).observe(cv);
+        offline();
+        render();
+        loop.start();
+        window.__miner = { G, step, tapShaft, tapElev, tapWare, buyShaft, upgrade, hire };
+    })();
+    </script>
+</body>
+</html>

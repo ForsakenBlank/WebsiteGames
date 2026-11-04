@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Research Lab</title>
+    <style>
+        body { background: #00050a; color: #90caf9; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .stats-bar { background: #001a33; padding: 15px; border-bottom: 2px solid #0288d1; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px; margin: auto; }
+        .card { background: #001a33; border: 1px solid #01579b; padding: 20px; border-radius: 10px; }
+        button { background: #0288d1; color: white; border: none; padding: 12px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; border-radius: 5px; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .gem-stat { font-weight: bold; margin: 0 10px; }
+        .dm-val { color: #00ccff; font-size: 1.5rem; }
+        .gem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; border-top: 1px solid #444; padding-top: 20px; }
+        .diamond-card { border: 1px solid #00e5ff; background: #001a1a; padding: 10px; border-radius: 5px; }
+        .ruby-card { border: 1px solid #ff1744; background: #1a0000; padding: 10px; border-radius: 5px; }
+
+    </style>
+</head>
+<body>
+    <div class="stats-bar">
+        DM: <b class="dm-val" id="dm-display">0</b> | Essence: <b id="ess-display">0</b><br>
+        <span style="color: #fdd835;">Diamonds: <b id="dia">0</b></span> | 
+        <span style="color: #ff5252;">Rubies: <b id="rub">0</b></span>
+    </div>
+
+    <h1>RESEARCH LAB</h1>
+
+    <div class="card" style="max-width:450px; margin:20px auto;">
+        <h3>Essence Condenser</h3>
+        <p>Convert <span id="cond-cost">1M</span> Essence -> <span id="cond-gain">1</span> DM</p>
+        <button id="cond-btn" onclick="manualCondense()">Condense (3s Delay)</button>
+        <button onclick="toggleAuto()" id="auto-btn">Auto-Condenser: OFF</button>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <b>Unlock Farmer EXP</b><br>
+            <small>Allows farmers to level up milestones via time.</small>
+            <button id="exp-btn" onclick="unlockExp()">Cost: 50 DM</button>
+        </div>
+
+        <div class="card">
+            <b>Higher Tier Conversion</b><br>
+            <small>10x Cost | 10x DM Gain</small>
+            <button id="tier-btn" onclick="upgradeTier()">Cost: <span id="tier-cost">10</span> DM</button>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <button onclick="location.href='void.html'" style="background:#4a148c; width:200px;">Back to Void</button>
+        <button onclick="location.href='index.html'" style="background:#222; width:200px;">Back to Farm</button>
+    </div>
+
+    <!-- In your DM Grid -->
+    <div class="card">
+        <b>Dust Infusion (Lvl <span id="dustLvl">0</span>)</b><br>
+        <button onclick="buyDMUpgrade('dust')">Cost: <span id="dust-up-cost">15</span> DM</button>
+    </div>
+
+    <div class="card">
+        <b>Milestone Tuning (Lvl <span id="mileLvl">0</span>)</b><br>
+        <button onclick="buyDMUpgrade('mile')">Cost: <span id="mile-up-cost">75</span> DM</button>
+    </div>
+
+
+    <!-- GEM SECTION -->
+    <div class="gem-grid">
+        <div class="diamond-card">
+            <b>Refracted Light (Lvl <span id="du1">0</span>)</b><br>
+            <small>+5% Crystal Power</small><br>
+            <button onclick="buyGem('diamonds', 'd_up1')">Cost: <span id="dc1">1</span> Dia</button>
+        </div>
+        <div class="diamond-card">
+            <b>Hardened Tools (Lvl <span id="du2">0</span>)</b><br>
+            <small>-1% Farmer Cost Scaling</small><br>
+            <button onclick="buyGem('diamonds', 'd_up2')">Cost: <span id="dc2">1</span> Dia</button>
+        </div>
+        <div class="ruby-card">
+            <b>Blood Harvest (Lvl <span id="ru1">0</span>)</b><br>
+            <small>+20% EXP Milestone Power</small><br>
+            <button onclick="buyGem('rubies', 'r_up1')">Cost: <span id="rc1">1</span> Ruby</button>
+        </div>
+        <div class="ruby-card">
+            <b>Eternal Flame (Lvl <span id="ru2">0</span>)</b><br>
+            <small>+25% Global Yield</small><br>
+            <button onclick="buyGem('rubies', 'r_up2')">Cost: <span id="rc2">1</span> Ruby</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script>
+        let costVal = 1000000 * Math.pow(10, state.dmTier || 0);
+        let gainVal = Math.pow(10, state.dmTier || 0);
+
+        document.getElementById('cond-cost').innerText = format(costVal);
+        document.getElementById('cond-gain').innerText = format(gainVal);
+
+        // Ensure DM and Essence use the new format too
+        document.getElementById('dm-display').innerText = format(state.dm);
+        document.getElementById('ess-display').innerText = format(state.essence);
+        // 1. FORCED SYNC & INITIALIZATION
+        function syncState() {
+            if (state.dustUpLvl === undefined) state.dustUpLvl = 0;
+            if (state.mileUpLvl === undefined) state.mileUpLvl = 0;
+            if (state.dmTier === undefined) state.dmTier = 0;
+        }
+        syncState();
+
+        // 2. CONVERSION & EXP LOGIC
+        function toggleAuto() {
+            state.autoCondense = !state.autoCondense;
+            save();
+        }
+
+        function manualCondense() {
+            let cost = 1000000 * Math.pow(10, state.dmTier || 0);
+            if (state.essence >= cost) {
+                const btn = document.getElementById('cond-btn');
+                btn.disabled = true;
+                btn.innerText = "Condensing...";
+                setTimeout(() => {
+                    state.essence -= cost;
+                    state.dm += Math.pow(10, state.dmTier || 0);
+                    btn.disabled = false;
+                    btn.innerText = "Condense (3s Delay)";
+                    save();
+                }, 3000);
+            }
+        }
+
+        function unlockExp() {
+            if (state.dm >= 50 && !state.expUnlocked) {
+                state.dm -= 50;
+                state.expUnlocked = true;
+                save();
+            }
+        }
+
+        function upgradeTier() {
+            let cost = 100 * Math.pow(10, state.dmTier || 0);
+            if (state.dm >= cost) {
+                state.dm -= cost;
+                state.dmTier = (state.dmTier || 0) + 1;
+                save();
+            }
+        }
+
+        // 3. DARK MATTER UPGRADES
+        function buyDMUpgrade(type) {
+            if (type === 'dust') {
+                let cost = 15 * Math.pow(2, state.dustUpLvl || 0);
+                if (state.dm >= cost) {
+                    state.dm -= cost;
+                    state.dustUpLvl++;
+                    state.dustMultSec *= 1.75;
+                    state.dustMultClick *= 1.5;
+                    save();
+                }
+            } else if (type === 'mile') {
+                let cost = 75 * Math.pow(2, state.mileUpLvl || 0);
+                if (state.dm >= cost) {
+                    state.dm -= cost;
+                    state.mileUpLvl++;
+                    state.milestoneMod *= 1.1;
+                    save();
+                }
+            }
+        }
+
+        // 4. GEM UPGRADES
+        function buyGem(cur, stat) {
+            let lvl = state[stat] || 0;
+            let cost = Math.pow(2, lvl);
+            if (state[cur] >= cost) {
+                state[cur] -= cost;
+                state[stat]++;
+                save();
+            }
+        }
+
+        // 5. THE UI LOOP (Fixed IDs)
+        setInterval(() => {
+            if (!state) return;
+
+            // Stats
+            document.getElementById('dm-display').innerText = format(state.dm);
+            document.getElementById('ess-display').innerText = format(state.essence);
+            document.getElementById('dia').innerText = state.diamonds || 0;
+            document.getElementById('rub').innerText = state.rubies || 0;
+
+            // Condenser
+            let cCost = 1000000 * Math.pow(10, state.dmTier || 0);
+            let cGain = Math.pow(10, state.dmTier || 0);
+            document.getElementById('cond-cost').innerText = format(cCost);
+            document.getElementById('cond-gain').innerText = format(cGain);
+            document.getElementById('auto-btn').innerText = "Auto: " + (state.autoCondense ? "ON" : "OFF");
+            document.getElementById('auto-btn').style.background = state.autoCondense ? "#2e7d32" : "#c62828";
+
+            // EXP Unlock
+            const expBtn = document.getElementById('exp-btn');
+            if (state.expUnlocked) {
+                expBtn.innerText = "UNLOCKED";
+                expBtn.disabled = true;
+            } else {
+                expBtn.disabled = state.dm < 50;
+            }
+
+            // Tier Upgrade
+            let tCost = 100 * Math.pow(10, state.dmTier || 0);
+            document.getElementById('tier-cost').innerText = format(tCost);
+            document.getElementById('tier-btn').disabled = state.dm < tCost;
+
+            // DM Upgrades (Levels & Costs)
+            let dCost = 15 * Math.pow(2, state.dustUpLvl || 0);
+            let mCost = 75 * Math.pow(2, state.mileUpLvl || 0);
+            
+            // Sync with IDs provided in your cards
+            if(document.getElementById('dust-up-cost')) document.getElementById('dust-up-cost').innerText = format(dCost);
+            if(document.getElementById('mile-up-cost')) document.getElementById('mile-up-cost').innerText = format(mCost);
+            if(document.getElementById('dustLvl')) document.getElementById('dustLvl').innerText = state.dustUpLvl || 0;
+            if(document.getElementById('mileLvl')) document.getElementById('mileLvl').innerText = state.mileUpLvl || 0;
+
+            // Gem UI
+            const updateGemUI = (idLvl, idCost, stat) => {
+                let lvl = state[stat] || 0;
+                let cost = Math.pow(2, lvl);
+                if(document.getElementById(idLvl)) document.getElementById(idLvl).innerText = lvl;
+                if(document.getElementById(idCost)) document.getElementById(idCost).innerText = format(cost);
+            };
+
+            updateGemUI('du1', 'dc1', 'd_up1');
+            updateGemUI('du2', 'dc2', 'd_up2');
+            updateGemUI('ru1', 'rc1', 'r_up1');
+            updateGemUI('ru2', 'rc2', 'r_up2');
+
+        }, 100);
+    </script>
+</body>
+</html>

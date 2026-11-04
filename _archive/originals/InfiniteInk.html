@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Inker: Pixel & Pulse</title>
+    <style>
+        :root { --accent: #00d4ff; --panel: rgba(10, 10, 10, 0.98); }
+        body { margin: 0; background: #111; color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; }
+        #menu { position: absolute; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .world-card { background: #222; padding: 20px; border: 2px solid #444; cursor: pointer; border-radius: 8px; width: 150px; text-align: center; margin: 10px; }
+        #toolbar { position: absolute; top: 20px; left: 20px; background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid #444; display: flex; flex-direction: column; gap: 10px; z-index: 100; width: 190px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); }
+        .tool-group { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        .label { font-size: 9px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+        button { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; text-align: left; }
+        button.active { background: var(--accent); color: #000; border-color: #fff; font-weight: bold; }
+        input[type="color"] { border: none; width: 100%; height: 25px; cursor: pointer; background: none; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); }
+        #cursor-preview { position: fixed; border: 1px solid rgba(255,255,255,0.5); border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); z-index: 99; display: none; }
+        canvas { flex-grow: 1; touch-action: none; }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1 style="letter-spacing: 5px; color: var(--accent);">INFINITE INKER</h1>
+        <div id="worldList" style="display:flex; flex-wrap:wrap; justify-content:center;"></div>
+        <button onclick="createNewWorld()" style="margin-top:20px; padding: 15px 40px; background:var(--accent); border:none; cursor:pointer; font-weight:bold;">+ NEW WORLD</button>
+    </div>
+
+    <div id="cursor-preview"></div>
+
+    <div id="toolbar">
+        <div class="tool-group">
+            <span class="label">Tools</span>
+            <button id="btn-draw" class="active" onclick="setTool('draw')">🖌️ BRUSH (B)</button>
+            <button id="btn-fill" onclick="setTool('fill')">🪣 FILL (F)</button>
+            <button id="btn-erase" onclick="setTool('erase')">🧽 ERASER (E)</button>
+            <button id="btn-picker" onclick="setTool('picker')">🧪 PICKER (P)</button>
+        </div>
+
+        <div class="tool-group">
+            <span class="label">Brush Style</span>
+            <select id="brushType" style="background:#333; color:white; border:1px solid #555; padding:4px; border-radius:4px;">
+                <option value="solid">Ink Liner</option>
+                <option value="glow">Pure Glow</option>
+                <option value="pixel">Pixel Square</option>
+            </select>
+        </div>
+
+        <div class="tool-group">
+            <span class="label">Size & Opacity</span>
+            <input type="range" id="sizeInput" min="1" max="150" value="20">
+            <input type="range" id="opInput" min="1" max="100" value="100">
+        </div>
+
+        <div class="tool-group">
+            <span class="label">Brush Color</span>
+            <input type="color" id="colorInput" value="#00d4ff">
+        </div>
+
+        <div class="tool-group" style="border:none">
+            <button onclick="undo()">↩ UNDO</button>
+            <button onclick="saveAndExit()" style="background:#222">💾 SAVE & EXIT</button>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor-preview');
+        
+        let worlds = JSON.parse(localStorage.getItem('infInkerV5')) || {};
+        let currentWorld = null, scale = 1.0, offsetX = 0, offsetY = 0, bgColor = "#111111";
+        let strokes = [], isDrawing = false, isPanning = false, currentTool = 'draw';
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; render(); }
+        window.addEventListener('resize', resize); resize();
+
+        function showMenu() {
+            document.getElementById('menu').style.display = 'flex';
+            const list = document.getElementById('worldList'); list.innerHTML = '';
+            Object.keys(worlds).forEach(name => {
+                const d = document.createElement('div'); d.className='world-card'; d.innerText=name;
+                d.onclick=()=>loadWorld(name); list.appendChild(d);
+            });
+        }
+
+        function createNewWorld() {
+            const n = prompt("World Name:");
+            if (n && !worlds[n]) { worlds[n] = { strokes: [], scale: 1, offsetX: 0, offsetY: 0, bgColor: "#111111" }; saveAll(); loadWorld(n); }
+        }
+
+        function loadWorld(n) {
+            currentWorld = n; const d = worlds[n];
+            strokes = d.strokes || []; scale = d.scale || 1.0; offsetX = d.offsetX || 0; offsetY = d.offsetY || 0;
+            bgColor = d.bgColor || "#111111";
+            document.getElementById('menu').style.display = 'none';
+            render();
+        }
+
+        function setTool(t) {
+            currentTool = t;
+            document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${t}`).classList.add('active');
+        }
+
+        function getMouseWorld(e) {
+            return { x: offsetX + (e.clientX - canvas.width/2)/scale, y: offsetY + (e.clientY - canvas.height/2)/scale };
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const pt = getMouseWorld(e);
+            if (e.button === 0) {
+                if (currentTool === 'fill') {
+                    bgColor = document.getElementById('colorInput').value;
+                    render(); return;
+                }
+                if (currentTool === 'picker') {
+                    const data = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
+                    document.getElementById('colorInput').value = "#" + ((1 << 24) + (data << 16) + (data << 8) + data).toString(16).slice(1);
+                    setTool('draw'); return;
+                }
+                isDrawing = true;
+                strokes.push({
+                    points: [pt],
+                    color: currentTool === 'erase' ? bgColor : document.getElementById('colorInput').value,
+                    size: document.getElementById('sizeInput').value / scale,
+                    opacity: document.getElementById('opInput').value / 100,
+                    type: document.getElementById('brushType').value,
+                    composite: currentTool === 'erase' ? 'destination-out' : 'source-over'
+                });
+            } else if (e.button === 2) isPanning = true;
+        });
+
+        window.addEventListener('mousemove', e => {
+            cursor.style.display = 'block';
+            cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
+            const sSize = document.getElementById('sizeInput').value;
+            cursor.style.width = cursor.style.height = sSize + 'px';
+            cursor.style.borderRadius = document.getElementById('brushType').value === 'pixel' ? '0' : '50%';
+
+            if (isDrawing) {
+                strokes[strokes.length-1].points.push(getMouseWorld(e));
+                render();
+            } else if (isPanning) {
+                offsetX -= e.movementX / scale; offsetY -= e.movementY / scale; render();
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isDrawing = false; isPanning = false; saveAll(); render(); });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoom = e.deltaY > 0 ? 0.9 : 1.1;
+            const mouseBefore = getMouseWorld(e);
+            scale *= zoom;
+            const mouseAfter = getMouseWorld(e);
+            offsetX += (mouseBefore.x - mouseAfter.x); offsetY += (mouseBefore.y - mouseAfter.y);
+            render();
+        }, { passive: false });
+
+        function render() {
+            ctx.fillStyle = bgColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+            strokes.forEach(s => {
+                ctx.globalCompositeOperation = s.composite || 'source-over';
+                ctx.globalAlpha = s.opacity;
+                const sWidth = s.size * scale;
+
+                if (s.type === 'glow') {
+                    // Pure Glow: No central line
+                    s.points.forEach(p => {
+                        const scr = { x: (p.x - offsetX) * scale + canvas.width/2, y: (p.y - offsetY) * scale + canvas.height/2 };
+                        const grad = ctx.createRadialGradient(scr.x, scr.y, 0, scr.x, scr.y, sWidth);
+                        grad.addColorStop(0, s.color);
+                        grad.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath(); ctx.arc(scr.x, scr.y, sWidth, 0, Math.PI*2); ctx.fill();
+                    });
+                } else if (s.type === 'pixel') {
+                    // Pixel Brush: Square Stamp
+                    ctx.fillStyle = s.color;
+                    s.points.forEach(p => {
+                        const scr = { x: (p.x - offsetX) * scale + canvas.width/2, y: (p.y - offsetY) * scale + canvas.height/2 };
+                        ctx.fillRect(scr.x - sWidth/2, scr.y - sWidth/2, sWidth, sWidth);
+                    });
+                } else {
+                    // Solid Brush (Handles single click dots too)
+                    ctx.beginPath();
+                    ctx.strokeStyle = s.color;
+                    ctx.lineWidth = sWidth;
+                    const start = { x: (s.points[0].x - offsetX) * scale + canvas.width/2, y: (s.points[0].y - offsetY) * scale + canvas.height/2 };
+                    if (s.points.length === 1) {
+                        ctx.fillStyle = s.color;
+                        ctx.arc(start.x, start.y, sWidth/2, 0, Math.PI*2);
+                        ctx.fill();
+                    } else {
+                        ctx.moveTo(start.x, start.y);
+                        for(let i=1; i<s.points.length; i++) {
+                            const p = { x: (s.points[i].x - offsetX) * scale + canvas.width/2, y: (s.points[i].y - offsetY) * scale + canvas.height/2 };
+                            ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.stroke();
+                    }
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1.0;
+        }
+
+        function undo() { strokes.pop(); render(); }
+        function saveAll() { if(currentWorld) worlds[currentWorld] = { strokes, scale, offsetX, offsetY, bgColor }; localStorage.setItem('infInkerV6', JSON.stringify(worlds)); }
+        function saveAndExit() { saveAll(); showMenu(); }
+        
+        window.addEventListener('keydown', e => {
+            if(e.key === 'b') setTool('draw');
+            if(e.key === 'e') setTool('erase');
+            if(e.key === 'p') setTool('picker');
+            if(e.key === 'f') setTool('fill');
+            if(e.ctrlKey && e.key === 'z') undo();
+        });
+
+        canvas.oncontextmenu = e => e.preventDefault();
+        showMenu();
+    </script>
+</body>
+</html>

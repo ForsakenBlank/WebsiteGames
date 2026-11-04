@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grid Breaker</title>
+    <style>
+        body { margin: 0; background: #000; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        canvas { border: 2px solid #0f0; background: #050505; cursor: none; }
+        #ui { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; pointer-events: none; font-weight: bold; }
+        .stat { text-shadow: 0 0 10px #0f0; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="stat">ENEMIES KILLED: <span id="killVal">0</span></div>
+        <div class="stat">WAVE: <span id="waveVal">1</span></div>
+        <div class="stat">BEST: <span id="bestVal">0</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 900; canvas.height = 600;
+
+        let best = localStorage.getItem('gridBest') || 0;
+        document.getElementById('bestVal').innerText = best;
+
+        let player = { x: 450, y: 300, trail: [], maxTrail: 50 };
+        let enemies = [], particles = [], wave = 1, kills = 0, gameActive = false;
+
+        function start() {
+            player = { x: 450, y: 300, trail: [], maxTrail: 60 };
+            enemies = []; wave = 1; kills = 0; gameActive = true;
+            spawnWave();
+            loop();
+        }
+
+        function spawnWave() {
+            for(let i=0; i < wave + 2; i++) {
+                enemies.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random()-0.5) * (2 + wave*0.5),
+                    vy: (Math.random()-0.5) * (2 + wave*0.5)
+                });
+            }
+        }
+
+        window.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            player.x = e.clientX - rect.left;
+            player.y = e.clientY - rect.top;
+        });
+
+        window.addEventListener('mousedown', () => { if(!gameActive) start(); });
+
+        function loop() {
+            if(!gameActive) return;
+
+            player.trail.push({x: player.x, y: player.y});
+            if(player.trail.length > player.maxTrail) player.trail.shift();
+
+            // Update Enemies
+            enemies.forEach((en, i) => {
+                en.x += en.vx; en.y += en.vy;
+                if(en.x < 0 || en.x > canvas.width) en.vx *= -1;
+                if(en.y < 0 || en.y > canvas.height) en.vy *= -1;
+
+                // Collision with player head
+                if(Math.hypot(player.x - en.x, player.y - en.y) < 15) {
+                    gameActive = false;
+                    if(kills > best) {
+                        best = kills;
+                        localStorage.setItem('gridBest', best);
+                        document.getElementById('bestVal').innerText = best;
+                    }
+                }
+
+                let inside = false;
+                if (player.trail.length > 20) {
+                    let tail = player.trail[0];
+                    if (Math.hypot(player.x - tail.x, player.y - tail.y) < 30) {
+                        let minX = Math.min(...player.trail.map(t => t.x));
+                        let maxX = Math.max(...player.trail.map(t => t.x));
+                        let minY = Math.min(...player.trail.map(t => t.y));
+                        let maxY = Math.max(...player.trail.map(t => t.y));
+                        
+                        if(en.x > minX && en.x < maxX && en.y > minY && en.y < maxY) {
+                            enemies.splice(i, 1);
+                            kills++;
+                            document.getElementById('killVal').innerText = kills;
+                            player.maxTrail += 5;
+                        }
+                    }
+                }
+            });
+
+            if(enemies.length === 0) { wave++; document.getElementById('waveVal').innerText = wave; spawnWave(); }
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            // Draw Grid lines
+            ctx.strokeStyle = '#020'; ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+            for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+            // Draw Trail
+            ctx.strokeStyle = '#0f0'; ctx.lineWidth = 3;
+            ctx.beginPath();
+            player.trail.forEach((t, i) => {
+                if(i===0) ctx.moveTo(t.x, t.y);
+                else ctx.lineTo(t.x, t.y);
+            });
+            ctx.stroke();
+
+            // Draw Enemies
+            ctx.fillStyle = '#f00';
+            enemies.forEach(en => ctx.fillRect(en.x-8, en.y-8, 16, 16));
+
+            // Head
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(player.x, player.y, 5, 0, Math.PI*2); ctx.fill();
+
+            if(!gameActive) {
+                ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = '#0f0'; ctx.textAlign = 'center'; ctx.font = '30px Courier New';
+                ctx.fillText('SYSTEM BREACHED', canvas.width/2, canvas.height/2);
+                ctx.font = '15px Courier New'; ctx.fillText('CLICK TO RE-ENCRYPT', canvas.width/2, canvas.height/2 + 40);
+            }
+        }
+        draw();
+    </script>
+</body>
+</html>

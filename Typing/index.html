@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #14b8a6; --accent-2: #38bdf8; --accent-ink: #011a17; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .test { width: min(860px, 100%); display: flex; flex-direction: column; gap: 14px; align-items: center; }
+        .live { display: flex; gap: 24px; font-family: var(--mono); font-size: 1.4rem; font-weight: 800; color: var(--accent); min-height: 1.6em; }
+        .live span { color: var(--muted); font-size: 0.8rem; font-weight: 600; margin-left: 4px; }
+        .words { position: relative; width: 100%; height: 9.6em; overflow: hidden; font-family: var(--mono); font-size: 1.55rem; line-height: 3.2rem; color: var(--dim); padding: 0 6px; cursor: text; outline: none; }
+        .words .inner { display: flex; flex-wrap: wrap; gap: 0 0.65em; transition: transform 0.15s; }
+        .word { position: relative; white-space: nowrap; }
+        .word.err { text-decoration: underline wavy #f87171; text-underline-offset: 6px; }
+        .ch.ok { color: var(--text); }
+        .ch.bad { color: #f87171; }
+        .ch.extra { color: #b91c1c; }
+        .caret { position: absolute; width: 2px; height: 1.6rem; background: var(--accent); top: 0.8rem; transition: left 0.08s, top 0.08s; animation: blink 1s infinite; }
+        .typing .caret { animation: none; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .hint { color: var(--muted); font-size: 0.85rem; }
+        .focus-msg { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(11, 16, 32, 0.75); color: var(--text); font-size: 1rem; font-family: var(--font); backdrop-filter: blur(3px); }
+        canvas.chart { width: 100%; height: 160px; }
+        #sh { cursor: none; }
+        #hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
+    </style>
+</head>
+<body class="no-scroll">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Typing Speed</h1>
+        <div class="stats">
+            <span class="chip accent">Best <b id="best">0</b> WPM</span>
+            <span class="chip gold hide-sm">Shooter best <b id="sbest">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="tbar">
+            <div class="seg" id="modeSeg"><button class="btn sm" data-v="test">⌨️ Speed test</button><button class="btn sm" data-v="shooter">☄️ Typing Shooter</button></div>
+            <div class="seg" id="timeSeg"><button class="btn sm" data-v="15">15s</button><button class="btn sm" data-v="30">30s</button><button class="btn sm" data-v="60">60s</button></div>
+            <div class="seg" id="setSeg"><button class="btn sm" data-v="common">Common words</button><button class="btn sm" data-v="hard">Harder words</button><button class="btn sm" data-v="punct">+ Punctuation</button></div>
+            <button class="btn sm" id="restartBtn" title="Tab">⟲ Restart</button>
+        </div>
+        <div class="test" id="testView">
+            <div class="live" id="live"></div>
+            <div class="words" id="words" tabindex="0"><div class="inner" id="inner"></div><div class="caret" id="caret"></div><div class="focus-msg" id="focusMsg" hidden>Click here or press any key to focus</div></div>
+            <div class="hint">Start typing to begin · <kbd>Space</kbd> next word · <kbd>Tab</kbd> restart</div>
+        </div>
+        <div class="canvas-box" id="shBox" hidden><canvas class="screen" id="sh"></canvas></div>
+        <input id="hidden" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="overlay fixed" id="resOv" hidden>
+            <div class="modal wide">
+                <h2 id="resTitle">Results</h2>
+                <div class="big-num" id="resWpm">0</div>
+                <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                <div class="stat-grid" id="resStats"></div>
+                <canvas class="chart" id="chart" width="760" height="160"></canvas>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Again (Tab)</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const COMMON = 'the be of and a to in he have it that for they with as not on she at by this we you do but from or which one would all will there say who make when can more if no man out other so what time up go about than into could state only new year some take come these know see use get like then first any work now may such give over think most even find day also after way many must look before great back through long where much should well people down own just because good each those feel seem how high too place little world very still nation hand old life tell write become here show house both between need mean call develop under last right move thing general school never same another begin while number part turn real leave might want point form off child few small since against ask late home interest large person end open public follow during present without again hold govern around possible head consider word program problem however lead system set order eye plan run keep face fact group play stand increase early course change help line'.split(' ');
+        const HARD = 'algorithm rhythm necessary occasion privilege conscience embarrass accommodate surveillance mischievous questionnaire bureaucracy entrepreneur liaison millennium pharaoh silhouette threshold vacuum weird yacht zealous quizzical juxtapose kaleidoscope labyrinth mnemonic onomatopoeia paradigm quarantine rendezvous sovereign xylophone acquiesce boulevard camouflage dichotomy ephemeral facetious gregarious hierarchy idiosyncrasy jeopardy knowledge lieutenant maneuver nuance obnoxious phenomenon recommend schedule technique ubiquitous vicious wednesday exaggerate fluorescent guarantee hypocrisy indispensable'.split(' ');
+        const SHOOT = { 3: 'cat dog sun run sky map box fox jet ice art key zap red sea toy cup bee owl ant'.split(' '), 5: 'laser orbit comet blast storm plane rocket alien space solar flare metal power quick spark light speed shield cannon target'.split(' '), 7: 'asteroid meteorite galaxy nebula gravity protect missile defense eclipse quantum photon voyager station thunder'.split(' '), 9: 'spaceship satellite supernova telescope astronaut wormhole interstellar constellation atmosphere hyperspace'.split(' ') };
+        const cfg = Object.assign({ mode: 'test', time: 30, set: 'common' }, Arcade.load('arcade.typing.cfg', {}));
+        const saveCfg = () => Arcade.save('arcade.typing.cfg', cfg);
+
+        /* =================== SPEED TEST =================== */
+        let words, typed, cur, started, startT, timer, done, perSec, keystrokes, errors;
+        function genWords(n) {
+            const list = cfg.set === 'hard' ? HARD.concat(COMMON.slice(0, 80)) : COMMON;
+            const out = [];
+            for (let i = 0; i < n; i++) {
+                let w = Arcade.pick(list);
+                if (cfg.set === 'punct') { const r = Math.random(); if (r < 0.12) w = w[0].toUpperCase() + w.slice(1); if (r > 0.86) w += Arcade.pick([',', '.', '?', '!', ';']); }
+                out.push(w);
+            }
+            return out;
+        }
+        function resetTest() {
+            clearInterval(timer);
+            words = genWords(160); typed = ['']; cur = 0; started = false; done = false; perSec = []; keystrokes = 0; errors = 0;
+            renderWords();
+            $('live').innerHTML = `${cfg.time}<span>seconds</span>`;
+            $('words').classList.remove('typing');
+            focusInput();
+        }
+        function renderWords() {
+            const inner = $('inner'); inner.innerHTML = '';
+            words.forEach((w, i) => {
+                const span = document.createElement('span'); span.className = 'word'; span.dataset.i = i;
+                const t = typed[i] || '';
+                for (let k = 0; k < Math.max(w.length, t.length); k++) {
+                    const ch = document.createElement('span'); ch.className = 'ch';
+                    if (k < w.length) { ch.textContent = w[k]; if (k < t.length) ch.className += t[k] === w[k] ? ' ok' : ' bad'; }
+                    else { ch.textContent = t[k]; ch.className += ' extra'; }
+                    span.appendChild(ch);
+                }
+                if (i < cur && t !== w) span.className += ' err';
+                inner.appendChild(span);
+            });
+            placeCaret();
+        }
+        function updateWord(i) {
+            const span = $('inner').children[i]; if (!span) return;
+            const w = words[i], t = typed[i] || '';
+            span.innerHTML = '';
+            for (let k = 0; k < Math.max(w.length, t.length); k++) {
+                const ch = document.createElement('span'); ch.className = 'ch';
+                if (k < w.length) { ch.textContent = w[k]; if (k < t.length) ch.className += t[k] === w[k] ? ' ok' : ' bad'; }
+                else { ch.textContent = t[k]; ch.className += ' extra'; }
+                span.appendChild(ch);
+            }
+            span.classList.toggle('err', i < cur && t !== w);
+        }
+        function placeCaret() {
+            const span = $('inner').children[cur]; if (!span) return;
+            const lineH = span.offsetHeight || 50;
+            const shift = Math.max(0, span.offsetTop - lineH);
+            $('inner').style.transform = `translateY(${-shift}px)`;
+            const chars = span.querySelectorAll('.ch'), k = (typed[cur] || '').length, caret = $('caret');
+            let x = span.offsetLeft;
+            if (k < chars.length) x += chars[k].offsetLeft;
+            else if (chars.length) { const l = chars[chars.length - 1]; x += l.offsetLeft + l.offsetWidth; }
+            caret.style.left = x + 'px';
+            caret.style.top = (span.offsetTop - shift + (lineH - caret.offsetHeight) / 2) + 'px';
+        }
+        const correctChars = () => { let n = 0; for (let i = 0; i < cur; i++) if (typed[i] === words[i]) n += words[i].length + 1; const t = typed[cur] || ''; for (let k = 0; k < t.length; k++) if (t[k] === words[cur][k]) n++; return n; };
+        function startTest() {
+            started = true; startT = performance.now();
+            $('words').classList.add('typing');
+            let last = 0;
+            timer = setInterval(() => {
+                const el = (performance.now() - startT) / 1000, left = cfg.time - el;
+                const sec = Math.floor(el);
+                if (sec > last) { last = sec; perSec.push(Math.round(correctChars() / 5 / (el / 60))); }
+                $('live').innerHTML = `${Math.max(0, Math.ceil(left))}<span>s</span> &nbsp; ${el > 1 ? Math.round(correctChars() / 5 / (el / 60)) : 0}<span>wpm</span>`;
+                if (left <= 0) finishTest();
+            }, 100);
+        }
+        function finishTest() {
+            if (done) return;
+            done = true; clearInterval(timer);
+            const mins = cfg.time / 60;
+            const wpm = Math.round(correctChars() / 5 / mins);
+            const totalTyped = typed.slice(0, cur + 1).join(' ').length;
+            const raw = Math.round(totalTyped / 5 / mins);
+            const acc = keystrokes ? Math.max(0, Math.round((keystrokes - errors) / keystrokes * 100)) : 0;
+            const r = Arcade.best('arcade.typing.best', wpm);
+            const key = 'arcade.typing.best.' + cfg.time; Arcade.best(key, wpm);
+            Arcade.report('wpm', wpm);
+            Arcade.addXP(Math.min(40, Math.round(wpm / 3)), true);
+            Arcade.sfx(r.isNew ? 'win' : 'score');
+            $('resTitle').textContent = `${cfg.time}s · ${cfg.set === 'hard' ? 'harder words' : cfg.set === 'punct' ? 'punctuation' : 'common words'}`;
+            $('resWpm').textContent = wpm + ' WPM';
+            $('newBest').hidden = !r.isNew;
+            const correctWords = words.slice(0, cur).filter((w, i) => typed[i] === w).length;
+            $('resStats').innerHTML = [['Raw', raw], ['Accuracy', acc + '%'], ['Words', correctWords + '/' + cur], ['Best ' + cfg.time + 's', Arcade.load(key, 0)]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            drawChart();
+            Arcade.show('resOv');
+            hud();
+        }
+        function drawChart() {
+            const cvs = $('chart'), g = cvs.getContext('2d'), Wc = cvs.width, Hc = cvs.height;
+            g.clearRect(0, 0, Wc, Hc);
+            const data = perSec.length ? perSec : [0], max = Math.max(20, ...data) * 1.15;
+            g.strokeStyle = 'rgba(148,163,184,0.2)'; g.fillStyle = '#64748b'; g.font = '11px system-ui';
+            for (let v = 0; v <= max; v += Math.ceil(max / 4 / 10) * 10) { const y = Hc - 18 - v / max * (Hc - 28); g.beginPath(); g.moveTo(34, y); g.lineTo(Wc, y); g.stroke(); g.fillText(v, 4, y + 4); }
+            g.strokeStyle = '#14b8a6'; g.lineWidth = 3; g.beginPath();
+            data.forEach((v, i) => { const x = 34 + i / Math.max(1, data.length - 1) * (Wc - 44), y = Hc - 18 - v / max * (Hc - 28); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+            g.stroke();
+            g.fillStyle = '#64748b'; g.fillText('seconds →', Wc - 70, Hc - 3);
+        }
+        function testKey(e) {
+            if (done) return;
+            if (e.key === 'Tab') return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                if (typed[cur].length) typed[cur] = typed[cur].slice(0, -1);
+                else if (cur > 0 && typed[cur - 1] !== words[cur - 1]) { cur--; }
+                updateWord(cur); placeCaret();
+                return;
+            }
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (!started || !typed[cur].length) return;
+                if (typed[cur] !== words[cur]) errors++;
+                keystrokes++;
+                cur++; typed[cur] = '';
+                updateWord(cur - 1);
+                if (cur > words.length - 40) { words.push(...genWords(80)); renderWords(); }
+                placeCaret();
+                return;
+            }
+            if (e.key.length !== 1) return;
+            e.preventDefault();
+            if (!started) startTest();
+            const k = typed[cur].length;
+            if (k > words[cur].length + 8) return;
+            keystrokes++;
+            if (e.key !== words[cur][k]) { errors++; Arcade.tone(160, 0.03, 'square', 0.02); }
+            typed[cur] += e.key;
+            updateWord(cur); placeCaret();
+        }
+
+        /* =================== TYPING SHOOTER =================== */
+        const SW = 820, SH = 560;
+        const scv = $('sh');
+        const sview = Arcade.fitCanvas(scv, SW, SH, { max: 1.5 });
+        const sc = sview.ctx;
+        let S = null;
+        const fx = new Arcade.Particles(500);
+        const stars = Array.from({ length: 90 }, () => ({ x: Math.random() * SW, y: Math.random() * SH, s: Math.random() * 1.6 + 0.3 }));
+        function newShooter() {
+            S = { meteors: [], score: 0, lives: 3, wave: 1, spawnT: 1, left: 0, target: null, combo: 0, lasers: [], over: false, typedOk: 0, typedAll: 0, t: 0 };
+            S.left = waveSize(1);
+            hud();
+        }
+        const waveSize = (w) => 6 + w * 3;
+        function wordFor(w) {
+            const lens = w < 3 ? [3, 5] : w < 6 ? [3, 5, 7] : w < 9 ? [5, 7, 9] : [7, 9];
+            let word, tries = 0;
+            do { word = Arcade.pick(SHOOT[Arcade.pick(lens)]); } while (tries++ < 20 && S.meteors.some(m => m.word[0] === word[0]));
+            return word;
+        }
+        function spawnMeteor() {
+            const word = wordFor(S.wave);
+            const x = 60 + Math.random() * (SW - 120);
+            S.meteors.push({ word, typed: 0, x, y: -30, vy: (20 + S.wave * 3.2) * (1 + (5 - word.length) * 0.04) * (0.85 + Math.random() * 0.3), vx: (SW / 2 - x) * 0.02 * (Math.random() - 0.3), r: 14 + word.length * 2, rot: 0 });
+        }
+        function shooterKey(e) {
+            if (!S || S.over) return;
+            if (e.key.length !== 1 || e.ctrlKey || e.metaKey) return;
+            e.preventDefault();
+            const ch = e.key.toLowerCase();
+            S.typedAll++;
+            if (!S.target) {
+                const cands = S.meteors.filter(m => m.word[0] === ch).sort((a, b) => b.y - a.y);
+                if (cands.length) S.target = cands[0];
+            }
+            const T = S.target;
+            if (T && T.word[T.typed] === ch) {
+                T.typed++; S.typedOk++;
+                S.lasers.push({ x: T.x, y: T.y, t: 0.12 });
+                Arcade.tone(700 + T.typed * 40, 0.03, 'square', 0.02);
+                if (T.typed === T.word.length) {
+                    S.meteors = S.meteors.filter(m => m !== T);
+                    S.combo++;
+                    S.score += T.word.length * 10 * (1 + Math.min(5, Math.floor(S.combo / 5)));
+                    fx.emit(T.x, T.y, { n: 26, speed: 200, color: ['#f97316', '#facc15', '#a8a29e'], life: 0.6, size: 4 });
+                    Arcade.sfx('hit');
+                    S.target = null;
+                    hud();
+                }
+            } else { S.combo = 0; Arcade.tone(140, 0.05, 'sawtooth', 0.03); }
+        }
+        function stepShooter(dt) {
+            if (!S || S.over) { fx.update(dt); return; }
+            S.t += dt;
+            S.spawnT -= dt;
+            if (S.left > 0 && S.spawnT <= 0) { spawnMeteor(); S.left--; S.spawnT = Math.max(0.7, 2.6 - S.wave * 0.18) * (0.7 + Math.random() * 0.6); }
+            for (const m of S.meteors) {
+                m.y += m.vy * dt; m.x += m.vx * dt; m.rot += dt;
+                if (m.y > SH - 70) {
+                    m.dead = true; S.lives--; S.combo = 0;
+                    if (S.target === m) S.target = null;
+                    fx.emit(m.x, SH - 70, { n: 40, speed: 260, color: ['#ef4444', '#f97316', '#fff'], life: 0.8, size: 5 });
+                    Arcade.sfx('boom');
+                    if (S.lives <= 0) return endShooter();
+                }
+            }
+            S.meteors = S.meteors.filter(m => !m.dead);
+            if (S.left === 0 && !S.meteors.length) { S.wave++; S.left = waveSize(S.wave); S.spawnT = 2.2; Arcade.sfx('level'); if (S.wave % 3 === 0 && S.lives < 5) S.lives++; hud(); }
+            for (const l of S.lasers) l.t -= dt;
+            S.lasers = S.lasers.filter(l => l.t > 0);
+            fx.update(dt);
+        }
+        function endShooter() {
+            S.over = true;
+            const r = Arcade.best('arcade.typing.shooter', S.score);
+            const wpm = S.t > 5 ? Math.round(S.typedOk / 5 / (S.t / 60)) : 0;
+            Arcade.addXP(Math.min(40, S.wave * 3), true);
+            Arcade.sfx('die');
+            $('resTitle').textContent = '☄️ The city fell — wave ' + S.wave;
+            $('resWpm').textContent = S.score;
+            $('newBest').hidden = !r.isNew;
+            $('resStats').innerHTML = [['Wave', S.wave], ['Typing speed', wpm + ' wpm'], ['Accuracy', S.typedAll ? Math.round(S.typedOk / S.typedAll * 100) + '%' : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            $('chart').getContext('2d').clearRect(0, 0, 760, 160);
+            Arcade.show('resOv');
+            hud();
+        }
+        function drawShooter() {
+            const g = sc;
+            g.fillStyle = '#030712'; g.fillRect(0, 0, SW, SH);
+            for (const s of stars) { g.fillStyle = `rgba(255,255,255,${0.3 + s.s * 0.3})`; g.fillRect(s.x, (s.y + (S ? S.t : 0) * s.s * 8) % SH, s.s, s.s); }
+            // city
+            g.fillStyle = '#0f172a'; g.fillRect(0, SH - 60, SW, 60);
+            for (let i = 0; i < 18; i++) { const x = i * 47 + 6, h = 20 + ((i * 37) % 40); g.fillStyle = '#1e293b'; g.fillRect(x, SH - 60 - h, 36, h); g.fillStyle = '#fde68a'; for (let y = SH - 56 - h; y < SH - 64; y += 9) for (let k = 0; k < 3; k++) if ((i + y + k) % 3) g.fillRect(x + 5 + k * 11, y, 4, 4); }
+            // turret
+            g.fillStyle = '#14b8a6'; g.beginPath(); g.arc(SW / 2, SH - 40, 22, Math.PI, 0); g.fill();
+            if (S) {
+                const T = S.target;
+                const ang = T ? Math.atan2(T.y - (SH - 40), T.x - SW / 2) : -Math.PI / 2;
+                g.strokeStyle = '#5eead4'; g.lineWidth = 8; g.beginPath(); g.moveTo(SW / 2, SH - 40); g.lineTo(SW / 2 + Math.cos(ang) * 36, SH - 40 + Math.sin(ang) * 36); g.stroke();
+                for (const l of S.lasers) { g.strokeStyle = `rgba(94,234,212,${l.t * 8})`; g.lineWidth = 3; g.beginPath(); g.moveTo(SW / 2, SH - 40); g.lineTo(l.x, l.y); g.stroke(); }
+                for (const m of S.meteors) {
+                    g.save(); g.translate(m.x, m.y); g.rotate(m.rot);
+                    const gr = g.createRadialGradient(-m.r * 0.3, -m.r * 0.3, 2, 0, 0, m.r);
+                    gr.addColorStop(0, '#a8a29e'); gr.addColorStop(1, '#44403c');
+                    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, m.r, 0, Math.PI * 2); g.fill();
+                    g.restore();
+                    g.fillStyle = 'rgba(249,115,22,0.35)'; g.beginPath(); g.moveTo(m.x - m.r * 0.6, m.y - m.r * 0.6); g.lineTo(m.x, m.y - m.r * 3); g.lineTo(m.x + m.r * 0.6, m.y - m.r * 0.6); g.fill();
+                    g.font = '700 17px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                    const w = g.measureText(m.word).width;
+                    g.fillStyle = m === S.target ? 'rgba(20,184,166,0.85)' : 'rgba(2,6,23,0.75)';
+                    g.fillRect(m.x - w / 2 - 6, m.y + m.r + 4, w + 12, 24);
+                    const done = m.word.slice(0, m.typed), rest = m.word.slice(m.typed);
+                    const x0 = m.x - w / 2;
+                    g.textAlign = 'left';
+                    g.fillStyle = '#facc15'; g.fillText(done, x0, m.y + m.r + 16);
+                    g.fillStyle = '#fff'; g.fillText(rest, x0 + g.measureText(done).width, m.y + m.r + 16);
+                }
+                fx.draw(g);
+                g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = '800 18px system-ui';
+                g.fillText(`Score ${S.score}`, 16, 28);
+                g.fillText(`Wave ${S.wave}`, 16, 52);
+                g.textAlign = 'right'; g.fillText('❤'.repeat(Math.max(0, S.lives)), SW - 16, 28);
+                if (S.combo >= 5) { g.fillStyle = '#facc15'; g.fillText(`Combo ×${1 + Math.min(5, Math.floor(S.combo / 5))}`, SW - 16, 52); }
+                if (S.t < 3 && S.wave === 1) { g.textAlign = 'center'; g.fillStyle = '#e2e8f0'; g.font = '700 18px system-ui'; g.fillText('Type the words to shoot the meteors before they hit the city!', SW / 2, SH / 2); }
+            }
+        }
+
+        /* =================== wiring =================== */
+        function focusInput() { const h = $('hidden'); h.focus({ preventScroll: true }); }
+        function setMode(m) {
+            cfg.mode = m; saveCfg();
+            $('testView').hidden = m !== 'test'; $('shBox').hidden = m !== 'shooter';
+            $('timeSeg').hidden = m !== 'test'; $('setSeg').hidden = m !== 'test';
+            if (m === 'shooter') { sview.refit(); newShooter(); } else resetTest();
+            syncSegs();
+        }
+        function syncSegs() {
+            document.querySelectorAll('#modeSeg [data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.mode));
+            document.querySelectorAll('#timeSeg [data-v]').forEach(b => b.classList.toggle('active', +b.dataset.v === cfg.time));
+            document.querySelectorAll('#setSeg [data-v]').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.set));
+        }
+        document.querySelectorAll('#modeSeg [data-v]').forEach(b => b.onclick = () => setMode(b.dataset.v));
+        document.querySelectorAll('#timeSeg [data-v]').forEach(b => b.onclick = () => { cfg.time = +b.dataset.v; saveCfg(); syncSegs(); resetTest(); });
+        document.querySelectorAll('#setSeg [data-v]').forEach(b => b.onclick = () => { cfg.set = b.dataset.v; saveCfg(); syncSegs(); resetTest(); });
+        const restart = () => { Arcade.hide('resOv'); if (cfg.mode === 'test') resetTest(); else newShooter(); };
+        $('restartBtn').onclick = restart;
+        $('againBtn').onclick = restart;
+        $('words').onclick = focusInput;
+        scv.onclick = focusInput;
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') { e.preventDefault(); restart(); return; }
+            if (!$('resOv').hidden) { if (e.key === 'Enter') restart(); return; }
+            if (cfg.mode === 'test') testKey(e); else shooterKey(e);
+        });
+        // mobile keyboards: the hidden input receives text
+        $('hidden').addEventListener('input', (e) => {
+            const v = e.target.value; e.target.value = '';
+            for (const ch of v) { const ev = { key: ch === ' ' ? ' ' : ch, preventDefault() { }, ctrlKey: false, metaKey: false, altKey: false }; if (cfg.mode === 'test') testKey(ev); else shooterKey(ev); }
+        });
+        window.addEventListener('resize', () => cfg.mode === 'test' && placeCaret());
+        function hud() { Arcade.text('best', Arcade.load('arcade.typing.best', 0) || 0); Arcade.text('sbest', Arcade.load('arcade.typing.shooter', 0) || 0); }
+        const loop = Arcade.loop((dt) => { if (cfg.mode === 'shooter') { stepShooter(dt); drawShooter(); } });
+        hud();
+        setMode(cfg.mode);
+        loop.start();
+        window.__typing = { get words() { return words; }, testKey, shooterKey, get S() { return S; }, finishTest, setMode, cfg };
+    })();
+    </script>
+</body>
+</html>

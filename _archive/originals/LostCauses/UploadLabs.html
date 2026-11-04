@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aether Alchemist 2.1</title>
+    <style>
+        :root { --brass: #b58900; --bg: #0d0d0d; --glow: #00d4ff; --iron: #7a7a7a; }
+        body { background: var(--bg); color: #eee; font-family: 'Courier New', monospace; display: flex; flex-direction: column; margin: 0; height: 100vh; overflow: hidden; }
+        #top-bar { padding: 15px; background: #1a1a1a; border-bottom: 2px solid var(--brass); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+        #main { display: flex; flex-grow: 1; }
+        #inventory { width: 220px; background: #151515; border-right: 1px solid #333; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .inv-item { background: #222; border: 1px solid var(--brass); padding: 10px; cursor: grab; font-size: 12px; }
+        #workbench { flex-grow: 1; position: relative; overflow: hidden; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 30px 30px; }
+        .node { position: absolute; width: 120px; min-height: 100px; background: #1a1a1a; border: 2px solid var(--iron); padding: 8px; font-size: 10px; cursor: move; user-select: none; box-shadow: 5px 5px 15px rgba(0,0,0,0.5); }
+        .node h4 { margin: 0 0 5px 0; color: var(--brass); border-bottom: 1px solid #333; text-align: center; }
+        .node .stat { margin: 3px 0; color: #aaa; text-align: center; }
+        .node.active { border-color: var(--glow); box-shadow: 0 0 10px var(--glow); }
+        #wire-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        line { stroke: var(--glow); stroke-width: 2; opacity: 0.5; stroke-dasharray: 5; }
+        #controls { position: absolute; bottom: 20px; left: 240px; display: flex; gap: 10px; }
+        .ui-btn { background: #333; border: 1px solid var(--brass); color: #fff; padding: 8px 15px; cursor: pointer; font-family: inherit; }
+        .ui-btn.active { background: var(--glow); color: #000; }
+    </style>
+</head>
+<body>
+
+<div id="top-bar">
+    <div>GOLD: <span id="gold" style="color:var(--brass); font-weight:bold;">100</span></div>
+    <div>CARGO (INGOTS): <span id="cargo" style="color:var(--glow);">0</span></div>
+    <button class="ui-btn" style="border-color:#0f0" onclick="sellCargo()">SELL CARGO ($10/ea)</button>
+</div>
+
+<div id="main">
+    <div id="inventory">
+        <h3 style="font-size:14px; text-align:center;">FACTORY SHOP</h3>
+        <div class="inv-item" draggable="true" ondragstart="drag(event)" data-type="extractor">
+            <b>EXTRACTOR</b><br>Generates Raw Ore<br>Cost: $15
+        </div>
+        <div class="inv-item" draggable="true" ondragstart="drag(event)" data-type="smelter">
+            <b>SMELTER</b><br>Ore -> Ingots<br>Cost: $40
+        </div>
+        <div class="inv-item" draggable="true" ondragstart="drag(event)" data-type="auto_seller">
+            <b>AUTO-EXPORTER</b><br>Auto-Sells Ingots<br>Cost: $150
+        </div>
+    </div>
+    <div id="workbench" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <svg id="wire-layer"></svg>
+    </div>
+</div>
+
+<div id="controls">
+    <button id="wireModeBtn" class="ui-btn" onclick="toggleWireMode()">CONNECTION MODE</button>
+    <button class="ui-btn" onclick="clearData()" style="color:#f44">RESET GAME</button>
+</div>
+
+<script>
+    let state = JSON.parse(localStorage.getItem('alch21Save')) || {
+        gold: 100, cargo: 0, nodes: [], links: []
+    };
+
+    let isWireMode = false, selectedNodeId = null;
+
+    function drag(ev) { ev.dataTransfer.setData("type", ev.target.dataset.type); }
+    function allowDrop(ev) { ev.preventDefault(); }
+    
+    function drop(ev) {
+        ev.preventDefault();
+        const type = ev.dataTransfer.getData("type");
+        const costs = { extractor: 15, smelter: 40, auto_seller: 150 };
+        if (state.gold >= costs[type]) {
+            state.gold -= costs[type];
+            const rect = canvas.getBoundingClientRect();
+            addNode(type, ev.clientX - rect.left - 60, ev.clientY - rect.top - 50);
+        } else { alert("Not enough gold!"); }
+    }
+
+    const canvas = document.getElementById('workbench');
+    const svg = document.getElementById('wire-layer');
+
+    function addNode(type, x, y) {
+        state.nodes.push({ id: Date.now(), type, x, y, storage: 0, max: 10 });
+        render();
+    }
+
+    function render() {
+        const nodesContainer = document.getElementById('workbench');
+        nodesContainer.querySelectorAll('.node').forEach(n => n.remove());
+        
+        state.nodes.forEach(n => {
+            const div = document.createElement('div');
+            div.className = `node ${selectedNodeId === n.id ? 'active' : ''}`;
+            div.style.left = n.x + 'px'; div.style.top = n.y + 'px';
+            
+            let html = `<h4>${n.type.toUpperCase()}</h4>`;
+            if (n.type === 'extractor') {
+                html += `<div class="stat">ORE: ${Math.floor(n.storage)}/${n.max}</div>`;
+            } else if (n.type === 'smelter') {
+                html += `<div class="stat">ORE BUFFER: ${Math.floor(n.storage)}/5</div>`;
+            } else {
+                html += `<div class="stat" style="color:#0f0">READY</div>`;
+            }
+            
+            div.innerHTML = html;
+            div.onclick = (e) => { e.stopPropagation(); clickNode(n.id); };
+            nodesContainer.appendChild(div);
+        });
+        drawWires();
+        updateUI();
+    }
+
+    function clickNode(id) {
+        if (!isWireMode) return;
+        if (selectedNodeId === null) { selectedNodeId = id; }
+        else {
+            if (selectedNodeId !== id) {
+                state.links.push({ from: selectedNodeId, to: id });
+            }
+            selectedNodeId = null;
+        }
+        render();
+    }
+
+    function drawWires() {
+        svg.innerHTML = '';
+        state.links.forEach(l => {
+            const n1 = state.nodes.find(n => n.id === l.from);
+            const n2 = state.nodes.find(n => n.id === l.to);
+            if (n1 && n2) {
+                const line = document.createElementNS("http://www.w3.org", "line");
+                line.setAttribute("x1", n1.x + 60); line.setAttribute("y1", n1.y + 50);
+                line.setAttribute("x2", n2.x + 60); line.setAttribute("y2", n2.y + 50);
+                svg.appendChild(line);
+            }
+        });
+    }
+
+    function sellCargo() {
+        state.gold += state.cargo * 10;
+        state.cargo = 0;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('gold').innerText = Math.floor(state.gold);
+        document.getElementById('cargo').innerText = Math.floor(state.cargo);
+    }
+
+    function toggleWireMode() {
+        isWireMode = !isWireMode;
+        selectedNodeId = null;
+        document.getElementById('wireModeBtn').className = `ui-btn ${isWireMode ? 'active' : ''}`;
+        render();
+    }
+
+    // GAME LOOP
+    setInterval(() => {
+        // 1. Generation
+        state.nodes.forEach(n => {
+            if (n.type === 'extractor' && n.storage < n.max) n.storage += 0.2;
+        });
+
+        // 2. Resource Transfer & Smelting
+        state.links.forEach(l => {
+            const src = state.nodes.find(n => n.id === l.from);
+            const dest = state.nodes.find(n => n.id === l.to);
+            if (!src || !dest) return;
+
+            // Extractor -> Smelter
+            if (src.type === 'extractor' && dest.type === 'smelter') {
+                if (src.storage >= 0.5 && dest.storage < 5) {
+                    src.storage -= 0.5;
+                    dest.storage += 0.5;
+                }
+            }
+
+            // Auto-Seller Logic: Link an Auto-Seller to anything, it sells cargo
+            if (src.type === 'auto_seller' || dest.type === 'auto_seller') {
+                if (state.cargo > 0) sellCargo();
+            }
+        });
+
+        // 3. Smelter output to Global Cargo
+        state.nodes.forEach(n => {
+            if (n.type === 'smelter' && n.storage >= 1) {
+                n.storage -= 1;
+                state.cargo += 1;
+            }
+        });
+
+        render();
+    }, 500);
+
+    function clearData() { localStorage.clear(); location.reload(); }
+    function save() { localStorage.setItem('alch21Save', JSON.stringify(state)); }
+    setInterval(save, 5000);
+    render();
+</script>
+
+</body>
+</html>

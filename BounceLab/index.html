@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounce Lab · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f43f5e; --accent-2: #fb923c; --accent-ink: #1f0309; }
+        .stage { gap: 8px; padding: 8px 12px 10px; }
+        .tbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .tbar .btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .work { flex: 1; min-height: 0; width: 100%; display: flex; gap: 12px; justify-content: center; align-items: stretch; }
+        .canvas-box { flex: 1 1 auto; min-width: 0; }
+        .phone { position: relative; line-height: 0; }
+        .phone canvas { display: block; border-radius: 18px; border: 1px solid var(--line-2); background: #05060d; box-shadow: var(--shadow), 0 0 70px -30px var(--accent); touch-action: none; }
+        .side-btns { position: absolute; right: 8px; bottom: 70px; display: flex; flex-direction: column; gap: 9px; z-index: 5; line-height: 1.2; align-items: center; }
+        .side-btns button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(15, 23, 42, 0.62); color: #fff; font-size: 1.15rem; cursor: pointer; backdrop-filter: blur(6px); display: grid; place-items: center; }
+        .side-btns button:hover { background: rgba(244, 63, 94, 0.55); }
+        .side-btns button.on { background: var(--accent); }
+        .side-btns button.rec.on { animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.35); } }
+        .side-btns small { display: block; text-align: center; font-size: 0.6rem; color: #cbd5e1; margin-top: -6px; text-shadow: 0 1px 2px #000; }
+        /* studio panel */
+        .studio { width: 330px; flex: none; overflow-y: auto; background: var(--surface); border: 1px solid var(--line-2); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem; }
+        .studio h3 { margin: 0; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .studio h4 { margin: 4px 0 0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+        .types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+        .types button { padding: 6px 7px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.74rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .types button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--bg-2)); }
+        .prow { display: grid; grid-template-columns: 112px 1fr 44px; gap: 6px; align-items: center; }
+        .prow span { color: var(--muted); font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .prow span.set { color: var(--accent-2); font-weight: 700; }
+        .prow input[type=range] { width: 100%; accent-color: var(--accent); }
+        .prow b { font-size: 0.72rem; text-align: right; font-variant-numeric: tabular-nums; }
+        .studio select, .studio input[type=text] { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.8rem; }
+        .togs { display: flex; flex-wrap: wrap; gap: 4px; }
+        .togs button { padding: 4px 8px; border-radius: 99px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--muted); cursor: pointer; font: inherit; font-size: 0.72rem; }
+        .togs button.on { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg-2)); }
+        .sbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .sbtns .btn { flex: 1; }
+        .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        @media (max-width: 860px) {
+            .studio { position: fixed; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 52vh; z-index: 60; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6); }
+        }
+        .pal { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+        .pal button { min-width: 36px; height: 32px; border-radius: 8px; border: 2px solid transparent; color: #fff; font-weight: 800; cursor: pointer; font-size: 0.82rem; }
+        .pal button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+        .lv-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; text-align: left; margin-top: 10px; }
+        .lv-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .lv-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+        .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 10px; max-height: 58vh; overflow: auto; }
+        .lv-grid button { padding: 8px 4px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.76rem; }
+        .lv-grid button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .lv-grid button b { display: block; font-size: 1rem; }
+        .lv-grid button i { display: block; font-style: normal; color: var(--gold); letter-spacing: 1px; }
+        .rm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; text-align: left; font-size: 0.85rem; }
+        .rm-row input[type=text] { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; }
+        .manual { text-align: left; max-height: 66vh; overflow-y: auto; font-size: 0.86rem; line-height: 1.5; }
+        .manual h3 { margin: 14px 0 4px; font-size: 0.95rem; }
+        .manual table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .manual td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        .manual td:first-child { white-space: nowrap; font-weight: 700; }
+        .chipk { display: inline-block; min-width: 26px; padding: 1px 6px; border-radius: 6px; color: #fff; font-weight: 800; text-align: center; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Bounce Lab</h1>
+        <div class="stats">
+            <span class="chip accent"><span id="cAl">Watched</span> <b id="cA">0</b></span>
+            <span class="chip gold"><span id="cBl">Liked</span> <b id="cB">0</b></span>
+            <span class="chip hide-sm"><span id="cCl">Best</span> <b id="cC">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="manualBtn" title="How everything works">📖 Manual</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="seg" id="tabs">
+            <button class="btn sm active" data-tab="shorts">📱 Physics Shorts</button>
+            <button class="btn sm" data-tab="bricks">🧱 Brick Shorts</button>
+            <button class="btn sm" data-tab="play">🎮 Brick Breaker</button>
+            <button class="btn sm" data-tab="ballz">🎱 Ballz</button>
+            <button class="btn sm" data-tab="editor">✏️ Level Editor</button>
+        </div>
+        <div class="tbar" id="barFeed">
+            <button class="btn sm" id="autoBtn">▶ Autoplay on</button>
+            <button class="btn sm" id="gridBtn" title="Watch four simulations at once">▦ 2×2 grid</button>
+            <button class="btn sm" id="studioBtn">🎛 Studio</button>
+            <button class="btn sm" id="likedBtn">❤ Liked</button>
+            <button class="btn sm" id="codeLoadBtn">🔗 Open code</button>
+        </div>
+        <div class="tbar" id="barPlay" hidden>
+            <button class="btn sm" id="lvBtn">📋 Levels</button>
+            <button class="btn sm" id="myBtn">⭐ My levels</button>
+            <button class="btn sm" id="pauseBtn">⏸ Pause</button>
+        </div>
+        <div class="tbar" id="barBallz" hidden>
+            <button class="btn sm" id="zSpeedBtn">⏩ ×1</button>
+            <button class="btn sm" id="zRecallBtn">⤓ Recall balls</button>
+            <button class="btn sm" id="zNewBtn">⟲ New game</button>
+        </div>
+        <div class="tbar" id="barEditor" hidden>
+            <div class="pal" id="pal"></div>
+            <button class="btn sm" id="mirBtn" title="Paint both halves at once">⇋ Mirror</button>
+            <button class="btn sm" id="testBtn">▶ Test</button>
+            <button class="btn sm" id="saveBtn">💾 Save</button>
+            <button class="btn sm" id="codeBtn">🔗 Code</button>
+            <button class="btn sm danger" id="clearBtn">Clear</button>
+        </div>
+        <div class="work">
+            <div class="canvas-box" id="box">
+                <div class="phone" id="phone">
+                    <canvas id="cv"></canvas>
+                    <div class="side-btns" id="sideBtns">
+                        <button id="likeBtn" title="Like (L)">❤</button><small id="likeN">Like</small>
+                        <button id="replayBtn" title="Replay (R)">↻</button><small>Replay</small>
+                        <button id="recBtn" class="rec" title="Record this simulation as a video">⏺</button><small id="recN">Record</small>
+                        <button id="shareBtn" title="Copy this simulation's code">🔗</button><small>Code</small>
+                        <button id="upBtn" title="Previous (↑)">▲</button>
+                        <button id="downBtn" title="Next (↓ · swipe up · scroll)">▼</button>
+                    </div>
+                </div>
+
+                <div class="overlay" id="likedOv" hidden><div class="modal"><h2>❤ Liked simulations</h2><div class="lv-list" id="likedList"></div><div class="actions"><button class="btn" data-close>Close</button></div></div></div>
+                <div class="overlay" id="codeOv" hidden>
+                    <div class="modal">
+                        <h2>🔗 Open a code</h2>
+                        <p class="small">Paste a simulation code someone shared (it looks like <code>escape-1a2b3c</code>).</p>
+                        <div class="rm-row"><input type="text" id="codeIn" placeholder="type-seed" spellcheck="false"><button class="btn primary" id="codeGo">Open</button></div>
+                        <div class="actions"><button class="btn" data-close>Close</button></div>
+                    </div>
+                </div>
+                <div class="overlay" id="lvOv" hidden><div class="modal wide"><h2>Levels</h2><p class="small">Clear a level to unlock the next. ★★★ = no lives lost. After level 24 the levels are generated forever.</p><div class="lv-grid" id="lvGrid"></div><div class="actions"><button class="btn" data-close>Close</button></div></div></div>
+                <div class="overlay" id="myOv" hidden>
+                    <div class="modal">
+                        <h2>⭐ My levels</h2>
+                        <p class="small">Levels you saved in the editor, and ones you imported from a code.</p>
+                        <div class="lv-list" id="myList"></div>
+                        <div class="rm-row"><input type="text" id="impCode" placeholder="paste a level code" spellcheck="false"><button class="btn sm" id="impBtn">Add</button></div>
+                        <div class="actions"><button class="btn" data-close>Close</button></div>
+                    </div>
+                </div>
+                <div class="overlay" id="endOv" hidden>
+                    <div class="modal">
+                        <h2 id="endTitle">Game over</h2>
+                        <div class="big-num" id="endScore">0</div>
+                        <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                        <p id="endText"></p>
+                        <div class="actions"><button class="btn primary lg" id="endGo">Play again</button><button class="btn" id="endLv">Levels</button></div>
+                    </div>
+                </div>
+            </div>
+            <aside class="studio" id="studio" hidden></aside>
+        </div>
+        <p class="tiny dim center" style="margin:0" id="help"></p>
+        <div class="overlay fixed" id="manualOv" hidden>
+            <div class="modal wide">
+                <h2>📖 Bounce Lab manual</h2>
+                <div class="seg" id="manTabs" style="margin-top:8px"></div>
+                <div class="manual" id="manual"></div>
+                <div class="actions"><button class="btn" data-close>Close</button></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script src="engine.js"></script>
+    <script src="modes.js"></script>
+    <script src="bricks.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

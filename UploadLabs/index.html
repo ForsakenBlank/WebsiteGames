@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Labs · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #22d3ee; --accent-2: #a78bfa; --accent-ink: #021619; }
+        .desk { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: grab;
+            background-color: #070b14;
+            background-image: radial-gradient(rgba(148,163,184,0.12) 1px, transparent 1px);
+            background-size: 28px 28px; touch-action: none; }
+        .desk.panning { cursor: grabbing; }
+        #wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        #layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+        .node {
+            position: absolute; width: 186px; border-radius: 14px; background: var(--surface);
+            border: 1px solid var(--line-2); box-shadow: var(--shadow); cursor: default; user-select: none;
+        }
+        .node.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+        .node.busy .nhead::after { content: ""; position: absolute; right: 9px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); }
+        .node.jam { border-color: var(--bad); }
+        .node.terminal { width: 210px; border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); }
+        .nhead { position: relative; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: move; font-weight: 750; font-size: 0.8rem; border-radius: 14px 14px 0 0; background: var(--surface-2); }
+        .nhead .lv { margin-left: auto; margin-right: 12px; font-size: 0.66rem; color: var(--muted); font-weight: 600; }
+        .nbody { padding: 7px 10px; font-size: 0.7rem; color: var(--muted); display: flex; flex-direction: column; gap: 5px; min-height: 38px; }
+        .nbody .bar { height: 5px; }
+        .nbody select { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 7px; padding: 3px 5px; font: inherit; font-size: 0.72rem; }
+        .nbody .pills { display: flex; flex-wrap: wrap; gap: 3px; }
+        .nbody .row2 { display: flex; gap: 4px; }
+        .nbody .row2 .btn { flex: 1; padding: 6px 4px; font-size: 0.74rem; }
+        .pill { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font-size: 0.68rem; }
+        .warn { color: var(--bad); }
+        .nfoot { display: flex; gap: 4px; padding: 0 8px 8px; }
+        .nfoot .btn { flex: 1; padding: 4px 6px; font-size: 0.68rem; }
+        .nfoot .btn.del { flex: none; }
+        .port { position: absolute; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: var(--bg-2); border: 2px solid var(--accent); cursor: crosshair; z-index: 2; }
+        .port.in { left: -10px; top: 50%; border-color: var(--accent-2); }
+        .port.out { right: -10px; top: 50%; }
+        .port.out.p0 { top: 38%; } .port.out.p1 { top: 72%; border-color: #fb923c; }
+        .port:hover { background: var(--accent); }
+        .port-lbl { position: absolute; right: 12px; font-size: 0.58rem; color: var(--muted); pointer-events: none; }
+        .float { position: absolute; z-index: 10; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); }
+        .shop { left: 12px; top: 12px; width: 232px; max-height: calc(100% - 24px); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
+        .shop h4 { margin: 8px 0 2px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+        .buy { display: grid; grid-template-columns: auto 1fr auto; gap: 1px 8px; align-items: center; padding: 7px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; text-align: left; color: var(--text); font: inherit; }
+        .buy:hover:not(:disabled) { border-color: var(--accent); }
+        .buy:disabled { opacity: 0.45; cursor: not-allowed; }
+        .buy .ic { font-size: 1.2rem; grid-row: span 2; }
+        .buy b { font-size: 0.78rem; }
+        .buy small { color: var(--muted); font-size: 0.64rem; grid-column: 2; }
+        .buy .price { grid-row: span 2; grid-column: 3; font-size: 0.74rem; color: var(--gold); font-weight: 700; text-align: right; }
+        .side { right: 12px; top: 12px; width: 280px; max-height: calc(100% - 24px); display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+        .side .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .side .tabs .btn { padding: 6px 2px; font-size: 0.72rem; }
+        .side .body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+        .goal, .tech { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .goal.done { opacity: 0.5; }
+        .goal b, .tech b { font-size: 0.8rem; }
+        .goal small, .tech small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 6px; }
+        .tech { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
+        .tech small { grid-column: 1; margin: 0; }
+        .tech .btn { grid-row: span 2; grid-column: 2; font-size: 0.7rem; }
+        .tech.owned { border-color: color-mix(in srgb, var(--good) 45%, transparent); opacity: 0.6; }
+        .tech.ready { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+        .statrow { display: flex; justify-content: space-between; font-size: 0.78rem; padding: 4px 2px; border-bottom: 1px solid var(--line); }
+        .statrow b { font-variant-numeric: tabular-nums; }
+        .legend { left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 10px; padding: 7px 12px; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; justify-content: center; max-width: calc(100% - 560px); }
+        .legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .power-chip.over b { color: var(--bad); }
+        .side .tabs { grid-template-columns: repeat(6, 1fr) !important; }
+        .node.multi { box-shadow: 0 0 0 2px var(--gold), var(--shadow); }
+        .node.hacked { border-color: #ef4444; animation: shake 0.4s infinite; }
+        .node.hacked .nhead { background: color-mix(in srgb, #ef4444 25%, var(--surface-2)); }
+        .bar-float { left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 8px 12px; font-size: 0.8rem; }
+        .selbar { bottom: 12px; }
+        .hackbar { top: 12px; border-color: #ef4444; box-shadow: 0 0 30px -10px #ef4444; }
+        .chalbar { top: 12px; border-color: var(--gold); }
+        .hackbar + .chalbar, .chalbar.low { top: 64px; }
+        #selBox { position: absolute; border: 1.5px dashed var(--gold); background: rgba(251, 191, 36, 0.08); pointer-events: none; z-index: 5; }
+        .bp, .chal { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .bp b, .chal b { font-size: 0.8rem; }
+        .bp small, .chal small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 6px; }
+        .chal.done { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+        @media (max-width: 980px) { .legend { display: none; } }
+        @media (max-width: 820px) { .shop { width: 180px; } .side { width: 210px; } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Upload Labs</h1>
+        <div class="stats">
+            <span class="chip gold">Money <b id="hMoney">$0</b></span>
+            <span class="chip accent">Income <b id="hIncome">$0/s</b></span>
+            <span class="chip">Research <b id="hRp">0 RP</b></span>
+            <span class="chip power-chip" id="powerChip" title="Power used / capacity">⚡ <b id="hPower">0/30W</b></span>
+            <span class="chip gold" id="shareChip" hidden>📈 <b id="hShares">0</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="selBtn" title="Box-select programs to save a blueprint (or hold Shift)">⬚ Select</button>
+            <button class="btn sm" id="helpBtn">❔ Help</button>
+            <button class="btn sm danger" id="resetBtn">Reset</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="desk" id="desk">
+        <canvas id="wires"></canvas>
+        <div id="layer"></div>
+
+        <aside class="panel float shop" id="shop"><h3 style="margin:0">Install</h3></aside>
+        <aside class="panel float side">
+            <div class="tabs">
+                <button class="btn sm active" data-tab="goals" title="Goals">🎯</button>
+                <button class="btn sm" data-tab="tech" title="Research">🧪</button>
+                <button class="btn sm" data-tab="bp" title="Blueprints">📐</button>
+                <button class="btn sm" data-tab="chal" title="Challenges">🏆</button>
+                <button class="btn sm" data-tab="stats" title="Stats">📊</button>
+                <button class="btn sm" data-tab="ipo" title="IPO">📈</button>
+            </div>
+            <div class="body" id="sideBody"></div>
+        </aside>
+        <div class="panel float legend" id="legend"></div>
+        <div id="selBox" hidden></div>
+        <div class="panel float bar-float selbar" id="selBar" hidden><b id="selN">0</b> selected <button class="btn sm primary" id="bpSave">📐 Save as blueprint</button><button class="btn sm ghost" id="selClear">Clear</button></div>
+        <div class="panel float bar-float hackbar" id="hackBar" hidden></div>
+        <div class="panel float bar-float chalbar" id="chalBar" hidden></div>
+        <div class="overlay" id="chalOv" hidden><div class="modal"><h2 id="chalTitle"></h2><p id="chalText"></p><div class="actions"><button class="btn primary lg" id="chalDone">Back to my lab</button><button class="btn" id="chalRetry">Retry</button></div></div></div>
+
+        <div class="overlay" id="helpOv" hidden>
+            <div class="modal wide" style="text-align:left">
+                <h2 style="text-align:center">Upload Labs</h2>
+                <p>Build a data business from a single terminal. Download files, process them into something valuable, and upload them for cash.</p>
+                <ul class="help">
+                    <li>Start by hand: press <b>Download</b> and <b>Upload</b> on your Terminal. Buy a <b>Downloader</b> and an <b>Uploader</b> to automate it.</li>
+                    <li><b>Drag</b> from an output port (right) to another program to connect a wire. <b>Click a wire</b> to cut it. Drag programs by their title bar, drag the background to pan, scroll to zoom.</li>
+                    <li>Files have sizes. Downloaders and uploaders move <b>MB/s</b>, so a video takes much longer than a text file. Processed files are worth far more per MB.</li>
+                    <li>Some downloads are <b>infected 🦠</b> — uploading them gets you fined. Use a <b>Sorter</b> or <b>Antivirus</b>.</li>
+                    <li>A wire jams when the program at the end can't use the file at the front. Sort files with a <b>Sorter</b>, or send leftovers to the <b>Trash</b>.</li>
+                    <li>Every program uses <b>power ⚡</b>. Go over capacity and everything slows down — build <b>Generators</b>.</li>
+                    <li><b>Hackers</b> attack once you start earning. Research Network security for <b>Firewalls</b>, or hammer <b>Counter-hack</b> before the timer runs out.</li>
+                    <li><b>Blueprints</b>: hold <kbd>Shift</kbd> and drag (or use ⬚ Select) to pick programs, save them, then paste the whole setup from the 📐 tab.</li>
+                    <li><b>Challenges</b> (🏆 tab) are timed scenarios with their own lab — clearing one earns shares for your main company.</li>
+                </ul>
+                <div class="actions"><button class="btn primary lg" id="helpClose">Boot up</button></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        /* ================= DATA ================= */
+        // File types: size in MB, base value in $, research value
+        const FT = {
+            text:    { n: 'Text', ic: '📄', c: '#cbd5e1', s: 1, v: 1, rp: 1 },
+            image:   { n: 'Image', ic: '🖼️', c: '#38bdf8', s: 3, v: 3, rp: 1 },
+            audio:   { n: 'Audio', ic: '🎵', c: '#a78bfa', s: 6, v: 6, rp: 2 },
+            video:   { n: 'Video', ic: '🎬', c: '#f472b6', s: 20, v: 18, rp: 3 },
+            virus:   { n: 'Infected', ic: '🦠', c: '#ef4444', s: 2, v: -3, rp: 0 },
+            sample:  { n: 'Virus sample', ic: '🧫', c: '#84cc16', s: 0.5, v: 2, rp: 10 },
+            code:    { n: 'Source code', ic: '💾', c: '#22c55e', s: 2, v: 12, rp: 4 },
+            app:     { n: 'App', ic: '📦', c: '#10b981', s: 8, v: 65, rp: 10 },
+            site:    { n: 'Website', ic: '🌐', c: '#06b6d4', s: 10, v: 60, rp: 10 },
+            movie:   { n: 'Movie', ic: '🎞️', c: '#e879f9', s: 45, v: 95, rp: 12 },
+            dataset: { n: 'Dataset', ic: '📊', c: '#fb923c', s: 15, v: 42, rp: 14 },
+            game:    { n: 'Game', ic: '🎮', c: '#facc15', s: 60, v: 480, rp: 40 },
+            model:   { n: 'AI Model', ic: '🧠', c: '#f59e0b', s: 30, v: 700, rp: 80 },
+            zip:     { n: 'Archive', ic: '🗜️', c: '#c4b5fd', s: 0, v: 0, rp: 0 },
+        };
+        const SOURCES = {
+            forum:   { n: 'Forums', mix: { text: 72, image: 23, virus: 5 } },
+            board:   { n: 'Image boards', mix: { image: 62, text: 28, virus: 10 }, tech: 'src_img' },
+            music:   { n: 'Music sites', mix: { audio: 62, image: 20, text: 12, virus: 6 }, tech: 'src_music' },
+            stream:  { n: 'Video sites', mix: { video: 52, audio: 26, image: 16, virus: 6 }, tech: 'src_video' },
+            torrent: { n: 'Torrents', mix: { video: 34, audio: 20, image: 14, text: 8, virus: 24 }, tech: 'src_torrent', bw: 2.5 },
+        };
+        const P = {
+            terminal:  { n: 'Terminal', ic: '🖥️', kind: 'terminal', power: 0, cat: '' },
+            downloader:{ n: 'Downloader', ic: '⬇️', kind: 'source', bw: 2, cost: 8, up: 12, power: 4, cat: 'Network', d: 'Downloads files · 2 MB/s' },
+            uploader:  { n: 'Uploader', ic: '⬆️', kind: 'sink', sink: 'cash', bw: 3, cost: 10, up: 14, power: 4, cat: 'Network', d: 'Sells files · 3 MB/s' },
+            research:  { n: 'Research Server', ic: '🧪', kind: 'sink', sink: 'rp', bw: 2, cost: 30, up: 40, power: 6, cat: 'Network', d: 'Analyses files into RP' },
+            trash:     { n: 'Trash Bin', ic: '🗑️', kind: 'sink', sink: 'trash', bw: 50, cost: 5, up: 0, power: 0, cat: 'Logistics', d: 'Deletes anything' },
+            filter:    { n: 'Sorter', ic: '🔀', kind: 'filter', cost: 40, up: 0, power: 1, tech: 'filter', cat: 'Logistics', d: 'Splits one file type off' },
+            storage:   { n: 'Storage Drive', ic: '💽', kind: 'storage', cap: 40, cost: 25, up: 30, power: 1, tech: 'storage', cat: 'Logistics', d: 'Buffers up to 40 files' },
+            antivirus: { n: 'Antivirus', ic: '🛡️', kind: 'xform', t: 0.6, cost: 60, up: 70, power: 4, tech: 'antivirus', cat: 'Processing', d: 'Infected → sample, rest pass' },
+            compressor:{ n: 'Compressor', ic: '🗜️', kind: 'pack', need: 4, t: 2, cost: 120, up: 150, power: 6, tech: 'compressor', cat: 'Processing', d: '4 files → archive (35% size)' },
+            encryptor: { n: 'Encryptor', ic: '🔐', kind: 'xform', t: 1.5, cost: 300, up: 350, power: 8, tech: 'encryptor', cat: 'Processing', d: 'Encrypted files sell ×1.6' },
+            coder:     { n: 'Code Editor', ic: '⌨️', kind: 'recipe', recipe: { text: 2 }, out: 'code', t: 2, cost: 200, up: 250, power: 6, tech: 'code', cat: 'Production', d: '2 text → source code' },
+            compiler:  { n: 'Compiler', ic: '⚙️', kind: 'recipe', recipe: { code: 3 }, out: 'app', t: 4, cost: 900, up: 1100, power: 12, tech: 'compiler', cat: 'Production', d: '3 code → app' },
+            web:       { n: 'Web Builder', ic: '🧱', kind: 'recipe', recipe: { code: 2, image: 2 }, out: 'site', t: 4, cost: 2500, up: 3000, power: 10, tech: 'web', cat: 'Production', d: '2 code + 2 images → website' },
+            editor:    { n: 'Video Editor', ic: '🎬', kind: 'recipe', recipe: { video: 2, audio: 1 }, out: 'movie', t: 6, cost: 4000, up: 5000, power: 15, tech: 'video', cat: 'Production', d: '2 video + audio → movie' },
+            cleaner:   { n: 'Data Cleaner', ic: '🧹', kind: 'recipe', recipe: { text: 3, image: 2 }, out: 'dataset', t: 3, cost: 6000, up: 7000, power: 10, tech: 'data', cat: 'Production', d: '3 text + 2 images → dataset' },
+            studio:    { n: 'Game Studio', ic: '🕹️', kind: 'recipe', recipe: { app: 2, image: 3, audio: 2 }, out: 'game', t: 10, cost: 40000, up: 50000, power: 25, tech: 'games', cat: 'Production', d: '2 apps + 3 images + 2 audio → game' },
+            gpu:       { n: 'GPU Trainer', ic: '🧠', kind: 'recipe', recipe: { dataset: 3 }, out: 'model', t: 15, cost: 120000, up: 150000, power: 60, tech: 'gpu', cat: 'Production', d: '3 datasets → AI model' },
+            generator: { n: 'Generator', ic: '🔋', kind: 'power', cost: 50, up: 70, power: -40, cat: 'Power', d: '+40W capacity per level' },
+            firewall:  { n: 'Firewall', ic: '🧱', kind: 'security', cost: 120, up: 160, power: 5, tech: 'firewall', cat: 'Security', d: 'Blocks hacker attacks · 10 strength/level' },
+            honeypot:  { n: 'Honeypot', ic: '🍯', kind: 'security', cost: 700, up: 900, power: 4, tech: 'honeypot', cat: 'Security', d: 'Blocked attacks give research' },
+        };
+        const CHALLENGES = [
+            { id: 'sprint', n: 'Startup sprint', ic: '⏱️', d: 'Earn $1,000 within 5 minutes.', time: 300, start: { money: 60 }, goal: { k: 'earned', n: 1000 } },
+            { id: 'virus', n: 'Virus storm', ic: '🦠', d: '40% of downloads are infected. Upload 300 files with at most 5 fines.', time: 600, start: { money: 250, tech: ['filter', 'antivirus'] }, mods: { virus: 0.4 }, goal: { k: 'uploaded', n: 300 }, fail: { k: 'fines', n: 6 } },
+            { id: 'power', n: 'Power crisis', ic: '🔌', d: 'Generators are banned and you only have 60W. Earn $5,000.', time: 900, start: { money: 300, tech: ['filter', 'storage'] }, mods: { power: 60, noGen: true }, goal: { k: 'earned', n: 5000 } },
+            { id: 'coder', n: "Coder's crunch", ic: '⌨️', d: 'Compile 20 apps in 12 minutes.', time: 720, start: { money: 1500, tech: ['filter', 'code', 'compiler', 'storage'] }, goal: { k: 'made', item: 'app', n: 20 } },
+            { id: 'drought', n: 'Bandwidth drought', ic: '🐌', d: 'Every download and upload runs at half speed. Earn $3,000.', time: 900, start: { money: 200 }, mods: { bw: 0.5 }, goal: { k: 'earned', n: 3000 } },
+            { id: 'siege', n: 'Under siege', ic: '🏴‍☠️', d: 'Hackers strike every 40 seconds. Earn $2,500 and lose less than $500 to them.', time: 900, start: { money: 400, tech: ['firewall'] }, mods: { hackEvery: 40 }, goal: { k: 'earned', n: 2500 }, fail: { k: 'stolen', n: 500 } },
+        ];
+        const TECH = [
+            { id: 'autoterm', n: 'Shell scripts', cost: 15, d: 'Terminal auto-downloads & uploads 1 file/s' },
+            { id: 'filter', n: 'Sorting', cost: 10, d: 'Unlocks the Sorter' },
+            { id: 'storage', n: 'Hard drives', cost: 20, d: 'Unlocks Storage Drives' },
+            { id: 'antivirus', n: 'Antivirus', cost: 25, d: 'Unlocks the Antivirus' },
+            { id: 'src_img', n: 'Image boards', cost: 30, d: 'Downloaders can pull mostly images' },
+            { id: 'compressor', n: 'Compression', cost: 45, d: 'Unlocks the Compressor' },
+            { id: 'code', n: 'Programming', cost: 70, d: 'Unlocks the Code Editor' },
+            { id: 'src_music', n: 'Music sites', cost: 90, d: 'Downloaders can pull audio', req: 'src_img' },
+            { id: 'fiber', n: 'Fiber optics', cost: 110, d: 'Wires carry files 50% faster' },
+            { id: 'bw1', n: 'Broadband', cost: 140, d: '+50% download & upload bandwidth' },
+            { id: 'encryptor', n: 'Cryptography', cost: 160, d: 'Unlocks the Encryptor', req: 'compressor' },
+            { id: 'wire2', n: 'Thick cables', cost: 180, d: 'Wires hold 8 files instead of 4' },
+            { id: 'src_video', n: 'Video sites', cost: 220, d: 'Downloaders can pull video', req: 'src_music' },
+            { id: 'compiler', n: 'Compilers', cost: 300, d: 'Unlocks the Compiler', req: 'code' },
+            { id: 'oc1', n: 'Overclock I', cost: 380, d: 'All programs work 25% faster' },
+            { id: 'val1', n: 'Data brokers', cost: 520, d: '+25% sale value' },
+            { id: 'web', n: 'Web development', cost: 650, d: 'Unlocks the Web Builder', req: 'code' },
+            { id: 'power1', n: 'Efficient PSUs', cost: 750, d: '−20% power draw' },
+            { id: 'offline1', n: 'Cloud hosting', cost: 850, d: 'Offline earnings up to 8h at 75%' },
+            { id: 'video', n: 'Video editing', cost: 950, d: 'Unlocks the Video Editor', req: 'src_video' },
+            { id: 'src_torrent', n: 'Torrents', cost: 1300, d: 'Huge mixed downloads at 2.5× speed (24% infected!)', req: 'src_video' },
+            { id: 'data', n: 'Data science', cost: 1600, d: 'Unlocks the Data Cleaner', req: 'code' },
+            { id: 'av2', n: 'Heuristic scanning', cost: 2000, d: 'Antivirus 2× faster, samples worth 2× RP', req: 'antivirus' },
+            { id: 'bw2', n: 'Fiber to the home', cost: 2600, d: '+100% download & upload bandwidth', req: 'bw1' },
+            { id: 'oc2', n: 'Overclock II', cost: 4200, d: 'All programs work 50% faster', req: 'oc1' },
+            { id: 'games', n: 'Game development', cost: 6500, d: 'Unlocks the Game Studio', req: 'compiler' },
+            { id: 'val2', n: 'Premium buyers', cost: 9000, d: '+50% sale value', req: 'val1' },
+            { id: 'gpu', n: 'Machine learning', cost: 16000, d: 'Unlocks the GPU Trainer', req: 'data' },
+            { id: 'power2', n: 'Liquid cooling', cost: 22000, d: '−30% power draw', req: 'power1' },
+            { id: 'oc3', n: 'Quantum chips', cost: 55000, d: 'All programs work 2× faster', req: 'oc2' },
+            { id: 'val3', n: 'Global markets', cost: 110000, d: '+100% sale value', req: 'val2' },
+            { id: 'firewall', n: 'Network security', cost: 40, d: 'Unlocks Firewalls against hackers' },
+            { id: 'ids', n: 'Intrusion detection', cost: 900, d: 'Firewalls are twice as strong', req: 'firewall' },
+            { id: 'honeypot', n: 'Honeypots', cost: 1500, d: 'Unlocks the Honeypot', req: 'firewall' },
+        ];
+        const GOALS = [
+            { d: 'Upload 10 files by hand', k: 'uploaded', n: 10, cash: 10 },
+            { d: 'Install a Downloader and an Uploader', k: 'auto', n: 1, cash: 15 },
+            { d: 'Earn $100', k: 'earned', n: 100, cash: 40 },
+            { d: 'Earn 25 research points', k: 'rp', n: 25, cash: 40 },
+            { d: 'Upload 250 files', k: 'uploaded', n: 250, cash: 120 },
+            { d: 'Scan 20 infected files', k: 'made', item: 'sample', n: 20, cash: 150, rp: 30 },
+            { d: 'Pack 25 archives', k: 'made', item: 'zip', n: 25, cash: 250 },
+            { d: 'Write 50 files of source code', k: 'made', item: 'code', n: 50, cash: 400, rp: 60 },
+            { d: 'Earn $5K', k: 'earned', n: 5000, cash: 1000 },
+            { d: 'Build 2 generators', k: 'gens', n: 2, cash: 600 },
+            { d: 'Compile 25 apps', k: 'made', item: 'app', n: 25, cash: 3000, rp: 200 },
+            { d: 'Launch 25 websites', k: 'made', item: 'site', n: 25, cash: 6000 },
+            { d: 'Earn $50K', k: 'earned', n: 50000, cash: 12000 },
+            { d: 'Cut 20 movies', k: 'made', item: 'movie', n: 20, cash: 15000, rp: 800 },
+            { d: 'Clean 30 datasets', k: 'made', item: 'dataset', n: 30, cash: 25000 },
+            { d: 'Upload 25,000 files', k: 'uploaded', n: 25000, cash: 40000 },
+            { d: 'Ship 10 games', k: 'made', item: 'game', n: 10, cash: 80000, rp: 5000 },
+            { d: 'Earn $1M', k: 'earned', n: 1e6, cash: 150000 },
+            { d: 'Train 10 AI models', k: 'made', item: 'model', n: 10, cash: 250000, rp: 20000 },
+            { d: 'Earn 100K research points', k: 'rp', n: 100000, cash: 300000 },
+            { d: 'Go public (IPO)', k: 'ipos', n: 1, cash: 0, rp: 5000 },
+            { d: 'Ship 250 games', k: 'made', item: 'game', n: 250, cash: 2e6 },
+            { d: 'Train 250 AI models', k: 'made', item: 'model', n: 250, cash: 5e6 },
+            { d: 'Earn $100M', k: 'earned', n: 1e8, cash: 2e7 },
+            { d: 'Earn $10B — data empire!', k: 'earned', n: 1e10, cash: 1e9 },
+        ];
+        const SAVE = 'arcade.uploadlabs.save';
+        const IPO_MIN = 1e6;
+
+        /* ================= STATE ================= */
+        let S;
+        function fresh() {
+            return {
+                v: 2, money: 0, rp: 0, tech: {}, goal: 0, nextId: 1, seenHelp: false,
+                stats: { uploaded: 0, rp: 0, earned: 0, made: {}, fines: 0, downloaded: 0, auto: 0, gens: 0, ipos: 0, hacksBlocked: 0, hacksLost: 0, stolen: 0 },
+                hackT: 150, hack: null,
+                runEarned: 0, shares: 0,
+                cam: { x: 0, y: 0, z: 1 },
+                nodes: [], wires: [], lastSeen: 0, rate: 0,
+            };
+        }
+        function load() {
+            const saved = Arcade.load(SAVE, null);
+            const chal = Arcade.load(SAVE + '.challenge', null);
+            if (chal && chal.challenge && !S) {
+                // a challenge was running when the page closed: pick it up again
+                S = Object.assign(fresh(), chal);
+                for (const n of S.nodes) Object.assign(n, { buf: n.buf || [], out: n.out || [], acc: n.acc || 0, lvl: n.lvl || 1 });
+                for (const w of S.wires) { w.packets = w.packets || []; w.port = w.port || 0; }
+                return;
+            }
+            // saves from the old version (no file sizes, free starter machines) start over — it's a new game
+            S = Object.assign(fresh(), saved && saved.v === 2 ? saved : {});
+            if (saved && saved.v !== 2) Arcade.toast('Upload Labs got a big update — your lab starts fresh!', 'gold', 4000);
+            S.stats = Object.assign(fresh().stats, S.stats);
+            delete S.challenge;
+            for (const n of S.nodes) Object.assign(n, { buf: n.buf || [], out: n.out || [], acc: n.acc || 0, lvl: n.lvl || 1 });
+            for (const w of S.wires) { w.packets = w.packets || []; w.port = w.port || 0; }
+            if (!S.nodes.some(n => n.type === 'terminal')) {
+                const t = addNode('terminal', 140, 160);
+                const r = document.getElementById('desk').getBoundingClientRect();
+                S.cam = { x: r.width / 2 - 245, y: r.height / 2 - 230, z: 1 };
+                t.store = [];
+            }
+            offline();
+        }
+        const persist = () => { S.lastSeen = Date.now(); Arcade.save(S.challenge ? SAVE + '.challenge' : SAVE, S); };
+        const mods = () => (S.challenge ? (CHALLENGES.find(c => c.id === S.challenge.id).mods || {}) : {});
+        const has = (t) => !!S.tech[t];
+        const byId = (id) => S.nodes.find(n => n.id === id);
+
+        function offline() {
+            if (!S.lastSeen || !S.rate) return;
+            const cap = has('offline1') ? 8 : 2, rate = has('offline1') ? 0.75 : 0.5;
+            const secs = Math.min(cap * 3600, (Date.now() - S.lastSeen) / 1000);
+            if (secs < 60) return;
+            const gain = S.rate * secs * rate;
+            earn(gain);
+            setTimeout(() => Arcade.toast(`Welcome back! Your lab earned $${Arcade.fmt(gain)} while you were away.`, 'gold', 5000), 400);
+        }
+
+        /* ================= ECONOMY ================= */
+        const shareBonus = () => 1 + S.shares * 0.04;
+        const techSpeed = () => (has('oc1') ? 1.25 : 1) * (has('oc2') ? 1.5 : 1) * (has('oc3') ? 2 : 1) * (1 + S.shares * 0.02);
+        const bwMult = () => (has('bw1') ? 1.5 : 1) * (has('bw2') ? 2 : 1);
+        const valueMult = () => (has('val1') ? 1.25 : 1) * (has('val2') ? 1.5 : 1) * (has('val3') ? 2 : 1) * shareBonus();
+        const wireSpeed = () => 0.8 * (has('fiber') ? 1.5 : 1);
+        const wireCap = () => (has('wire2') ? 8 : 4);
+        const powerMult = () => (has('power1') ? 0.8 : 1) * (has('power2') ? 0.7 : 1);
+        const owned = (type) => S.nodes.filter(n => n.type === type).length;
+        const buyCost = (type) => Math.round(P[type].cost * Math.pow(1.45, owned(type)));
+        const upCost = (n) => Math.round(P[n.type].up * Math.pow(1.8, n.lvl - 1));
+        const nodeDraw = (n) => (P[n.type].power > 0 ? P[n.type].power * (1 + 0.3 * (n.lvl - 1)) * powerMult() : 0);
+        const powerDraw = () => S.nodes.reduce((a, n) => a + nodeDraw(n), 0);
+        const powerCap = () => mods().power || 30 + S.nodes.filter(n => n.type === 'generator').reduce((a, n) => a + 40 * n.lvl, 0);
+        const firewallPower = () => S.nodes.filter(n => n.type === 'firewall').reduce((a, n) => a + 10 * n.lvl, 0) * (has('ids') ? 2 : 1) * techSpeed();
+        let eff = 1;
+        const nodeSpeed = (n) => (1 + (n.lvl - 1) * 0.5) * techSpeed() * eff;
+        const bandwidth = (n) => P[n.type].bw * (n.type === 'downloader' || n.type === 'uploader' ? bwMult() * (mods().bw || 1) : 1) * (n.type === 'downloader' && SOURCES[n.src || 'forum'].bw || 1) * nodeSpeed(n);
+
+        function makeFile(t, extra) {
+            const f = { t, s: FT[t].s, v: FT[t].v, rp: FT[t].rp };
+            return Object.assign(f, extra || {});
+        }
+        function rollFile(src) {
+            if (mods().virus && Math.random() < mods().virus) return makeFile('virus');
+            const mix = SOURCES[src].mix;
+            const tot = Object.values(mix).reduce((a, b) => a + b, 0);
+            let r = Math.random() * tot;
+            for (const [t, w] of Object.entries(mix)) { r -= w; if (r <= 0) return makeFile(t); }
+            return makeFile('text');
+        }
+        const fileIcon = (f) => FT[f.t].ic + (f.e ? '🔒' : '');
+        const fileName = (f) => (f.e ? 'Encrypted ' : '') + FT[f.t].n;
+        function earn(v) { S.money += v; S.stats.earned += v; S.runEarned += v; }
+
+        // what a program will take at its input
+        function accepts(n, f) {
+            const d = P[n.type];
+            switch (d.kind) {
+                case 'sink': return n.buf.length < (d.sink === 'trash' ? 99 : 8);
+                case 'filter': return n.buf.length < 6;
+                case 'storage': return n.buf.length < d.cap * n.lvl;
+                case 'xform':
+                    if (n.type === 'encryptor' && (f.e || f.t === 'virus')) return false;
+                    return n.buf.length < 6;
+                case 'pack': return f.t !== 'virus' && f.t !== 'zip' && n.buf.length < 8;
+                case 'recipe': return !f.e && d.recipe[f.t] !== undefined && n.buf.filter(x => x.t === f.t).length < d.recipe[f.t] * 3;
+                default: return false;
+            }
+        }
+        const hasInput = (type) => !['terminal', 'downloader', 'generator', 'firewall', 'honeypot'].includes(type);
+        const outPorts = (type) => (P[type].kind === 'filter' ? 2 : ['sink', 'power', 'security'].includes(P[type].kind) ? 0 : 1);
+
+        let earnedWindow = [];
+        function sellFile(n, f) {
+            if (n.type === 'terminal' || P[n.type].sink === 'cash') {
+                const v = f.v * (f.v > 0 ? valueMult() : 1);
+                earn(v);
+                S.stats.uploaded++;
+                if (f.t === 'virus') { S.stats.fines++; if (n.type !== 'terminal' || Math.random() < 0.5) Arcade.toast('🦠 You uploaded an infected file — fined $' + Math.abs(v).toFixed(0), 'bad', 1500); }
+                earnedWindow.push([performance.now(), v]);
+            } else if (P[n.type].sink === 'rp') {
+                const r = f.rp * (f.t === 'sample' && has('av2') ? 2 : 1) * shareBonus();
+                S.rp += r; S.stats.rp += r;
+            }
+            n.flash = 0.25;
+        }
+
+        function tick(dt) {
+            const draw = powerDraw(), cap = powerCap();
+            eff = draw > cap ? Math.max(0.15, cap / draw) : 1;
+            hackTick(dt);
+            for (const n of S.nodes) {
+                const d = P[n.type];
+                n.busy = false;
+                if (n.hacked > 0) { n.hacked -= dt; continue; }
+                if (n.type === 'terminal') {
+                    if (has('autoterm')) {
+                        n.acc += dt;
+                        if (n.acc >= 1) { n.acc -= 1; manualDownload(n, true); if (!S.wires.some(w => w.from === n.id)) manualUpload(n, true); }
+                    }
+                    // stored files feed connected wires
+                    if (n.store.length && S.wires.some(w => w.from === n.id) && n.out.length < 3) n.out.push(n.store.shift());
+                } else if (d.kind === 'source') {
+                    if (n.out.length < 5) {
+                        if (!n.next) n.next = rollFile(n.src || 'forum');
+                        n.acc += bandwidth(n) * dt; n.busy = true;
+                        if (n.acc >= n.next.s) { n.acc = 0; n.out.push(n.next); n.next = null; S.stats.downloaded++; }
+                    }
+                } else if (d.kind === 'sink') {
+                    if (n.buf.length) {
+                        n.busy = true;
+                        n.acc += bandwidth(n) * dt;
+                        while (n.buf.length && n.acc >= n.buf[0].s) { n.acc -= n.buf[0].s; sellFile(n, n.buf.shift()); }
+                        if (!n.buf.length) n.acc = 0;
+                    }
+                } else if (d.kind === 'filter') {
+                    while (n.buf.length && (n.o0 || []).length + (n.o1 || []).length < 6) {
+                        const f = n.buf.shift();
+                        (f.t === (n.ft || 'virus') ? (n.o0 = n.o0 || []) : (n.o1 = n.o1 || [])).push(f);
+                    }
+                } else if (d.kind === 'storage') {
+                    while (n.buf.length && n.out.length < 3) n.out.push(n.buf.shift());
+                } else if (d.kind === 'xform') {
+                    if (n.cur == null && n.buf.length && n.out.length < 5) { n.job = n.buf.shift(); n.cur = 0; }
+                    if (n.cur != null) {
+                        const speed = nodeSpeed(n) * (n.type === 'antivirus' && has('av2') ? 2 : 1);
+                        // clean files only need a quick check
+                        const t = n.type === 'antivirus' && n.job.t !== 'virus' ? d.t * 0.25 : d.t;
+                        n.cur += dt * speed / t; n.busy = true;
+                        if (n.cur >= 1) {
+                            let f = n.job;
+                            if (n.type === 'antivirus' && f.t === 'virus') { f = makeFile('sample'); bump('sample'); }
+                            else if (n.type === 'encryptor') { f = { ...f, e: true, v: f.v * 1.6, s: f.s * 1.05 }; bump('enc'); }
+                            n.out.push(f); n.cur = null; n.job = null;
+                        }
+                    }
+                } else if (d.kind === 'pack') {
+                    if (n.cur == null && n.buf.length >= d.need && n.out.length < 5) { n.job = n.buf.splice(0, d.need); n.cur = 0; }
+                    if (n.cur != null) {
+                        n.cur += dt * nodeSpeed(n) / d.t; n.busy = true;
+                        if (n.cur >= 1) {
+                            const v = n.job.reduce((a, f) => a + f.v, 0), s = n.job.reduce((a, f) => a + f.s, 0), rp = n.job.reduce((a, f) => a + f.rp, 0);
+                            n.out.push({ t: 'zip', v: v * 1.3, s: s * 0.35, rp: Math.round(rp * 0.8), e: n.job.every(f => f.e) });
+                            bump('zip'); n.cur = null; n.job = null;
+                        }
+                    }
+                } else if (d.kind === 'recipe') {
+                    if (n.cur == null && n.out.length < 5 && Object.entries(d.recipe).every(([k, v]) => n.buf.filter(f => f.t === k).length >= v)) {
+                        for (const [k, v] of Object.entries(d.recipe)) for (let i = 0; i < v; i++) n.buf.splice(n.buf.findIndex(f => f.t === k), 1);
+                        n.cur = 0;
+                    }
+                    if (n.cur != null) {
+                        n.cur += dt * nodeSpeed(n) / d.t; n.busy = true;
+                        if (n.cur >= 1) { n.out.push(makeFile(d.out)); bump(d.out); n.cur = null; }
+                    }
+                }
+                // push outputs into wires (round-robin over wires on each port)
+                for (let port = 0; port < outPorts(n.type); port++) {
+                    const q = n.type === 'filter' ? (port === 0 ? (n.o0 = n.o0 || []) : (n.o1 = n.o1 || [])) : n.out;
+                    if (!q.length) continue;
+                    const ws = S.wires.filter(w => w.from === n.id && (w.port || 0) === port);
+                    for (let i = 0; i < ws.length && q.length; i++) {
+                        const w = ws[((n['rr' + port] || 0) + i) % ws.length];
+                        const last = w.packets[w.packets.length - 1];
+                        if (w.packets.length < wireCap() && (!last || last.p > 0.2)) { w.packets.push({ f: q.shift(), p: 0 }); n['rr' + port] = ((n['rr' + port] || 0) + i + 1) % ws.length; }
+                    }
+                }
+            }
+            const sp = wireSpeed() * dt;
+            for (const n of S.nodes) n.jam = null;
+            for (const w of S.wires) {
+                const dst = byId(w.to);
+                for (let i = 0; i < w.packets.length; i++) {
+                    const p = w.packets[i];
+                    const limit = i === 0 ? 1 : w.packets[i - 1].p - 0.18;
+                    p.p = Math.min(limit, p.p + sp);
+                }
+                if (w.packets.length && w.packets[0].p >= 1 && dst) {
+                    const f = w.packets[0].f;
+                    if (accepts(dst, f)) { w.packets.shift(); dst.buf.push(f); }
+                    else if (P[dst.type].kind === 'recipe' && (f.e || P[dst.type].recipe[f.t] === undefined) || (P[dst.type].kind === 'pack' && (f.t === 'virus' || f.t === 'zip')) || (dst.type === 'encryptor' && (f.e || f.t === 'virus'))) dst.jam = fileName(f);
+                }
+            }
+        }
+        function bump(t) { S.stats.made[t] = (S.stats.made[t] || 0) + 1; }
+
+        /* ================= HACKERS ================= */
+        const hackStrength = () => Math.round(8 + Math.pow(Math.log10(S.stats.earned + 10), 2) * 3);
+        function hackTick(dt) {
+            if (S.stats.earned < 300 && !mods().hackEvery) return;
+            if (!S.hack) {
+                S.hackT = (S.hackT ?? 150) - dt;
+                if (S.hackT > 0) return;
+                const targets = S.nodes.filter(n => n.type !== 'terminal' && P[n.type].kind !== 'security');
+                if (!targets.length) { S.hackT = 30; return; }
+                const t = Arcade.pick(targets);
+                S.hack = { target: t.id, left: 22, str: hackStrength(), traced: 0 };
+                Arcade.toast(`🏴‍☠️ Hacker attack on your ${P[t.type].n}!`, 'bad', 2500);
+                Arcade.sfx('bad');
+                return;
+            }
+            S.hack.left -= dt;
+            if (S.hack.left > 0) return;
+            const h = S.hack, t = byId(h.target);
+            S.hack = null;
+            S.hackT = mods().hackEvery || Arcade.rand(150, 320);
+            const need = h.str * (1 - h.traced / 6);
+            if (firewallPower() >= need) {
+                S.stats.hacksBlocked++;
+                const pots = S.nodes.filter(n => n.type === 'honeypot').reduce((a, n) => a + n.lvl, 0);
+                const rp = pots ? Math.round(h.str * 4 * pots * shareBonus()) : 0;
+                S.rp += rp; S.stats.rp += rp;
+                Arcade.toast('🧱 Firewall blocked the attack!' + (rp ? ` 🍯 +${Arcade.fmt(rp)} RP` : ''), 'good', 2200);
+                Arcade.sfx('power');
+                return;
+            }
+            S.stats.hacksLost++;
+            if (Math.random() < 0.5 || !t) {
+                const stolen = Math.round(S.money * 0.08);
+                S.money -= stolen; S.stats.stolen += stolen;
+                Arcade.toast(`💸 Hackers stole $${Arcade.fmt(stolen)}! Build firewalls.`, 'bad', 2600);
+            } else {
+                t.hacked = 45;
+                Arcade.toast(`🔒 Hackers locked your ${P[t.type].n} for 45s! Build firewalls.`, 'bad', 2600);
+            }
+            Arcade.sfx('die');
+        }
+        function counterHack() {
+            if (!S.hack) return;
+            S.hack.traced = Math.min(6, S.hack.traced + 1);
+            Arcade.sfx('tick');
+            if (S.hack.traced >= 6) {
+                S.hack = null; S.hackT = mods().hackEvery || Arcade.rand(150, 320);
+                S.stats.hacksBlocked++;
+                Arcade.toast('🔎 You traced the hacker and cut them off!', 'good', 2000);
+                Arcade.sfx('win');
+            }
+        }
+        function refreshHack() {
+            const bar = $('hackBar');
+            bar.hidden = !S.hack;
+            if (!S.hack) return;
+            const t = byId(S.hack.target), need = Math.round(S.hack.str * (1 - S.hack.traced / 6)), fw = Math.round(firewallPower());
+            const html = `🏴‍☠️ <b>Attack on ${t ? P[t.type].ic + ' ' + P[t.type].n : 'your lab'}</b> · strength <b>${need}</b> vs firewall <b class="${fw >= need ? 'good' : 'bad'}">${fw}</b> · <b>${Math.ceil(S.hack.left)}s</b>
+                <button class="btn sm danger" id="traceBtn">🔎 Counter-hack ${S.hack.traced}/6</button>`;
+            if (bar.dataset.k !== html) { bar.dataset.k = html; bar.innerHTML = html; $('traceBtn').onclick = counterHack; }
+        }
+
+        function manualDownload(n, quiet) {
+            if (n.store.length >= 20) { if (!quiet) Arcade.toast('Terminal storage full — upload some files', 'bad', 1200); return; }
+            const f = rollFile('forum');
+            n.store.push(f);
+            S.stats.downloaded++;
+            if (!quiet) Arcade.sfx('click');
+        }
+        function manualUpload(n, quiet) {
+            if (!n.store.length) { if (!quiet) Arcade.toast('Nothing to upload — download a file first', null, 1000); return; }
+            // upload the most valuable file first
+            n.store.sort((a, b) => b.v - a.v);
+            const f = n.store.shift();
+            sellFile(n, f);
+            if (!quiet) Arcade.sfx(f.t === 'virus' ? 'bad' : 'coin');
+        }
+
+        /* ================= NODES & DOM ================= */
+        const layer = document.getElementById('layer'), desk = document.getElementById('desk');
+        const els = new Map();
+        let selected = null;
+        const multi = new Set();
+        let selMode = false;
+
+        function addNode(type, x, y) {
+            const n = { id: S.nextId++, type, x, y, lvl: 1, buf: [], out: [], acc: 0 };
+            if (type === 'downloader') n.src = 'forum';
+            if (type === 'filter') n.ft = 'virus';
+            if (type === 'terminal') n.store = [];
+            S.nodes.push(n);
+            return n;
+        }
+
+        function nodeEl(n) {
+            let el = els.get(n.id);
+            if (el) return el;
+            const d = P[n.type];
+            el = document.createElement('div');
+            el.className = 'node' + (n.type === 'terminal' ? ' terminal' : '');
+            const outs = outPorts(n.type);
+            el.innerHTML = `<div class="nhead"><span>${d.ic}</span><span>${d.n}</span><span class="lv"></span></div>
+                <div class="nbody"></div>
+                ${n.type === 'terminal' ? '' : `<div class="nfoot">${d.up ? '<button class="btn sm primary up"></button>' : ''}<button class="btn sm danger del" title="Uninstall (refunds half)">✕</button></div>`}
+                ${hasInput(n.type) ? '<div class="port in" title="Input"></div>' : ''}
+                ${outs === 1 ? '<div class="port out" data-port="0" title="Output"></div>' : ''}
+                ${outs === 2 ? '<div class="port out p0" data-port="0" title="Matching files"></div><div class="port out p1" data-port="1" title="Everything else"></div>' : ''}`;
+            const upb = el.querySelector('.up');
+            if (upb) upb.onclick = (e) => {
+                e.stopPropagation();
+                const c = upCost(n);
+                if (S.money < c) { Arcade.sfx('bad'); return; }
+                S.money -= c; n.lvl++; Arcade.sfx('coin'); refreshNode(n);
+            };
+            const del = el.querySelector('.del');
+            if (del) {
+                let armed = false;
+                del.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!armed) { armed = true; del.textContent = 'Sure?'; setTimeout(() => { armed = false; del.textContent = '✕'; }, 2000); return; }
+                    removeNode(n);
+                };
+            }
+            el.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                if (e.shiftKey || selMode) { if (n.type !== 'terminal') { multi.has(n.id) ? multi.delete(n.id) : multi.add(n.id); refreshSel(); } return; }
+                select(n);
+            });
+            el.querySelector('.nhead').addEventListener('pointerdown', (e) => startNodeDrag(e, n));
+            el.querySelectorAll('.port.out').forEach(p => p.addEventListener('pointerdown', (e) => startWire(e, n, +p.dataset.port)));
+            // static controls built once per node
+            const body = el.querySelector('.nbody');
+            if (n.type === 'terminal') {
+                body.innerHTML = `<div class="row2"><button class="btn sm primary" data-a="dl">⬇ Download</button><button class="btn sm" data-a="ul">⬆ Upload</button></div><div class="tinfo"></div>`;
+                body.querySelector('[data-a=dl]').onclick = (e) => { e.stopPropagation(); manualDownload(n); refreshNode(n); };
+                body.querySelector('[data-a=ul]').onclick = (e) => { e.stopPropagation(); manualUpload(n); refreshNode(n); };
+            } else if (d.kind === 'source') {
+                body.innerHTML = `<select data-a="src"></select><div class="info"></div>`;
+                const sel = body.querySelector('select');
+                sel.onpointerdown = (e) => e.stopPropagation();
+                sel.onchange = () => { n.src = sel.value; n.next = null; n.acc = 0; };
+            } else if (d.kind === 'filter') {
+                body.innerHTML = `<select data-a="ft"></select><div class="info"></div><span class="port-lbl" style="top:30%">match ▸</span><span class="port-lbl" style="top:66%">rest ▸</span>`;
+                const sel = body.querySelector('select');
+                sel.onpointerdown = (e) => e.stopPropagation();
+                sel.onchange = () => { n.ft = sel.value; };
+            } else body.innerHTML = '<div class="info"></div>';
+            layer.appendChild(el);
+            els.set(n.id, el);
+            return el;
+        }
+
+        function removeNode(n) {
+            if (n.type === 'terminal') return;
+            S.money += Math.round(P[n.type].cost * Math.pow(1.45, owned(n.type) - 1) * 0.5);
+            S.wires = S.wires.filter(w => w.from !== n.id && w.to !== n.id);
+            S.nodes = S.nodes.filter(x => x !== n);
+            els.get(n.id)?.remove();
+            els.delete(n.id);
+            if (selected === n) selected = null;
+            Arcade.sfx('pop');
+            renderShop();
+        }
+
+        function select(n) {
+            selected = n;
+            for (const [id, el] of els) el.classList.toggle('sel', !!n && id === n.id);
+        }
+
+        const pillsFor = (list) => {
+            const c = {};
+            for (const f of list) { const k = fileIcon(f); c[k] = (c[k] || 0) + 1; }
+            return Object.entries(c).map(([k, v]) => `<span class="pill">${k} ${v}</span>`).join('');
+        };
+        function refreshNode(n) {
+            const el = nodeEl(n), d = P[n.type];
+            el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+            el.classList.toggle('busy', !!n.busy);
+            el.classList.toggle('jam', !!n.jam);
+            el.classList.toggle('hacked', n.hacked > 0);
+            el.classList.toggle('multi', multi.has(n.id));
+            el.querySelector('.lv').textContent = n.type === 'terminal' ? '' : 'Lv ' + n.lvl;
+            const up = el.querySelector('.up');
+            if (up) { const c = upCost(n); up.textContent = `▲ Lv ${n.lvl + 1} · $${Arcade.fmt(c)}`; up.disabled = S.money < c; }
+            let html = '';
+            const mb = (x) => x < 10 ? x.toFixed(1) : Math.round(x);
+            if (n.type === 'terminal') {
+                html = n.store.length ? `<div class="pills">${pillsFor(n.store)}</div>` : '<span class="dim">No files stored.</span>';
+                html += `<span>${n.store.length}/20 stored${has('autoterm') ? ' · auto 1/s' : ''}</span>`;
+                const t = el.querySelector('.tinfo');
+                if (t.innerHTML !== html) t.innerHTML = html;
+                return;
+            }
+            if (d.kind === 'source') {
+                const sel = el.querySelector('select');
+                const opts = Object.entries(SOURCES).filter(([, s]) => !s.tech || has(s.tech)).map(([k, s]) => `<option value="${k}" ${k === (n.src || 'forum') ? 'selected' : ''}>🌐 ${s.n}</option>`).join('');
+                if (sel.dataset.v !== opts) { sel.innerHTML = opts; sel.dataset.v = opts; }
+                html = `<span>${mb(bandwidth(n))} MB/s${n.next ? ` · ${fileIcon(n.next)} ${mb(n.acc)}/${mb(n.next.s)} MB` : ''}</span><div class="bar"><i style="width:${n.next ? n.acc / n.next.s * 100 : 0}%"></i></div>`;
+            } else if (d.kind === 'filter') {
+                const sel = el.querySelector('select');
+                const opts = Object.entries(FT).filter(([k]) => k === 'virus' || k === 'zip' || seenType(k)).map(([k, t]) => `<option value="${k}" ${k === n.ft ? 'selected' : ''}>${t.ic} ${t.n}</option>`).join('');
+                if (sel.dataset.v !== opts) { sel.innerHTML = opts; sel.dataset.v = opts; }
+                html = `<span>Waiting: ${n.buf.length + (n.o0 || []).length + (n.o1 || []).length}</span>`;
+            } else if (d.kind === 'sink') {
+                html = `<span>${mb(bandwidth(n))} MB/s ${d.sink === 'cash' ? 'upload' : d.sink === 'rp' ? 'analysis' : 'shredding'}</span>`;
+                html += `<div class="pills">${n.buf.length ? pillsFor(n.buf) : '<span class="dim">waiting for files…</span>'}</div>`;
+            } else if (d.kind === 'storage') {
+                html = `<span>${n.buf.length + n.out.length}/${d.cap * n.lvl} files</span><div class="bar"><i style="width:${(n.buf.length + n.out.length) / (d.cap * n.lvl) * 100}%"></i></div>`;
+            } else if (d.kind === 'power') {
+                html = mods().noGen ? '<span class="warn">Generators are banned here</span>' : `<span>+${40 * n.lvl}W capacity</span>`;
+            } else if (d.kind === 'security') {
+                html = n.type === 'firewall' ? `<span>Strength ${Math.round(10 * n.lvl * (has('ids') ? 2 : 1) * techSpeed())} · total ${Math.round(firewallPower())}</span>` : `<span>${n.lvl}× research from blocked attacks</span>`;
+            } else if (d.kind === 'recipe') {
+                html = `<div class="pills">${Object.entries(d.recipe).map(([k, v]) => `<span class="pill">${FT[k].ic} ${n.buf.filter(f => f.t === k).length}/${v}</span>`).join('')}<span class="pill">→ ${FT[d.out].ic}</span></div>`;
+                html += `<div class="bar"><i style="width:${(n.cur || 0) * 100}%"></i></div>`;
+            } else {
+                html = `<span>${d.d}</span><div class="pills">${n.buf.length ? pillsFor(n.buf) : ''}${n.type === 'compressor' ? `<span class="pill">${n.buf.length}/${d.need}</span>` : ''}</div><div class="bar"><i style="width:${(n.cur || 0) * 100}%"></i></div>`;
+            }
+            if (d.power > 0 && eff < 1) html += `<span class="warn">⚡ Low power: ${Math.round(eff * 100)}% speed</span>`;
+            if (n.jam) html += `<span class="warn">Jammed: can't use ${n.jam}</span>`;
+            if (n.hacked > 0) html += `<span class="warn">🔒 Hacked — back in ${Math.ceil(n.hacked)}s</span>`;
+            const outQ = n.type === 'filter' ? (n.o0 || []).length + (n.o1 || []).length : n.out.length;
+            if (outPorts(n.type) && outQ >= 5 && !S.wires.some(w => w.from === n.id)) html += '<span class="warn">Output full — connect a wire</span>';
+            const info = el.querySelector('.info');
+            if (info.innerHTML !== html) info.innerHTML = html;
+        }
+        const seenType = (k) => ['text', 'image'].includes(k) || (S.stats.made[k] || 0) > 0 || (k === 'audio' && has('src_music')) || (k === 'video' && has('src_video')) || (k === 'sample' && has('antivirus'));
+
+        /* ================= WIRES & INPUT ================= */
+        const canvas = document.getElementById('wires'), ctx = canvas.getContext('2d');
+        let VW = 0, VH = 0, DPR = 1;
+        function resize() {
+            const r = desk.getBoundingClientRect();
+            DPR = Math.min(2, devicePixelRatio || 1);
+            VW = r.width; VH = r.height;
+            canvas.width = VW * DPR; canvas.height = VH * DPR;
+        }
+        const applyCam = () => { layer.style.transform = `translate(${S.cam.x}px, ${S.cam.y}px) scale(${S.cam.z})`; };
+        const toWorld = (sx, sy) => ({ x: (sx - S.cam.x) / S.cam.z, y: (sy - S.cam.y) / S.cam.z });
+        const local = (e) => { const r = desk.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+
+        function portPos(n, side, port) {
+            const el = nodeEl(n);
+            const h = el.offsetHeight;
+            const y = side === 'out' && outPorts(n.type) === 2 ? (port ? 0.72 : 0.38) * h : h / 2;
+            return { x: n.x + (side === 'out' ? el.offsetWidth : 0), y: n.y + y };
+        }
+        function bez(a, b) {
+            const dx = Math.max(60, Math.abs(b.x - a.x) * 0.5);
+            return [a, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }, b];
+        }
+        function bezAt(c, t) {
+            const u = 1 - t;
+            return {
+                x: u * u * u * c[0].x + 3 * u * u * t * c[1].x + 3 * u * t * t * c[2].x + t * t * t * c[3].x,
+                y: u * u * u * c[0].y + 3 * u * u * t * c[1].y + 3 * u * t * t * c[2].y + t * t * t * c[3].y,
+            };
+        }
+
+        let drag = null;
+        const pointers = new Map();
+        let pinch = null;
+
+        function startNodeDrag(e, n) {
+            e.stopPropagation();
+            const p = local(e), w = toWorld(p.x, p.y);
+            drag = { kind: 'node', n, ox: w.x - n.x, oy: w.y - n.y };
+            desk.setPointerCapture(e.pointerId);
+        }
+        function startWire(e, n, port) {
+            e.stopPropagation();
+            const p = local(e);
+            drag = { kind: 'wire', from: n, port, to: toWorld(p.x, p.y) };
+            desk.setPointerCapture(e.pointerId);
+        }
+
+        desk.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.float') || e.target.closest('.overlay')) return;
+            const p = local(e);
+            pointers.set(e.pointerId, p);
+            if (pointers.size === 2) {
+                const [a, b] = [...pointers.values()];
+                pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cam: { ...S.cam }, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+                drag = null;
+                return;
+            }
+            if (drag) return;
+            if (e.shiftKey || selMode) {
+                drag = { kind: 'box', sx: p.x, sy: p.y, x: p.x, y: p.y };
+                desk.setPointerCapture(e.pointerId);
+                return;
+            }
+            drag = { kind: 'pan', sx: p.x, sy: p.y, cx: S.cam.x, cy: S.cam.y, moved: false };
+            desk.classList.add('panning');
+            desk.setPointerCapture(e.pointerId);
+            select(null);
+        });
+        desk.addEventListener('pointermove', (e) => {
+            const p = local(e);
+            if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
+            if (pinch && pointers.size >= 2) {
+                const [a, b] = [...pointers.values()];
+                const z = Arcade.clamp(pinch.cam.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, 0.3, 1.8);
+                const wx = (pinch.mid.x - pinch.cam.x) / pinch.cam.z, wy = (pinch.mid.y - pinch.cam.y) / pinch.cam.z;
+                const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+                S.cam = { z, x: mid.x - wx * z, y: mid.y - wy * z };
+                applyCam();
+                return;
+            }
+            if (!drag) return;
+            if (drag.kind === 'pan') {
+                if (Math.hypot(p.x - drag.sx, p.y - drag.sy) > 4) drag.moved = true;
+                S.cam.x = drag.cx + p.x - drag.sx; S.cam.y = drag.cy + p.y - drag.sy;
+                applyCam();
+            } else if (drag.kind === 'node') {
+                const w = toWorld(p.x, p.y);
+                drag.n.x = Math.round(w.x - drag.ox); drag.n.y = Math.round(w.y - drag.oy);
+                refreshNode(drag.n);
+            } else if (drag.kind === 'wire') drag.to = toWorld(p.x, p.y);
+            else if (drag.kind === 'box') {
+                drag.x = p.x; drag.y = p.y;
+                const b = $('selBox');
+                b.hidden = false;
+                Object.assign(b.style, { left: Math.min(drag.sx, p.x) + 'px', top: Math.min(drag.sy, p.y) + 'px', width: Math.abs(p.x - drag.sx) + 'px', height: Math.abs(p.y - drag.sy) + 'px' });
+            }
+        });
+        const up = (e) => {
+            pointers.delete(e.pointerId);
+            if (pinch) { if (pointers.size < 2) pinch = null; return; }
+            if (!drag) return;
+            const p = local(e);
+            if (drag.kind === 'wire') {
+                const hit = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('node'));
+                const dst = hit && S.nodes.find(n => els.get(n.id) === hit);
+                if (dst && dst !== drag.from) connect(drag.from, dst, drag.port);
+            } else if (drag.kind === 'box') {
+                $('selBox').hidden = true;
+                const a = toWorld(Math.min(drag.sx, drag.x), Math.min(drag.sy, drag.y)), b = toWorld(Math.max(drag.sx, drag.x), Math.max(drag.sy, drag.y));
+                for (const n of S.nodes) {
+                    if (n.type === 'terminal') continue;
+                    const el = nodeEl(n), cx = n.x + el.offsetWidth / 2, cy = n.y + el.offsetHeight / 2;
+                    if (cx >= a.x && cx <= b.x && cy >= a.y && cy <= b.y) multi.add(n.id);
+                }
+                refreshSel();
+            } else if (drag.kind === 'pan' && !drag.moved) {
+                const w = toWorld(p.x, p.y);
+                const wire = nearestWire(w);
+                if (wire) { S.wires = S.wires.filter(x => x !== wire); Arcade.sfx('pop'); Arcade.toast('Wire cut — files on it were lost', null, 1100); }
+            }
+            desk.classList.remove('panning');
+            drag = null;
+        };
+        desk.addEventListener('pointerup', up);
+        desk.addEventListener('pointercancel', up);
+        desk.addEventListener('wheel', (e) => {
+            if (e.target.closest('.float')) return;
+            e.preventDefault();
+            const p = local(e);
+            const w = toWorld(p.x, p.y);
+            S.cam.z = Arcade.clamp(S.cam.z * Math.exp(-e.deltaY * 0.0015), 0.3, 1.8);
+            S.cam.x = p.x - w.x * S.cam.z; S.cam.y = p.y - w.y * S.cam.z;
+            applyCam();
+        }, { passive: false });
+
+        function connect(a, b, port) {
+            if (!hasInput(b.type)) { Arcade.toast(`${P[b.type].n} has no input`, 'bad'); Arcade.sfx('bad'); return; }
+            if (S.wires.some(w => w.from === a.id && w.to === b.id && (w.port || 0) === port)) return;
+            S.wires.push({ from: a.id, to: b.id, port, packets: [] });
+            Arcade.sfx('select');
+        }
+
+        function nearestWire(w) {
+            let best = null, bd = 10 / S.cam.z;
+            for (const wire of S.wires) {
+                const a = byId(wire.from), b = byId(wire.to);
+                if (!a || !b) continue;
+                const c = bez(portPos(a, 'out', wire.port), portPos(b, 'in'));
+                for (let t = 0; t <= 1; t += 0.04) {
+                    const q = bezAt(c, t);
+                    const d = Math.hypot(q.x - w.x, q.y - w.y);
+                    if (d < bd) { bd = d; best = wire; }
+                }
+            }
+            return best;
+        }
+
+        function drawWires(time) {
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            ctx.clearRect(0, 0, VW, VH);
+            ctx.setTransform(DPR * S.cam.z, 0, 0, DPR * S.cam.z, DPR * S.cam.x, DPR * S.cam.y);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (const w of S.wires) {
+                const a = byId(w.from), b = byId(w.to);
+                if (!a || !b) continue;
+                const c = bez(portPos(a, 'out', w.port), portPos(b, 'in'));
+                const col = a.type === 'filter' && w.port === 1 ? '#fb923c' : '#22d3ee';
+                ctx.strokeStyle = col + '44'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); ctx.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y); ctx.stroke();
+                ctx.setLineDash([6, 10]); ctx.lineDashOffset = -time * 30;
+                ctx.strokeStyle = col + '99'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
+                for (const p of w.packets) {
+                    const q = bezAt(c, p.p);
+                    const T = FT[p.f.t];
+                    ctx.fillStyle = '#0b1020'; ctx.strokeStyle = T.c; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.roundRect(q.x - 9, q.y - 9, 18, 18, 5); ctx.fill(); ctx.stroke();
+                    ctx.font = '11px "Segoe UI Emoji", sans-serif';
+                    ctx.fillText(T.ic, q.x, q.y + 1);
+                    if (p.f.e) { ctx.font = '7px sans-serif'; ctx.fillText('🔒', q.x + 8, q.y - 8); }
+                }
+            }
+            if (drag && drag.kind === 'wire') {
+                const a = portPos(drag.from, 'out', drag.port);
+                const c = bez(a, drag.to);
+                ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+                ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); ctx.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        /* ================= PANELS ================= */
+        const $ = (id) => document.getElementById(id);
+        let tab = 'goals';
+
+        function renderShop() {
+            const host = $('shop');
+            host.querySelectorAll('.buy, h4, .shop-note').forEach(x => x.remove());
+            let cat = null;
+            for (const [type, d] of Object.entries(P)) {
+                if (!d.cat) continue;
+                const locked = d.tech && !has(d.tech);
+                // only tease the next couple of locked programs
+                if (locked && TECH.findIndex(t => t.id === d.tech) > TECH.findIndex(t => !has(t.id)) + 8) continue;
+                if (d.cat !== cat) { cat = d.cat; host.insertAdjacentHTML('beforeend', `<h4>${cat}</h4>`); }
+                const b = document.createElement('button');
+                b.className = 'buy';
+                b.dataset.type = type;
+                b.innerHTML = `<span class="ic">${locked ? '🔒' : d.ic}</span><b>${d.n}</b><span class="price"></span><small>${locked ? 'Research ' + TECH.find(t => t.id === d.tech).n : d.d + (d.power > 0 ? ` · ${d.power}W` : '')}</small>`;
+                b.onclick = () => buy(type);
+                host.appendChild(b);
+            }
+            host.insertAdjacentHTML('beforeend', '<p class="tiny dim shop-note" style="margin:6px 0 0">New programs appear in the middle of your view. Uninstalling refunds half.</p>');
+            refreshShop();
+        }
+        function refreshShop() {
+            document.querySelectorAll('.buy').forEach(b => {
+                const type = b.dataset.type, d = P[type];
+                const locked = d.tech && !has(d.tech);
+                const c = buyCost(type);
+                b.querySelector('.price').textContent = locked ? '' : '$' + Arcade.fmt(c);
+                b.disabled = locked || S.money < c;
+            });
+        }
+        function buy(type) {
+            const c = buyCost(type);
+            if (type === 'generator' && mods().noGen) { Arcade.toast('Generators are banned in this challenge', 'bad'); Arcade.sfx('bad'); return; }
+            if (S.money < c) { Arcade.sfx('bad'); return; }
+            S.money -= c;
+            const center = toWorld(VW / 2, VH / 2);
+            let px = center.x - 93, py = center.y - 60;
+            // must not overlap another program, and must not hide under the side panels
+            const L = VW > 900 ? 255 : 200, Rr = VW > 900 ? 300 : 225;
+            const onScreen = (x, y) => { const sx = x * S.cam.z + S.cam.x, sy = y * S.cam.z + S.cam.y; return sx > L && sx + 190 * S.cam.z < VW - Rr && sy > 8 && sy + 150 * S.cam.z < VH - 50; };
+            const free = (x, y) => onScreen(x, y) && S.nodes.every(o => Math.abs(o.x - x) > 215 || Math.abs(o.y - y) > 160);
+            outer: for (let r = 0; r < 9; r++) for (let i = -r; i <= r; i++) for (const [dx, dy] of [[i, -r], [i, r], [-r, i], [r, i]]) {
+                const x = center.x - 93 + dx * 225, y = center.y - 60 + dy * 170;
+                if (free(x, y)) { px = x; py = y; break outer; }
+            }
+            const n = addNode(type, Math.round(px), Math.round(py));
+            if (type === 'generator') S.stats.gens = owned('generator');
+            if (owned('downloader') && owned('uploader')) S.stats.auto = 1;
+            refreshNode(n);
+            select(n);
+            Arcade.sfx('coin');
+            renderShop();
+        }
+
+        function goalProgress(g) {
+            if (g.k === 'made') return S.stats.made[g.item] || 0;
+            return S.stats[g.k] || 0;
+        }
+        const ipoShares = () => (S.runEarned >= IPO_MIN ? Math.floor(10 * Math.sqrt(S.runEarned / IPO_MIN)) : 0);
+        function renderSide() {
+            document.querySelectorAll('.side .tabs .btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            const host = $('sideBody');
+            host.innerHTML = '';
+            if (tab === 'goals') {
+                const g = GOALS[S.goal];
+                if (g) host.insertAdjacentHTML('beforeend', `<div class="goal"><b>${g.d}</b><small>Reward: ${g.cash ? '$' + Arcade.fmt(g.cash) : ''}${g.rp ? ' +' + Arcade.fmt(g.rp) + ' RP' : ''}</small><div class="bar"><i id="goalBar"></i></div><small id="goalTxt" style="margin:6px 0 0"></small></div>`);
+                else host.insertAdjacentHTML('beforeend', '<div class="goal"><b>Every milestone complete! 🎉</b></div>');
+                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:2px">${S.goal}/${GOALS.length} milestones</p>`);
+                for (let i = S.goal - 1; i >= Math.max(0, S.goal - 5); i--) host.insertAdjacentHTML('beforeend', `<div class="goal done"><b>✓ ${GOALS[i].d}</b></div>`);
+            } else if (tab === 'tech') {
+                const list = TECH.slice().sort((a, b) => (has(a.id) - has(b.id)) || a.cost - b.cost);
+                for (const t of list) {
+                    const own = has(t.id), blocked = t.req && !has(t.req);
+                    const d = document.createElement('div');
+                    d.className = 'tech' + (own ? ' owned' : !blocked && S.rp >= t.cost ? ' ready' : '');
+                    d.innerHTML = `<b>${t.n}</b><button class="btn sm ${own ? '' : 'primary'}" data-tech="${t.id}">${own ? '✓' : Arcade.fmt(t.cost) + ' RP'}</button><small>${blocked ? '🔒 needs ' + TECH.find(x => x.id === t.req).n : t.d}</small>`;
+                    d.querySelector('button').onclick = () => {
+                        if (own || blocked || S.rp < t.cost) return;
+                        S.rp -= t.cost; S.tech[t.id] = true;
+                        Arcade.toast('Researched ' + t.n, 'gold'); Arcade.sfx('level');
+                        renderSide(); renderShop();
+                    };
+                    host.appendChild(d);
+                }
+            } else if (tab === 'bp') {
+                const bps = loadBps();
+                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:2px">Hold <kbd>Shift</kbd> and drag (or use ⬚ Select) to pick programs, then save them. Pasting buys fresh copies at level 1 with the same wiring and settings.</p>`);
+                if (!bps.length) host.insertAdjacentHTML('beforeend', '<div class="bp"><b>No blueprints yet</b><small>Select a working setup and press “Save as blueprint”.</small></div>');
+                bps.forEach((bp, i) => {
+                    const d = document.createElement('div');
+                    d.className = 'bp';
+                    const locked = bp.nodes.some(x => P[x.type].tech && !has(P[x.type].tech));
+                    d.innerHTML = `<b></b><small>${bp.nodes.map(x => P[x.type].ic).join('')} · ${bp.wires.length} wires</small><div class="row2"><button class="btn sm primary" data-a="paste"></button><button class="btn sm danger" data-a="del">✕</button></div>`;
+                    d.querySelector('b').textContent = bp.name;
+                    const pb = d.querySelector('[data-a=paste]');
+                    pb.dataset.bp = i;
+                    pb.textContent = locked ? '🔒 needs research' : 'Paste · $' + Arcade.fmt(bpCost(bp));
+                    pb.disabled = locked;
+                    pb.onclick = () => pasteBp(bp);
+                    d.querySelector('[data-a=del]').onclick = () => { if (confirm('Delete blueprint "' + bp.name + '"?')) { bps.splice(i, 1); saveBps(bps); renderSide(); } };
+                    host.appendChild(d);
+                });
+            } else if (tab === 'chal') {
+                const rec = Arcade.load('arcade.uploadlabs.challenges', {}) || {};
+                host.insertAdjacentHTML('beforeend', `<p class="tiny dim" style="margin:2px">Timed scenarios in a separate lab — your company is saved and waiting. First clear of each gives <b>+3 shares</b>.</p>`);
+                for (const c of CHALLENGES) {
+                    const d = document.createElement('div');
+                    d.className = 'chal' + (rec[c.id] ? ' done' : '');
+                    d.innerHTML = `<b>${c.ic} ${c.n}</b><small>${c.d}<br>${rec[c.id] ? '✅ Best: ' + Arcade.time(rec[c.id]) : 'Time limit ' + Arcade.time(c.time)}</small><button class="btn sm primary block">${S.challenge && S.challenge.id === c.id ? 'Restart' : 'Start'}</button>`;
+                    d.querySelector('button').onclick = () => startChallenge(c);
+                    host.appendChild(d);
+                }
+                if (S.challenge) {
+                    const q = document.createElement('button');
+                    q.className = 'btn sm danger block'; q.textContent = 'Quit challenge';
+                    q.onclick = () => endChallenge(false, true);
+                    host.appendChild(q);
+                }
+            } else if (tab === 'stats') {
+                host.innerHTML = '<div id="statList"></div>';
+            } else {
+                host.innerHTML = `<div class="goal"><b>📈 Initial public offering</b><small>Sell your company to investors: everything resets (money, programs, research) except milestones, but you keep your <b>shares</b>. Each share gives <b>+4% file value</b> and <b>+2% speed</b>, forever.</small>
+                    <div class="statrow"><span>Earned this run</span><b id="ipoRun"></b></div>
+                    <div class="statrow"><span>Shares now</span><b id="ipoHave"></b></div>
+                    <div class="statrow"><span>IPO would give</span><b id="ipoGain"></b></div>
+                    <button class="btn primary block" id="ipoBtn" style="margin-top:8px"></button></div>`;
+                let armed = false;
+                $('ipoBtn').onclick = () => {
+                    if (!ipoShares()) return;
+                    if (!armed) { armed = true; $('ipoBtn').textContent = 'Tap again to go public'; setTimeout(() => { armed = false; }, 3000); return; }
+                    doIpo();
+                };
+            }
+            refreshSide();
+        }
+        function refreshSide() {
+            const g = GOALS[S.goal];
+            if (tab === 'goals' && g && $('goalBar')) {
+                const p = Math.min(g.n, goalProgress(g));
+                $('goalBar').style.width = (p / g.n * 100) + '%';
+                $('goalTxt').textContent = `${Arcade.fmt(p)} / ${Arcade.fmt(g.n)}`;
+            }
+            if (tab === 'tech') document.querySelectorAll('[data-tech]').forEach(b => {
+                const t = TECH.find(x => x.id === b.dataset.tech);
+                b.disabled = has(t.id) || (t.req && !has(t.req)) || S.rp < t.cost;
+            });
+            if (tab === 'stats' && $('statList')) {
+                const rows = [['Earned (all time)', '$' + Arcade.fmt(S.stats.earned)], ['Earned this run', '$' + Arcade.fmt(S.runEarned)], ['Files downloaded', Arcade.fmt(S.stats.downloaded)], ['Files uploaded', Arcade.fmt(S.stats.uploaded)], ['Research earned', Arcade.fmt(S.stats.rp) + ' RP'], ['Virus fines', S.stats.fines], ['Programs installed', S.nodes.length - 1], ['Power', `${Math.round(powerDraw())}W / ${powerCap()}W`],
+                    ['Attacks blocked', S.stats.hacksBlocked || 0], ['Attacks lost', S.stats.hacksLost || 0], ['Stolen by hackers', '$' + Arcade.fmt(S.stats.stolen || 0)], ['Firewall strength', Math.round(firewallPower())]];
+                for (const [k, t] of Object.entries(FT)) if (S.stats.made[k]) rows.push([`${t.ic} ${t.n} made`, Arcade.fmt(S.stats.made[k])]);
+                if (S.stats.made.enc) rows.push(['🔒 Encrypted', Arcade.fmt(S.stats.made.enc)]);
+                const html = rows.map(([a, b]) => `<div class="statrow"><span>${a}</span><b>${b}</b></div>`).join('');
+                if ($('statList').innerHTML !== html) $('statList').innerHTML = html;
+            }
+            if (tab === 'ipo' && $('ipoBtn')) {
+                $('ipoRun').textContent = '$' + Arcade.fmt(S.runEarned);
+                $('ipoHave').textContent = S.shares;
+                $('ipoGain').textContent = '+' + ipoShares();
+                if (!$('ipoBtn').textContent.startsWith('Tap')) $('ipoBtn').textContent = ipoShares() ? `Go public · +${ipoShares()} shares` : `Earn $${Arcade.fmt(IPO_MIN)} this run first`;
+                $('ipoBtn').disabled = !ipoShares();
+            }
+        }
+        function checkGoals() {
+            if (S.challenge) return;
+            let changed = false;
+            while (S.goal < GOALS.length && goalProgress(GOALS[S.goal]) >= GOALS[S.goal].n) {
+                const g = GOALS[S.goal];
+                if (g.cash) earn(g.cash);
+                if (g.rp) S.rp += g.rp;
+                Arcade.toast(`🎯 ${g.d}` + (g.cash ? ` · +$${Arcade.fmt(g.cash)}` : '') + (g.rp ? ` · +${Arcade.fmt(g.rp)} RP` : ''), 'gold', 3500);
+                Arcade.sfx('win');
+                S.goal++; changed = true;
+            }
+            if (changed && tab === 'goals') renderSide();
+        }
+        function doIpo() {
+            const gain = ipoShares();
+            if (!gain) return;
+            const keep = { shares: S.shares + gain, goal: S.goal, stats: S.stats, seenHelp: true, nextId: 1 };
+            keep.stats.ipos = (keep.stats.ipos || 0) + 1;
+            for (const el of els.values()) el.remove();
+            els.clear();
+            S = Object.assign(fresh(), keep);
+            S.money = 50 * S.shares;
+            const t = addNode('terminal', 140, 160);
+            S.cam = { x: VW / 2 - 245, y: VH / 2 - 230, z: 1 };
+            applyCam();
+            refreshNode(t);
+            Arcade.toast(`📈 You went public! +${gain} shares · starting cash $${Arcade.fmt(S.money)}`, 'gold', 4000);
+            Arcade.sfx('win');
+            tab = 'goals';
+            renderShop(); renderSide();
+            persist();
+        }
+        document.querySelectorAll('.side .tabs .btn').forEach(b => b.onclick = () => { tab = b.dataset.tab; renderSide(); });
+
+        /* ================= BLUEPRINTS ================= */
+        const BP_KEY = 'arcade.uploadlabs.blueprints';
+        const loadBps = () => Arcade.load(BP_KEY, []) || [];
+        const saveBps = (b) => Arcade.save(BP_KEY, b);
+        function refreshSel() {
+            for (const n of S.nodes) { const el = els.get(n.id); if (el) el.classList.toggle('multi', multi.has(n.id)); }
+            $('selBar').hidden = !multi.size;
+            $('legend').hidden = multi.size > 0;
+            Arcade.text('selN', multi.size);
+        }
+        function bpCost(bp) {
+            const add = {};
+            let c = 0;
+            for (const x of bp.nodes) { add[x.type] = (add[x.type] || 0) + 1; c += Math.round(P[x.type].cost * Math.pow(1.45, owned(x.type) + add[x.type] - 1)); }
+            return c;
+        }
+        $('bpSave').onclick = () => {
+            const list = S.nodes.filter(n => multi.has(n.id));
+            if (!list.length) return;
+            const name = (prompt('Name this blueprint:', list.map(n => P[n.type].ic).join('') + ' setup') || '').trim().slice(0, 30);
+            if (!name) return;
+            const x0 = Math.min(...list.map(n => n.x)), y0 = Math.min(...list.map(n => n.y));
+            const idx = new Map(list.map((n, i) => [n.id, i]));
+            const bp = {
+                name,
+                nodes: list.map(n => ({ type: n.type, dx: n.x - x0, dy: n.y - y0, src: n.src, ft: n.ft })),
+                wires: S.wires.filter(w => idx.has(w.from) && idx.has(w.to)).map(w => ({ a: idx.get(w.from), b: idx.get(w.to), port: w.port || 0 })),
+            };
+            const bps = loadBps(); bps.push(bp); saveBps(bps);
+            multi.clear(); refreshSel();
+            Arcade.toast(`📐 Saved blueprint "${name}"`, 'good');
+            Arcade.sfx('coin');
+            tab = 'bp'; renderSide();
+        };
+        $('selClear').onclick = () => { multi.clear(); refreshSel(); };
+        $('selBtn').onclick = () => { selMode = !selMode; $('selBtn').classList.toggle('active', selMode); Arcade.toast(selMode ? 'Select mode: drag a box or tap programs' : 'Select mode off', null, 1200); };
+        function pasteBp(bp) {
+            if (bp.nodes.some(x => P[x.type].tech && !has(P[x.type].tech))) return;
+            if (bp.nodes.some(x => x.type === 'generator') && mods().noGen) { Arcade.toast('Generators are banned in this challenge', 'bad'); return; }
+            const c = bpCost(bp);
+            if (S.money < c) { Arcade.toast('Need $' + Arcade.fmt(c), 'bad'); Arcade.sfx('bad'); return; }
+            S.money -= c;
+            const w = Math.max(...bp.nodes.map(x => x.dx)) + 190, h = Math.max(...bp.nodes.map(x => x.dy)) + 150;
+            const center = toWorld(VW / 2, VH / 2);
+            // slide right until the pasted block doesn't sit on existing programs
+            let ox = center.x - w / 2, oy = center.y - h / 2;
+            for (let k = 0; k < 30 && S.nodes.some(o => o.x > ox - 200 && o.x < ox + w + 10 && o.y > oy - 150 && o.y < oy + h + 10); k++) ox += 230;
+            const made = bp.nodes.map(x => { const n = addNode(x.type, Math.round(ox + x.dx), Math.round(oy + x.dy)); if (x.src) n.src = x.src; if (x.ft) n.ft = x.ft; return n; });
+            for (const wi of bp.wires) S.wires.push({ from: made[wi.a].id, to: made[wi.b].id, port: wi.port, packets: [] });
+            if (owned('downloader') && owned('uploader')) S.stats.auto = 1;
+            S.stats.gens = owned('generator');
+            made.forEach(refreshNode);
+            S.cam.x = VW / 2 - (ox + w / 2) * S.cam.z; S.cam.y = VH / 2 - (oy + h / 2) * S.cam.z; applyCam();
+            Arcade.toast(`📐 Pasted "${bp.name}" · $${Arcade.fmt(c)}`, 'gold');
+            Arcade.sfx('level');
+            renderShop(); renderSide();
+        }
+
+        /* ================= CHALLENGES ================= */
+        function resetDesk() { for (const el of els.values()) el.remove(); els.clear(); multi.clear(); selected = null; refreshSel(); }
+        function startChallenge(c) {
+            if (!S.challenge) persist();
+            resetDesk();
+            S = Object.assign(fresh(), { challenge: { id: c.id, t: 0 }, seenHelp: true, money: c.start.money, rp: c.start.rp || 0 });
+            for (const t of c.start.tech || []) S.tech[t] = true;
+            if (c.mods && c.mods.hackEvery) S.hackT = c.mods.hackEvery;
+            const t = addNode('terminal', 140, 160);
+            t.store = [];
+            S.cam = { x: VW / 2 - 245, y: VH / 2 - 230, z: 1 };
+            applyCam(); refreshNode(t);
+            tab = 'chal';
+            renderShop(); renderSide();
+            Arcade.toast(`${c.ic} Challenge: ${c.d}`, 'gold', 4000);
+            Arcade.sfx('level');
+        }
+        const chalProgress = (c) => (c.goal.k === 'made' ? S.stats.made[c.goal.item] || 0 : S.stats[c.goal.k] || 0);
+        function challengeTick(dt) {
+            if (!S.challenge) { $('chalBar').hidden = true; return; }
+            const c = CHALLENGES.find(x => x.id === S.challenge.id);
+            S.challenge.t += dt;
+            const left = c.time - S.challenge.t, p = chalProgress(c);
+            const html = `${c.ic} <b>${c.n}</b> · ${Arcade.fmt(Math.min(p, c.goal.n))} / ${Arcade.fmt(c.goal.n)} · <b class="${left < 30 ? 'bad' : ''}">${Arcade.time(Math.max(0, left))}</b>${c.fail ? ` · ${c.fail.k === 'fines' ? 'fines' : 'stolen'} ${c.fail.k === 'stolen' ? '$' + Arcade.fmt(S.stats.stolen) : S.stats.fines}/${c.fail.k === 'stolen' ? '$' + Arcade.fmt(c.fail.n) : c.fail.n - 1}` : ''} <button class="btn sm ghost" id="chalQuit">Quit</button>`;
+            const bar = $('chalBar');
+            bar.hidden = false;
+            bar.classList.toggle('low', !!S.hack);
+            if (bar.dataset.k !== html) { bar.dataset.k = html; bar.innerHTML = html; $('chalQuit').onclick = () => endChallenge(false, true); }
+            if (p >= c.goal.n) endChallenge(true);
+            else if (c.fail && (S.stats[c.fail.k] || 0) >= c.fail.n) endChallenge(false);
+            else if (left <= 0) endChallenge(false);
+        }
+        let lastChal = null;
+        function endChallenge(won, quit) {
+            const c = CHALLENGES.find(x => x.id === S.challenge.id), time = Math.round(S.challenge.t);
+            lastChal = c;
+            Arcade.remove(SAVE + '.challenge');
+            resetDesk();
+            load();
+            applyCam();
+            for (const n of S.nodes) refreshNode(n);
+            if (quit) { Arcade.toast('Challenge abandoned — welcome back to your lab', null, 2000); renderShop(); renderSide(); return; }
+            const rec = Arcade.load('arcade.uploadlabs.challenges', {}) || {};
+            let text = '';
+            if (won) {
+                const first = !rec[c.id];
+                if (first || time < rec[c.id]) rec[c.id] = time;
+                Arcade.save('arcade.uploadlabs.challenges', rec);
+                if (first) { S.shares += 3; persist(); }
+                Arcade.report('challenges', Object.keys(rec).length);
+                text = `Cleared in ${Arcade.time(time)}.` + (first ? ' Your company earned <b>+3 shares</b>!' : ' Best: ' + Arcade.time(rec[c.id]));
+                Arcade.sfx('win');
+            } else { text = 'Out of time — or a fail condition hit. Try a different layout!'; Arcade.sfx('die'); }
+            $('chalTitle').textContent = (won ? '🏆 ' : '') + c.n + (won ? ' cleared!' : ' failed');
+            $('chalTitle').className = won ? 'good' : 'bad';
+            $('chalText').innerHTML = text;
+            Arcade.show('chalOv');
+            renderShop(); renderSide();
+        }
+        $('chalDone').onclick = () => Arcade.hide('chalOv');
+        $('chalRetry').onclick = () => { Arcade.hide('chalOv'); if (lastChal) startChallenge(lastChal); };
+        function renderLegend() {
+            const html = Object.entries(FT).filter(([k]) => k !== 'zip' && (seenType(k) || k === 'virus')).map(([, t]) => `<span>${t.ic} ${t.n} <b>$${t.v}</b> · ${t.s}MB</span>`).join('');
+            if ($('legend').innerHTML !== html) $('legend').innerHTML = html;
+        }
+
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        $('helpClose').onclick = () => { Arcade.hide('helpOv'); S.seenHelp = true; };
+        let resetArmed = false;
+        $('resetBtn').onclick = () => {
+            if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Really reset?'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Reset'; }, 3000); return; }
+            Arcade.remove(SAVE); window.removeEventListener('beforeunload', persist); location.reload();
+        };
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'SELECT') return;
+            if ((e.code === 'Delete' || e.code === 'Backspace') && selected) removeNode(selected);
+            if (e.code === 'Escape') { select(null); Arcade.hide('helpOv'); }
+        });
+
+        /* ================= LOOP ================= */
+        let acc = 0, uiT = 0, saveT = 0, time = 0;
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            acc += dt;
+            while (acc >= 0.05) { tick(0.05); acc -= 0.05; if (S.challenge) challengeTick(0.05); }
+            drawWires(time);
+            uiT += dt;
+            if (uiT > 0.15) {
+                uiT = 0;
+                for (const n of S.nodes) refreshNode(n);
+                const now = performance.now();
+                earnedWindow = earnedWindow.filter(x => now - x[0] < 10000);
+                S.rate = Math.max(0, earnedWindow.reduce((a, x) => a + x[1], 0) / 10);
+                Arcade.text('hMoney', '$' + Arcade.fmt(S.money));
+                Arcade.text('hIncome', '$' + Arcade.fmt(S.rate) + '/s');
+                Arcade.text('hRp', Arcade.fmt(S.rp) + ' RP');
+                const dr = powerDraw(), cp = powerCap();
+                Arcade.text('hPower', `${Math.round(dr)}/${cp}W`);
+                $('powerChip').classList.toggle('over', dr > cp);
+                $('shareChip').hidden = !S.shares;
+                Arcade.text('hShares', S.shares);
+                refreshShop();
+                checkGoals();
+                refreshSide();
+                if (!multi.size) renderLegend();
+                refreshHack();
+                if (!S.challenge) $('chalBar').hidden = true;
+            }
+            saveT += dt;
+            if (saveT > 6) { saveT = 0; persist(); }
+        });
+
+        resize();
+        load();
+        applyCam();
+        for (const n of S.nodes) refreshNode(n);
+        window.addEventListener('resize', resize);
+        window.addEventListener('beforeunload', persist);
+        renderShop();
+        renderSide();
+        if (!S.seenHelp) Arcade.show('helpOv');
+        loop.start();
+        window.__ul = { get S() { return S; }, buy, connect, byId, tick, P }; // for automated tests
+    })();
+    </script>
+</body>
+</html>

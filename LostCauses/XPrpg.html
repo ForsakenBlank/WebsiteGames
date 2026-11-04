@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Soul Siphon: Charmed Legacy</title>
+    <style>
+        body { background: #050505; color: #f0f0f0; font-family: 'Garamond', serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        #xp-header { width: 100%; background: #111; border-bottom: 2px solid #6a0dad; padding: 10px; position: sticky; top: 0; z-index: 10; text-align: center; }
+        .bar-container { width: 80%; max-width: 600px; height: 18px; background: #222; border: 1px solid #444; border-radius: 9px; margin: 5px auto; overflow: hidden; position: relative; }
+        #xp-bar { width: 40%; height: 100%; background: linear-gradient(90deg, #9400d3, #4b0082); transition: width 0.3s; }
+        
+        #game-box { width: 700px; background: #121214; margin: 20px; border-radius: 15px; border: 1px solid #333; padding: 25px; box-shadow: 0 0 40px #000; }
+        .screen { display: none; }
+        .active { display: block; }
+        
+        /* Stats Styling */
+        .stat-input { display: flex; justify-content: space-between; background: #1c1c1e; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #2c2c2e; }
+        .btn-ctrl { background: #333; color: white; border: none; width: 30px; height: 30px; cursor: pointer; border-radius: 5px; }
+
+        /* Charmed Combat Visuals */
+        .battle-stage { height: 320px; background: radial-gradient(circle, #1a1a1c 0%, #050505 100%); border-radius: 10px; position: relative; display: flex; flex-direction: column; align-items: center; border: 1px solid #222; }
+        #enemy-img { height: 180px; margin-top: 20px; filter: drop-shadow(0 0 20px rgba(106, 13, 173, 0.4)); transition: 0.3s; }
+        .projectile { width: 20px; height: 20px; background: orange; border-radius: 50%; position: absolute; top: 50%; left: 50%; display: none; box-shadow: 0 0 15px orange; }
+        
+        #dialogue { font-style: italic; color: #a29bfe; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; margin-top: 10px; min-height: 40px; text-align: center; }
+
+        /* Power Grid */
+        .power-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        button.pwr { padding: 15px; border: 1px solid #4facfe; background: #1a1a1c; color: #4facfe; font-weight: bold; cursor: pointer; border-radius: 8px; }
+        button.pwr:hover:not(:disabled) { background: #4facfe; color: black; }
+        button:disabled { opacity: 0.2; }
+    </style>
+</head>
+<body>
+
+    <div id="xp-header">
+        <div style="font-size: 14px; letter-spacing: 2px;">SOUL ESSENCE RECEPTACLE</div>
+        <div class="bar-container">
+            <div id="xp-bar"></div>
+            <div style="position:absolute; width:100%; top:0; font-size:11px; line-height:18px;" id="xp-val">0 / 100</div>
+        </div>
+        <div id="leech-tag" style="color:#ff7675; font-size:12px; font-weight:bold; display:none;">MARK OF THE UNDERWORLD (Siphoning Active)</div>
+    </div>
+
+    <div id="game-box">
+        <!-- SCREEN: Character Creation -->
+        <div id="create-screen" class="screen active">
+            <h2>The Prophecy Awakens</h2>
+            <p>You have <b>15 Points</b> to manifest your lineage. Each point increases your potency.</p>
+            <div style="color: #fdcb6e; margin-bottom:15px;">Points Available: <span id="pool">15</span></div>
+            
+            <div class="stat-input">
+                <span>Molecular Control (Freeze/Burn)</span>
+                <div>
+                    <button class="btn-ctrl" onclick="modStat('mole', -1)">-</button>
+                    <span id="ui-mole" style="margin:0 15px">10</span>
+                    <button class="btn-ctrl" onclick="modStat('mole', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="stat-input">
+                <span>Telekinetic Force (Deflect/Blast)</span>
+                <div>
+                    <button class="btn-ctrl" onclick="modStat('tele', -1)">-</button>
+                    <span id="ui-tele" style="margin:0 15px">10</span>
+                    <button class="btn-ctrl" onclick="modStat('tele', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="stat-input">
+                <span>Psychic Resilience (IQ/Defense)</span>
+                <div>
+                    <button class="btn-ctrl" onclick="modStat('psyc', -1)">-</button>
+                    <span id="ui-psyc" style="margin:0 15px">100</span>
+                    <button class="btn-ctrl" onclick="modStat('psyc', 1)">+</button>
+                </div>
+            </div>
+
+            <button id="btn-begin" onclick="startIntro()" disabled style="width:100%; padding:15px; margin-top:20px; background:#6a0dad; color:white; border:none; border-radius:8px;">Accept Your Destiny</button>
+        </div>
+
+        <!-- SCREEN: Story/Elias -->
+        <div id="story-screen" class="screen">
+            <h2 id="chapter-name">Chapter 1: The Fringe</h2>
+            <div id="npc-box" style="display:flex; align-items:center; background:#111; padding:15px; border-radius:10px;">
+                <div style="font-size:40px; margin-right:20px;">🕵️‍♂️</div>
+                <div id="elias-talk">"Keep your hands steady. You're a witch, not a target. The Siphoners are coming for your XP—if they drain you dry, you'll join their mindless ranks."</div>
+            </div>
+            <button onclick="startCombat()" style="width:100%; margin-top:20px; padding:15px; background:#2d3436; color:white; border:1px solid #444;">Venture into the Dark</button>
+        </div>
+
+        <!-- SCREEN: Charmed Battle -->
+        <div id="battle-screen" class="screen">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:12px;">
+                <span>LVL: <b id="ui-lvl">1</b></span>
+                <span id="combat-status" style="color:#fdcb6e;">READY</span>
+            </div>
+
+            <div class="battle-stage">
+                <img id="enemy-img" src="https://www.rpgmakerweb.com" alt="Siphoner">
+                <div id="projectile" class="projectile"></div>
+                <div id="dialogue">"I can smell your potential... give it to me!"</div>
+            </div>
+
+            <div class="power-grid">
+                <button class="pwr" onclick="cast('freeze')">❄️ MOLECULAR FREEZE</button>
+                <button class="pwr" onclick="cast('deflect')">🛡️ TELEKINETIC SHIELD</button>
+                <button class="pwr" onclick="cast('blast')">🔥 ENERGY COMBUSTION</button>
+                <button class="pwr" onclick="cast('orb')" id="elias-help">✨ ELIAS: ORB AWAY</button>
+                <button onclick="goRest()" style="grid-column: span 2; background:#006266; color:white; border:none; padding:10px; border-radius:5px; margin-top:10px;">RETURN TO SANCTUARY (Sleep)</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let pool = 15;
+    let witch = { mole: 10, tele: 10, psyc: 100, lvl: 1, xp: 40, req: 100, leech: 0 };
+    let enemy = { hp: 50, charge: 0, state: 'idle' };
+
+    function modStat(s, a) {
+        if (a > 0 && pool > 0) { 
+            witch[s] += (s === 'psyc' ? 10 : 1); pool--; 
+        } else if (a < 0) {
+            if (s === 'psyc' && witch.psyc > 100) { witch.psyc -= 10; pool++; }
+            else if (s !== 'psyc' && witch[s] > 10) { witch[s] -= 1; pool++; }
+        }
+        document.getElementById('pool').innerText = pool;
+        document.getElementById('ui-mole').innerText = witch.mole;
+        document.getElementById('ui-tele').innerText = witch.tele;
+        document.getElementById('ui-psyc').innerText = witch.psyc;
+        document.getElementById('btn-begin').disabled = pool > 0;
+    }
+
+    function startIntro() { show('story-screen'); }
+    function startCombat() { show('battle-screen'); spawn(); }
+
+    function spawn() {
+        enemy = { hp: 40 + (witch.lvl * 20), charge: 0, state: 'idle' };
+        document.getElementById('combat-status').innerText = "ENEMY APPEARS";
+        document.getElementById('dialogue').innerText = '"Another soul for the Book of Shadows..."';
+    }
+
+    function cast(pwr) {
+        if (pwr === 'freeze') {
+            enemy.state = 'frozen';
+            document.getElementById('enemy-img').style.filter = "cyan(100%)";
+            log("Molecular Stasis! The enemy is frozen for 2 turns.");
+            enemy.charge = -2;
+        } else if (pwr === 'deflect') {
+            if (enemy.state === 'charging') {
+                enemy.hp -= 20;
+                log("You deflected the siphoning beam back at the enemy!");
+                enemy.state = 'idle';
+            } else {
+                log("Telekinetic shield raised, but nothing was coming.");
+            }
+        } else if (pwr === 'blast') {
+            enemy.hp -= (witch.mole + witch.tele);
+            log("Energy Combustion hits the target!");
+        } else if (pwr === 'orb') {
+            witch.leech = 0;
+            log("Elias orbed you to safety for a moment. Leech effect cleared!");
+        }
+
+        if (enemy.hp <= 0) victory();
+        else enemyTick();
+        update();
+    }
+
+    function enemyTick() {
+        if (enemy.state === 'frozen') {
+            enemy.charge++;
+            if (enemy.charge >= 0) { enemy.state = 'idle'; document.getElementById('enemy-img').style.filter = ""; }
+            return;
+        }
+
+        if (enemy.state === 'idle') {
+            enemy.state = 'charging';
+            document.getElementById('dialogue').innerText = '"The drain begins... hold still."';
+            document.getElementById('combat-status').innerText = "ENEMY CHARGING SIPHON";
+        } else if (enemy.state === 'charging') {
+            // SIPHON ATTACK
+            let loss = (15 * witch.lvl) + (witch.leech * 10) - (witch.psyc / 20);
+            loss = Math.max(2, loss);
+            witch.xp -= loss;
+            witch.leech++;
+            log(`<span style="color:red">The enemy siphons ${Math.floor(loss)} XP! You are now Leeched.</span>`);
+            enemy.state = 'idle';
+            checkDeath();
+        }
+    }
+
+    function victory() {
+        let gain = 40 + (witch.leech * 15);
+        witch.xp += gain;
+        log(`Enemy Vanquished! Reclaimed ${gain} essence.`);
+        if (witch.xp >= witch.req) {
+            witch.lvl++; witch.xp -= witch.req; witch.req = Math.floor(witch.req * 1.5);
+            log("Level Up! Your lineage grows stronger.");
+        }
+        spawn();
+    }
+
+    function goRest() {
+        witch.leech = 0;
+        log("You rested at Sanctuary. The Underworld Mark is gone.");
+        update();
+    }
+
+    function checkDeath() {
+        if (witch.xp <= 0) {
+            if (witch.lvl > 1) {
+                witch.lvl--; witch.xp = witch.req - 10;
+                log("CRITICAL DRAIN! You lost a full level.");
+            } else {
+                alert("You have become a Hollow Servant. The Book of Shadows is closed.");
+                location.reload();
+            }
+        }
+    }
+
+    function log(m) {
+        document.getElementById('dialogue').innerHTML = m;
+    }
+
+    function update() {
+        document.getElementById('xp-bar').style.width = (witch.xp / witch.req * 100) + "%";
+        document.getElementById('xp-val').innerText = `${Math.floor(witch.xp)} / ${witch.req}`;
+        document.getElementById('ui-lvl').innerText = witch.lvl;
+        document.getElementById('leech-tag').style.display = witch.leech > 0 ? 'block' : 'none';
+    }
+
+    function show(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        update();
+    }
+</script>
+</body>
+</html>

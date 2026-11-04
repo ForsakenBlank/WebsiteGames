@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SUDO-BLOCKS: PRO EDITION</title>
+    <style>
+        body { background: #1a1a1a; color: #d4a373; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        #game-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        #grid { display: grid; grid-template-columns: repeat(9, 40px); grid-template-rows: repeat(9, 40px); gap: 2px; background: #333; padding: 4px; border: 4px solid #5d4037; border-radius: 8px; }
+        .cell { width: 40px; height: 40px; background: #2a2a2a; border-radius: 2px; transition: 0.1s; position: relative; }
+        .cell.alt { background: #353535; }
+        .cell.filled { background: #bc8a5f; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); border: 1px solid #8b5e34; }
+        .cell.ghost { background: rgba(188, 138, 95, 0.4) !important; border: 1px dashed #bc8a5f; }
+        .cell.will-clear { background: rgba(255, 255, 255, 0.3) !important; box-shadow: 0 0 10px #ffffff; z-index: 2; }
+        #pieces-area { display: flex; gap: 25px; height: 120px; align-items: center; }
+        .piece { display: grid; gap: 2px; cursor: grab; padding: 5px; }
+        .p-cell { width: 18px; height: 18px; border-radius: 2px; pointer-events: auto; }
+        .p-filled { background: #bc8a5f; border: 1px solid #8b5e34; }
+        #controls { display: flex; gap: 15px; margin-bottom: 10px; }
+        .toggle-btn { background: #333; color: #d4a373; border: 1px solid #5d4037; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .toggle-btn.active { background: #bc8a5f; color: #fff; }
+        #score-board { font-size: 1.2rem; font-weight: bold; text-align: center; min-height: 40px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="controls">
+            <button id="easy-toggle" class="toggle-btn" onclick="toggleEasyMode()">EASY MODE: OFF</button>
+            <button class="toggle-btn" onclick="resetGame()">RESET</button>
+        </div>
+        <div id="score-board">SCORE: <span id="score">0</span><br><span id="streak-ui" style="color:#ffcc00; font-size:0.9rem;"></span></div>
+        <div id="grid"></div>
+        <div id="pieces-area"></div>
+    </div>
+
+<script>
+    const gridEl = document.getElementById('grid');
+    const piecesArea = document.getElementById('pieces-area');
+    const scoreEl = document.getElementById('score');
+    const streakEl = document.getElementById('streak-ui');
+    const easyBtn = document.getElementById('easy-toggle');
+
+    let grid = Array(9).fill().map(() => Array(9).fill(0));
+    let score = 0, streak = 0, currentDraggingShape = null, isEasyMode = false;
+    let dragOffset = { r: 0, c: 0 };
+
+    const baseShapes = [
+        [[1,1],[1,1]], 
+        [[1,1,1]], 
+        [[1,1]], 
+        [[1,1,1],[0,1,0]], 
+        [[1]],
+        [[1,0,0],[0,1,0],[0,0,1]], 
+        [[0,1],[1,1],[1,0]]
+    ];
+
+    function rotate(m) { return m.map((v, i) => m.map(row => row[i]).reverse()); }
+    let allShapes = [];
+    baseShapes.forEach(s => {
+        let v = [s]; let c = s;
+        for(let i=0; i<3; i++) { c = rotate(c); v.push(c); }
+        let u = Array.from(new Set(v.map(JSON.stringify))).map(JSON.parse);
+        allShapes.push(...u);
+    });
+
+    function initGrid() {
+        gridEl.innerHTML = '';
+        grid = Array(9).fill().map(() => Array(9).fill(0));
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (((Math.floor(r/3) + Math.floor(c/3)) % 2 === 1) ? ' alt' : '');
+                cell.dataset.r = r; cell.dataset.c = c;
+                gridEl.appendChild(cell);
+            }
+        }
+    }
+
+    function createPiece() {
+        const shape = allShapes[Math.floor(Math.random() * allShapes.length)];
+        const pWrap = document.createElement('div');
+        pWrap.className = 'piece';
+        pWrap.draggable = true;
+        pWrap.style.gridTemplateColumns = `repeat(${shape[0].length}, 18px)`;
+        
+        shape.forEach((row, rIdx) => row.forEach((val, cIdx) => {
+            const div = document.createElement('div');
+            div.className = val ? 'p-cell p-filled' : 'p-cell';
+            if(val) div.onmousedown = () => { dragOffset.r = rIdx; dragOffset.c = cIdx; };
+            pWrap.appendChild(div);
+        }));
+
+        pWrap.ondragstart = (e) => { currentDraggingShape = shape; pWrap.style.opacity = '0.1'; };
+        pWrap.ondragend = () => { pWrap.style.opacity = '1'; clearEffects(); };
+        return pWrap;
+    }
+
+    function spawnPieces() { piecesArea.innerHTML = ''; for(let i=0; i<3; i++) piecesArea.appendChild(createPiece()); }
+    function toggleEasyMode() { isEasyMode = !isEasyMode; easyBtn.innerText = `EASY MODE: ${isEasyMode ? 'ON' : 'OFF'}`; easyBtn.classList.toggle('active'); resetGame(); }
+    function resetGame() { score = 0; streak = 0; scoreEl.innerText = "0"; streakEl.innerText = ""; initGrid(); spawnPieces(); }
+    function clearEffects() { document.querySelectorAll('.cell.ghost, .cell.will-clear').forEach(el => el.classList.remove('ghost', 'will-clear')); }
+
+    gridEl.ondragover = e => {
+        e.preventDefault();
+        clearEffects();
+        const cell = e.target.closest('.cell');
+        if (!cell || !currentDraggingShape) return;
+        const r = parseInt(cell.dataset.r) - dragOffset.r, c = parseInt(cell.dataset.c) - dragOffset.c;
+        if (canPlace(currentDraggingShape, r, c)) {
+            currentDraggingShape.forEach((row, i) => row.forEach((val, j) => {
+                if(val) gridEl.children[(r+i)*9+(c+j)].classList.add('ghost');
+            }));
+            predictClears(currentDraggingShape, r, c);
+        }
+    };
+
+    gridEl.ondrop = e => {
+        e.preventDefault();
+        const cell = e.target.closest('.cell');
+        if (!cell || !currentDraggingShape) return;
+        const r = parseInt(cell.dataset.r) - dragOffset.r, c = parseInt(cell.dataset.c) - dragOffset.c;
+        if (canPlace(currentDraggingShape, r, c)) {
+            currentDraggingShape.forEach((row, i) => row.forEach((val, j) => {
+                if(val) { grid[r+i][c+j] = 1; gridEl.children[(r+i)*9+(c+j)].classList.add('filled'); }
+            }));
+            const clears = checkAndClear();
+            if (clears > 0) { streak++; score += Math.floor((100 * clears) * clears * (1 + (streak * 0.1))); } else streak = 0;
+            scoreEl.innerText = score; streakEl.innerText = clears > 0 ? `STREAK x${streak} | COMBO x${clears}!` : "";
+            const active = document.querySelector('.piece[style*="opacity: 0.1"]');
+            if (isEasyMode) piecesArea.replaceChild(createPiece(), active);
+            else { active.remove(); if (piecesArea.children.length === 0) spawnPieces(); }
+        }
+        currentDraggingShape = null;
+    };
+
+    function canPlace(shape, r, c) {
+        return shape.every((row, i) => row.every((val, j) => {
+            if(!val) return true;
+            let nr = r + i, nc = c + j;
+            return (nr >= 0 && nr < 9 && nc >= 0 && nc < 9 && !grid[nr][nc]);
+        }));
+    }
+
+    function predictClears(shape, r, c) {
+        let temp = grid.map(row => [...row]);
+        shape.forEach((row, i) => row.forEach((val, j) => { if(val) temp[r+i][c+j] = 1; }));
+        for(let i=0; i<9; i++) {
+            if(temp[i].every(v => v === 1)) for(let k=0; k<9; k++) gridEl.children[i*9+k].classList.add('will-clear');
+            let cf = true; for(let r2=0; r2<9; r2++) if(!temp[r2][i]) cf = false;
+            if(cf) for(let k=0; k<9; k++) gridEl.children[k*9+i].classList.add('will-clear');
+        }
+        for (let sr=0; sr<9; sr+=3) for (let sc=0; sc<9; sc+=3) {
+            let f = true; for(let i=0; i<3; i++) for(let j=0; j<3; j++) if(!temp[sr+i][sc+j]) f=false;
+            if(f) for(let i=0; i<3; i++) for(let j=0; j<3; j++) gridEl.children[(sr+i)*9+(sc+j)].classList.add('will-clear');
+        }
+    }
+
+    function checkAndClear() {
+        let rT = [], cT = [], sT = [];
+        for (let i=0; i<9; i++) {
+            if (grid[i].every(v => v === 1)) rT.push(i);
+            let cf = true; for(let r=0; r<9; r++) if(!grid[r][i]) cf = false;
+            if(cf) cT.push(i);
+        }
+        for (let r=0; r<9; r+=3) for (let c=0; c<9; c+=3) {
+            let f = true; for(let i=0; i<3; i++) for(let j=0; j<3; j++) if(!grid[r+i][c+j]) f=false;
+            if(f) sT.push({r,c});
+        }
+        rT.forEach(r => { grid[r].fill(0); for(let c=0; c<9; c++) gridEl.children[r*9+c].classList.remove('filled'); });
+        cT.forEach(c => { for(let r=0; r<9; r++) { grid[r][c] = 0; gridEl.children[r*9+c].classList.remove('filled'); } });
+        sT.forEach(s => { for(let i=0; i<3; i++) for(let j=0; j<3; j++) { grid[s.r+i][s.c+j] = 0; gridEl.children[(s.r+i)*9+(s.c+j)].classList.remove('filled'); } });
+        return rT.length + cT.length + sT.length;
+    }
+
+    initGrid(); spawnPieces();
+</script>
+</body>
+</html>

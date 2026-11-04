@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tap Match · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #fb7185; --accent-2: #fbbf24; --accent-ink: #2a0610; --t: 56px; }
+        .stage { gap: 10px; padding: 10px; }
+        .board-area { position: relative; flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; }
+        .board { position: relative; }
+        .tile {
+            position: absolute;
+            width: var(--t);
+            height: calc(var(--t) * 1.08);
+            border-radius: calc(var(--t) * 0.2);
+            background: linear-gradient(180deg, #fff7ed, #fde7d3);
+            box-shadow: 0 calc(var(--t) * 0.08) 0 #c08457, 0 calc(var(--t) * 0.1) calc(var(--t) * 0.2) rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--t) * 0.58);
+            cursor: pointer;
+            transition: filter 0.2s, transform 0.12s, opacity 0.2s;
+        }
+        .tile:hover:not(.blocked) { transform: translateY(-3px); }
+        .tile.blocked { filter: brightness(0.48) saturate(0.6); cursor: default; }
+        .tile.gone { opacity: 0; transform: scale(0.4) translateY(40px); pointer-events: none; }
+        .tile.hint { animation: hintPulse 0.8s infinite alternate; }
+        @keyframes hintPulse { to { box-shadow: 0 0 0 4px var(--gold), 0 calc(var(--t) * 0.1) calc(var(--t) * 0.2) rgba(0,0,0,0.45); } }
+        .tray {
+            display: flex;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 18px;
+            background: var(--surface);
+            border: 1px solid var(--line-2);
+            box-shadow: var(--shadow);
+        }
+        .tray.danger { border-color: var(--bad); box-shadow: 0 0 30px -10px var(--bad); }
+        .slot {
+            width: clamp(36px, 10vw, 50px);
+            height: clamp(38px, 10.6vw, 54px);
+            border-radius: 12px;
+            background: var(--bg-2);
+            border: 1px dashed var(--line-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 5.6vw, 28px);
+        }
+        .slot.full { background: linear-gradient(180deg, #fff7ed, #fde7d3); border: none; animation: popIn 0.2s; }
+        .slot.clear { animation: matchOut 0.28s forwards; }
+        @keyframes matchOut { to { transform: scale(1.3); opacity: 0; } }
+        .powers { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .powers .btn b { background: var(--bg-2); border-radius: 999px; padding: 0 7px; font-size: 0.75rem; }
+        .menu { width: min(860px, 100%); }
+        .diff-seg { margin: 12px 0 4px; }
+        .diff-seg .btn { flex-direction: column; gap: 0; padding: 7px 14px; }
+        .diff-seg .btn small { font-weight: 500; font-size: .68rem; opacity: .75; }
+        .diff-seg .btn.locked { opacity: 0.5; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 12px; max-height: 46vh; overflow-y: auto; padding: 2px 4px 4px 2px; }
+        .lay { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 7px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; color: var(--text); font: inherit; transition: border-color .15s, transform .1s; }
+        .lay:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .lay canvas { width: 64px; height: 64px; }
+        .lay span { font-size: .76rem; font-weight: 700; }
+        .lay i { position: absolute; top: 4px; right: 6px; font-style: normal; font-size: .7rem; color: var(--gold); letter-spacing: -1px; }
+        .lay.random { background: color-mix(in srgb, var(--accent) 14%, var(--bg-2)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+        .lay.random b { font-size: 2.4rem; line-height: 64px; height: 64px; }
+        .menu-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 10px; font-size: .75rem; color: var(--dim); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Tap Match</h1>
+        <div class="stats">
+            <span class="chip accent">Left <b id="left">0</b></span>
+            <span class="chip">Time <b id="time">0:00</b></span>
+            <span class="chip gold"><b id="diffName">Easy</b> · <b id="layName">—</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="menuTop">Boards</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="board-area" id="area">
+            <div class="board" id="board"></div>
+
+            <div class="overlay" id="menuOv">
+                <div class="modal menu">
+                    <h2>Tap Match</h2>
+                    <p>Tap uncovered tiles to move them into the tray. Three of a kind vanish. Fill all 7 slots and you lose.</p>
+                    <div class="seg diff-seg" id="diffSeg"></div>
+                    <div class="gallery" id="gallery"></div>
+                    <div class="menu-foot"><span id="clearedCount"></span><span>Win Easy, Medium and Hard 3× each to unlock Extreme.</span></div>
+                </div>
+            </div>
+
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">Cleared!</h2>
+                    <p id="endText"></p>
+                    <div class="stat-grid">
+                        <div><small>Time</small><b id="endTime">0:00</b></div>
+                        <div><small>Power-ups</small><b id="endPowers">0</b></div>
+                        <div><small>Wins here</small><b id="endWins">0</b></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn primary lg" id="nextBtn">Next board ▶</button>
+                        <button class="btn" id="againBtn">Replay</button>
+                        <button class="btn" id="levelsBtn">Boards</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tray" id="tray"></div>
+        <div class="powers">
+            <button class="btn sm" id="undoBtn">↶ Undo <b id="undoN">2</b></button>
+            <button class="btn sm" id="shuffleBtn">🔀 Shuffle <b id="shuffleN">1</b></button>
+            <button class="btn sm" id="magicBtn">✨ Magic <b id="magicN">1</b></button>
+            <button class="btn sm ghost" id="restartBtn">⟲ Restart</button>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const EMOJI = ['🍇','🍉','🍊','🍎','🍓','🥑','🍒','🍍','🥝','🍋','🍑','🥥','🥦','🥕','🌽','🍄','🧀','🍩','🍪','🌶️','🍌','🫐'];
+        // layers: how many stacked layers the board grows; keep: fraction of possible tiles kept per layer;
+        // piles/pileDepth: face-down side stacks where only the top tile can be reached.
+        const DIFFS = {
+            easy:    { name: 'Easy',    layers: 3, types: 9,  keep: [1, 0.95, 0.85], cap: 66, piles: 0, pileDepth: 0, spread: 0.35 },
+            medium:  { name: 'Medium',  layers: 4, types: 12, keep: [1, 0.95, 0.9, 0.8], cap: 96, piles: 2, pileDepth: 4, spread: 0.5 },
+            hard:    { name: 'Hard',    layers: 5, types: 15, keep: [1, 1, 0.9, 0.85, 0.75], cap: 126, piles: 2, pileDepth: 6, spread: 0.62 },
+            extreme: { name: 'Extreme', layers: 6, types: 18, keep: [1, 1, 0.95, 0.9, 0.85, 0.75], cap: 165, piles: 3, pileDepth: 7, spread: 0.72 },
+        };
+        const DIFF_IDS = Object.keys(DIFFS);
+        const SLOTS = 7;
+
+        /* ---------- Board layouts ----------
+           Compact base shapes that grow tall: upper layers sit on the corner of four tiles (pyramid),
+           between two tiles (brick), straight on top (stack — hides the tile below completely),
+           or alternate (mixed). Small footprints + deep stacks mean most tiles are buried. */
+        const ART = [
+            ['heart', 'Heart', 'pyramid', [
+                '.##...##.',
+                '####.####',
+                '#########',
+                '.#######.',
+                '..#####..',
+                '...###...',
+                '....#....']],
+            ['butterfly', 'Butterfly', 'mixed', [
+                '##.....##',
+                '###...###',
+                '####.####',
+                '.#######.',
+                '####.####',
+                '###...###',
+                '##.....##']],
+            ['cat', 'Cat', 'mixed', [
+                '#.....#',
+                '##...##',
+                '#######',
+                '#.###.#',
+                '#######',
+                '.#####.',
+                '..###..']],
+            ['crown', 'Crown', 'stack', [
+                '#..#..#',
+                '##.#.##',
+                '#######',
+                '#######',
+                '.#####.']],
+            ['fish', 'Fish', 'brick', [
+                '..###...#',
+                '.#####.##',
+                '#########',
+                '.#####.##',
+                '..###...#']],
+            ['tree', 'Pine Tree', 'pyramid', [
+                '...#...',
+                '..###..',
+                '.#####.',
+                '..###..',
+                '.#####.',
+                '#######',
+                '...#...']],
+            ['house', 'House', 'mixed', [
+                '...#...',
+                '..###..',
+                '.#####.',
+                '#######',
+                '##.#.##',
+                '##.#.##',
+                '#######']],
+            ['rocket', 'Rocket', 'stack', [
+                '..#..',
+                '.###.',
+                '.###.',
+                '.###.',
+                '#####',
+                '#.#.#']],
+            ['mushroom', 'Mushroom', 'pyramid', [
+                '.#####.',
+                '#######',
+                '#######',
+                '..###..',
+                '..###..']],
+            ['star', 'Star', 'mixed', [
+                '...#...',
+                '..###..',
+                '#######',
+                '.#####.',
+                '..###..',
+                '.##.##.']],
+            ['ghost', 'Ghost', 'stack', [
+                '..###..',
+                '.#####.',
+                '##.#.##',
+                '#######',
+                '#######',
+                '#.#.#.#']],
+            ['castle', 'Castle', 'stack', [
+                '#.#.#.#',
+                '#######',
+                '#######',
+                '##...##',
+                '##...##']],
+            ['owl', 'Owl', 'pyramid', [
+                '#.....#',
+                '#######',
+                '##.#.##',
+                '#######',
+                '.#####.',
+                '..#.#..']],
+            ['robot', 'Robot', 'stack', [
+                '...#...',
+                '.#####.',
+                '.#.#.#.',
+                '.#####.',
+                '#######',
+                '.##.##.']],
+            ['apple', 'Apple', 'pyramid', [
+                '...#...',
+                '.##.##.',
+                '#######',
+                '#######',
+                '#######',
+                '.#####.',
+                '..#.#..']],
+        ];
+        const nx = (c, W) => (c - (W - 1) / 2) / (W / 2);
+        const ny = (r, H) => (r - (H - 1) / 2) / (H / 2);
+        const GEO = [
+            ['temple', 'Temple', 'pyramid', 7, 6, () => true],
+            ['tower', 'Tall Tower', 'stack', 4, 5, () => true],
+            ['diamond', 'Diamond', 'pyramid', 9, 9, (c, r, W, H) => Math.abs(nx(c, W)) + Math.abs(ny(r, H)) <= 1.05],
+            ['circle', 'Moon', 'pyramid', 8, 8, (c, r, W, H) => nx(c, W) ** 2 + ny(r, H) ** 2 <= 1.1],
+            ['ring', 'Donut', 'stack', 8, 8, (c, r, W, H) => { const d = nx(c, W) ** 2 + ny(r, H) ** 2; return d <= 1.1 && d >= 0.22; }],
+            ['cross', 'Cross', 'mixed', 9, 9, (c, r, W, H) => Math.abs(nx(c, W)) <= 0.36 || Math.abs(ny(r, H)) <= 0.36],
+            ['x', 'Crossroads', 'stack', 9, 9, (c, r, W, H) => Math.abs(Math.abs(nx(c, W)) - Math.abs(ny(r, H))) <= 0.26],
+            ['hourglass', 'Hourglass', 'brick', 8, 8, (c, r, W, H) => Math.abs(nx(c, W)) <= Math.abs(ny(r, H)) + 0.15],
+            ['checker', 'Checkers', 'stack', 8, 8, (c, r) => (Math.floor(c / 2) + Math.floor(r / 2)) % 2 === 0],
+            ['frame', 'Picture Frame', 'brick', 8, 7, (c, r, W, H) => c < 2 || r < 2 || c > W - 3 || r > H - 3],
+            ['pillars', 'Pillars', 'stack', 8, 6, (c) => c % 3 !== 2],
+            ['stairs', 'Staircase', 'brick', 8, 7, (c, r) => c <= r + 1],
+            ['towers', 'Twin Towers', 'stack', 8, 7, (c, r, W, H) => (c >= 0 && c <= 2) || (c >= W - 3) || (r >= H - 2)],
+            ['corners', 'Four Islands', 'pyramid', 9, 9, (c, r, W, H) => (c < 3 || c > W - 4) && (r < 3 || r > H - 4) || (Math.abs(nx(c, W)) < 0.25 && Math.abs(ny(r, H)) < 0.25)],
+            ['wave', 'Wave', 'brick', 9, 7, (c, r, W, H) => { const y = Math.sin(c / (W - 1) * Math.PI * 2) * 1.6 + (H - 1) / 2; return Math.abs(r - y) <= 1.5; }],
+            ['smile', 'Smiley', 'pyramid', 9, 9, (c, r, W, H) => {
+                const X = nx(c, W), Y = ny(r, H);
+                if (X * X + Y * Y > 1.08) return false;
+                if (Math.abs(Math.abs(X) - 0.4) < 0.14 && Math.abs(Y + 0.3) < 0.18) return false;  // eyes
+                if (Y > 0.3 && Y < 0.55 && Math.abs(X) < 0.45) return false;                         // mouth
+                return true;
+            }],
+        ];
+        const LAYOUTS = [];
+        for (const [id, name, style, rows] of ART) {
+            const W = Math.max(...rows.map(s => s.length));
+            LAYOUTS.push({ id, name, style, w: W, h: rows.length, has: (c, r) => rows[r][c] === '#' });
+        }
+        for (const [id, name, style, w, h, f] of GEO) {
+            const cache = [];
+            for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) if (f(c, r, w, h)) cache.push(r * w + c);
+            const set = new Set(cache);
+            LAYOUTS.push({ id, name, style, w, h, has: (c, r) => set.has(r * w + c) });
+        }
+        const byId = (id) => LAYOUTS.find(l => l.id === id);
+
+        const boardEl = document.getElementById('board');
+        const trayEl = document.getElementById('tray');
+        const area = document.getElementById('area');
+
+        // keep the original save format: { easy, medium, hard, extreme }
+        let wins = Object.assign({ easy: 0, medium: 0, hard: 0, extreme: 0 }, Arcade.load('tapMatchWins', {}));
+        // which difficulties each layout has been cleared on: { heart: ['easy', 'hard'] }
+        let cleared = Arcade.load('arcade.tapmatch.cleared', {});
+        let diff = Arcade.load('arcade.tapmatch.diff', 'easy');
+        if (!DIFFS[diff]) diff = 'easy';
+        let layout = byId(Arcade.load('arcade.tapmatch.layout', 'heart')) || LAYOUTS[0];
+        let tiles = [], tray = [], history = [], powers, powersUsed, seconds, timer, busy = false, over = true, bounds;
+
+        const unlockedExtreme = () => wins.easy >= 3 && wins.medium >= 3 && wins.hard >= 3;
+
+        /* ---------- Menu ---------- */
+        function buildMenu() {
+            const seg = document.getElementById('diffSeg');
+            seg.innerHTML = '';
+            for (const id of DIFF_IDS) {
+                const d = DIFFS[id];
+                const locked = id === 'extreme' && !unlockedExtreme();
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (id === diff ? ' active' : '') + (locked ? ' locked' : '');
+                const prog = id === 'extreme' ? (locked ? '🔒 locked' : wins.extreme + ' wins') : `${Math.min(3, wins[id])}/3 wins` + (wins[id] > 3 ? ` (${wins[id]})` : '');
+                b.innerHTML = `<span>${d.name}</span><small>${prog}</small>`;
+                b.onclick = () => {
+                    if (locked) { Arcade.toast('Win Easy, Medium and Hard 3× each first', 'bad'); Arcade.sfx('bad'); return; }
+                    diff = id; Arcade.save('arcade.tapmatch.diff', id); Arcade.sfx('select'); buildMenu();
+                };
+                seg.appendChild(b);
+            }
+            const gal = document.getElementById('gallery');
+            gal.innerHTML = '';
+            const rnd = document.createElement('button');
+            rnd.className = 'lay random';
+            rnd.innerHTML = '<b>🎲</b><span>Random</span>';
+            rnd.onclick = () => start(diff, Arcade.pick(LAYOUTS));
+            gal.appendChild(rnd);
+            for (const L of LAYOUTS) {
+                const b = document.createElement('button');
+                b.className = 'lay';
+                const cv = document.createElement('canvas');
+                cv.width = 144; cv.height = 144;
+                drawThumb(cv, L);
+                const name = document.createElement('span');
+                name.textContent = L.name;
+                const marks = document.createElement('i');
+                const got = cleared[L.id] || [];
+                marks.textContent = DIFF_IDS.filter(d => got.includes(d)).map(() => '★').join('');
+                marks.title = got.length ? 'Cleared on ' + got.map(d => DIFFS[d].name).join(', ') : '';
+                b.append(cv, name, marks);
+                b.onclick = () => start(diff, L);
+                gal.appendChild(b);
+            }
+            const n = LAYOUTS.filter(L => (cleared[L.id] || []).length).length;
+            Arcade.text('clearedCount', `${n} / ${LAYOUTS.length} boards cleared · ★ = one per difficulty`);
+        }
+
+        function drawThumb(cv, L) {
+            const g = cv.getContext('2d');
+            const pos = buildPositions(L, DIFFS.hard, true);
+            const b = boundsOf(pos);
+            const s = Math.min(130 / b.w, 130 / (b.h * 1.08));
+            const ox = (144 - b.w * s) / 2, oy = (144 - b.h * 1.08 * s) / 2;
+            const cols = ['#c08457', '#fde7d3', '#fbcfe8', '#fda4af', '#fb7185'];
+            pos.sort((a, b2) => a.z - b2.z);
+            for (const p of pos) {
+                g.fillStyle = cols[Math.min(cols.length - 1, p.z + 1)];
+                g.strokeStyle = 'rgba(80,40,20,0.55)';
+                g.lineWidth = 1.5;
+                const x = ox + (p.x - b.x) * s, y = oy + (p.y - b.y) * 1.08 * s - p.z * s * 0.1;
+                g.beginPath(); g.roundRect(x + 1, y + 1, s - 2, s * 1.08 - 2, s * 0.2); g.fill(); g.stroke();
+            }
+        }
+
+        /* ---------- Generation (always solvable) ---------- */
+        const overlaps = (a, b) => Math.abs(a.x - b.x) < 0.98 && Math.abs(a.y - b.y) < 0.98;
+
+        function buildPositions(L, cfg, preview) {
+            let prev = [];
+            for (let r = 0; r < L.h; r++) for (let c = 0; c < L.w; c++) if (L.has(c, r)) prev.push({ x: c, y: r, z: 0 });
+            const all = prev.slice();
+            for (let z = 1; z < cfg.layers; z++) {
+                const set = new Set(prev.map(p => p.x + ',' + p.y));
+                const has = (x, y) => set.has(x + ',' + y);
+                const style = L.style === 'mixed' ? (z % 2 ? 'pyramid' : 'stack') : L.style;
+                let cand = [];
+                for (const p of prev) {
+                    if (style === 'pyramid') { if (has(p.x + 1, p.y) && has(p.x, p.y + 1) && has(p.x + 1, p.y + 1)) cand.push({ x: p.x + 0.5, y: p.y + 0.5 }); }
+                    else if (style === 'brick') { if (has(p.x + 1, p.y)) cand.push({ x: p.x + 0.5, y: p.y }); }
+                    else {
+                        const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => has(p.x + dx, p.y + dy)).length;
+                        if (n >= 2) cand.push({ x: p.x, y: p.y });
+                    }
+                }
+                // thin the layer symmetrically (mirror pairs share one coin flip)
+                const keep = cfg.keep[z] ?? 0.4;
+                const coin = new Map();
+                cand = cand.filter(p => {
+                    const key = Math.min(p.x, L.w - 1 - p.x) + ',' + p.y;
+                    if (!coin.has(key)) coin.set(key, preview ? (hashStr(L.id + key + z) < keep) : Math.random() < keep);
+                    return coin.get(key);
+                });
+                if (!cand.length) break;
+                cand.forEach(p => { p.z = z; });
+                all.push(...cand);
+                prev = cand;
+            }
+            // face-down side piles: each tile sits almost exactly on the one below, so only the top is reachable
+            const spots = [[-1.9, (L.h - 1) / 2, -1], [L.w + 0.9, (L.h - 1) / 2, 1], [(L.w - 1) / 2, L.h + 0.7, 1]];
+            for (let pi = 0; pi < (cfg.piles || 0); pi++) {
+                const [px, py, dir] = spots[pi];
+                for (let i = 0; i < cfg.pileDepth; i++) all.push({ x: px + dir * i * 0.13, y: py - i * 0.05, z: i, pile: true });
+            }
+            return all;
+        }
+        function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) / 4294967296; }
+        function boundsOf(pos) {
+            const xs = pos.map(p => p.x), ys = pos.map(p => p.y);
+            const x = Math.min(...xs), y = Math.min(...ys);
+            return { x, y, w: Math.max(...xs) - x + 1, h: Math.max(...ys) - y + 1 };
+        }
+
+        function generate(L, cfg) {
+            let pos = buildPositions(L, cfg, false);
+            // trim upper layers down to the cap, then to a multiple of 3. The base layer is only touched
+            // for the last 1–2 tiles, taken from the middle column so the picture keeps its symmetry.
+            const trimTop = (allowBase) => {
+                const board = pos.filter(p => !p.pile);
+                const top = Math.max(...board.map(p => p.z));
+                if (top === 0 && !allowBase) return false;
+                let pool = board.filter(p => p.z === top);
+                if (top === 0) {
+                    const mid = pool.filter(p => Math.abs(p.x - (L.w - 1) / 2) < 0.6);
+                    if (mid.length) pool = mid;
+                }
+                pos.splice(pos.indexOf(Arcade.pick(pool)), 1);
+                return true;
+            };
+            while (pos.length > cfg.cap && trimTop(false));
+            while (pos.length % 3) trimTop(true);
+
+            // simulate a removal order by repeatedly taking a random uncovered tile
+            const remaining = pos.slice();
+            const order = [];
+            while (remaining.length) {
+                const free = remaining.filter(t => !remaining.some(u => u !== t && u.z > t.z && overlaps(u, t)));
+                // mostly dig down from the top, so the tiles you can see now pair up with tiles buried below
+                const mz = Math.max(...free.map(t => t.z));
+                const pool = Math.random() < 0.75 ? free.filter(t => t.z >= mz - 1) : free;
+                const pick = pool[(Math.random() * pool.length) | 0];
+                order.push(pick);
+                remaining.splice(remaining.indexOf(pick), 1);
+            }
+            // Deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
+            // late as the tray allows (never more than 6 loose tiles), so matching tiles end up far apart and
+            // usually buried — but following this order always clears the board.
+            const kinds = Arcade.shuffle(EMOJI.slice()).slice(0, Math.min(cfg.types, order.length / 3));
+            const spread = cfg.spread || 0.5;
+            let open = [], held = 0, need = 0, ki = 0;
+            for (let i = 0; i < order.length; i++) {
+                const left = order.length - i;           // tiles still to deal, including this one
+                // a full tray (6 loose tiles) must always contain a pair that the next tile can finish
+                const canStart = (held + 1 <= 5 || (held + 1 === 6 && open.some(o => o.n === 2))) && open.length < kinds.length && left - 1 >= need + 2;
+                const mustClose = !canStart || left === need;
+                let pickOpen = null;
+                if (open.length && (mustClose || Math.random() > spread)) {
+                    // add to an open triple; when the tray is tight only finishing a triple is allowed
+                    const ok = open.filter(o => o.n === 2 || held + 1 <= 6);
+                    pickOpen = Arcade.pick(ok.length ? ok : open.filter(o => o.n === 2));
+                }
+                if (pickOpen) {
+                    order[i].type = pickOpen.type;
+                    pickOpen.n++; need--;
+                    if (pickOpen.n === 3) { held -= 2; open = open.filter(o => o !== pickOpen); } else held++;
+                } else {
+                    const used = new Set(open.map(o => o.type));
+                    let type = kinds[ki++ % kinds.length];
+                    for (let k = 0; used.has(type) && k < kinds.length; k++) type = kinds[ki++ % kinds.length];
+                    order[i].type = type;
+                    open.push({ type, n: 1 }); held++; need += 2;
+                }
+            }
+            return pos;
+        }
+
+        /* ---------- Game ---------- */
+        function start(d, L) {
+            diff = d || diff;
+            if (L) { layout = L; Arcade.save('arcade.tapmatch.layout', L.id); }
+            const cfg = DIFFS[diff];
+            tiles = generate(layout, cfg).map((p, i) => ({ ...p, id: i, gone: false }));
+            bounds = boundsOf(tiles);
+            tray = []; history = [];
+            powers = { undo: 2, shuffle: 1, magic: 1 };
+            if (tiles.length > 120) powers = { undo: 3, shuffle: 2, magic: 1 };
+            powersUsed = 0; seconds = 0; busy = false; over = false;
+            clearInterval(timer);
+            timer = setInterval(() => { if (!over) { seconds++; Arcade.text('time', Arcade.time(seconds)); } }, 1000);
+            buildBoard();
+            renderTray();
+            hud();
+            Arcade.hide('menuOv'); Arcade.hide('endOv');
+            Arcade.text('time', '0:00');
+            Arcade.sfx('level');
+        }
+
+        function sizeBoard() {
+            if (!bounds) return;
+            const r = area.getBoundingClientRect();
+            const maxZ = Math.max(...tiles.map(t => t.z));
+            const t = Math.floor(Math.min((r.width - 16) / (bounds.w + maxZ * 0.06), (r.height - 16) / (bounds.h * 1.08 + 0.15 + maxZ * 0.08)));
+            const T = Arcade.clamp(t, 22, 76);
+            document.documentElement.style.setProperty('--t', T + 'px');
+            boardEl.style.width = (bounds.w + maxZ * 0.06) * T + 'px';
+            boardEl.style.height = (bounds.h * 1.08 + 0.15 + maxZ * 0.08) * T + 'px';
+            for (const tl of tiles) {
+                tl.el.style.left = ((tl.x - bounds.x) * T + (maxZ - tl.z) * T * 0.06) + 'px';
+                tl.el.style.top = ((tl.y - bounds.y) * 1.08 * T + (maxZ - tl.z) * T * 0.08) + 'px';
+            }
+        }
+
+        function buildBoard() {
+            boardEl.innerHTML = '';
+            for (const t of tiles) {
+                const el = document.createElement('div');
+                el.className = 'tile';
+                el.textContent = t.type;
+                el.style.zIndex = t.z * 100 + Math.round(t.y * 2);
+                el.onclick = () => pick(t);
+                t.el = el;
+                boardEl.appendChild(el);
+            }
+            sizeBoard();
+            updateBlocked();
+        }
+
+        function isBlocked(t) {
+            return tiles.some(u => !u.gone && u.z > t.z && overlaps(u, t));
+        }
+
+        function updateBlocked() {
+            for (const t of tiles) {
+                if (t.gone) continue;
+                t.el.textContent = t.type;
+                t.el.classList.toggle('blocked', isBlocked(t));
+            }
+        }
+
+        function hud() {
+            Arcade.text('left', tiles.filter(t => !t.gone).length);
+            Arcade.text('diffName', DIFFS[diff].name);
+            Arcade.text('layName', layout ? layout.name : '—');
+            Arcade.text('undoN', powers.undo); Arcade.text('shuffleN', powers.shuffle); Arcade.text('magicN', powers.magic);
+            document.getElementById('undoBtn').disabled = over || !powers.undo || !history.length;
+            document.getElementById('shuffleBtn').disabled = over || !powers.shuffle;
+            document.getElementById('magicBtn').disabled = over || !powers.magic;
+        }
+
+        function renderTray(clearing) {
+            trayEl.innerHTML = '';
+            for (let i = 0; i < SLOTS; i++) {
+                const s = document.createElement('div');
+                const t = tray[i];
+                s.className = 'slot' + (t ? ' full' : '') + (t && clearing && clearing.includes(t) ? ' clear' : '');
+                s.textContent = t ? t.type : '';
+                trayEl.appendChild(s);
+            }
+            trayEl.classList.toggle('danger', tray.length >= SLOTS - 1);
+        }
+
+        function addToTray(t) {
+            let idx = -1;
+            for (let i = tray.length - 1; i >= 0; i--) if (tray[i].type === t.type) { idx = i; break; }
+            if (idx === -1) tray.push(t); else tray.splice(idx + 1, 0, t);
+        }
+
+        function pick(t) {
+            if (over || busy || t.gone || isBlocked(t) || tray.length >= SLOTS) return;
+            t.gone = true;
+            t.el.classList.add('gone');
+            addToTray(t);
+            history.push(t);
+            Arcade.sfx('pop');
+            afterChange();
+        }
+
+        function afterChange() {
+            updateBlocked();
+            const counts = {};
+            for (const t of tray) counts[t.type] = (counts[t.type] || 0) + 1;
+            const triple = Object.keys(counts).find(k => counts[k] >= 3);
+            if (triple) {
+                const matched = tray.filter(t => t.type === triple).slice(0, 3);
+                busy = true;
+                renderTray(matched);
+                setTimeout(() => {
+                    tray = tray.filter(t => !matched.includes(t));
+                    history = history.filter(t => !matched.includes(t));
+                    busy = false;
+                    Arcade.sfx('score');
+                    renderTray();
+                    hud();
+                    checkEnd();
+                }, 280);
+            } else {
+                renderTray();
+                checkEnd();
+            }
+            hud();
+        }
+
+        function checkEnd() {
+            if (over) return;
+            if (tray.length === 0 && tiles.every(t => t.gone)) return end(true);
+            if (tray.length >= SLOTS) return end(false);
+        }
+
+        function end(won) {
+            over = true;
+            clearInterval(timer);
+            if (won) {
+                wins[diff]++;
+                Arcade.save('tapMatchWins', wins);
+                const got = cleared[layout.id] || [];
+                if (!got.includes(diff)) { cleared[layout.id] = [...got, diff]; Arcade.save('arcade.tapmatch.cleared', cleared); }
+                Arcade.sfx('win');
+                Arcade.count('win');
+            } else {
+                Arcade.sfx('die');
+                trayEl.classList.add('shake');
+                setTimeout(() => trayEl.classList.remove('shake'), 400);
+            }
+            setTimeout(() => {
+                const h = document.getElementById('endTitle');
+                h.textContent = won ? 'Cleared!' : 'Tray full';
+                h.className = won ? 'good' : 'bad';
+                Arcade.text('endText', won
+                    ? (diff !== 'extreme' && unlockedExtreme() && wins[diff] === 3 ? '🔥 Extreme mode is now unlocked!' : `${layout.name} cleared on ${DIFFS[diff].name}.`)
+                    : tiles.filter(t => !t.gone).length + ' tiles were left. Power-ups can save a stuck tray!');
+                Arcade.text('endTime', Arcade.time(seconds));
+                Arcade.text('endPowers', powersUsed);
+                Arcade.text('endWins', wins[diff]);
+                document.getElementById('nextBtn').hidden = !won;
+                document.getElementById('againBtn').className = won ? 'btn' : 'btn primary lg';
+                Arcade.show('endOv');
+                hud();
+            }, won ? 500 : 700);
+        }
+
+        /* ---------- Power-ups ---------- */
+        function undo() {
+            if (busy || over || !powers.undo) return;
+            const t = history.pop();
+            if (!t || !tray.includes(t)) return;
+            tray.splice(tray.indexOf(t), 1);
+            t.gone = false;
+            t.el.classList.remove('gone');
+            powers.undo--; powersUsed++;
+            Arcade.sfx('click');
+            updateBlocked(); renderTray(); hud();
+        }
+
+        function shuffle() {
+            if (busy || over || !powers.shuffle) return;
+            const left = tiles.filter(t => !t.gone);
+            const types = Arcade.shuffle(left.map(t => t.type));
+            left.forEach((t, i) => t.type = types[i]);
+            powers.shuffle--; powersUsed++;
+            Arcade.sfx('power');
+            boardEl.classList.add('shake'); setTimeout(() => boardEl.classList.remove('shake'), 350);
+            updateBlocked(); hud();
+        }
+
+        function magic() {
+            if (busy || over || !powers.magic) return;
+            const counts = {};
+            for (const t of tray) counts[t.type] = (counts[t.type] || 0) + 1;
+            const left = tiles.filter(t => !t.gone);
+            let type = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+            if (!type) type = left.find(t => !isBlocked(t))?.type || left[0]?.type;
+            if (!type) return;
+            const need = 3 - (counts[type] || 0);
+            const pool = left.filter(t => t.type === type).sort((a, b) => isBlocked(a) - isBlocked(b) || b.z - a.z);
+            if (pool.length < need) return;
+            for (let i = 0; i < need; i++) {
+                pool[i].gone = true;
+                pool[i].el.classList.add('gone');
+                addToTray(pool[i]);
+            }
+            powers.magic--; powersUsed++;
+            Arcade.sfx('power');
+            afterChange();
+        }
+
+        /* ---------- Wiring ---------- */
+        document.getElementById('undoBtn').onclick = undo;
+        document.getElementById('shuffleBtn').onclick = shuffle;
+        document.getElementById('magicBtn').onclick = magic;
+        document.getElementById('restartBtn').onclick = () => start();
+        document.getElementById('againBtn').onclick = () => start();
+        document.getElementById('nextBtn').onclick = () => start(diff, LAYOUTS[(LAYOUTS.indexOf(layout) + 1) % LAYOUTS.length]);
+        const openMenu = () => { buildMenu(); Arcade.hide('endOv'); Arcade.show('menuOv'); };
+        document.getElementById('levelsBtn').onclick = openMenu;
+        document.getElementById('menuTop').onclick = openMenu;
+        window.addEventListener('resize', () => { if (tiles.length) sizeBoard(); });
+        window.__tapmatch = { LAYOUTS, DIFFS, buildPositions, generate }; // for automated tests
+
+        powers = { undo: 2, shuffle: 1, magic: 1 };
+        buildMenu();
+        renderTray();
+        hud();
+    })();
+    </script>
+</body>
+</html>

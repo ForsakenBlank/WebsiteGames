@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #8b5cf6; --accent-2: #ec4899; --accent-ink: #0f0420; --x: #38bdf8; --o: #f472b6; --sz: min(78vw, 64vh, 540px); }
+        body.no-scroll { overflow: auto; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .status { font-weight: 800; font-size: 1.05rem; min-height: 1.5em; text-align: center; }
+        .status .x { color: var(--x); } .status .o { color: var(--o); }
+        .big { width: var(--sz); height: var(--sz); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); }
+        .classic .big { gap: 8px; }
+        .local { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); min-width: 0; min-height: 0; gap: 4px; padding: 5px; border-radius: 12px; background: var(--bg-2); position: relative; transition: box-shadow 0.2s, opacity 0.2s; }
+        .local.active { box-shadow: 0 0 0 3px var(--accent), 0 0 24px -6px var(--accent); }
+        .local.dim { opacity: 0.55; }
+        .local .won { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--sz) * 0.24); font-weight: 900; border-radius: 12px; background: rgba(11, 16, 32, 0.72); pointer-events: none; }
+        .cell { border: 0; border-radius: 8px; background: var(--surface-2); cursor: pointer; display: grid; place-items: center; font-weight: 900; font-size: calc(var(--sz) * 0.065); color: var(--text); padding: 0; min-width: 0; min-height: 0; }
+        .classic .cell { font-size: calc(var(--sz) * 0.2); border-radius: 14px; }
+        .cell:hover:not(:disabled) { background: var(--surface-3); }
+        .cell:disabled { cursor: default; }
+        .cell.x { color: var(--x); } .cell.o { color: var(--o); }
+        .cell.last { box-shadow: 0 0 0 2px #facc15 inset; }
+        .cell.win { background: color-mix(in srgb, var(--accent) 40%, var(--surface-2)); }
+        .cell.ghost { opacity: 0; }
+        .cell.pop { animation: pop 0.2s; }
+        @keyframes pop { from { transform: scale(0.4); } }
+        .classic .local { padding: 0; background: transparent; }
+        .score { display: flex; gap: 10px; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Tic-Tac-Toe</h1>
+        <div class="stats">
+            <span class="chip accent">Wins <b id="wins">0</b></span>
+            <span class="chip">Draws <b id="draws">0</b></span>
+            <span class="chip">Losses <b id="losses">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="tbar">
+            <div class="seg" id="modeSeg"><button class="btn sm" data-v="classic">Classic 3×3</button><button class="btn sm" data-v="ultimate">Ultimate</button></div>
+            <div class="seg" id="oppSeg"><button class="btn sm" data-v="easy">AI Easy</button><button class="btn sm" data-v="normal">AI Normal</button><button class="btn sm" data-v="hard">AI Hard</button><button class="btn sm" data-v="2p">2 players</button></div>
+            <button class="btn sm" id="newBtn">⟲ New game</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div id="wrap"><div class="big" id="big"></div></div>
+        <p class="tiny dim center" id="help" style="max-width:560px;margin:0"></p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+        const cfg = Object.assign({ mode: 'classic', opp: 'normal' }, Arcade.load('arcade.ttt.cfg', {}));
+        const stats = Object.assign({ wins: 0, losses: 0, draws: 0 }, Arcade.load('arcade.ttt.stats', {}));
+        let S, human = 'X', starter = 'X', over = false, last = -1, thinking = false, winLine = null;
+        const lineWin = (b) => { for (const l of LINES) { const v = b[l[0]]; if (v && v !== 'D' && v === b[l[1]] && v === b[l[2]]) return v; } return null; };
+        const lineOf = (b) => LINES.find(l => { const v = b[l[0]]; return v && v !== 'D' && v === b[l[1]] && v === b[l[2]]; });
+
+        /* ---------- state (works for both modes; classic = one local board) ---------- */
+        function fresh() {
+            const n = cfg.mode === 'ultimate' ? 9 : 1;
+            return { cells: Array.from({ length: n }, () => Array(9).fill(null)), meta: Array(n).fill(null), next: -1, turn: starter, moves: 0 };
+        }
+        function legal(s) {
+            const out = [];
+            const boards = s.next >= 0 && !s.meta[s.next] ? [s.next] : s.meta.map((m, i) => (m ? -1 : i)).filter(i => i >= 0);
+            for (const b of boards) for (let k = 0; k < 9; k++) if (!s.cells[b][k]) out.push(b * 9 + k);
+            return out;
+        }
+        function apply(s, mv) {
+            const b = Math.floor(mv / 9), k = mv % 9;
+            s.cells[b][k] = s.turn;
+            if (!s.meta[b]) { const w = lineWin(s.cells[b]); if (w) s.meta[b] = w; else if (s.cells[b].every(Boolean)) s.meta[b] = 'D'; }
+            s.next = s.meta.length > 1 ? k : 0;
+            s.turn = s.turn === 'X' ? 'O' : 'X';
+            s.moves++;
+        }
+        const clone = (s) => ({ cells: s.cells.map(r => r.slice()), meta: s.meta.slice(), next: s.next, turn: s.turn, moves: s.moves });
+        function result(s) {
+            if (s.meta.length === 1) { return s.meta[0] === 'X' || s.meta[0] === 'O' ? s.meta[0] : s.meta[0] === 'D' ? 'D' : null; }
+            const w = lineWin(s.meta);
+            if (w) return w;
+            if (s.meta.every(Boolean) || !legal(s).length) return 'D';
+            return null;
+        }
+
+        /* ---------- AI: perfect minimax for 3×3, Monte-Carlo tree search for Ultimate ---------- */
+        function minimax(b, turn, me, depth) {
+            const w = lineWin(b);
+            if (w) return w === me ? 10 - depth : depth - 10;
+            if (b.every(Boolean)) return 0;
+            let best = turn === me ? -99 : 99;
+            for (let k = 0; k < 9; k++) if (!b[k]) {
+                b[k] = turn;
+                const v = minimax(b, turn === 'X' ? 'O' : 'X', me, depth + 1);
+                b[k] = null;
+                best = turn === me ? Math.max(best, v) : Math.min(best, v);
+            }
+            return best;
+        }
+        function classicAI(s) {
+            const b = s.cells[0], me = s.turn, moves = legal(s);
+            const blunder = cfg.opp === 'easy' ? 0.6 : cfg.opp === 'normal' ? 0.2 : 0;
+            if (Math.random() < blunder) return Arcade.pick(moves);
+            let best = -99, pickMv = [];
+            for (const mv of moves) { b[mv] = me; const v = minimax(b, me === 'X' ? 'O' : 'X', me, 1); b[mv] = null; if (v > best) { best = v; pickMv = [mv]; } else if (v === best) pickMv.push(mv); }
+            return Arcade.pick(pickMv);
+        }
+        function rollout(s) {
+            let g = clone(s), r;
+            while (!(r = result(g))) {
+                const ms = legal(g);
+                // win a local board if possible, else random
+                let mv = null;
+                for (const m of ms) { const b = Math.floor(m / 9), k = m % 9; const cells = g.cells[b]; cells[k] = g.turn; const w = lineWin(cells); cells[k] = null; if (w) { mv = m; break; } }
+                apply(g, mv ?? ms[(Math.random() * ms.length) | 0]);
+            }
+            return r;
+        }
+        function mcts(root, ms) {
+            const me = root.turn, t0 = performance.now();
+            const node = (s, mv, parent) => ({ s, mv, parent, kids: null, untried: null, n: 0, w: 0 });
+            const R = node(clone(root), null, null);
+            R.untried = legal(R.s); R.kids = [];
+            let iters = 0;
+            while (performance.now() - t0 < ms) {
+                let n = R;
+                while (!n.untried.length && n.kids.length) {
+                    const lg = Math.log(n.n);
+                    let best = null, bv = -1;
+                    for (const k of n.kids) { const v = k.w / k.n + 1.25 * Math.sqrt(lg / k.n); if (v > bv) { bv = v; best = k; } }
+                    n = best;
+                }
+                if (n.untried.length && !result(n.s)) {
+                    const i = (Math.random() * n.untried.length) | 0, mv = n.untried.splice(i, 1)[0];
+                    const s2 = clone(n.s); apply(s2, mv);
+                    const ch = node(s2, mv, n); ch.untried = result(s2) ? [] : legal(s2); ch.kids = [];
+                    n.kids.push(ch); n = ch;
+                }
+                const r = rollout(n.s);
+                for (let p = n; p; p = p.parent) {
+                    p.n++;
+                    const mover = p.parent ? p.parent.s.turn : null;   // who made the move into p
+                    if (mover) p.w += r === 'D' ? 0.5 : r === mover ? 1 : 0;
+                }
+                iters++;
+            }
+            let best = R.kids[0];
+            for (const k of R.kids) if (k.n > best.n) best = k;
+            return best ? best.mv : legal(root)[0];
+        }
+        function ultimateAI(s) {
+            const moves = legal(s);
+            if (cfg.opp === 'easy' && Math.random() < 0.35) return Arcade.pick(moves);
+            return mcts(s, cfg.opp === 'easy' ? 120 : cfg.opp === 'normal' ? 450 : 1300);
+        }
+
+        /* ---------- flow ---------- */
+        function newGame() {
+            S = fresh(); over = false; last = -1; winLine = null; thinking = false;
+            if (cfg.opp !== '2p') human = starter === 'X' ? 'X' : 'O';
+            render();
+            maybeAI();
+        }
+        function move(mv) {
+            if (over || thinking || !legal(S).includes(mv)) return;
+            const p = S.turn;
+            apply(S, mv); last = mv;
+            Arcade.tone(p === 'X' ? 520 : 390, 0.06, 'triangle', 0.05);
+            const b = Math.floor(mv / 9);
+            if (S.meta.length > 1 && S.meta[b] && S.meta[b] !== 'D' && S.cells[b].filter(Boolean).length) { const w = S.meta[b]; if (lineWin(S.cells[b]) === w && !S._seen?.[b]) { S._seen = S._seen || {}; S._seen[b] = 1; Arcade.sfx('score'); } }
+            const r = result(S);
+            if (r) return end(r);
+            render();
+            maybeAI();
+        }
+        function maybeAI() {
+            if (over || cfg.opp === '2p' || S.turn === human) return;
+            thinking = true; render();
+            setTimeout(() => {
+                const mv = S.meta.length === 1 ? classicAI(S) : ultimateAI(S);
+                thinking = false;
+                move(mv);
+            }, S.meta.length === 1 ? 380 : 60);
+        }
+        function end(r) {
+            over = true;
+            winLine = S.meta.length === 1 ? lineOf(S.cells[0]) : lineOf(S.meta);
+            if (cfg.opp !== '2p') {
+                if (r === 'D') stats.draws++;
+                else if (r === human) { stats.wins++; Arcade.count('win'); Arcade.addXP(cfg.mode === 'ultimate' ? 25 : cfg.opp === 'hard' ? 5 : 8, true); }
+                else stats.losses++;
+                Arcade.save('arcade.ttt.stats', stats);
+                Arcade.sfx(r === 'D' ? 'select' : r === human ? 'win' : 'die');
+            } else Arcade.sfx('win');
+            starter = starter === 'X' ? 'O' : 'X';
+            render(r);
+        }
+        function render(r) {
+            const big = $('big');
+            $('wrap').className = cfg.mode === 'classic' ? 'classic' : 'ultimate';
+            big.innerHTML = '';
+            const legalSet = new Set(over ? [] : legal(S));
+            const activeBoards = new Set([...legalSet].map(m => Math.floor(m / 9)));
+            S.cells.forEach((cells, b) => {
+                const L = document.createElement('div');
+                L.className = 'local' + (S.meta.length > 1 && activeBoards.has(b) && !over && (cfg.opp === '2p' || S.turn === human) ? ' active' : '') + (S.meta.length > 1 && !activeBoards.has(b) && !over ? ' dim' : '');
+                if (S.meta.length === 1) L.style.gridColumn = '1 / -1', L.style.gridRow = '1 / -1';
+                const wl = S.meta.length === 1 ? (over ? winLine : null) : null;
+                cells.forEach((v, k) => {
+                    const c = document.createElement('button');
+                    const mv = b * 9 + k;
+                    c.className = 'cell' + (v ? ' ' + v.toLowerCase() : '') + (mv === last ? ' last pop' : '') + (wl && wl.includes(k) && (S.meta.length === 1 || S.meta[b] !== 'D') ? ' win' : '');
+                    c.textContent = v === 'X' ? '✕' : v === 'O' ? '◯' : '';
+                    c.disabled = !legalSet.has(mv) || thinking || (cfg.opp !== '2p' && S.turn !== human);
+                    c.onclick = () => move(mv);
+                    L.appendChild(c);
+                });
+                if (S.meta.length > 1 && S.meta[b]) {
+                    const w = document.createElement('div'); w.className = 'won';
+                    w.textContent = S.meta[b] === 'X' ? '✕' : S.meta[b] === 'O' ? '◯' : '–';
+                    w.style.color = S.meta[b] === 'X' ? 'var(--x)' : S.meta[b] === 'O' ? 'var(--o)' : 'var(--muted)';
+                    if (over && winLine && winLine.includes(b)) w.style.background = 'rgba(139,92,246,0.45)';
+                    L.appendChild(w);
+                }
+                big.appendChild(L);
+            });
+            const sym = (p) => `<span class="${p.toLowerCase()}">${p === 'X' ? '✕' : '◯'}</span>`;
+            let st;
+            if (over) st = r === 'D' ? 'Draw!' : cfg.opp === '2p' ? `${sym(r)} wins!` : r === human ? `You win! ${sym(r)}` : `The AI wins ${sym(r)}`;
+            else if (thinking) st = `AI ${sym(S.turn)} is thinking…`;
+            else st = cfg.opp === '2p' ? `${sym(S.turn)} to play` : `Your move ${sym(S.turn)}` + (S.meta.length > 1 && S.next >= 0 && !S.meta[S.next] ? ' — in the highlighted board' : S.meta.length > 1 ? ' — anywhere' : '');
+            $('status').innerHTML = st + (over ? ' &nbsp;<button class="btn sm primary" id="againBtn">Play again</button>' : '');
+            if (over) $('againBtn').onclick = newGame;
+            document.querySelectorAll('#modeSeg [data-v]').forEach(x => x.classList.toggle('active', x.dataset.v === cfg.mode));
+            document.querySelectorAll('#oppSeg [data-v]').forEach(x => { x.classList.toggle('active', x.dataset.v === cfg.opp); if (x.dataset.v === 'hard') x.textContent = cfg.mode === 'classic' ? 'AI Impossible' : 'AI Hard'; });
+            $('help').textContent = cfg.mode === 'ultimate'
+                ? 'Ultimate: win small boards to claim them; win three small boards in a row to win. The square you pick decides which board your opponent must play in next. If that board is finished, they can play anywhere.'
+                : 'Get three in a row. Impossible AI never loses — can you force a draw?';
+            Arcade.text('wins', stats.wins); Arcade.text('draws', stats.draws); Arcade.text('losses', stats.losses);
+        }
+        document.querySelectorAll('#modeSeg [data-v]').forEach(x => x.onclick = () => { cfg.mode = x.dataset.v; Arcade.save('arcade.ttt.cfg', cfg); newGame(); });
+        document.querySelectorAll('#oppSeg [data-v]').forEach(x => x.onclick = () => { cfg.opp = x.dataset.v; Arcade.save('arcade.ttt.cfg', cfg); newGame(); });
+        $('newBtn').onclick = newGame;
+        newGame();
+        window.__ttt = { get S() { return S; }, move, legal: () => legal(S), get over() { return over; }, get thinking() { return thinking; }, cfg, newGame };
+    })();
+    </script>
+</body>
+</html>

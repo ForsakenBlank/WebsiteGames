@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Slicer · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #22c55e; --accent-2: #facc15; --accent-ink: #03170a; }
+        .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+        .modes button { padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; }
+        .modes button:hover { border-color: var(--accent); }
+        .modes button b { display: block; font-size: 1.6rem; }
+        .modes button small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 4px; line-height: 1.3; }
+        #cv { cursor: crosshair; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Fruit Slicer</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+            <span class="chip" id="modeChip">Mode <b id="modeName">—</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="menuBtn">☰ Modes</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>🍉 Fruit Slicer</h2>
+                    <p>Swipe across the fruit to slice it. Slice 3 or more in one swipe for a combo!</p>
+                    <div class="modes">
+                        <button data-mode="classic"><b>⚔️</b>Classic<small>3 lives. Don't drop fruit. Never slice a bomb.</small><small id="bc"></small></button>
+                        <button data-mode="arcade"><b>⏱️</b>Arcade<small>60 seconds. Bombs cost points. Special bananas!</small><small id="ba"></small></button>
+                        <button data-mode="zen"><b>🧘</b>Zen<small>90 relaxing seconds. No bombs at all.</small><small id="bz"></small></button>
+                    </div>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">Game over</h2>
+                    <div class="big-num" id="endScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid" id="endStats"></div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button><button class="btn" id="modesBtn">Modes</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only">Hold the mouse button and swipe</span><span class="touch-only">Swipe with your finger</span> · Bananas in Arcade: <b style="color:#60a5fa">freeze</b>, <b style="color:#facc15">double</b>, <b style="color:#f87171">frenzy</b></p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 800, H = 560, TAU = Math.PI * 2, G = 900;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.8 });
+        const c = view.ctx;
+        const FRUITS = [
+            { e: '🍉', juice: '#ef4444', r: 46 }, { e: '🍊', juice: '#fb923c', r: 38 }, { e: '🍎', juice: '#f87171', r: 38 }, { e: '🍋', juice: '#fde047', r: 36 },
+            { e: '🥝', juice: '#84cc16', r: 34 }, { e: '🍑', juice: '#fdba74', r: 37 }, { e: '🍍', juice: '#facc15', r: 44 }, { e: '🍇', juice: '#a855f7', r: 38 },
+            { e: '🍓', juice: '#e11d48', r: 32 }, { e: '🥥', juice: '#f5f5f4', r: 38 }, { e: '🍐', juice: '#bef264', r: 37 }, { e: '🥭', juice: '#f59e0b', r: 39 },
+        ];
+        const BOMB = { e: '💣', r: 36, bomb: true };
+        const BANANAS = { freeze: { e: '🍌', glow: '#60a5fa', r: 38, label: 'FREEZE' }, double: { e: '🍌', glow: '#facc15', r: 38, label: 'DOUBLE SCORE' }, frenzy: { e: '🍌', glow: '#f87171', r: 38, label: 'FRENZY' } };
+        const sprites = {};
+        function sprite(e) {
+            if (sprites[e]) return sprites[e];
+            const s = document.createElement('canvas'); s.width = s.height = 128;
+            const g = s.getContext('2d');
+            g.font = '104px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+            g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText(e, 64, 70);
+            return (sprites[e] = s);
+        }
+        const stains = document.createElement('canvas'); stains.width = W; stains.height = H;
+        const sg = stains.getContext('2d');
+
+        let mode = null, score = 0, lives = 3, timeLeft = 0, running = false, items = [], halves = [], trail = [], down = false, spawnT = 0, elapsed = 0;
+        let swipeHits = [], swipeT = 0, popups = [], flash = 0, flashC = '#fff', slow = 0, dbl = 0, frenzy = 0, frenzyT = 0, maxCombo = 0, sliced = 0, missed = 0, shake = 0;
+        const fx = new Arcade.Particles(700);
+        const bestKey = (m) => 'arcade.slicer.best.' + m;
+        function updateBests() {
+            $('bc').textContent = 'Best ' + (Arcade.load(bestKey('classic'), 0) || 0);
+            $('ba').textContent = 'Best ' + (Arcade.load(bestKey('arcade'), 0) || 0);
+            $('bz').textContent = 'Best ' + (Arcade.load(bestKey('zen'), 0) || 0);
+        }
+        function start(m) {
+            mode = m; score = 0; lives = 3; timeLeft = m === 'arcade' ? 60 : m === 'zen' ? 90 : 0;
+            items = []; halves = []; trail = []; popups = []; spawnT = 0.6; elapsed = 0; slow = 0; dbl = 0; frenzy = 0; maxCombo = 0; sliced = 0; missed = 0;
+            sg.clearRect(0, 0, W, H); fx.clear();
+            running = true;
+            Arcade.hide('menuOv'); Arcade.hide('endOv');
+            hud();
+        }
+        function hud() {
+            Arcade.text('score', score);
+            Arcade.text('best', mode ? (Arcade.load(bestKey(mode), 0) || 0) : (Arcade.load('arcade.slicer.best', 0) || 0));
+            Arcade.text('modeName', mode ? mode[0].toUpperCase() + mode.slice(1) : '—');
+        }
+        function throwOne(kind, fromSide) {
+            const def = kind === 'bomb' ? BOMB : BANANAS[kind] || Arcade.pick(FRUITS);
+            let x, y, vx, vy;
+            if (fromSide) { const left = Math.random() < 0.5; x = left ? -40 : W + 40; y = H * (0.45 + Math.random() * 0.3); vx = (left ? 1 : -1) * (380 + Math.random() * 200); vy = -(420 + Math.random() * 220); }
+            else { x = 120 + Math.random() * (W - 240); y = H + 50; vx = (W / 2 - x) * (0.35 + Math.random() * 0.5) + (Math.random() - 0.5) * 120; vy = -(640 + Math.random() * 190); }
+            items.push({ x, y, vx, vy, rot: Math.random() * TAU, spin: (Math.random() - 0.5) * 6, def, kind: kind || 'fruit', r: def.r, born: elapsed });
+            Arcade.tone(180 + Math.random() * 60, 0.08, 'sine', 0.03, 260);
+        }
+        function spawnWave() {
+            const lvl = Math.min(1, elapsed / 120 + score / 300);
+            const n = 1 + Math.floor(Math.random() * (2 + lvl * 4));
+            let bombChance = mode === 'zen' ? 0 : mode === 'arcade' ? 0.1 : 0.08 + lvl * 0.14;
+            for (let i = 0; i < n; i++) setTimeout(() => {
+                if (!running) return;
+                const r = Math.random();
+                if (r < bombChance) throwOne('bomb');
+                else if (mode === 'arcade' && r < bombChance + 0.06) throwOne(Arcade.pick(['freeze', 'double', 'frenzy']));
+                else throwOne();
+            }, i * (120 + Math.random() * 160));
+            spawnT = Math.max(0.75, 2.1 - lvl * 1.1) * (0.8 + Math.random() * 0.4);
+        }
+        function sliceItem(it, ang) {
+            it.dead = true;
+            if (it.kind === 'bomb') return boom(it);
+            sliced++;
+            const juice = it.def.juice || '#fde047';
+            for (const side of [-1, 1]) {
+                const nx = Math.cos(ang + Math.PI / 2) * side, ny = Math.sin(ang + Math.PI / 2) * side;
+                halves.push({ x: it.x, y: it.y, vx: it.vx * 0.6 + nx * 140, vy: it.vy * 0.4 + ny * 140 - 60, rot: it.rot, rot0: it.rot, spin: it.spin + side * 3, ang, side, def: it.def, life: 2.5 });
+            }
+            fx.emit(it.x, it.y, { n: 18, speed: 260, color: [juice, juice, '#fff'], life: 0.6, size: 5, gravity: 600, shape: 'circle' });
+            sg.globalAlpha = 0.5; sg.fillStyle = juice;
+            for (let i = 0; i < 9; i++) { const a = Math.random() * TAU, d = Math.random() * it.r * 1.4; sg.beginPath(); sg.arc(it.x + Math.cos(a) * d, it.y + Math.sin(a) * d, 4 + Math.random() * 14, 0, TAU); sg.fill(); }
+            sg.globalAlpha = 1;
+            Arcade.tone(700 + Math.random() * 300, 0.06, 'triangle', 0.05, 300);
+            if (BANANAS[it.kind]) {
+                const b = it.kind;
+                if (b === 'freeze') slow = 5; else if (b === 'double') dbl = 6; else { frenzy = 4; frenzyT = 0; }
+                popups.push({ x: W / 2, y: H / 2 - 60, text: BANANAS[b].label + '!', t: 1.4, col: BANANAS[b].glow, big: true });
+                Arcade.sfx('power');
+            }
+            const pts = dbl > 0 ? 2 : 1;
+            score += pts;
+            swipeHits.push(it);
+            popups.push({ x: it.x, y: it.y - 20, text: '+' + pts, t: 0.6, col: '#fff' });
+            hud();
+        }
+        function boom(it) {
+            Arcade.sfx('boom');
+            flash = 1; flashC = '#fff'; shake = 0.5;
+            fx.emit(it.x, it.y, { n: 60, speed: 420, color: ['#f97316', '#facc15', '#ef4444', '#fff', '#1f2937'], life: 0.9, size: 6 });
+            if (mode === 'classic') { setTimeout(() => endGame('Boom!'), 650); running = false; }
+            else { score = Math.max(0, score - 10); popups.push({ x: it.x, y: it.y, text: '−10', t: 1, col: '#f87171', big: true }); hud(); }
+        }
+        function endSwipe() {
+            if (swipeHits.length >= 3) {
+                const n = swipeHits.length, bonus = n * (dbl > 0 ? 2 : 1);
+                score += bonus; maxCombo = Math.max(maxCombo, n);
+                const cx = swipeHits.reduce((a, s) => a + s.x, 0) / n, cy = swipeHits.reduce((a, s) => a + s.y, 0) / n;
+                popups.push({ x: cx, y: cy - 30, text: n + ' fruit combo! +' + bonus, t: 1.3, col: '#fde047', big: true });
+                Arcade.sfx('coin');
+                hud();
+            }
+            swipeHits = [];
+        }
+        function endGame(title) {
+            running = false;
+            endSwipe();
+            const r = Arcade.best(bestKey(mode), score);
+            Arcade.best('arcade.slicer.best', score);
+            Arcade.report('score', score);
+            Arcade.addXP(Math.min(50, Math.floor(score / 4)), true);
+            Arcade.sfx(title === 'Boom!' ? 'die' : 'win');
+            $('endTitle').textContent = title; $('endTitle').className = title === 'Boom!' || title === 'Game over' ? 'bad' : 'good';
+            $('endScore').textContent = score;
+            $('newBest').hidden = !r.isNew;
+            $('endStats').innerHTML = [['Sliced', sliced], ['Best combo', maxCombo || '—'], ['Missed', mode === 'classic' ? missed : '—']].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            Arcade.show('endOv');
+            hud();
+        }
+        const distSeg = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1; const t = Arcade.clamp(((px - ax) * dx + (py - ay) * dy) / L, 0, 1); return Math.hypot(px - ax - dx * t, py - ay - dy * t); };
+
+        function step(dt) {
+            const k = slow > 0 ? 0.4 : 1, sdt = dt * k;
+            fx.update(dt);
+            flash = Math.max(0, flash - dt * 2.5);
+            shake = Math.max(0, shake - dt);
+            for (const p of popups) { p.t -= dt; p.y -= 30 * dt; }
+            popups = popups.filter(p => p.t > 0);
+            const now = performance.now();
+            trail = trail.filter(p => now - p.t < 140);
+            for (const h of halves) { h.vy += G * sdt; h.x += h.vx * sdt; h.y += h.vy * sdt; h.rot += h.spin * sdt; h.life -= dt; }
+            halves = halves.filter(h => h.life > 0 && h.y < H + 120);
+            if (!running) return;
+            elapsed += dt;
+            slow = Math.max(0, slow - dt); dbl = Math.max(0, dbl - dt);
+            if (timeLeft > 0) { timeLeft -= dt; if (timeLeft <= 0) { timeLeft = 0; return endGame("Time's up!"); } }
+            if (frenzy > 0) { frenzy -= dt; frenzyT -= dt; if (frenzyT <= 0) { frenzyT = 0.12; throwOne(null, true); } }
+            spawnT -= dt;
+            if (spawnT <= 0) spawnWave();
+            for (const it of items) {
+                it.vy += G * sdt; it.x += it.vx * sdt; it.y += it.vy * sdt; it.rot += it.spin * sdt;
+                if (it.y > H + 70 && it.vy > 0) {
+                    it.dead = true;
+                    if (mode === 'classic' && it.kind === 'fruit') {
+                        lives--; missed++;
+                        Arcade.sfx('bad');
+                        popups.push({ x: Arcade.clamp(it.x, 40, W - 40), y: H - 40, text: '✗', t: 1, col: '#ef4444', big: true });
+                        if (lives <= 0) { endGame('Game over'); return; }
+                    }
+                }
+            }
+            items = items.filter(it => !it.dead);
+            sg.globalCompositeOperation = 'destination-out'; sg.fillStyle = `rgba(0,0,0,${dt * 0.12})`; sg.fillRect(0, 0, W, H); sg.globalCompositeOperation = 'source-over';
+            if (!down && swipeHits.length && performance.now() - swipeT > 150) endSwipe();
+        }
+        function drawItem(img, x, y, rot, r, clipAng, side) {
+            c.save(); c.translate(x, y);
+            if (clipAng !== undefined) {
+                c.rotate(clipAng);
+                c.beginPath(); c.rect(-80, side < 0 ? -80 : 0, 160, 80); c.clip();
+                c.rotate(-clipAng);
+            }
+            c.rotate(rot);
+            const s = r * 2.6;
+            c.drawImage(img, -s / 2, -s / 2, s, s);
+            c.restore();
+        }
+        function draw() {
+            c.save();
+            if (shake > 0) c.translate((Math.random() - 0.5) * 16 * shake, (Math.random() - 0.5) * 16 * shake);
+            const grd = c.createLinearGradient(0, 0, 0, H);
+            grd.addColorStop(0, '#5b3a1e'); grd.addColorStop(1, '#3b2412');
+            c.fillStyle = grd; c.fillRect(-20, -20, W + 40, H + 40);
+            c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 3;
+            for (let y = 70; y < H; y += 90) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+            c.strokeStyle = 'rgba(255,255,255,0.04)'; c.lineWidth = 1;
+            for (let i = 0; i < 30; i++) { const y = (i * 37) % H; c.beginPath(); c.moveTo(0, y); c.bezierCurveTo(W * 0.3, y + 8, W * 0.6, y - 8, W, y + 4); c.stroke(); }
+            c.drawImage(stains, 0, 0);
+            if (slow > 0) { c.fillStyle = 'rgba(96,165,250,0.15)'; c.fillRect(0, 0, W, H); }
+            for (const h of halves) { c.globalAlpha = Math.min(1, h.life); drawItem(sprite(h.def.e), h.x, h.y, h.rot, h.def.r, h.ang + h.rot - h.rot0, h.side); }
+            c.globalAlpha = 1;
+            for (const it of items) {
+                if (it.def.glow) { c.shadowColor = it.def.glow; c.shadowBlur = 26; }
+                if (it.kind === 'bomb') { c.shadowColor = '#ef4444'; c.shadowBlur = 14 + Math.sin(elapsed * 20) * 8; }
+                drawItem(sprite(it.def.e), it.x, it.y, it.rot, it.r);
+                c.shadowBlur = 0;
+                if (it.kind === 'bomb') { fx.emit(it.x + Math.cos(it.rot - 0.9) * it.r * 0.9, it.y + Math.sin(it.rot - 0.9) * it.r * 0.9, { n: 1, speed: 40, color: ['#facc15', '#f97316'], life: 0.25, size: 3 }); }
+            }
+            fx.draw(c);
+            // blade
+            if (trail.length > 1) {
+                const now = performance.now();
+                c.lineCap = 'round'; c.lineJoin = 'round';
+                for (let i = 1; i < trail.length; i++) {
+                    const a = trail[i - 1], b = trail[i], k = 1 - (now - b.t) / 140;
+                    c.strokeStyle = `rgba(255,255,255,${k})`; c.lineWidth = 2 + k * 9;
+                    c.shadowColor = '#bae6fd'; c.shadowBlur = 12;
+                    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+                }
+                c.shadowBlur = 0;
+            }
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            for (const p of popups) {
+                c.globalAlpha = Math.min(1, p.t * 2.5);
+                c.font = (p.big ? '900 28px' : '800 18px') + ' system-ui'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.6)';
+                c.strokeText(p.text, p.x, p.y); c.fillStyle = p.col; c.fillText(p.text, p.x, p.y);
+            }
+            c.globalAlpha = 1;
+            c.restore();
+            // HUD
+            c.font = '900 34px system-ui'; c.textAlign = 'left'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.fillStyle = '#fde68a';
+            c.strokeText(score, 22, 38); c.fillText(score, 22, 38);
+            if (mode === 'classic') {
+                c.textAlign = 'right'; c.font = '900 30px system-ui';
+                for (let i = 0; i < 3; i++) { c.fillStyle = i < 3 - lives ? '#ef4444' : 'rgba(255,255,255,0.25)'; c.fillText('✗', W - 22 - i * 34, 38); }
+            } else if (mode) {
+                c.textAlign = 'right'; c.fillStyle = timeLeft < 10 ? '#f87171' : '#fff'; c.font = '900 30px system-ui';
+                c.strokeText(Math.ceil(timeLeft) + 's', W - 22, 38); c.fillText(Math.ceil(timeLeft) + 's', W - 22, 38);
+            }
+            let px = 22;
+            c.font = '800 13px system-ui'; c.textAlign = 'left';
+            for (const [v, label, col] of [[slow, 'FREEZE', '#60a5fa'], [dbl, '×2', '#facc15'], [frenzy, 'FRENZY', '#f87171']]) if (v > 0) { c.fillStyle = col; c.fillText(label + ' ' + v.toFixed(1), px, 70); px += 100; }
+            if (flash > 0) { c.fillStyle = flashC; c.globalAlpha = flash; c.fillRect(0, 0, W, H); c.globalAlpha = 1; }
+        }
+
+        // swiping
+        let last = null;
+        function addPoint(e) {
+            const p = Arcade.pointer(cv, e, W, H), now = performance.now();
+            if (last && running) {
+                const d = Math.hypot(p.x - last.x, p.y - last.y);
+                if (d > 4) {
+                    const ang = Math.atan2(p.y - last.y, p.x - last.x);
+                    for (const it of items) if (!it.dead && distSeg(it.x, it.y, last.x, last.y, p.x, p.y) < it.r * 0.95) sliceItem(it, ang);
+                    if (swipeHits.length) swipeT = now;
+                }
+            }
+            if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 2) { trail.push({ x: p.x, y: p.y, t: now }); last = { x: p.x, y: p.y }; }
+        }
+        cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down = true; last = null; cv.setPointerCapture(e.pointerId); addPoint(e); if (!Arcade.muted) Arcade.tone(900, 0.04, 'sine', 0.015, 1500); });
+        cv.addEventListener('pointermove', (e) => { if (down) addPoint(e); });
+        const up = () => { down = false; last = null; endSwipe(); };
+        cv.addEventListener('pointerup', up);
+        cv.addEventListener('pointercancel', up);
+
+        document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => start(b.dataset.mode));
+        $('againBtn').onclick = () => start(mode);
+        $('modesBtn').onclick = () => { Arcade.hide('endOv'); updateBests(); Arcade.show('menuOv'); };
+        $('menuBtn').onclick = () => { if (running && !confirm('Quit this game?')) return; running = false; items = []; Arcade.hide('endOv'); updateBests(); Arcade.show('menuOv'); };
+        let pausedByHide = false;
+        document.addEventListener('visibilitychange', () => { if (document.hidden && running) { running = false; pausedByHide = true; } else if (!document.hidden && pausedByHide) { pausedByHide = false; running = true; } });
+        updateBests(); hud();
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__slicer = { start, get items() { return items; }, sliceItem, get score() { return score; }, get running() { return running; } };
+    })();
+    </script>
+</body>
+</html>

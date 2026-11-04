@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Sort | Extreme</title>
+    <style>
+        body { background: #111; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow-x: hidden; }
+        #ui { margin-bottom: 20px; text-align: center; z-index: 5; }
+        .btn { background: #222; border: 2px solid #444; color: #fff; padding: 10px 20px; cursor: pointer; margin: 5px; font-weight: bold; transition: 0.2s; }
+        .btn:hover { border-color: #0f0; background: #333; }
+        .btn.active { border-color: #0f0; background: #141; }
+        
+        #game-container { 
+            display: flex; flex-wrap: wrap; justify-content: center; 
+            gap: 15px; max-width: 900px; padding: 20px;
+        }
+        
+        .tube { 
+            width: 45px; height: 160px; border: 3px solid #666; border-top: none; 
+            border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; 
+            display: flex; flex-direction: column-reverse; overflow: hidden; 
+            cursor: pointer; position: relative; transition: transform 0.2s, border-color 0.2s; 
+            background: rgba(255,255,255,0.05);
+        }
+        .tube.selected { transform: translateY(-25px); border-color: #0f0; box-shadow: 0 10px 15px rgba(0,255,0,0.2); }
+        
+        .color-block { width: 100%; height: 25%; border-top: 1px solid rgba(0,0,0,0.1); }
+        
+        #win-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; 
+            flex-direction: column; align-items: center; justify-content: center; z-index: 100; 
+        }
+        h1 { margin: 10px; letter-spacing: 2px; color: #0f0; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1>COLOR SORT EXTREME</h1>
+    <button class="btn" id="btn-easy" onclick="initGame('easy')">EASY (5)</button>
+    <button class="btn" id="btn-medium" onclick="initGame('medium')">MEDIUM (8)</button>
+    <button class="btn" id="btn-hard" onclick="initGame('hard')">HARD (14)</button>
+</div>
+
+<div id="game-container"></div>
+
+<div id="win-overlay">
+    <h1 style="font-size: 3rem;">MASTERED!</h1>
+    <p>All colors sorted perfectly.</p>
+    <button class="btn" style="padding: 15px 40px; font-size: 1.2rem;" onclick="resetCurrent()">NEXT LEVEL</button>
+</div>
+
+<script>
+    const COLORS = [
+        '#ff4d4d', '#4d79ff', '#4dff4d', '#ffff4d', '#ff4dff', '#4dffff', 
+        '#ffa64d', '#a64dff', '#ffffff', '#808080', '#006400', '#8B4513',
+        '#FFD700', '#FF1493'
+    ];
+    
+    let tubesData = [];
+    let selectedIdx = null;
+    let currentDiff = 'easy';
+
+    function initGame(diff) {
+        currentDiff = diff;
+        document.getElementById('win-overlay').style.display = 'none';
+        selectedIdx = null;
+        
+        // Highlight active button
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + diff).classList.add('active');
+
+        let colorCount, emptyTubes = 2;
+        if (diff === 'easy') colorCount = 5;
+        else if (diff === 'medium') colorCount = 8;
+        else colorCount = 14;
+
+        // Create the deck
+        let deck = [];
+        for (let i = 0; i < colorCount; i++) {
+            for (let j = 0; j < 4; j++) deck.push(COLORS[i]);
+        }
+        
+        // Fisher-Yates Shuffle
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+
+        // Fill tubes
+        tubesData = [];
+        for (let i = 0; i < colorCount; i++) {
+            tubesData.push(deck.splice(0, 4));
+        }
+        for (let i = 0; i < emptyTubes; i++) {
+            tubesData.push([]);
+        }
+
+        render();
+    }
+
+    function render() {
+        const container = document.getElementById('game-container');
+        container.innerHTML = '';
+        
+        tubesData.forEach((colors, index) => {
+            const tube = document.createElement('div');
+            tube.className = 'tube' + (selectedIdx === index ? ' selected' : '');
+            tube.onclick = () => handleTap(index);
+
+            colors.forEach(c => {
+                const block = document.createElement('div');
+                block.className = 'color-block';
+                block.style.backgroundColor = c;
+                tube.appendChild(block);
+            });
+
+            container.appendChild(tube);
+        });
+
+        if (checkWin()) {
+            setTimeout(() => {
+                document.getElementById('win-overlay').style.display = 'flex';
+            }, 500);
+        }
+    }
+
+    function handleTap(index) {
+        if (selectedIdx === null) {
+            if (tubesData[index].length > 0) selectedIdx = index;
+        } else {
+            if (selectedIdx === index) {
+                selectedIdx = null;
+            } else {
+                pour(selectedIdx, index);
+                selectedIdx = null;
+            }
+        }
+        render();
+    }
+
+    function pour(fromIdx, toIdx) {
+        let from = tubesData[fromIdx];
+        let to = tubesData[toIdx];
+
+        if (to.length >= 4 || from.length === 0) return;
+
+        let color = from[from.length - 1];
+
+        if (to.length === 0 || to[to.length - 1] === color) {
+            // Pour all consecutive blocks of same color
+            while (from.length > 0 && from[from.length - 1] === color && to.length < 4) {
+                to.push(from.pop());
+            }
+        }
+    }
+
+    function checkWin() {
+        return tubesData.every(tube => {
+            if (tube.length === 0) return true;
+            if (tube.length === 4) {
+                return tube.every(c => c === tube[0]);
+            }
+            return false;
+        });
+    }
+
+    function resetCurrent() {
+        initGame(currentDiff);
+    }
+
+    initGame('easy');
+</script>
+</body>
+</html>

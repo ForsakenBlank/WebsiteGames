@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #06b6d4; --accent-2: #a855f7; --accent-ink: #021417; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        #cv { touch-action: none; cursor: pointer; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Flow</h1>
+        <div class="stats">
+            <span class="chip accent">Level <b id="lvl">1</b></span>
+            <span class="chip">Flows <b id="flows">0/0</b></span>
+            <span class="chip">Moves <b id="moves">0</b></span>
+            <span class="chip gold hide-sm">Solved <b id="solved">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="tbar">
+            <div class="seg" id="sizes"></div>
+            <button class="btn sm" id="prevBtn">◀</button>
+            <button class="btn sm" id="nextBtn">▶</button>
+            <button class="btn sm" id="hintBtn">💡 Hint</button>
+            <button class="btn sm" id="resetBtn">⟲ Restart</button>
+        </div>
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="winOv" hidden>
+                <div class="modal">
+                    <h2 class="good" id="winTitle">Solved!</h2>
+                    <div class="big-num" id="winStars">★★★</div>
+                    <p id="winText"></p>
+                    <div class="actions"><button class="btn primary lg" id="winNext">Next level</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0">Drag from a dot to draw a pipe to its twin. Connect every pair and fill every square. Pipes can't cross.</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#facc15', '#f97316', '#22d3ee', '#ec4899', '#a16207', '#a855f7', '#f8fafc', '#84cc16', '#64748b', '#be123c', '#0d9488'];
+        const SIZES = [5, 6, 7, 8, 9, 10];
+        const S = 600;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, S, S, { max: 1.5 });
+        const c = view.ctx;
+        const prog = Object.assign({}, Arcade.load('arcade.flow.prog', {}));
+        let solvedTotal = Arcade.load('arcade.flow.solved', 0) || 0;
+        let N = Arcade.load('arcade.flow.size', 5); if (!SIZES.includes(N)) N = 5;
+        let level = 1, P = null, paths, owner, drawing = null, moves = 0, lastColor = -1, hints = 0, won = false, pulse = 0;
+
+        /* ---------- puzzle generator: random Hamiltonian path (backbite moves), cut into flows ---------- */
+        function generate(n, seed) {
+            const rng = Arcade.seeded(seed);
+            const path = [];
+            for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) path.push(y * n + (y % 2 ? n - 1 - x : x));
+            const nb = (i) => { const x = i % n, y = (i / n) | 0, o = []; if (x > 0) o.push(i - 1); if (x < n - 1) o.push(i + 1); if (y > 0) o.push(i - n); if (y < n - 1) o.push(i + n); return o; };
+            const pos = new Int32Array(n * n);
+            const reindex = () => path.forEach((v, i) => { pos[v] = i; });
+            reindex();
+            for (let it = 0; it < n * n * 40; it++) {
+                if (rng() < 0.5) path.reverse(), reindex();
+                const end = path[0], ns = nb(end), m = ns[Math.floor(rng() * ns.length)], j = pos[m];
+                if (j === 1) continue;
+                // backbite: link end → m, then the path starts from path[j-1]
+                const head = path.slice(0, j).reverse();
+                for (let k = 0; k < j; k++) path[k] = head[k];
+                for (let k = 0; k < j; k++) pos[path[k]] = k;
+            }
+            const total = n * n;
+            const k = Math.min(COLORS.length, n + (n >= 7 ? Math.floor(rng() * 2) : 0));
+            const lens = Array(k).fill(3);
+            for (let r = total - 3 * k; r > 0; r--) lens[Math.floor(rng() * k)]++;
+            const flows = [];
+            let at = 0;
+            for (let i = 0; i < k; i++) { flows.push(path.slice(at, at + lens[i])); at += lens[i]; }
+            // shuffle colours so neighbours along the path aren't always red, green, blue…
+            const order = Arcade.shuffle(flows.map((_, i) => i).slice());
+            return { n, flows: flows.map((f, i) => ({ cells: f, color: order[i] })) };
+        }
+        function load(n, lv) {
+            N = n; level = lv;
+            P = generate(n, n * 1000003 + lv * 7919 + 17);
+            paths = P.flows.map(f => [f.cells[0]]);
+            paths.forEach((p, i) => { p.length = 0; });
+            owner = new Int32Array(n * n).fill(-1);
+            drawing = null; moves = 0; lastColor = -1; hints = 0; won = false;
+            Arcade.save('arcade.flow.size', n);
+            buildSizes(); hud();
+        }
+        const endsOf = (i) => [P.flows[i].cells[0], P.flows[i].cells[P.flows[i].cells.length - 1]];
+        const dotAt = (cell) => { for (let i = 0; i < P.flows.length; i++) { const [a, b] = endsOf(i); if (cell === a || cell === b) return i; } return -1; };
+        const complete = (i) => { const p = paths[i]; if (p.length < 2) return false; const [a, b] = endsOf(i); return (p[0] === a && p[p.length - 1] === b) || (p[0] === b && p[p.length - 1] === a); };
+        function setPath(i, cells) {
+            for (const v of paths[i]) if (owner[v] === i) owner[v] = -1;
+            paths[i] = cells;
+            for (const v of cells) owner[v] = i;
+        }
+        function cutAt(i, cell) {   // another flow drew through this cell: cut flow i before it
+            const p = paths[i], k = p.indexOf(cell);
+            if (k < 0) return;
+            setPath(i, p.slice(0, k));
+        }
+        const adj = (a, b) => { const ax = a % N, ay = (a / N) | 0, bx = b % N, by = (b / N) | 0; return Math.abs(ax - bx) + Math.abs(ay - by) === 1; };
+        function down(cell) {
+            if (won) return;
+            const d = dotAt(cell);
+            if (d >= 0) { startColor(d); setPath(d, [cell]); drawing = d; return; }
+            const o = owner[cell];
+            if (o >= 0) { startColor(o); const p = paths[o]; setPath(o, p.slice(0, p.indexOf(cell) + 1)); drawing = o; }
+        }
+        function startColor(i) { if (i !== lastColor) { moves++; lastColor = i; } }
+        function extend(cell) {
+            if (drawing === null || won) return;
+            const i = drawing, p = paths[i];
+            const last = p[p.length - 1];
+            if (cell === last) return;
+            const k = p.indexOf(cell);
+            if (k >= 0) { setPath(i, p.slice(0, k + 1)); return; }      // dragging back over itself
+            if (!adj(last, cell)) return;
+            if (complete(i)) return;
+            const d = dotAt(cell);
+            if (d >= 0 && d !== i) return;                              // someone else's dot
+            if (d === i && cell === p[0]) return;
+            const o = owner[cell];
+            if (o >= 0 && o !== i) cutAt(o, cell);
+            p.push(cell); owner[cell] = i;
+            Arcade.tone(300 + p.length * 18, 0.03, 'triangle', 0.025);
+            if (d === i) { Arcade.tone(880, 0.1, 'triangle', 0.05); pulse = 1; }
+            hud();
+        }
+        function up() {
+            if (drawing === null) return;
+            drawing = null;
+            checkWin();
+        }
+        function checkWin() {
+            const allDone = P.flows.every((_, i) => complete(i));
+            const filled = owner.every(v => v >= 0);
+            hud();
+            if (allDone && filled) {
+                won = true;
+                const perfect = moves <= P.flows.length && !hints;
+                const stars = hints ? 1 : perfect ? 3 : 2;
+                const key = String(N);
+                if ((prog[key] || 1) <= level) { prog[key] = level + 1; Arcade.save('arcade.flow.prog', prog); }
+                solvedTotal++; Arcade.save('arcade.flow.solved', solvedTotal);
+                Arcade.count('win');
+                Arcade.addXP(4 + N, true);
+                Arcade.sfx('win');
+                $('winTitle').textContent = perfect ? 'Perfect!' : 'Solved!';
+                $('winStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+                $('winText').textContent = `${N}×${N} level ${level} in ${moves} moves` + (hints ? ` · ${hints} hint${hints > 1 ? 's' : ''}` : '') + (perfect ? '' : ' · Perfect = one move per colour, no hints');
+                setTimeout(() => Arcade.show('winOv'), 350);
+            } else if (allDone && !filled) Arcade.toast('Every pair is linked — now fill the empty squares too', null, 2200);
+        }
+        function hint() {
+            if (won) return;
+            const i = P.flows.findIndex((f, k) => !(complete(k) && paths[k].length === f.cells.length && paths[k].every((v, j) => v === f.cells[j] || v === f.cells[f.cells.length - 1 - j])));
+            if (i < 0) return;
+            for (const v of P.flows[i].cells) { const o = owner[v]; if (o >= 0 && o !== i) cutAt(o, v); }
+            setPath(i, P.flows[i].cells.slice());
+            hints++; moves++;
+            Arcade.sfx('power');
+            checkWin();
+        }
+        function hud() {
+            Arcade.text('lvl', N + '×' + N + ' · ' + level);
+            Arcade.text('flows', P.flows.filter((_, i) => complete(i)).length + '/' + P.flows.length);
+            Arcade.text('moves', moves);
+            Arcade.text('solved', solvedTotal);
+        }
+        function buildSizes() {
+            const host = $('sizes'); host.innerHTML = '';
+            for (const n of SIZES) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (n === N ? ' active' : '');
+                b.textContent = n + '×' + n;
+                b.title = 'Reached level ' + (prog[n] || 1);
+                b.onclick = () => load(n, prog[n] || 1);
+                host.appendChild(b);
+            }
+        }
+        function draw() {
+            const cs = S / N, pad = 0;
+            c.fillStyle = '#05070f'; c.fillRect(0, 0, S, S);
+            for (let i = 0; i < N * N; i++) {
+                const x = (i % N) * cs, y = ((i / N) | 0) * cs, o = owner[i];
+                if (o >= 0) { c.fillStyle = COLORS[P.flows[o].color]; c.globalAlpha = complete(o) ? 0.22 : 0.12; c.fillRect(x, y, cs, cs); c.globalAlpha = 1; }
+            }
+            c.strokeStyle = 'rgba(148,163,184,0.25)'; c.lineWidth = 1;
+            for (let k = 0; k <= N; k++) { c.beginPath(); c.moveTo(k * cs + 0.5, 0); c.lineTo(k * cs + 0.5, S); c.stroke(); c.beginPath(); c.moveTo(0, k * cs + 0.5); c.lineTo(S, k * cs + 0.5); c.stroke(); }
+            const ctr = (v) => [(v % N + 0.5) * cs, (((v / N) | 0) + 0.5) * cs];
+            c.lineCap = 'round'; c.lineJoin = 'round';
+            paths.forEach((p, i) => {
+                if (p.length < 2) return;
+                c.strokeStyle = COLORS[P.flows[i].color]; c.lineWidth = cs * 0.34;
+                c.beginPath(); p.forEach((v, k) => { const [x, y] = ctr(v); k ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke();
+            });
+            P.flows.forEach((f, i) => {
+                for (const v of endsOf(i)) {
+                    const [x, y] = ctr(v);
+                    const r = cs * 0.34 * (complete(i) && pulse > 0 ? 1 + pulse * 0.15 : 1);
+                    c.fillStyle = COLORS[f.color]; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+                    if (complete(i)) { c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 2; c.stroke(); }
+                }
+            });
+            if (drawing !== null) {
+                const p = paths[drawing], [x, y] = ctr(p[p.length - 1]);
+                c.fillStyle = COLORS[P.flows[drawing].color]; c.globalAlpha = 0.35; c.beginPath(); c.arc(x, y, cs * 0.5, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+            }
+        }
+        const cellAt = (e) => { const p = Arcade.pointer(cv, e, S, S), cs = S / N; const x = Math.floor(p.x / cs), y = Math.floor(p.y / cs); return x >= 0 && y >= 0 && x < N && y < N ? y * N + x : -1; };
+        cv.addEventListener('pointerdown', (e) => { const k = cellAt(e); if (k >= 0) { down(k); cv.setPointerCapture(e.pointerId); } });
+        cv.addEventListener('pointermove', (e) => {
+            if (drawing === null) return;
+            const k = cellAt(e);
+            if (k < 0) return;
+            // fast drags can skip cells: walk there one step at a time
+            let guard = 0;
+            while (drawing !== null && guard++ < 30) {
+                const p = paths[drawing], last = p[p.length - 1];
+                if (last === k || p.includes(k)) { extend(k); break; }
+                const lx = last % N, ly = (last / N) | 0, kx = k % N, ky = (k / N) | 0;
+                const nx = lx + Math.sign(kx - lx) * (Math.abs(kx - lx) >= Math.abs(ky - ly) ? 1 : 0), ny = ly + Math.sign(ky - ly) * (Math.abs(kx - lx) >= Math.abs(ky - ly) ? 0 : 1);
+                const before = p.length;
+                extend(ny * N + nx);
+                if (paths[drawing].length === before || complete(drawing)) break;
+            }
+        });
+        cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+        $('prevBtn').onclick = () => { if (level > 1) load(N, level - 1); };
+        $('nextBtn').onclick = () => { if (level < (prog[N] || 1)) load(N, level + 1); else Arcade.toast('Solve this one to unlock the next', null, 1500); };
+        $('resetBtn').onclick = () => load(N, level);
+        $('hintBtn').onclick = hint;
+        $('winNext').onclick = () => { Arcade.hide('winOv'); load(N, level + 1); };
+        const loop = Arcade.loop((dt) => { pulse = Math.max(0, pulse - dt * 3); draw(); });
+        load(N, prog[N] || 1);
+        loop.start();
+        window.__flow = { get P() { return P; }, hint, get won() { return won; }, load };
+    })();
+    </script>
+</body>
+</html>

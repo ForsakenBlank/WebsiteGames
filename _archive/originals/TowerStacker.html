@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Precision Stack</title>
+    <style>
+        body { margin: 0; background: #121212; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        canvas { background: #1a1a1a; border: 2px solid #333; cursor: pointer; }
+        #ui { position: absolute; top: 20px; text-align: center; pointer-events: none; }
+        .score { font-size: 24px; font-weight: bold; color: #00ffcc; text-shadow: 0 0 10px #00ffcc; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="score">HEIGHT: <span id="hVal">0</span> | BEST: <span id="bVal">0</span></div>
+        <div style="color: #666; margin-top: 5px;">Click to Stack</div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const hVal = document.getElementById('hVal'), bVal = document.getElementById('bVal');
+
+        canvas.width = 400; canvas.height = 600;
+
+        let best = localStorage.getItem('stackerBest') || 0;
+        bVal.innerText = best;
+
+        let blocks = [], cameraY = 0, gameOver = false;
+        let current = { x: 0, y: 0, w: 150, speed: 4, dir: 1 };
+
+        function init() {
+            blocks = [{ x: 125, y: 560, w: 150 }]; // Starting base
+            current = { x: -150, y: 530, w: 150, speed: 4, dir: 1 };
+            cameraY = 0; gameOver = false; hVal.innerText = "0";
+            requestAnimationFrame(loop);
+        }
+
+        canvas.addEventListener('mousedown', () => {
+            if (gameOver) { init(); return; }
+            
+            const last = blocks[blocks.length - 1];
+            const overlap = Math.min(current.x + current.w, last.x + last.w) - Math.max(current.x, last.x);
+
+            if (overlap <= 0) {
+                gameOver = true;
+                if (blocks.length - 1 > best) {
+                    best = blocks.length - 1;
+                    localStorage.setItem('stackerBest', best);
+                    bVal.innerText = best;
+                }
+            } else {
+                // Slice and keep only the overlapping part
+                const newX = Math.max(current.x, last.x);
+                blocks.push({ x: newX, y: current.y, w: overlap });
+                
+                // Set up next block
+                current.w = overlap;
+                current.y -= 30;
+                current.x = (blocks.length % 2 === 0) ? -current.w : canvas.width;
+                current.dir = (blocks.length % 2 === 0) ? 1 : -1;
+                current.speed += 0.2; // Slowly get harder
+                
+                hVal.innerText = blocks.length - 1;
+                if (blocks.length > 8) cameraY += 30;
+            }
+        });
+
+        function loop() {
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '24px Arial';
+                ctx.fillText("TOWER COLLAPSED", 200, 280);
+                ctx.font = '14px Arial'; ctx.fillText("Click to Rebuild", 200, 320);
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            current.x += current.speed * current.dir;
+            if (current.x > canvas.width || current.x < -current.w) current.dir *= -1;
+
+            ctx.save(); ctx.translate(0, cameraY);
+            blocks.forEach((b, i) => {
+                ctx.fillStyle = `hsl(${(i * 15) % 360}, 60%, 50%)`;
+                ctx.fillRect(b.x, b.y, b.w, 30);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.strokeRect(b.x, b.y, b.w, 30);
+            });
+            ctx.restore();
+
+            // Draw the moving block
+            ctx.fillStyle = '#fff'; ctx.fillRect(current.x, current.y + cameraY, current.w, 30);
+            
+            requestAnimationFrame(loop);
+        }
+
+        init();
+    </script>
+</body>
+</html>

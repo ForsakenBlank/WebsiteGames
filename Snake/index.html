@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #34d399; --accent-2: #22d3ee; --accent-ink: #03140d; }
+        .mode-list { display: grid; gap: 8px; margin-top: 14px; }
+        .mode-btn { justify-content: space-between; text-align: left; padding: 12px 14px; white-space: normal; }
+        .mode-btn small { color: var(--muted); font-weight: 500; display: block; }
+        .mode-btn .best { font-size: 0.75rem; color: var(--gold); white-space: nowrap; }
+        .tabs { margin-top: 12px; }
+        .levels { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 14px; }
+        .lv { aspect-ratio: 1; padding: 2px; flex-direction: column; gap: 0; font-size: 0.95rem; }
+        .lv small { font-size: 0.62rem; color: var(--gold); letter-spacing: -1px; }
+        .lv.locked { opacity: 0.35; }
+        .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; margin-top: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); text-align: left; }
+        .opt small { color: var(--muted); display: block; font-size: 0.74rem; }
+        .switch { width: 46px; height: 26px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-2); position: relative; cursor: pointer; flex: none; }
+        .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: 0.15s; }
+        .switch.on { background: var(--accent); }
+        .switch.on::after { left: 22px; background: #fff; }
+        .custom-row { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .custom-row b { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #editBar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: 720px; }
+        #editBar input[type=text] { width: 140px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: inherit; }
+        #editBar select { padding: 7px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: inherit; }
+        .stars { font-size: 2rem; letter-spacing: 4px; color: var(--gold); }
+        .stars .off { color: var(--surface-3); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Snake</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip gold" id="bestChip">Best <b id="best">0</b></span>
+            <span class="chip" id="goalChip" hidden>Apples <b id="goal">0</b></span>
+            <span class="chip">Length <b id="len">3</b></span>
+            <span class="chip good" id="pwChip" hidden><b id="pw"></b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" id="pauseBtn" title="Pause (P)">⏸</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>Snake</h2>
+                    <p>Eat apples, grow long, don't bite yourself.</p>
+                    <div class="seg tabs" id="tabs">
+                        <button class="btn sm" data-tab="endless">Endless</button>
+                        <button class="btn sm" data-tab="daily">Daily</button>
+                        <button class="btn sm" data-tab="campaign">Campaign</button>
+                        <button class="btn sm" data-tab="custom">Editor</button>
+                    </div>
+                    <div id="tabBody"></div>
+                    <div class="opt">
+                        <div><b>Power-ups</b><small>🐌 slow-mo · 👻 ghost · 🧲 magnet · ✂️ shrink</small></div>
+                        <div class="switch" id="pwSwitch" role="switch" tabindex="0"></div>
+                    </div>
+                    <p class="tiny dim" style="margin-top:14px">
+                        <span class="desktop-only"><kbd>WASD</kbd>/<kbd>Arrows</kbd> move · <kbd>P</kbd> pause</span>
+                        <span class="touch-only">Swipe on the board or use the pad</span>
+                        · Snake skins are in the hub 🛍️ shop
+                    </p>
+                </div>
+            </div>
+
+            <div class="overlay" id="pauseOv" hidden>
+                <div class="modal">
+                    <h2>Paused</h2>
+                    <div class="actions">
+                        <button class="btn primary lg" id="resumeBtn">Resume</button>
+                        <button class="btn" id="restartBtn">Restart</button>
+                        <button class="btn" id="quitBtn">Menu</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad" id="overTitle">Game Over</h2>
+                    <div class="big-num" id="finalScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Length</small><b id="finalLen">0</b></div>
+                        <div><small>Apples</small><b id="finalApples">0</b></div>
+                        <div><small>Best</small><b id="finalBest">0</b></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn primary lg" id="againBtn">Play again</button>
+                        <button class="btn" id="menuBtn">Menu</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overlay" id="winOv" hidden>
+                <div class="modal">
+                    <h2 class="good" id="winTitle">Level clear!</h2>
+                    <div class="stars" id="winStars"></div>
+                    <p id="winInfo"></p>
+                    <div class="actions">
+                        <button class="btn primary lg" id="nextBtn">Next level</button>
+                        <button class="btn" id="retryBtn">Retry</button>
+                        <button class="btn" id="winMenuBtn">Menu</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="editBar" hidden>
+            <input type="text" id="edName" maxlength="24" placeholder="Level name">
+            <label class="small muted">Goal <select id="edGoal"></select></label>
+            <label class="small muted">Speed <select id="edSpeed"><option value="6">Slow</option><option value="8" selected>Normal</option><option value="10.5">Fast</option><option value="13">Very fast</option></select></label>
+            <button class="btn sm" id="edWrap">Walls wrap: off</button>
+            <button class="btn sm" id="edBorder">Border</button>
+            <button class="btn sm" id="edClear">Clear</button>
+            <button class="btn sm" id="edTest">▶ Test</button>
+            <button class="btn sm primary" id="edSave">💾 Save</button>
+            <button class="btn sm" id="edCode">📋 Code</button>
+            <button class="btn sm ghost" id="edBack">Back</button>
+            <span class="tiny dim" style="width:100%;text-align:center">Click or drag on the board to draw walls. The snake starts on the green arrow.</span>
+        </div>
+
+        <div class="dpad">
+            <button class="btn up" data-dir="up">▲</button>
+            <button class="btn left" data-dir="left">◀</button>
+            <button class="btn down" data-dir="down">▼</button>
+            <button class="btn right" data-dir="right">▶</button>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const N = 20, CELL = 24, W = N * CELL;
+        const MODES = {
+            chill:   { name: 'Chill',   desc: 'Walls wrap around. Relaxed pace.', wrap: true,  speed: 6.5, inc: 0.08, max: 12, rocks: false },
+            classic: { name: 'Classic', desc: 'Walls are deadly. Speeds up as you eat.', wrap: false, speed: 8,   inc: 0.14, max: 16, rocks: false },
+            insane:  { name: 'Insane',  desc: 'Fast, and rocks appear as you grow.', wrap: false, speed: 10.5, inc: 0.2, max: 22, rocks: true },
+        };
+        const DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+        const $ = (id) => document.getElementById(id);
+
+        /* ---------- Campaign: 30 hand-made levels ---------- */
+        const rect = (x, y, w, h) => { const out = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([x + i, y + j]); return out; };
+        const hl = (y, x0, x1) => rect(x0, y, x1 - x0 + 1, 1);
+        const vl = (x, y0, y1) => rect(x, y0, 1, y1 - y0 + 1);
+        const border = () => [...hl(0, 0, 19), ...hl(19, 0, 19), ...vl(0, 1, 18), ...vl(19, 1, 18)];
+        const mirror4 = (cells) => cells.flatMap(([x, y]) => [[x, y], [19 - x, y], [x, 19 - y], [19 - x, 19 - y]]);
+        const LEVELS = [
+            { name: 'First Bite', wrap: true, goal: 8, speed: 6, walls: [] },
+            { name: 'Fenced In', goal: 10, speed: 6.5, walls: border() },
+            { name: 'Four Pillars', wrap: true, goal: 12, speed: 7, walls: mirror4(rect(4, 4, 2, 2)) },
+            { name: 'The Divide', wrap: true, goal: 12, speed: 7, walls: [...vl(10, 0, 7), ...vl(10, 12, 19)] },
+            { name: 'Corridors', wrap: true, goal: 14, speed: 7.5, walls: [...hl(4, 3, 16), ...hl(15, 3, 16)] },
+            { name: 'Inner Room', goal: 14, speed: 7.5, walls: [...border(), ...hl(6, 6, 13), ...hl(13, 6, 13)] },
+            { name: 'Crossroads', wrap: true, goal: 15, speed: 8, walls: [...vl(9, 2, 7), ...vl(10, 2, 7), ...vl(9, 12, 17), ...vl(10, 12, 17), ...hl(9, 13, 18), ...hl(10, 13, 18)] },
+            { name: 'Zig Zag', wrap: true, goal: 15, speed: 8, walls: [...hl(3, 0, 13), ...hl(7, 6, 19), ...hl(13, 0, 13), ...hl(16, 6, 19)] },
+            { name: 'Dotted', wrap: true, goal: 16, speed: 8, walls: [2, 6, 10, 14, 18].flatMap(x => [2, 6, 14, 18].map(y => [x, y])) },
+            { name: 'Four Rooms', goal: 16, speed: 8, walls: [...border(), ...vl(10, 1, 6), ...vl(10, 13, 18), ...hl(14, 1, 5), ...hl(14, 14, 18), ...hl(5, 1, 5), ...hl(5, 14, 18)] },
+            { name: 'Spiral', goal: 16, speed: 8.5, walls: [...border(), ...hl(4, 4, 15), ...vl(15, 4, 15), ...hl(15, 4, 15), ...vl(4, 7, 15), ...hl(7, 4, 12), ...vl(12, 7, 12)] },
+            { name: 'Bunkers', wrap: true, goal: 18, speed: 8.5, walls: mirror4([...hl(3, 3, 7), ...vl(3, 3, 6)]) },
+            { name: 'Twin Lanes', goal: 18, speed: 8.5, walls: [...border(), ...vl(6, 1, 13), ...vl(13, 6, 18)] },
+            { name: 'Comb', wrap: true, goal: 18, speed: 9, walls: [2, 6, 13, 17].flatMap(x => vl(x, 0, 7)).concat([4, 8, 11, 15].flatMap(x => vl(x, 13, 19))) },
+            { name: 'Diamond', goal: 20, speed: 9, walls: [...border(), ...mirror4([[8, 5], [7, 6], [6, 7], [5, 8]])] },
+            { name: 'Labyrinth', goal: 20, speed: 9, walls: [...border(), ...hl(4, 1, 14), ...hl(8, 5, 18), ...hl(12, 1, 14), ...hl(16, 5, 18)] },
+            { name: 'Brackets', wrap: true, goal: 20, speed: 9.5, walls: [...vl(3, 3, 16), ...hl(3, 3, 6), ...hl(16, 3, 6), ...vl(16, 3, 16), ...hl(3, 13, 16), ...hl(16, 13, 16)] },
+            { name: 'Checkerboard', goal: 20, speed: 9.5, walls: [...border(), ...[3, 7, 12, 16].flatMap(x => [3, 7, 12, 16].map(y => [x, y]))] },
+            { name: 'Hourglass', goal: 22, speed: 9.5, walls: [...border(), ...mirror4([[3, 3], [4, 4], [5, 5], [6, 6], [7, 7]]), ...hl(9, 1, 3), ...hl(9, 16, 18)] },
+            { name: 'Gates', wrap: true, goal: 22, speed: 10, walls: [...vl(5, 0, 8), ...vl(5, 11, 19), ...vl(14, 0, 3), ...vl(14, 6, 19)] },
+            { name: 'Islands', goal: 22, speed: 10, walls: [...border(), ...rect(4, 4, 3, 3), ...rect(13, 4, 3, 3), ...rect(4, 13, 3, 3), ...rect(13, 13, 3, 3), ...rect(9, 9, 2, 2)] },
+            { name: 'Ribcage', wrap: true, goal: 24, speed: 10, walls: [...vl(10, 0, 19).filter(([, y]) => y % 5 !== 2), ...[3, 7, 12, 16].flatMap(y => [...hl(y, 5, 8), ...hl(y, 12, 15)])] },
+            { name: 'Pinball', goal: 24, speed: 10.5, walls: [...border(), ...[[5, 5], [14, 5], [9, 8], [5, 13], [14, 13], [9, 16], [3, 9], [16, 9]].flatMap(([x, y]) => rect(x, y, 1, 1))] },
+            { name: 'Switchback', goal: 24, speed: 10.5, walls: [...border(), ...vl(4, 1, 15), ...vl(8, 4, 18), ...vl(12, 1, 15), ...vl(16, 4, 18)] },
+            { name: 'Fortress', goal: 26, speed: 10.5, walls: [...border(), ...hl(5, 5, 8), ...hl(5, 11, 14), ...hl(14, 5, 8), ...hl(14, 11, 14), ...vl(5, 6, 8), ...vl(5, 11, 13), ...vl(14, 6, 8), ...vl(14, 11, 13)] },
+            { name: 'Maze Runner', goal: 26, speed: 11, walls: [...border(), ...hl(3, 3, 16), ...vl(3, 4, 12), ...hl(6, 6, 18), ...vl(16, 7, 15), ...hl(15, 3, 13), ...vl(6, 9, 15), ...hl(12, 9, 16)] },
+            { name: 'Asteroid Belt', wrap: true, goal: 28, speed: 11, walls: [[3, 2], [8, 3], [15, 2], [1, 6], [11, 6], [17, 7], [5, 9], [14, 11], [2, 13], [9, 13], [18, 14], [6, 16], [12, 17], [16, 18], [4, 19], [10, 1]].flatMap(([x, y]) => rect(x, y, 1, 1)) },
+            { name: 'Tight Squeeze', goal: 28, speed: 11.5, walls: [...border(), ...rect(3, 3, 6, 6), ...rect(11, 11, 6, 6), ...rect(11, 3, 6, 2), ...rect(3, 15, 6, 2)] },
+            { name: 'Gauntlet', goal: 30, speed: 12, walls: [...border(), ...[4, 8, 12, 16].flatMap((y, i) => i % 2 ? hl(y, 1, 14) : hl(y, 5, 18))] },
+            { name: 'Final Boss', goal: 35, speed: 12.5, walls: [...border(), ...mirror4([...hl(3, 3, 7), ...vl(3, 4, 6), [7, 7], [8, 8]]), ...rect(9, 3, 2, 3), ...rect(9, 14, 2, 3)] },
+        ];
+        const CAMP_KEY = 'arcade.snake.campaign';
+        let camp = Arcade.load(CAMP_KEY, {}) || {}; // { idx: stars }
+
+        /* ---------- Canvas + state ---------- */
+        const canvas = $('c');
+        const view = Arcade.fitCanvas(canvas, W, W, { max: 1.6 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles();
+
+        let mode = Arcade.load('arcade.snake.mode', 'classic');
+        if (!MODES[mode]) mode = 'classic';
+        let tab = Arcade.load('arcade.snake.tab', 'endless');
+        let powerOn = !!Arcade.load('arcade.snake.powerups', false);
+        let skin = Arcade.cosmetic('snake.skin');
+        let customs = Arcade.load('arcade.snake.custom', []) || [];
+
+        let run = null;              // the current game's rules
+        let walls = new Set();       // cell index (x + y*N) → wall
+        let reach = null;            // reachable cells (food only spawns here)
+        let snake, prev, dir, queue, food, golden, rocks, apples, grow, speed, acc, runTime;
+        let pickup = null, active = {}; // power-ups
+        let score = 0;
+        let state = 'menu'; // menu | play | pause | over | win | edit
+        let shake = 0, flash = 0, time = 0;
+        let rng = Math.random;
+
+        const bestKey = (m) => 'arcade.snake.best.' + m;
+        const idx = (x, y) => x + y * N;
+        const isWall = (x, y) => walls.has(idx(x, y));
+
+        /* ---------- Menu ---------- */
+        function buildMenu() {
+            skin = Arcade.cosmetic('snake.skin');
+            document.querySelectorAll('#tabs [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            $('pwSwitch').classList.toggle('on', powerOn);
+            const body = $('tabBody');
+            body.innerHTML = '';
+            if (tab === 'endless') {
+                const list = document.createElement('div'); list.className = 'mode-list';
+                for (const [id, m] of Object.entries(MODES)) {
+                    const b = document.createElement('button');
+                    b.className = 'btn mode-btn' + (id === mode ? ' active' : '');
+                    b.innerHTML = `<span><b>${m.name}</b><small>${m.desc}</small></span><span class="best">★ ${Arcade.load(bestKey(id), 0)}</span>`;
+                    b.onclick = () => { mode = id; Arcade.save('arcade.snake.mode', id); startEndless(); };
+                    list.appendChild(b);
+                }
+                body.appendChild(list);
+            } else if (tab === 'daily') {
+                const d = Arcade.load('arcade.snake.daily', {}) || {};
+                const today = Arcade.dayKey();
+                body.innerHTML = `<div class="mode-list"><p class="small">Everyone gets the same map and the same apple spots today. New map every midnight.</p>
+                    <div class="stat-grid"><div><small>Today</small><b>${today.slice(5)}</b></div><div><small>Your best today</small><b>${d.date === today ? d.best : 0}</b></div><div><small>Days played</small><b>${d.days || 0}</b></div></div>
+                    <button class="btn primary lg" id="dailyGo">▶ Play today's map</button></div>`;
+                $('dailyGo').onclick = startDaily;
+            } else if (tab === 'campaign') {
+                const total = Object.values(camp).reduce((a, b) => a + b, 0);
+                body.innerHTML = `<p class="small" style="margin-top:12px">Eat the target number of apples. Faster clears earn more stars. ★ ${total} / ${LEVELS.length * 3}</p><div class="levels" id="lvGrid"></div>`;
+                LEVELS.forEach((L, i) => {
+                    const open = i === 0 || camp[i - 1] > 0;
+                    const b = document.createElement('button');
+                    b.className = 'btn lv' + (open ? '' : ' locked');
+                    b.disabled = !open;
+                    b.title = L.name;
+                    const st = camp[i] || 0;
+                    b.innerHTML = `${open ? i + 1 : '🔒'}<small>${'★'.repeat(st)}${'☆'.repeat(3 - st)}</small>`;
+                    b.onclick = () => startCampaign(i);
+                    $('lvGrid').appendChild(b);
+                });
+            } else {
+                body.innerHTML = `<div class="mode-list"><p class="small">Draw your own levels, then play them or share the code.</p>
+                    <div class="row center"><button class="btn primary" id="newLvl">＋ New level</button><button class="btn" id="loadCode">📥 Load code</button></div><div class="col" id="customList"></div></div>`;
+                $('newLvl').onclick = () => openEditor(null);
+                $('loadCode').onclick = () => {
+                    const code = prompt('Paste a Snake level code:');
+                    if (!code) return;
+                    const L = decodeLevel(code.trim());
+                    if (!L) { Arcade.toast('That code did not work', 'bad'); return; }
+                    customs.push(L); Arcade.save('arcade.snake.custom', customs); buildMenu();
+                    Arcade.toast('Level added', 'good');
+                };
+                const host = $('customList');
+                if (!customs.length) host.innerHTML = '<p class="small dim">No levels yet.</p>';
+                customs.forEach((L, i) => {
+                    const r = document.createElement('div'); r.className = 'custom-row';
+                    r.innerHTML = `<b></b><span class="tiny gold">${L.best ? '★ ' + L.best : ''}</span>`;
+                    r.querySelector('b').textContent = L.name || 'Untitled';
+                    const mk = (t, f, cls) => { const b = document.createElement('button'); b.className = 'btn sm ' + (cls || ''); b.textContent = t; b.onclick = f; r.appendChild(b); };
+                    mk('▶', () => startCustom(i), 'primary');
+                    mk('✏️', () => openEditor(i));
+                    mk('🗑', () => { if (confirm('Delete "' + (L.name || 'Untitled') + '"?')) { customs.splice(i, 1); Arcade.save('arcade.snake.custom', customs); buildMenu(); } }, 'danger');
+                    host.appendChild(r);
+                });
+            }
+        }
+        document.querySelectorAll('#tabs [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; Arcade.save('arcade.snake.tab', tab); Arcade.sfx('click'); buildMenu(); });
+        $('pwSwitch').onclick = () => { powerOn = !powerOn; Arcade.save('arcade.snake.powerups', powerOn); Arcade.sfx('select'); buildMenu(); };
+
+        /* ---------- Level helpers ---------- */
+        function setWalls(cells) {
+            walls = new Set();
+            for (const [x, y] of cells) if (x >= 0 && y >= 0 && x < N && y < N) walls.add(idx(x, y));
+        }
+        /** Finds a free horizontal run for the starting snake, as close to (6,10) as possible. */
+        function findStart() {
+            const rows = [10, 9, 11, 8, 12, 7, 13, 6, 14, 5, 15, 4, 16, 3, 17, 2, 18, 1];
+            for (const y of rows) for (const x of [6, 7, 8, 5, 9, 10, 11, 12, 13, 4]) {
+                let ok = true;
+                for (let i = -2; i <= 3 && ok; i++) { const cx = x + i; if (cx < 1 && !run.wrap) ok = false; else if (isWall((cx + N) % N, y)) ok = false; }
+                if (ok) return { x, y };
+            }
+            return { x: 6, y: 10 };
+        }
+        function floodFrom(sx, sy) {
+            const seen = new Set([idx(sx, sy)]);
+            const st = [[sx, sy]];
+            while (st.length) {
+                const [x, y] = st.pop();
+                for (const d of Object.values(DIRS)) {
+                    let nx = x + d.x, ny = y + d.y;
+                    if (run.wrap) { nx = (nx + N) % N; ny = (ny + N) % N; } else if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+                    const k = idx(nx, ny);
+                    if (seen.has(k) || walls.has(k)) continue;
+                    seen.add(k); st.push([nx, ny]);
+                }
+            }
+            return seen;
+        }
+
+        function freeCell(minHeadDist) {
+            for (let tries = 0; tries < 800; tries++) {
+                const p = { x: Math.floor(rng() * N), y: Math.floor(rng() * N) };
+                if (isWall(p.x, p.y) || (reach && !reach.has(idx(p.x, p.y)))) continue;
+                if (snake.some(s => s.x === p.x && s.y === p.y)) continue;
+                if (rocks.some(r => r.x === p.x && r.y === p.y)) continue;
+                if (food && food.x === p.x && food.y === p.y) continue;
+                if (golden && golden.x === p.x && golden.y === p.y) continue;
+                if (pickup && pickup.x === p.x && pickup.y === p.y) continue;
+                if (minHeadDist && Math.abs(p.x - snake[0].x) + Math.abs(p.y - snake[0].y) < minHeadDist) continue;
+                return p;
+            }
+            return null;
+        }
+
+        /* ---------- Starting runs ---------- */
+        function startEndless() {
+            const m = MODES[mode];
+            run = { kind: 'endless', wrap: m.wrap, speed: m.speed, inc: m.inc, max: m.max, rocks: m.rocks, goal: 0, walls: [] };
+            rng = Math.random;
+            begin();
+        }
+        function dailyWalls(r) {
+            const cells = [];
+            for (let i = 0; i < 6; i++) {
+                const horiz = r() < 0.5, len = 3 + Math.floor(r() * 4);
+                const x = 1 + Math.floor(r() * 8), y = 1 + Math.floor(r() * 8);
+                for (let k = 0; k < len; k++) cells.push(horiz ? [x + k, y] : [x, y + k]);
+            }
+            return mirror4(cells);
+        }
+        function startDaily() {
+            const r = Arcade.seeded('snake-daily-' + Arcade.dayKey());
+            run = { kind: 'daily', wrap: false, speed: 8, inc: 0.14, max: 16, rocks: false, goal: 0, walls: dailyWalls(r) };
+            rng = Arcade.seeded('snake-food-' + Arcade.dayKey());
+            begin();
+        }
+        function startCampaign(i) {
+            const L = LEVELS[i];
+            run = { kind: 'campaign', level: i, wrap: !!L.wrap, speed: L.speed, inc: 0, max: L.speed, rocks: false, goal: L.goal, walls: L.walls, name: L.name };
+            rng = Math.random;
+            begin();
+        }
+        function startCustom(i, testing) {
+            const L = testing || customs[i];
+            run = { kind: 'custom', custom: testing ? -1 : i, wrap: !!L.wrap, speed: L.speed, inc: 0, max: L.speed, rocks: false, goal: L.goal, walls: L.walls, name: L.name || 'Custom' };
+            rng = Math.random;
+            begin();
+        }
+        function restart() {
+            if (!run) return startEndless();
+            if (run.kind === 'daily') return startDaily();
+            if (run.kind === 'custom' && run.custom === -1) return startCustom(-1, editLevel());
+            begin();
+        }
+
+        function begin() {
+            setWalls(run.walls);
+            const s = findStart();
+            snake = [{ x: s.x, y: s.y }, { x: s.x - 1, y: s.y }, { x: s.x - 2, y: s.y }].map(p => ({ x: (p.x + N) % N, y: p.y }));
+            reach = floodFrom(s.x, s.y);
+            prev = snake.map(p => ({ ...p }));
+            dir = DIRS.right; queue = [];
+            rocks = []; food = null; golden = null; pickup = null; active = {};
+            food = freeCell(4);
+            score = 0; apples = 0; grow = 0; acc = 0; runTime = 0;
+            speed = run.speed;
+            fx.clear();
+            state = 'play';
+            ['menuOv', 'overOv', 'pauseOv', 'winOv'].forEach(Arcade.hide);
+            $('editBar').hidden = true;
+            $('goalChip').hidden = !run.goal;
+            $('bestChip').hidden = run.kind === 'campaign' || run.kind === 'custom';
+            updateHud();
+            if (run.name) Arcade.toast((run.kind === 'campaign' ? 'Level ' + (run.level + 1) + ': ' : '') + run.name + ' — eat ' + run.goal + ' apples', '', 2000);
+            Arcade.sfx('level');
+        }
+
+        function currentBest() {
+            if (!run) return Arcade.load(bestKey(mode), 0);
+            if (run.kind === 'daily') { const d = Arcade.load('arcade.snake.daily', {}) || {}; return d.date === Arcade.dayKey() ? d.best : 0; }
+            return Arcade.load(bestKey(mode), 0);
+        }
+
+        function updateHud() {
+            Arcade.text('score', score);
+            Arcade.text('best', Math.max(score, currentBest()));
+            Arcade.text('len', snake ? snake.length : 3);
+            if (run && run.goal) Arcade.text('goal', apples + ' / ' + run.goal);
+            const pw = Object.entries(active).filter(([, t]) => t > 0).map(([k, t]) => PW[k].icon + ' ' + Math.ceil(t));
+            $('pwChip').hidden = !pw.length;
+            Arcade.text('pw', pw.join('  '));
+        }
+
+        function turn(name) {
+            if (state !== 'play') return;
+            const d = DIRS[name];
+            const last = queue.length ? queue[queue.length - 1] : dir;
+            if (d === last || (d.x === -last.x && d.y === -last.y)) return;
+            if (queue.length < 3) queue.push(d);
+        }
+
+        /* ---------- Power-ups ---------- */
+        const PW = {
+            slow: { icon: '🐌', name: 'Slow-mo', time: 6, color: '#60a5fa' },
+            ghost: { icon: '👻', name: 'Ghost — pass through yourself once', time: 10, color: '#e2e8f0' },
+            magnet: { icon: '🧲', name: 'Magnet', time: 8, color: '#f472b6' },
+            shrink: { icon: '✂️', name: 'Shrink', time: 0, color: '#facc15' },
+        };
+        function maybeSpawnPickup() {
+            if (!powerOn || pickup || rng() > 0.35) return;
+            const p = freeCell(3);
+            if (p) pickup = Object.assign(p, { kind: Arcade.pick(Object.keys(PW)), t: 9 });
+        }
+        function takePickup(cx, cy) {
+            const k = pickup.kind, P = PW[k];
+            pickup = null;
+            fx.emit(cx, cy, { n: 20, color: [P.color, '#fff'], speed: 170, life: 0.6 });
+            Arcade.sfx('power');
+            Arcade.toast(P.icon + ' ' + P.name, 'good', 1300);
+            if (k === 'shrink') {
+                const cut = Math.max(0, Math.min(snake.length - 3, Math.floor(snake.length / 3)));
+                for (let i = 0; i < cut; i++) { const t = snake.pop(); fx.emit(t.x * CELL + CELL / 2, t.y * CELL + CELL / 2, { n: 4, color: '#facc15', speed: 80, life: 0.4 }); }
+                prev.length = snake.length;
+                grow = 0;
+            } else active[k] = P.time;
+        }
+        function stepFoodMagnet() {
+            if (!(active.magnet > 0) || !food) return;
+            const h = snake[0];
+            const dx = Math.sign(h.x - food.x), dy = Math.sign(h.y - food.y);
+            const opts = Math.abs(h.x - food.x) > Math.abs(h.y - food.y) ? [[dx, 0], [0, dy]] : [[0, dy], [dx, 0]];
+            for (const [mx, my] of opts) {
+                if (!mx && !my) continue;
+                const nx = food.x + mx, ny = food.y + my;
+                if (nx < 0 || ny < 0 || nx >= N || ny >= N || isWall(nx, ny)) continue;
+                if (snake.slice(1).some(s => s.x === nx && s.y === ny) || rocks.some(r => r.x === nx && r.y === ny)) continue;
+                food.x = nx; food.y = ny; return;
+            }
+        }
+
+        /* ---------- Simulation ---------- */
+        let magnetTick = 0;
+        function step() {
+            if (queue.length) dir = queue.shift();
+            prev = snake.map(s => ({ ...s }));
+            let head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+            if (run.wrap) {
+                head.x = (head.x + N) % N;
+                head.y = (head.y + N) % N;
+            } else if (head.x < 0 || head.y < 0 || head.x >= N || head.y >= N) {
+                return die();
+            }
+
+            const willGrow = grow > 0 || (food && head.x === food.x && head.y === food.y);
+            const body = willGrow ? snake : snake.slice(0, -1);
+            if (body.some(s => s.x === head.x && s.y === head.y)) {
+                if (active.ghost > 0) { active.ghost = 0; Arcade.sfx('hit'); Arcade.toast('👻 Ghosted through!', 'good', 900); }
+                else return die();
+            }
+            if (isWall(head.x, head.y) || rocks.some(r => r.x === head.x && r.y === head.y)) return die();
+
+            snake.unshift(head);
+            const cx = head.x * CELL + CELL / 2, cy = head.y * CELL + CELL / 2;
+
+            if (food && head.x === food.x && head.y === food.y) {
+                apples++;
+                score += 10;
+                grow += 1;
+                speed = Math.min(run.max, speed + run.inc);
+                fx.emit(cx, cy, { n: 14, color: ['#f87171', '#fca5a5', '#fbbf24'], speed: 140, life: 0.5 });
+                Arcade.sfx('pop');
+                food = freeCell(0);
+                if (!golden && apples % 5 === 0) golden = Object.assign(freeCell(3) || { x: -5, y: -5 }, { t: 7 });
+                if (run.rocks && apples % 3 === 0) { const r = freeCell(4); if (r) rocks.push(r); }
+                maybeSpawnPickup();
+                if (run.goal && apples >= run.goal) { if (grow > 0) grow--; else snake.pop(); return winLevel(); }
+            }
+            if (golden && head.x === golden.x && head.y === golden.y) {
+                const bonus = 30 + Math.ceil(golden.t) * 10;
+                score += bonus;
+                grow += 3;
+                fx.emit(cx, cy, { n: 26, color: ['#fbbf24', '#fde68a', '#fff'], speed: 200, life: 0.7 });
+                Arcade.sfx('coin');
+                Arcade.toast('+' + bonus + ' golden apple!', 'gold', 1200);
+                golden = null;
+            }
+            if (pickup && head.x === pickup.x && head.y === pickup.y) takePickup(cx, cy);
+
+            if (grow > 0) grow--;
+            else snake.pop();
+
+            if (prev.length < snake.length) prev.push({ ...snake[snake.length - 1] });
+            if (active.magnet > 0 && (magnetTick++ % 2 === 0)) stepFoodMagnet();
+            updateHud();
+        }
+
+        function starsFor() {
+            const par = run.goal * 9 / run.speed + 3;
+            return runTime <= par ? 3 : runTime <= par * 1.6 ? 2 : 1;
+        }
+        function winLevel() {
+            state = 'win';
+            const stars = starsFor();
+            Arcade.sfx('win');
+            fx.emit(W / 2, W / 2, { n: 60, color: ['#34d399', '#fde047', '#fff'], speed: 260, life: 1 });
+            let info = `${run.name} · ${runTime.toFixed(1)}s`;
+            if (run.kind === 'campaign') {
+                const i = run.level;
+                if (stars > (camp[i] || 0)) { camp[i] = stars; Arcade.save(CAMP_KEY, camp); }
+                Arcade.report('campaign', Object.keys(camp).length);
+                Arcade.report('score', score);
+                $('nextBtn').hidden = i >= LEVELS.length - 1;
+                $('winTitle').textContent = i >= LEVELS.length - 1 ? 'Campaign complete!' : 'Level ' + (i + 1) + ' clear!';
+            } else {
+                $('nextBtn').hidden = true;
+                $('winTitle').textContent = 'Level clear!';
+                if (run.custom >= 0) { const L = customs[run.custom]; if (!L.best || runTime < L.best) { L.best = +runTime.toFixed(1); Arcade.save('arcade.snake.custom', customs); } }
+            }
+            $('winStars').innerHTML = [1, 2, 3].map(n => n <= stars ? '★' : '<span class="off">★</span>').join('');
+            Arcade.text('winInfo', info);
+            setTimeout(() => Arcade.show('winOv'), 500);
+        }
+
+        function die() {
+            state = 'over';
+            shake = 0.4; flash = 1;
+            const h = snake[0];
+            fx.emit(h.x * CELL + CELL / 2, h.y * CELL + CELL / 2, { n: 40, color: ['#34d399', '#f87171', '#fff'], speed: 220, life: 0.9 });
+            Arcade.sfx('die');
+            let r = { best: score, isNew: false };
+            if (run.kind === 'endless') r = Arcade.best(bestKey(mode), score);
+            else if (run.kind === 'daily') {
+                const d = Arcade.load('arcade.snake.daily', {}) || {};
+                const today = Arcade.dayKey();
+                if (d.date !== today) { d.date = today; d.best = 0; d.days = (d.days || 0) + 1; }
+                r = { best: Math.max(d.best, score), isNew: score > d.best && score > 0 };
+                d.best = r.best;
+                Arcade.save('arcade.snake.daily', d);
+            }
+            if (run.kind === 'endless' || run.kind === 'daily') Arcade.report('score', score);
+            $('overTitle').textContent = run.goal ? 'Try again' : 'Game Over';
+            setTimeout(() => {
+                Arcade.text('finalScore', score);
+                Arcade.text('finalLen', snake.length);
+                Arcade.text('finalApples', run.goal ? apples + ' / ' + run.goal : apples);
+                Arcade.text('finalBest', r.best);
+                $('newBest').hidden = !r.isNew;
+                Arcade.show('overOv');
+                updateHud();
+            }, 650);
+        }
+
+        function setPaused(p) {
+            if (p && state === 'play') { state = 'pause'; Arcade.show('pauseOv'); }
+            else if (!p && state === 'pause') { state = 'play'; Arcade.hide('pauseOv'); }
+        }
+        function toMenu() {
+            state = 'menu';
+            ['overOv', 'pauseOv', 'winOv'].forEach(Arcade.hide);
+            $('editBar').hidden = true;
+            buildMenu();
+            Arcade.show('menuOv');
+        }
+
+        /* ---------- Level editor ---------- */
+        let edit = null; // { name, goal, speed, wrap, cells:Set, index }
+        for (const g of [5, 8, 10, 12, 15, 20, 25, 30, 40]) { const o = document.createElement('option'); o.value = g; o.textContent = g + ' apples'; $('edGoal').appendChild(o); }
+        function openEditor(i) {
+            const L = i === null ? { name: '', goal: 10, speed: 8, wrap: false, walls: [] } : customs[i];
+            edit = { index: i, name: L.name, goal: L.goal, speed: L.speed, wrap: !!L.wrap, cells: new Set(L.walls.map(([x, y]) => idx(x, y))) };
+            $('edName').value = edit.name || '';
+            $('edGoal').value = edit.goal;
+            $('edSpeed').value = edit.speed;
+            refreshEditBar();
+            state = 'edit';
+            Arcade.hide('menuOv');
+            $('editBar').hidden = false;
+            run = { wrap: edit.wrap };
+            snake = null; food = null; golden = null; rocks = []; pickup = null;
+        }
+        function refreshEditBar() { $('edWrap').textContent = 'Walls wrap: ' + (edit.wrap ? 'on' : 'off'); $('edWrap').classList.toggle('active', edit.wrap); }
+        function editLevel() {
+            return {
+                name: $('edName').value.trim() || 'Untitled', goal: +$('edGoal').value, speed: +$('edSpeed').value, wrap: edit.wrap,
+                walls: [...edit.cells].map(k => [k % N, Math.floor(k / N)]),
+            };
+        }
+        function encodeLevel(L) {
+            const bits = new Array(N * N).fill(0);
+            for (const [x, y] of L.walls) bits[idx(x, y)] = 1;
+            let hex = '';
+            for (let i = 0; i < bits.length; i += 4) hex += (bits[i] * 8 + bits[i + 1] * 4 + bits[i + 2] * 2 + bits[i + 3]).toString(16);
+            return ['SNK1', encodeURIComponent(L.name), L.goal, L.speed, L.wrap ? 1 : 0, hex].join('~');
+        }
+        function decodeLevel(s) {
+            const p = s.split('~');
+            if (p[0] !== 'SNK1' || p.length !== 6 || p[5].length !== N * N / 4) return null;
+            const walls = [];
+            for (let i = 0; i < p[5].length; i++) {
+                const v = parseInt(p[5][i], 16);
+                for (let b = 0; b < 4; b++) if (v & (8 >> b)) { const k = i * 4 + b; walls.push([k % N, Math.floor(k / N)]); }
+            }
+            return { name: decodeURIComponent(p[1]), goal: +p[2] || 10, speed: +p[3] || 8, wrap: p[4] === '1', walls };
+        }
+        let paint = null;
+        function editAt(e) {
+            const p = Arcade.pointer(canvas, e, W, W);
+            const x = Math.floor(p.x / CELL), y = Math.floor(p.y / CELL);
+            if (x < 0 || y < 0 || x >= N || y >= N) return;
+            const k = idx(x, y);
+            if (paint === null) paint = !edit.cells.has(k);
+            if (paint) edit.cells.add(k); else edit.cells.delete(k);
+        }
+        canvas.addEventListener('pointerdown', (e) => { if (state !== 'edit') return; paint = null; canvas.setPointerCapture(e.pointerId); editAt(e); });
+        canvas.addEventListener('pointermove', (e) => { if (state === 'edit' && paint !== null && e.buttons) editAt(e); });
+        canvas.addEventListener('pointerup', () => { paint = null; });
+        $('edWrap').onclick = () => { edit.wrap = !edit.wrap; run.wrap = edit.wrap; refreshEditBar(); };
+        $('edBorder').onclick = () => { const b = border().map(([x, y]) => idx(x, y)); const all = b.every(k => edit.cells.has(k)); b.forEach(k => all ? edit.cells.delete(k) : edit.cells.add(k)); };
+        $('edClear').onclick = () => { if (confirm('Clear every wall?')) edit.cells.clear(); };
+        $('edTest').onclick = () => startCustom(-1, editLevel());
+        $('edSave').onclick = () => {
+            const L = editLevel();
+            if (edit.index === null) { customs.push(L); edit.index = customs.length - 1; } else customs[edit.index] = Object.assign(customs[edit.index], L);
+            Arcade.save('arcade.snake.custom', customs);
+            Arcade.toast('Saved "' + L.name + '"', 'good');
+            Arcade.sfx('coin');
+        };
+        $('edCode').onclick = async () => {
+            const code = encodeLevel(editLevel());
+            try { await navigator.clipboard.writeText(code); Arcade.toast('Level code copied — share it!', 'good'); }
+            catch (e) { prompt('Copy this level code:', code); }
+        };
+        $('edBack').onclick = () => { tab = 'custom'; toMenu(); };
+        /** Returns to the editor after a test run without losing unsaved changes. */
+        function resumeEditor() {
+            state = 'edit';
+            ['overOv', 'pauseOv', 'winOv', 'menuOv'].forEach(Arcade.hide);
+            $('editBar').hidden = false;
+            run = { wrap: edit.wrap };
+            snake = null; food = null; golden = null; rocks = []; pickup = null; active = {};
+            $('goalChip').hidden = true;
+        }
+
+        /* ---------- Rendering ---------- */
+        const SKINS = {
+            classic: { body: (f) => `hsl(${158 - f * 30}, 70%, ${52 - f * 22}%)`, head: '#5eead4', glow: '#34d399' },
+            fire: { body: (f) => `hsl(${35 - f * 30}, 95%, ${56 - f * 16}%)`, head: '#fde047', glow: '#f97316' },
+            ice: { body: (f) => `hsl(${190 + f * 25}, 85%, ${72 - f * 26}%)`, head: '#e0f2fe', glow: '#38bdf8' },
+            gold: { body: (f) => `hsl(45, 95%, ${60 - f * 22}%)`, head: '#fef08a', glow: '#facc15' },
+            candy: { body: (f, i) => (i % 2 ? '#f472b6' : '#fdf2f8'), head: '#f9a8d4', glow: '#ec4899' },
+            void: { body: (f) => `hsl(${270 + f * 25}, 70%, ${48 - f * 26}%)`, head: '#c4b5fd', glow: '#a855f7' },
+            rainbow: { body: (f, i) => `hsl(${(i * 18 + time * 140) % 360}, 85%, 58%)`, head: '#fff', glow: '#f0abfc' },
+        };
+        function drawBoard() {
+            ctx.fillStyle = '#0c1424';
+            ctx.fillRect(0, 0, W, W);
+            ctx.fillStyle = '#0f192d';
+            for (let y = 0; y < N; y++) for (let x = (y % 2); x < N; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            const wrap = state === 'edit' ? edit.wrap : run ? run.wrap : MODES[mode].wrap;
+            if (!wrap) {
+                ctx.strokeStyle = 'rgba(248,113,113,0.35)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(1, 1, W - 2, W - 2);
+            }
+            const cells = state === 'edit' ? edit.cells : walls;
+            for (const k of cells) {
+                const x = (k % N) * CELL, y = Math.floor(k / N) * CELL;
+                ctx.fillStyle = '#3b4a6b'; ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+                ctx.fillStyle = '#56688f'; ctx.fillRect(x + 1, y + 1, CELL - 2, 4);
+                ctx.fillStyle = '#2a3652'; ctx.fillRect(x + 1, y + CELL - 4, CELL - 2, 3);
+            }
+            if (state === 'edit') {
+                run = { wrap: edit.wrap, walls: [] }; walls = edit.cells;
+                const s = findStart();
+                walls = new Set();
+                ctx.fillStyle = 'rgba(52,211,153,0.35)';
+                for (let i = -2; i <= 0; i++) ctx.fillRect(((s.x + i + N) % N) * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4);
+                ctx.fillStyle = '#34d399'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('▶', (s.x + 1.5) * CELL, (s.y + 0.5) * CELL);
+            }
+        }
+
+        function drawSnake(t) {
+            if (!snake) return;
+            const S = SKINS[skin] || SKINS.classic;
+            const pts = snake.map((s, i) => {
+                const p = prev[i] || s;
+                const jump = Math.abs(p.x - s.x) + Math.abs(p.y - s.y) > 1;
+                const k = jump ? 1 : t;
+                return { x: (Arcade.lerp(p.x, s.x, k) + 0.5) * CELL, y: (Arcade.lerp(p.y, s.y, k) + 0.5) * CELL };
+            });
+            const ghost = active.ghost > 0;
+            if (ghost) ctx.globalAlpha = 0.55 + Math.sin(time * 10) * 0.15;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            for (let i = pts.length - 1; i > 0; i--) {
+                const a = pts[i], b = pts[i - 1];
+                if (Math.abs(a.x - b.x) > CELL * 1.5 || Math.abs(a.y - b.y) > CELL * 1.5) continue;
+                const f = i / pts.length;
+                ctx.strokeStyle = S.body(f, i);
+                ctx.lineWidth = CELL * (0.78 - f * 0.22);
+                ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+            }
+            const h = pts[0];
+            ctx.fillStyle = state === 'over' ? '#f87171' : S.head;
+            ctx.shadowColor = S.glow; ctx.shadowBlur = 16;
+            ctx.beginPath(); ctx.arc(h.x, h.y, CELL * 0.43, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+            // eyes
+            const ex = dir.x, ey = dir.y;
+            const px = -ey, py = ex;
+            for (const s of [-1, 1]) {
+                const x = h.x + ex * 4 + px * 5 * s, y = h.y + ey * 4 + py * 5 * s;
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#0b1020'; ctx.beginPath(); ctx.arc(x + ex * 1.3, y + ey * 1.3, 1.7, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function drawApple(p, color, r) {
+            const x = p.x * CELL + CELL / 2, y = p.y * CELL + CELL / 2;
+            ctx.fillStyle = color;
+            ctx.shadowColor = color; ctx.shadowBlur = 14;
+            ctx.beginPath(); ctx.arc(x, y + 1, r, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.25, r * 0.28, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#65a30d'; ctx.lineWidth = 2.2;
+            ctx.beginPath(); ctx.moveTo(x, y - r + 1); ctx.quadraticCurveTo(x + 2, y - r - 4, x + 5, y - r - 4); ctx.stroke();
+        }
+
+        function render(t) {
+            ctx.save();
+            if (shake > 0) ctx.translate(Arcade.rand(-6, 6) * shake, Arcade.rand(-6, 6) * shake);
+            drawBoard();
+            for (const r of rocks || []) {
+                const x = r.x * CELL, y = r.y * CELL;
+                ctx.fillStyle = '#334155'; ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
+                ctx.fillStyle = '#475569'; ctx.fillRect(x + 4, y + 4, CELL - 12, CELL - 12);
+            }
+            if (food) {
+                drawApple(food, '#f87171', 8 + Math.sin(time * 6) * 0.8);
+                if (active.magnet > 0) { ctx.strokeStyle = 'rgba(244,114,182,0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.7 + Math.sin(time * 8) * 2, 0, Math.PI * 2); ctx.stroke(); }
+            }
+            if (golden) {
+                drawApple(golden, '#fbbf24', 8.5 + Math.sin(time * 10) * 1.2);
+                const x = golden.x * CELL + CELL / 2, y = golden.y * CELL + CELL / 2;
+                ctx.strokeStyle = 'rgba(251,191,36,0.8)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x, y, CELL * 0.62, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (golden.t / 7)); ctx.stroke();
+            }
+            if (pickup) {
+                const x = pickup.x * CELL + CELL / 2, y = pickup.y * CELL + CELL / 2;
+                const P = PW[pickup.kind];
+                ctx.fillStyle = P.color + '44'; ctx.beginPath(); ctx.arc(x, y, CELL * 0.55 + Math.sin(time * 7) * 1.5, 0, Math.PI * 2); ctx.fill();
+                ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.globalAlpha = pickup.t < 2 ? (Math.sin(time * 20) > 0 ? 1 : 0.3) : 1;
+                ctx.fillText(P.icon, x, y + 1);
+                ctx.globalAlpha = 1;
+            }
+            drawSnake(t);
+            fx.draw(ctx);
+            if (active.slow > 0) { ctx.fillStyle = 'rgba(96,165,250,0.07)'; ctx.fillRect(0, 0, W, W); }
+            if (flash > 0) { ctx.fillStyle = `rgba(248,113,113,${flash * 0.35})`; ctx.fillRect(0, 0, W, W); }
+            ctx.restore();
+        }
+
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            if (state === 'play') {
+                runTime += dt;
+                acc += dt;
+                const sp = active.slow > 0 ? speed * 0.6 : speed;
+                const stepT = 1 / sp;
+                while (acc >= stepT && state === 'play') { acc -= stepT; step(); }
+                if (golden) { golden.t -= dt; if (golden.t <= 0) golden = null; }
+                if (pickup) { pickup.t -= dt; if (pickup.t <= 0) pickup = null; }
+                let changed = false;
+                for (const k in active) if (active[k] > 0) { const before = Math.ceil(active[k]); active[k] -= dt; if (Math.ceil(active[k]) !== before) changed = true; }
+                if (changed) updateHud();
+                render(Math.min(1, acc * sp));
+            } else render(1);
+            fx.update(dt);
+            shake = Math.max(0, shake - dt);
+            flash = Math.max(0, flash - dt * 2);
+        });
+
+        /* ---------- Input ---------- */
+        const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (KEYS[e.code]) { e.preventDefault(); turn(KEYS[e.code]); }
+            else if (e.code === 'KeyP' || e.code === 'Escape') setPaused(state === 'play');
+            else if (e.code === 'KeyR' && (state === 'play' || state === 'over')) restart();
+            else if ((e.code === 'Space' || e.code === 'Enter')) {
+                e.preventDefault();
+                if (state === 'pause') setPaused(false);
+                else if (state === 'over' && !$('overOv').hidden) restart();
+                else if (state === 'win' && !$('winOv').hidden) ($('nextBtn').hidden ? $('retryBtn') : $('nextBtn')).click();
+            }
+        });
+        Arcade.swipe(canvas, turn);
+        document.querySelectorAll('.dpad [data-dir]').forEach(b => b.addEventListener('pointerdown', (e) => { e.preventDefault(); turn(b.dataset.dir); }));
+        $('pauseBtn').onclick = () => setPaused(state === 'play');
+        $('resumeBtn').onclick = () => setPaused(false);
+        $('restartBtn').onclick = restart;
+        $('quitBtn').onclick = () => testing() ? resumeEditor() : toMenu();
+        $('againBtn').onclick = restart;
+        const testing = () => run && run.kind === 'custom' && run.custom === -1;
+        $('menuBtn').onclick = () => testing() ? resumeEditor() : toMenu();
+        $('retryBtn').onclick = restart;
+        $('nextBtn').onclick = () => startCampaign(run.level + 1);
+        $('winMenuBtn').onclick = () => testing() ? resumeEditor() : toMenu();
+        document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+
+        // idle board behind the menu
+        snake = [{ x: 6, y: 10 }, { x: 5, y: 10 }, { x: 4, y: 10 }]; prev = snake; dir = DIRS.right; rocks = [];
+        buildMenu();
+        updateHud();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

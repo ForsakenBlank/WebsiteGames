@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shape Match · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #facc15; --accent-2: #fb923c; --accent-ink: #1c1500; }
+        .opts { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
+        .stars { font-size: 2rem; letter-spacing: 4px; color: var(--gold); }
+        .stars .off { color: var(--surface-3); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Shape Match</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip">Level <b id="level">1</b></span>
+            <span class="chip">Goal <b id="goal">0/0</b></span>
+            <span class="chip bad">Lives <b id="lives">♥♥♥</b></span>
+            <span class="chip good" id="pwChip" hidden><b id="pw"></b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" id="pauseBtn">⏸</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>Shape Match</h2>
+                    <p>Drag falling shapes into the right bin before they hit the floor.</p>
+                    <ul class="help small">
+                        <li>Some bins want an exact <b>shape + colour</b>, others only a <b>shape</b> or only a <b>colour</b>.</li>
+                        <li>💣 <b>Tap bombs</b> to defuse them — never bin them! ⭐ Golden shapes fit any bin.</li>
+                        <li>🪆 <b>Double shapes</b> hide a second shape inside — sort the outside, then sort what pops out.</li>
+                        <li>🫧 Tap bubbles for power-ups: ❄️ freeze, 🤖 auto-sort, ✂️ defuse all bombs.</li>
+                        <li>Every 4th level ends with a <b>conveyor bonus round</b>.</li>
+                    </ul>
+                    <div class="opts">
+                        <div class="seg" id="diffSeg"></div>
+                        <div class="row center"><span class="small muted">Start at</span><div class="seg" id="startSeg"></div></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="playBtn">Start shift</button></div>
+                    <p class="tiny dim" id="bestLine"></p>
+                </div>
+            </div>
+            <div class="overlay" id="pauseOv" hidden>
+                <div class="modal"><h2>Paused</h2><div class="actions"><button class="btn primary lg" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Menu</button></div></div>
+            </div>
+            <div class="overlay" id="clearOv" hidden>
+                <div class="modal">
+                    <h2 class="good" id="clearTitle">Level clear</h2>
+                    <div class="stars" id="clearStars"></div>
+                    <p id="clearInfo"></p>
+                    <div class="actions"><button class="btn primary lg" id="nextBtn">Next level</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad">Shift over</h2>
+                    <div class="big-num" id="finalScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Sorted</small><b id="finalSorted">0</b></div>
+                        <div><small>Level</small><b id="finalLevel">1</b></div>
+                        <div><small>Best streak</small><b id="finalStreak">0</b></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Retry level</button><button class="btn" id="menuBtn">Menu</button></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const W = 480, H = 720, BIN_H = 104, FLOOR = H - BIN_H, BELT_Y = 300;
+        const SHAPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart', 'cross'];
+        const COLORS = { red: '#f87171', blue: '#60a5fa', green: '#4ade80', yellow: '#facc15', purple: '#c084fc', orange: '#fb923c', pink: '#f9a8d4' };
+        const CNAMES = Object.keys(COLORS);
+        const DIFFS = {
+            easy: { name: 'Easy', lives: 5, speed: 0.75, bomb: 0.6, spawn: 1.25 },
+            normal: { name: 'Normal', lives: 3, speed: 1, bomb: 1, spawn: 1 },
+            hard: { name: 'Hard', lives: 2, speed: 1.3, bomb: 1.4, spawn: 0.8 },
+        };
+        const POWERS = { freeze: { e: '❄️', name: 'Freeze — nothing falls for 5s' }, auto: { e: '🤖', name: 'Auto-sort — the next 5 shapes sort themselves' }, defuse: { e: '✂️', name: 'Every bomb defused' } };
+        const $ = (id) => document.getElementById(id);
+
+        const canvas = $('c');
+        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.3 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles();
+
+        let best = Arcade.load('arcade.shapematch.best', 0);
+        let diffId = Arcade.load('arcade.shapematch.diff', 'normal');
+        if (!DIFFS[diffId]) diffId = 'normal';
+        let progress = Arcade.load('arcade.shapematch.progress', {}) || {};
+        let startLevel = 1;
+        const D = () => DIFFS[diffId];
+
+        let state = 'menu', time = 0;
+        let items = [], bins = [], score = 0, level = 1, lives = 3, sorted = 0, levelSorted = 0, livesAtStart = 3, streak = 0, bestStreak = 0, spawnT = 0, drag = null, popups = [];
+        let freezeT = 0, autoN = 0, bonusT = 0, levelScore = 0;
+
+        const goal = () => 10 + level * 2;
+        const isBonusNext = () => level % 4 === 0;
+
+        /* ---------- Bins ---------- */
+        function shapeCount() { return level < 4 ? 3 : level < 8 ? 5 : level < 12 ? 6 : 8; }
+        function colorCount() { return level < 4 ? 3 : level < 8 ? 5 : 7; }
+        function makeBins() {
+            const n = level >= 10 ? 5 : level >= 6 ? 4 : 3;
+            const out = [];
+            const usedShapes = Arcade.shuffle(SHAPES.slice(0, shapeCount()));
+            const usedColors = Arcade.shuffle(CNAMES.slice(0, colorCount()));
+            for (let i = 0; i < n; i++) {
+                let rule = 'both';
+                if (level >= 3) rule = Arcade.pick(['both', 'shape', 'color']);
+                out.push({ rule, shape: usedShapes[i % usedShapes.length], color: usedColors[i % usedColors.length] });
+            }
+            const keyOf = (b) => b.rule === 'shape' ? 's:' + b.shape : b.rule === 'color' ? 'c:' + b.color : b.shape + b.color;
+            const seen = new Set();
+            for (const b of out) {
+                for (let k = 0; seen.has(keyOf(b)) && k < 40; k++) {
+                    b.shape = usedShapes[(usedShapes.indexOf(b.shape) + 1) % usedShapes.length];
+                    if (k % 5 === 4) b.color = usedColors[(usedColors.indexOf(b.color) + 1) % usedColors.length];
+                }
+                seen.add(keyOf(b));
+            }
+            return out;
+        }
+        function layoutBins() {
+            const w = W / bins.length;
+            bins.forEach((b, i) => { b.tx = i * w; b.w = w; if (b.x === undefined) b.x = b.tx; });
+        }
+        const fits = (it, b) => it.gold || (b.rule === 'both' ? it.shape === b.shape && it.color === b.color : b.rule === 'shape' ? it.shape === b.shape : it.color === b.color);
+        /** Picks traits that some bin accepts, so every shape is sortable. */
+        function sortableTraits() {
+            const b = Arcade.pick(bins);
+            let shape = b.shape, color = b.color;
+            if (b.rule === 'shape') color = Arcade.pick(CNAMES.slice(0, colorCount()));
+            if (b.rule === 'color') shape = Arcade.pick(SHAPES.slice(0, shapeCount()));
+            return { shape, color };
+        }
+
+        /* ---------- Items ---------- */
+        const speed = () => (60 + Math.min(level, 25) * 12) * D().speed;
+        function spawnItem() {
+            const x = Arcade.rand(40, W - 40);
+            const bombChance = level >= 2 ? Math.min(0.16, 0.05 + level * 0.012) * D().bomb : 0;
+            const r = Math.random();
+            if (r < bombChance) { items.push({ bomb: true, x, y: -30, vy: speed() * 0.9, r: 20, fuse: 0 }); return; }
+            if (r < bombChance + 0.035 && level >= 2) { items.push({ power: Arcade.pick(Object.keys(POWERS)), x, y: -30, vy: speed() * 0.7, r: 20, t: 0 }); return; }
+            const gold = r < bombChance + 0.07;
+            const t = sortableTraits();
+            const it = { x, y: -30, vy: speed(), shape: t.shape, color: t.color, gold, r: 22, rot: Math.random() * 6, vr: Arcade.rand(-1, 1) };
+            if (!gold && level >= 5 && Math.random() < Math.min(0.3, 0.1 + level * 0.01)) { it.inner = sortableTraits(); it.r = 26; it.vy *= 0.85; }
+            if (autoN > 0) { it.auto = true; autoN--; hud(); }
+            items.push(it);
+        }
+        function spawnBelt() {
+            const t = sortableTraits();
+            items.push({ x: -30, y: BELT_Y, vx: 120 + level * 4, vy: 0, shape: t.shape, color: t.color, gold: Math.random() < 0.08, r: 22, rot: 0, vr: 0, belt: true });
+        }
+
+        /* ---------- Game ---------- */
+        function start(fromLevel) {
+            level = fromLevel || startLevel;
+            items = []; popups = []; score = 0; lives = D().lives; sorted = 0; streak = 0; bestStreak = 0; drag = null;
+            freezeT = 0; autoN = 0;
+            fx.clear();
+            ['menuOv', 'overOv', 'clearOv', 'pauseOv'].forEach(Arcade.hide);
+            beginLevel();
+            Arcade.sfx('level');
+        }
+        function beginLevel() {
+            items = []; levelSorted = 0; livesAtStart = lives; levelScore = score; spawnT = 0.5;
+            bins = makeBins(); layoutBins(); bins.forEach((b, i) => b.x = (i % 2 ? W : -b.w));
+            state = 'play';
+            Arcade.toast('Level ' + level + ' — sort ' + goal() + ' shapes', 'gold', 1400);
+            hud();
+        }
+        function beginBonus() {
+            items = []; bonusT = 20; spawnT = 0.3;
+            state = 'bonus';
+            Arcade.toast('🎁 Conveyor bonus! Sort what you can in 20s — double points, no lives lost', 'gold', 2200);
+            Arcade.sfx('power');
+            hud();
+        }
+
+        function hud() {
+            Arcade.text('score', score);
+            Arcade.text('level', level);
+            Arcade.text('goal', state === 'bonus' ? 'BONUS ' + Math.ceil(bonusT) + 's' : Math.min(levelSorted, goal()) + '/' + goal());
+            Arcade.text('lives', lives > 0 ? '♥'.repeat(lives) : '—');
+            const act = [];
+            if (freezeT > 0) act.push('❄️ ' + Math.ceil(freezeT));
+            if (autoN > 0) act.push('🤖 ' + autoN);
+            $('pwChip').hidden = !act.length;
+            Arcade.text('pw', act.join('  '));
+        }
+
+        function loseLife(x, y, why) {
+            if (state === 'bonus') { popups.push({ x, y: y - 20, text: why, t: 0.8, bad: true }); Arcade.sfx('bad'); streak = 0; return; }
+            lives--;
+            streak = 0;
+            fx.emit(x, y, { n: 24, color: ['#f87171', '#fff'], speed: 220, life: 0.6 });
+            popups.push({ x, y: y - 20, text: why, t: 1, bad: true });
+            Arcade.sfx(why === 'BOOM' ? 'boom' : 'bad');
+            hud();
+            if (lives <= 0) gameOver();
+        }
+
+        function sortedOk(it) {
+            sorted++; streak++; bestStreak = Math.max(bestStreak, streak);
+            if (state === 'play') levelSorted++;
+            const mult = (1 + Math.floor(streak / 5)) * (state === 'bonus' ? 2 : 1);
+            const gain = (it.gold ? 5 : it.inner ? 3 : 1) * mult;
+            score += gain;
+            popups.push({ x: it.x, y: it.y - 20, text: '+' + gain + (mult > 1 ? ' ×' + mult : ''), t: 0.8 });
+            fx.emit(it.x, it.y, { n: 14, color: it.gold ? ['#facc15', '#fff'] : [COLORS[it.color], '#fff'], speed: 160, life: 0.5 });
+            Arcade.sfx(it.gold ? 'coin' : 'score');
+            if (it.inner) {
+                // the shell cracks open and the inner shape drops back in from the top
+                items.push({ x: Arcade.rand(50, W - 50), y: -30, vy: speed(), shape: it.inner.shape, color: it.inner.color, r: 22, rot: 0, vr: Arcade.rand(-1, 1), popped: true });
+                popups.push({ x: it.x, y: it.y - 44, text: '🪆 POP!', t: 0.8 });
+            }
+            hud();
+            if (state === 'play' && levelSorted >= goal()) levelClear();
+        }
+
+        function binAt(x, y) {
+            if (y < FLOOR - 10) return null;
+            return bins.find(b => x >= b.tx && x < b.tx + b.w) || null;
+        }
+        function resolve(it) {
+            const b = binAt(it.x, it.y + it.r * 0.5);
+            if (!b) return false;
+            it.dead = true;
+            if (it.bomb) { loseLife(it.x, it.y, 'BOOM'); return true; }
+            if (it.power) return true;
+            if (fits(it, b)) sortedOk(it); else loseLife(it.x, it.y, 'WRONG BIN');
+            return true;
+        }
+
+        function levelClear() {
+            state = 'clear';
+            drag = null;
+            const lost = livesAtStart - lives;
+            const stars = lost === 0 ? 3 : lost === 1 ? 2 : 1;
+            const p = progress[diffId] || 1;
+            if (level + 1 > p) { progress[diffId] = level + 1; Arcade.save('arcade.shapematch.progress', progress); }
+            Arcade.report('level', level + 1);
+            Arcade.sfx('win');
+            for (const it of items) if (!it.dead) fx.emit(it.x, it.y, { n: 6, color: '#facc15', speed: 90, life: 0.4 });
+            items = [];
+            Arcade.text('clearTitle', 'Level ' + level + ' clear');
+            $('clearStars').innerHTML = [1, 2, 3].map(n => n <= stars ? '★' : '<span class="off">★</span>').join('');
+            Arcade.text('clearInfo', `+${score - levelScore} points this level${lost ? ' · lost ' + lost + ' ♥' : ' · no lives lost!'}${isBonusNext() ? ' — 🎁 bonus round next!' : ''}`);
+            $('nextBtn').textContent = isBonusNext() ? '🎁 Bonus round' : 'Next level';
+            setTimeout(() => Arcade.show('clearOv'), 400);
+        }
+
+        function gameOver() {
+            state = 'over';
+            drag = null;
+            Arcade.sfx('die');
+            Arcade.report('score', score);
+            const isNew = score > best;
+            if (isNew) { best = score; Arcade.save('arcade.shapematch.best', best); }
+            Arcade.text('finalScore', score);
+            Arcade.text('finalSorted', sorted);
+            Arcade.text('finalLevel', level);
+            Arcade.text('finalStreak', bestStreak);
+            $('newBest').hidden = !isNew;
+            setTimeout(() => Arcade.show('overOv'), 600);
+            hud();
+        }
+
+        function collectPower(it) {
+            it.dead = true;
+            const P = POWERS[it.power];
+            if (it.power === 'freeze') freezeT = 5;
+            if (it.power === 'auto') { autoN += 5; for (const o of items) if (!o.bomb && !o.power && !o.dead && autoN > 0 && !o.auto) { o.auto = true; autoN--; } }
+            if (it.power === 'defuse') for (const b of items) if (b.bomb && !b.dead) { b.dead = true; score += 2; fx.emit(b.x, b.y, { n: 12, color: ['#94a3b8', '#fde047'], speed: 120, life: 0.4 }); }
+            fx.emit(it.x, it.y, { n: 18, color: ['#a5f3fc', '#fff'], speed: 160, life: 0.5 });
+            Arcade.toast(P.e + ' ' + P.name, 'good', 1400);
+            Arcade.sfx('power');
+            hud();
+        }
+
+        function update(dt) {
+            const wasF = Math.ceil(freezeT);
+            freezeT = Math.max(0, freezeT - dt);
+            if (Math.ceil(freezeT) !== wasF) hud();
+            if (state === 'bonus') {
+                const b = Math.ceil(bonusT);
+                bonusT -= dt;
+                if (Math.ceil(bonusT) !== b) hud();
+                if (bonusT <= 0) { state = 'between'; items = []; Arcade.toast('Bonus over!', 'gold', 1000); setTimeout(() => { level++; beginLevel(); }, 700); return; }
+                spawnT -= dt;
+                if (spawnT <= 0) { spawnBelt(); spawnT = Math.max(0.55, 1.1 - level * 0.02); }
+            } else if (freezeT <= 0) {
+                spawnT -= dt;
+                if (spawnT <= 0) {
+                    spawnItem();
+                    spawnT = Math.max(0.45, 1.7 - level * 0.09) * Arcade.rand(0.75, 1.25) * D().spawn;
+                }
+            }
+            for (const b of bins) b.x += (b.tx - b.x) * Math.min(1, dt * 8);
+            for (const it of items) {
+                if (it.dead || it === drag?.item) continue;
+                if (it.belt) {
+                    it.x += it.vx * dt;
+                    if (it.y < BELT_Y - 1) it.y = Math.min(BELT_Y, it.y + 300 * dt);
+                    if (it.x > W + 40) it.dead = true;
+                    continue;
+                }
+                if (it.auto) {
+                    const b = bins.find(bb => fits(it, bb));
+                    if (b) { it.x += (b.tx + b.w / 2 - it.x) * Math.min(1, dt * 4); it.handled = true; }
+                    it.y += Math.max(it.vy, 260) * dt;
+                } else if (freezeT <= 0) it.y += it.vy * dt;
+                if (it.power) { it.t += dt; continue; }
+                if (!it.bomb) it.rot += it.vr * dt;
+                else it.fuse += dt;
+                if (it.y + it.r * 0.5 >= FLOOR) {
+                    if (it.power) it.dead = true;
+                    else if (it.bomb || !it.handled) { it.dead = true; loseLife(it.x, FLOOR, it.bomb ? 'BOOM' : 'MISSED'); }
+                    else if (!resolve(it)) { it.dead = true; loseLife(it.x, FLOOR, 'DROPPED'); }
+                    if (state !== 'play' && state !== 'bonus') return;
+                }
+            }
+            for (const it of items) if (it.power && it.y > FLOOR) it.dead = true;
+            items = items.filter(i => !i.dead);
+            popups = popups.filter(p => (p.t -= dt) > 0);
+        }
+
+        /* ---------- Drawing ---------- */
+        function shapePath(c, shape, x, y, r, rot) {
+            c.save(); c.translate(x, y); c.rotate(rot || 0);
+            c.beginPath();
+            switch (shape) {
+                case 'circle': c.arc(0, 0, r, 0, Math.PI * 2); break;
+                case 'square': c.roundRect(-r * 0.85, -r * 0.85, r * 1.7, r * 1.7, r * 0.2); break;
+                case 'triangle': c.moveTo(0, -r); c.lineTo(r * 0.95, r * 0.75); c.lineTo(-r * 0.95, r * 0.75); c.closePath(); break;
+                case 'diamond': c.moveTo(0, -r); c.lineTo(r * 0.75, 0); c.lineTo(0, r); c.lineTo(-r * 0.75, 0); c.closePath(); break;
+                case 'star': for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); break;
+                case 'hexagon': for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); break;
+                case 'heart':
+                    c.moveTo(0, r * 0.9);
+                    c.bezierCurveTo(-r * 1.25, 0, -r * 0.7, -r * 1.05, 0, -r * 0.4);
+                    c.bezierCurveTo(r * 0.7, -r * 1.05, r * 1.25, 0, 0, r * 0.9);
+                    c.closePath(); break;
+                case 'cross': { const a = r * 0.34; c.moveTo(-a, -r); c.lineTo(a, -r); c.lineTo(a, -a); c.lineTo(r, -a); c.lineTo(r, a); c.lineTo(a, a); c.lineTo(a, r); c.lineTo(-a, r); c.lineTo(-a, a); c.lineTo(-r, a); c.lineTo(-r, -a); c.lineTo(-a, -a); c.closePath(); break; }
+            }
+            c.restore();
+        }
+
+        function drawItem(it) {
+            if (it.bomb) {
+                const pulse = 1 + Math.sin(it.fuse * 10) * 0.06;
+                ctx.fillStyle = '#1f2937';
+                ctx.beginPath(); ctx.arc(it.x, it.y, it.r * pulse, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.strokeStyle = '#a16207'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(it.x + 8, it.y - 16); ctx.quadraticCurveTo(it.x + 16, it.y - 28, it.x + 22, it.y - 24); ctx.stroke();
+                ctx.fillStyle = Math.floor(time * 10) % 2 ? '#fde047' : '#f97316';
+                ctx.beginPath(); ctx.arc(it.x + 22, it.y - 24, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#f87171'; ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('TAP', it.x, it.y + 1);
+                return;
+            }
+            if (it.power) {
+                ctx.fillStyle = 'rgba(165,243,252,0.18)'; ctx.strokeStyle = 'rgba(165,243,252,0.8)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(it.x, it.y, it.r + Math.sin(it.t * 6) * 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.font = '20px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(POWERS[it.power].e, it.x, it.y + 1);
+                return;
+            }
+            const col = it.gold ? '#facc15' : COLORS[it.color];
+            ctx.fillStyle = col;
+            ctx.shadowColor = col; ctx.shadowBlur = it.gold ? 20 : 8;
+            shapePath(ctx, it.shape, it.x, it.y, it.r, it.rot);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = it.auto ? '#a5f3fc' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = it.auto ? 3 : 2;
+            ctx.stroke();
+            if (it.inner) {
+                ctx.fillStyle = 'rgba(15,23,42,0.55)';
+                shapePath(ctx, it.shape, it.x, it.y, it.r * 0.62, it.rot); ctx.fill();
+                ctx.fillStyle = COLORS[it.inner.color];
+                shapePath(ctx, it.inner.shape, it.x, it.y, it.r * 0.42, -it.rot); ctx.fill();
+            }
+            if (it.gold) { ctx.fillStyle = '#fff'; ctx.font = '14px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⭐', it.x, it.y); }
+        }
+
+        function drawBin(b, hot) {
+            const x = b.x + 6, y = FLOOR + 6, w = b.w - 12, h = BIN_H - 12;
+            ctx.fillStyle = hot === 'ok' ? 'rgba(74,222,128,0.18)' : hot === 'bad' ? 'rgba(248,113,113,0.18)' : 'rgba(255,255,255,0.04)';
+            ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.fill();
+            ctx.strokeStyle = hot === 'ok' ? '#4ade80' : hot === 'bad' ? '#f87171' : 'rgba(255,255,255,0.18)';
+            ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.stroke(); ctx.setLineDash([]);
+            const cx = x + w / 2, cy = y + h / 2 - 8;
+            if (b.rule === 'color') {
+                ctx.fillStyle = COLORS[b.color];
+                ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+            } else {
+                ctx.fillStyle = b.rule === 'both' ? COLORS[b.color] : 'transparent';
+                ctx.strokeStyle = b.rule === 'shape' ? '#e2e8f0' : 'transparent';
+                ctx.lineWidth = 3;
+                shapePath(ctx, b.shape, cx, cy, 18, 0);
+                if (b.rule === 'both') ctx.fill(); else ctx.stroke();
+            }
+            ctx.fillStyle = '#94a3b8'; ctx.font = `bold ${bins.length > 4 ? 9 : 11}px "Segoe UI", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            const label = b.rule === 'both' ? `${b.color} ${b.shape}` : b.rule === 'shape' ? `any ${b.shape}` : `any ${b.color}`;
+            ctx.fillText(label.toUpperCase(), cx, y + h - 10);
+        }
+
+        function render() {
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#0f172a'); g.addColorStop(1, '#1a1530');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(250,204,21,0.05)'; ctx.lineWidth = 18;
+            const off = (time * 30) % 60;
+            if (freezeT <= 0) for (let y = -60 + off; y < FLOOR; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + 40); ctx.stroke(); }
+            if (freezeT > 0) { ctx.fillStyle = 'rgba(165,243,252,0.07)'; ctx.fillRect(0, 0, W, FLOOR); }
+            if (state === 'bonus') {
+                // the conveyor belt
+                ctx.fillStyle = '#1f2937'; ctx.fillRect(0, BELT_Y + 22, W, 22);
+                ctx.fillStyle = '#374151';
+                const bo = (time * (120 + level * 4)) % 30;
+                for (let x = -30 + bo; x < W; x += 30) ctx.fillRect(x, BELT_Y + 26, 14, 14);
+                ctx.fillStyle = '#facc15'; ctx.fillRect(0, BELT_Y + 22, W, 2);
+                ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('🎁 BONUS ×2 — ' + Math.ceil(bonusT) + 's', W / 2, 40);
+            }
+            ctx.fillStyle = '#facc15'; ctx.fillRect(0, FLOOR - 2, W, 2);
+
+            let hotBin = null, hotKind = null;
+            if (drag && !drag.item.bomb && !drag.item.power) {
+                const b = binAt(drag.item.x, drag.item.y + 20);
+                if (b) { hotBin = b; hotKind = fits(drag.item, b) ? 'ok' : 'bad'; }
+            }
+            for (const b of bins) drawBin(b, b === hotBin ? hotKind : null);
+            for (const it of items) drawItem(it);
+            fx.draw(ctx);
+            ctx.textAlign = 'center';
+            for (const p of popups) {
+                ctx.globalAlpha = Math.min(1, p.t * 2);
+                ctx.fillStyle = p.bad ? '#f87171' : '#fde68a';
+                ctx.font = 'bold 18px "Segoe UI", sans-serif';
+                ctx.fillText(p.text, p.x, p.y - (1 - p.t) * 30);
+            }
+            ctx.globalAlpha = 1;
+            if (state === 'play') {
+                ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(W - 132, 12, 120, 8);
+                ctx.fillStyle = '#facc15'; ctx.fillRect(W - 132, 12, 120 * Math.min(1, levelSorted / goal()), 8);
+            }
+            if (streak >= 5 && (state === 'play' || state === 'bonus')) {
+                ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 15px "Segoe UI", sans-serif'; ctx.textAlign = 'left';
+                ctx.fillText('STREAK ' + streak + ' · ×' + (1 + Math.floor(streak / 5)), 12, 24);
+            }
+        }
+
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            if (state === 'play' || state === 'bonus') update(dt);
+            fx.update(dt);
+            render();
+        });
+
+        /* ---------- Input ---------- */
+        canvas.addEventListener('pointerdown', (e) => {
+            if (state !== 'play' && state !== 'bonus') return;
+            const p = Arcade.pointer(canvas, e, W, H);
+            let hit = null, bd = 1e9;
+            for (const it of items) {
+                const d = Math.hypot(it.x - p.x, it.y - p.y);
+                if (d < it.r + 16 && d < bd) { bd = d; hit = it; }
+            }
+            if (!hit) return;
+            if (hit.bomb) {
+                hit.dead = true;
+                score += 2; hud();
+                fx.emit(hit.x, hit.y, { n: 16, color: ['#94a3b8', '#fde047'], speed: 140, life: 0.4 });
+                popups.push({ x: hit.x, y: hit.y - 20, text: 'DEFUSED +2', t: 0.8 });
+                Arcade.sfx('pop');
+                return;
+            }
+            if (hit.power) { collectPower(hit); return; }
+            hit.handled = true; hit.auto = false;
+            drag = { item: hit, ox: hit.x - p.x, oy: hit.y - p.y };
+            canvas.setPointerCapture(e.pointerId);
+            Arcade.sfx('select');
+        });
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            const p = Arcade.pointer(canvas, e, W, H);
+            drag.item.x = Arcade.clamp(p.x + drag.ox, 20, W - 20);
+            drag.item.y = Arcade.clamp(p.y + drag.oy, 20, H - 30);
+        });
+        const drop = () => {
+            if (!drag) return;
+            const it = drag.item;
+            drag = null;
+            if (state !== 'play' && state !== 'bonus') return;
+            if (!resolve(it) && !it.belt) it.vy = Math.max(it.vy * 0.8, 50);
+            items = items.filter(i => !i.dead);
+        };
+        canvas.addEventListener('pointerup', drop);
+        canvas.addEventListener('pointercancel', drop);
+
+        /* ---------- Menu ---------- */
+        function buildMenu() {
+            const ds = $('diffSeg');
+            ds.innerHTML = '';
+            for (const [id, d] of Object.entries(DIFFS)) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (id === diffId ? ' active' : '');
+                b.textContent = d.name + ' · ' + d.lives + '♥';
+                b.onclick = () => { diffId = id; Arcade.save('arcade.shapematch.diff', id); startLevel = 1; Arcade.sfx('select'); buildMenu(); };
+                ds.appendChild(b);
+            }
+            const ss = $('startSeg');
+            ss.innerHTML = '';
+            const reached = progress[diffId] || 1;
+            for (let l = 1; l <= reached; l += 5) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (l === startLevel ? ' active' : '');
+                b.textContent = 'Lv ' + l;
+                b.onclick = () => { startLevel = l; Arcade.sfx('select'); buildMenu(); };
+                ss.appendChild(b);
+            }
+            Arcade.text('bestLine', `Best score ${best} · furthest level on ${D().name}: ${reached}`);
+        }
+        function toMenu() { state = 'menu'; ['overOv', 'pauseOv', 'clearOv'].forEach(Arcade.hide); items = []; buildMenu(); Arcade.show('menuOv'); }
+        function setPaused(on) {
+            if (on && (state === 'play' || state === 'bonus')) { state = { from: state }; drag = null; Arcade.show('pauseOv'); }
+            else if (!on && typeof state === 'object') { state = state.from; Arcade.hide('pauseOv'); }
+        }
+        window.addEventListener('keydown', (e) => { if (e.code === 'KeyP' || e.code === 'Escape') setPaused(state === 'play' || state === 'bonus'); });
+        $('pauseBtn').onclick = () => setPaused(state === 'play' || state === 'bonus');
+        $('resumeBtn').onclick = () => setPaused(false);
+        $('quitBtn').onclick = toMenu;
+        $('playBtn').onclick = () => start();
+        $('againBtn').onclick = () => start(level);
+        $('menuBtn').onclick = toMenu;
+        $('nextBtn').onclick = () => { Arcade.hide('clearOv'); if (isBonusNext()) beginBonus(); else { level++; beginLevel(); } };
+        document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+
+        bins = makeBins(); layoutBins();
+        buildMenu();
+        hud();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

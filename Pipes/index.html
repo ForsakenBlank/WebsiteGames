@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipe Puzzle · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #3b82f6; --accent-2: #22d3ee; --accent-ink: #020b1f; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        #cv { cursor: pointer; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Pipe Puzzle</h1>
+        <div class="stats">
+            <span class="chip accent">Level <b id="lvl">1</b></span>
+            <span class="chip">Drains <b id="drains">0/0</b></span>
+            <span class="chip">Moves <b id="moves">0</b></span>
+            <span class="chip gold hide-sm">Solved <b id="solved">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="tbar">
+            <div class="seg" id="sizes"></div>
+            <button class="btn sm" id="prevBtn">◀</button>
+            <button class="btn sm" id="nextBtn">▶</button>
+            <button class="btn sm" id="wrapBtn" title="Pipes can leave one edge and come back on the other">⟳ Wrap: off</button>
+            <button class="btn sm" id="resetBtn">⟲ Restart</button>
+        </div>
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="winOv" hidden>
+                <div class="modal">
+                    <h2 class="good">Water is flowing!</h2>
+                    <div class="big-num" id="winStars">★★★</div>
+                    <p id="winText"></p>
+                    <div class="actions"><button class="btn primary lg" id="winNext">Next level</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0">Click a tile to rotate it (right-click or <kbd>Shift</kbd>+click rotates back · long-press locks it). Connect every pipe to the tap with no loose ends.</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const S = 600, SIZES = [5, 6, 7, 8, 9, 10];
+        const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];   // N E S W, bit i = 1 << i
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, S, S, { max: 1.5 });
+        const c = view.ctx;
+        const prog = Object.assign({}, Arcade.load('arcade.pipes.prog', {}));
+        let solvedTotal = Arcade.load('arcade.pipes.solved', 0) || 0;
+        let N = Arcade.load('arcade.pipes.size', 5); if (!SIZES.includes(N)) N = 5;
+        let wrap = !!Arcade.load('arcade.pipes.wrap', false);
+        let level = 1, tiles, src, moves, par, wet, won, anim, locked;
+        const rotBits = (m, k) => { k = ((k % 4) + 4) % 4; return ((m << k) | (m >> (4 - k))) & 15; };
+        const progKey = () => N + (wrap ? 'w' : '');
+        function neighbor(i, d) {
+            let x = i % N + DX[d], y = ((i / N) | 0) + DY[d];
+            if (wrap) { x = (x + N) % N; y = (y + N) % N; }
+            else if (x < 0 || y < 0 || x >= N || y >= N) return -1;
+            return y * N + x;
+        }
+        function generate(seed) {
+            const rng = Arcade.seeded(seed);
+            const total = N * N, conn = new Array(total).fill(0), seen = new Uint8Array(total);
+            src = Math.floor(N / 2) * N + Math.floor(N / 2);
+            // randomized Prim: grows a spanning tree; prefers fewer 4-way crossings
+            const frontier = [];
+            const add = (i) => { seen[i] = 1; for (let d = 0; d < 4; d++) { const j = neighbor(i, d); if (j >= 0 && !seen[j]) frontier.push([i, d, j]); } };
+            add(src);
+            while (frontier.length) {
+                const k = Math.floor(rng() * frontier.length);
+                const [i, d, j] = frontier[k];
+                frontier[k] = frontier[frontier.length - 1]; frontier.pop();
+                if (seen[j]) continue;
+                const deg = [0, 1, 2, 3].filter(b => conn[i] >> b & 1).length;
+                if (deg >= 3 && rng() < 0.85) { frontier.push([i, d, j]); if (frontier.length < 3 || rng() < 0.3) { /* allow it */ } else continue; }
+                conn[i] |= 1 << d; conn[j] |= 1 << ((d + 2) % 4);
+                add(j);
+            }
+            const solution = conn.slice();
+            tiles = solution.map((m, i) => ({ m, rot: 0, show: 0, sol: m }));
+            par = 0;
+            for (const t of tiles) {
+                const r = Math.floor(rng() * 4);
+                t.rot = r; t.show = r * 90;
+                // fewest clicks back to a correct orientation (symmetric pieces have several)
+                let best = 4;
+                for (let k = 0; k < 4; k++) if (rotBits(t.m, r + k) === t.sol) { best = Math.min(best, k, 4 - k); }
+                par += best === 4 ? 0 : best;
+            }
+            locked = new Uint8Array(total);
+        }
+        const bits = (i) => rotBits(tiles[i].m, tiles[i].rot);
+        function flood() {
+            wet = new Uint8Array(N * N);
+            const q = [src]; wet[src] = 1;
+            let loose = 0;
+            while (q.length) {
+                const i = q.shift(), b = bits(i);
+                for (let d = 0; d < 4; d++) {
+                    if (!(b >> d & 1)) continue;
+                    const j = neighbor(i, d);
+                    if (j < 0 || !(bits(j) >> ((d + 2) % 4) & 1)) { loose++; continue; }
+                    if (!wet[j]) { wet[j] = 1; q.push(j); }
+                }
+            }
+            return loose;
+        }
+        function load(n, lv) {
+            N = n; level = lv;
+            Arcade.save('arcade.pipes.size', n);
+            generate(n * 7777 + lv * 104729 + (wrap ? 99991 : 0));
+            moves = 0; won = false; anim = 0;
+            flood();
+            if (wet.every(Boolean) && !flood()) { tiles[0].rot = (tiles[0].rot + 1) % 4; tiles[0].show = tiles[0].rot * 90; flood(); }
+            buildSizes(); hud();
+        }
+        function rotate(i, dir) {
+            if (won || locked[i]) return;
+            const t = tiles[i];
+            t.rot = (t.rot + dir + 4) % 4;
+            moves++;
+            Arcade.tone(dir > 0 ? 520 : 440, 0.04, 'square', 0.03);
+            const loose = flood();
+            hud();
+            if (wet.every(Boolean) && loose === 0) win();
+        }
+        function win() {
+            won = true; anim = 0;
+            const stars = moves <= par ? 3 : moves <= par * 1.5 + 2 ? 2 : 1;
+            const key = progKey();
+            if ((prog[key] || 1) <= level) { prog[key] = level + 1; Arcade.save('arcade.pipes.prog', prog); }
+            solvedTotal++; Arcade.save('arcade.pipes.solved', solvedTotal);
+            Arcade.count('win'); Arcade.addXP(4 + N, true);
+            Arcade.sfx('win');
+            $('winStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+            $('winText').textContent = `${N}×${N}${wrap ? ' wrap' : ''} level ${level} · ${moves} moves (best possible ${par})`;
+            setTimeout(() => Arcade.show('winOv'), 900);
+        }
+        function hud() {
+            const leaves = tiles.filter((t, i) => i !== src && [0, 1, 2, 3].filter(b => t.m >> b & 1).length === 1);
+            const wetLeaves = tiles.filter((t, i) => i !== src && wet[i] && [0, 1, 2, 3].filter(b => t.m >> b & 1).length === 1);
+            Arcade.text('lvl', N + '×' + N + ' · ' + level);
+            Arcade.text('drains', wetLeaves.length + '/' + leaves.length);
+            Arcade.text('moves', moves + ' / par ' + par);
+            Arcade.text('solved', solvedTotal);
+            $('wrapBtn').textContent = '⟳ Wrap: ' + (wrap ? 'on' : 'off');
+        }
+        function buildSizes() {
+            const host = $('sizes'); host.innerHTML = '';
+            for (const n of SIZES) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (n === N ? ' active' : '');
+                b.textContent = n + '×' + n;
+                b.onclick = () => load(n, prog[n + (wrap ? 'w' : '')] || 1);
+                host.appendChild(b);
+            }
+        }
+        function draw(dt) {
+            anim += dt;
+            const cs = S / N;
+            c.fillStyle = '#0a1020'; c.fillRect(0, 0, S, S);
+            for (let i = 0; i < N * N; i++) {
+                const t = tiles[i], x = (i % N) * cs, y = ((i / N) | 0) * cs;
+                const target = t.rot * 90;
+                let diff = ((target - t.show) % 360 + 540) % 360 - 180;
+                t.show += diff * Math.min(1, dt * 18);
+                c.fillStyle = locked[i] ? '#1e293b' : (i % N + ((i / N) | 0)) % 2 ? '#0f172a' : '#111a30';
+                c.fillRect(x, y, cs, cs);
+                c.save(); c.translate(x + cs / 2, y + cs / 2); c.rotate(t.show * Math.PI / 180);
+                const deg = [0, 1, 2, 3].filter(b => t.m >> b & 1).length;
+                const isWet = wet[i];
+                const col = isWet ? (won ? `hsl(${190 + Math.sin(anim * 4 + i * 0.3) * 15},90%,60%)` : '#38bdf8') : '#64748b';
+                c.lineCap = 'round';
+                for (const [w, cc] of [[cs * 0.3, '#020617'], [cs * 0.2, col]]) {
+                    c.strokeStyle = cc; c.lineWidth = w;
+                    c.beginPath();
+                    for (let d = 0; d < 4; d++) if (t.m >> d & 1) { c.moveTo(0, 0); c.lineTo(DX[d] * cs / 2, DY[d] * cs / 2); }
+                    c.stroke();
+                }
+                c.restore();
+                if (i === src) { c.fillStyle = '#0ea5e9'; c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.26, 0, Math.PI * 2); c.fill(); c.font = `${cs * 0.32}px system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💧', x + cs / 2, y + cs / 2 + 1); }
+                else if (deg === 1) {
+                    c.fillStyle = isWet ? '#22d3ee' : '#334155'; c.strokeStyle = '#020617'; c.lineWidth = 3;
+                    c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.2, 0, Math.PI * 2); c.fill(); c.stroke();
+                    c.font = `${cs * 0.22}px system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(isWet ? '🌱' : '🥀', x + cs / 2, y + cs / 2 + 1);
+                }
+                if (locked[i]) { c.font = `${cs * 0.18}px system-ui`; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('🔒', x + cs - 3, y + 3); }
+            }
+            c.strokeStyle = 'rgba(148,163,184,0.12)'; c.lineWidth = 1;
+            for (let k = 1; k < N; k++) { c.beginPath(); c.moveTo(k * cs, 0); c.lineTo(k * cs, S); c.stroke(); c.beginPath(); c.moveTo(0, k * cs); c.lineTo(S, k * cs); c.stroke(); }
+            if (wrap) { c.strokeStyle = 'rgba(56,189,248,0.4)'; c.setLineDash([6, 6]); c.lineWidth = 3; c.strokeRect(1.5, 1.5, S - 3, S - 3); c.setLineDash([]); }
+        }
+        const cellAt = (e) => { const p = Arcade.pointer(cv, e, S, S), cs = S / N; const x = Math.floor(p.x / cs), y = Math.floor(p.y / cs); return x >= 0 && y >= 0 && x < N && y < N ? y * N + x : -1; };
+        let press = null;
+        cv.addEventListener('pointerdown', (e) => {
+            const k = cellAt(e); if (k < 0) return;
+            press = { k, t: performance.now(), btn: e.button, shift: e.shiftKey, long: false };
+            press.timer = setTimeout(() => { if (press) { press.long = true; locked[k] ^= 1; Arcade.sfx('select'); } }, 450);
+        });
+        cv.addEventListener('pointerup', (e) => {
+            if (!press) return;
+            clearTimeout(press.timer);
+            if (!press.long) rotate(press.k, press.btn === 2 || press.shift ? -1 : 1);
+            press = null;
+        });
+        cv.addEventListener('pointerleave', () => { if (press) clearTimeout(press.timer); press = null; });
+        cv.addEventListener('contextmenu', (e) => e.preventDefault());
+        $('prevBtn').onclick = () => { if (level > 1) load(N, level - 1); };
+        $('nextBtn').onclick = () => { if (level < (prog[progKey()] || 1)) load(N, level + 1); else Arcade.toast('Solve this one to unlock the next', null, 1500); };
+        $('resetBtn').onclick = () => load(N, level);
+        $('wrapBtn').onclick = () => { wrap = !wrap; Arcade.save('arcade.pipes.wrap', wrap); load(N, prog[progKey()] || 1); };
+        $('winNext').onclick = () => { Arcade.hide('winOv'); load(N, level + 1); };
+        const loop = Arcade.loop((dt) => draw(dt));
+        load(N, prog[progKey()] || 1);
+        loop.start();
+        window.__pipes = {
+            solve() { for (const t of tiles) { for (let k = 0; k < 4; k++) if (rotBits(t.m, k) === t.sol) { t.rot = k; break; } } tiles[1].rot = (tiles[1].rot + 3) % 4; rotate(1, 1); },
+            get won() { return won; }, load,
+        };
+    })();
+    </script>
+</body>
+</html>

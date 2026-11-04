@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Stacker · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #2dd4bf; --accent-2: #818cf8; --accent-ink: #021714; }
+        .themes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+        .themes .btn { flex-direction: column; gap: 3px; padding: 8px 4px; font-size: 0.74rem; white-space: normal; }
+        .themes .btn span { font-size: 1.4rem; }
+        .themes .btn small { color: var(--muted); font-weight: 500; font-size: 0.64rem; }
+        .themes .btn.locked { opacity: 0.45; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Tower Stacker</h1>
+        <div class="stats">
+            <span class="chip accent">Height <b id="height">0</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+            <span class="chip">Perfect <b id="combo">0</b></span>
+            <button class="btn sm" id="powerBtn" disabled title="Fill the meter with perfect drops (E)">⚡ Power</button>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>Tower Stacker</h2>
+                    <p>Drop each block on the one below. Anything hanging over gets sliced off.</p>
+                    <p class="small">Land <b class="accent">3 perfect drops</b> in a row to grow your block back. Perfect drops also charge the <b class="gold">⚡ power meter</b> — fire it for 6 slow, snap-to-perfect drops.</p>
+                    <p class="tiny dim"><span class="desktop-only"><kbd>Space</kbd> / <kbd>Click</kbd> to drop · <kbd>E</kbd> use power</span><span class="touch-only">Tap to drop · tap ⚡ for power</span></p>
+                    <div class="themes" id="themes"></div>
+                    <p class="tiny dim" id="themeInfo" style="margin-top:8px"></p>
+                    <div class="actions"><button class="btn primary lg" id="playBtn">Build</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad">Collapsed</h2>
+                    <div class="big-num" id="finalH">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Perfect drops</small><b id="finalPerfect">0</b></div>
+                        <div><small>Best streak</small><b id="finalStreak">0</b></div>
+                        <div><small>Best</small><b id="finalBest">0</b></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Rebuild</button><button class="btn" id="themeBtn">🎨 Themes</button></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const W = 400, H = 640, BH = 28, START_W = 170, BASE_Y = H - 90;
+        const canvas = document.getElementById('c');
+        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.4 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles();
+
+        let best = Number(Arcade.load('stackerBest', 0)) || 0;
+        let blocks, cur, falling, cam, camT, combo, perfects, bestStreak, state = 'menu', time = 0, flashes, speedBase;
+        const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * W, y: Math.random() * 3000, s: Math.random() * 1.6 + 0.4 }));
+
+        const hue = (i) => (170 + i * 9) % 360;
+        // Tower themes unlock as your best height grows.
+        const THEMES = [
+            { id: 'classic', name: 'Classic', icon: '🌈', need: 0 },
+            { id: 'sky', name: 'Skyscraper', icon: '🏢', need: 10 },
+            { id: 'cake', name: 'Cake', icon: '🎂', need: 20 },
+            { id: 'ice', name: 'Ice', icon: '🧊', need: 35 },
+            { id: 'candy', name: 'Candy', icon: '🍬', need: 50 },
+        ];
+        let theme = Arcade.load('arcade.stacker.theme', 'classic');
+        if (!THEMES.some(t => t.id === theme)) theme = 'classic';
+        // Sky zones you climb through: [floor, top colour, bottom colour, name]
+        const ZONES = [
+            [0, [218, 60, 22], [200, 55, 38], null],
+            [15, [205, 70, 45], [200, 70, 62], '☁️ Above the clouds'],
+            [35, [215, 65, 30], [205, 60, 48], '✈️ Jet stream'],
+            [60, [235, 55, 16], [225, 55, 28], '🌌 Stratosphere'],
+            [90, [250, 45, 7], [245, 45, 14], '🚀 Outer space'],
+            [130, [285, 55, 8], [260, 50, 12], '🪐 Deep space'],
+        ];
+        const lerp3 = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+        let meter = 0, steady = 0, zoneIdx = 0;
+        const clouds = Array.from({ length: 14 }, () => ({ x: Math.random() * W, y: Math.random() * 900, w: 50 + Math.random() * 80, s: 0.2 + Math.random() * 0.5 }));
+
+        function reset() {
+            blocks = [{ x: (W - START_W) / 2, w: START_W, y: BASE_Y, i: 0 }];
+            falling = []; flashes = [];
+            cam = 0; camT = 0; combo = 0; perfects = 0; bestStreak = 0;
+            speedBase = 170;
+            meter = 0; steady = 0; zoneIdx = 0;
+            nextBlock();
+            hud();
+        }
+
+        function nextBlock() {
+            const last = blocks[blocks.length - 1];
+            const n = blocks.length;
+            const fromLeft = n % 2 === 1;
+            cur = {
+                x: fromLeft ? -last.w : W,
+                w: last.w,
+                y: last.y - BH,
+                dir: fromLeft ? 1 : -1,
+                speed: Math.min(520, speedBase + n * 7) * (steady > 0 ? 0.5 : 1),
+                i: n,
+            };
+        }
+
+        function start() {
+            reset();
+            state = 'play';
+            Arcade.hide('menuOv'); Arcade.hide('overOv');
+            Arcade.sfx('level');
+        }
+
+        function hud() {
+            Arcade.text('height', blocks.length - 1);
+            Arcade.text('best', Math.max(best, blocks.length - 1));
+            Arcade.text('combo', combo);
+            const pb = document.getElementById('powerBtn');
+            pb.disabled = !(meter >= 1 && state === 'play' && steady <= 0);
+            pb.textContent = steady > 0 ? '⚡ ' + steady + ' left' : meter >= 1 ? '⚡ POWER READY' : '⚡ ' + Math.floor(meter * 100) + '%';
+            pb.classList.toggle('primary', meter >= 1 && steady <= 0);
+        }
+        function usePower() {
+            if (state !== 'play' || meter < 1 || steady > 0) return;
+            meter = 0; steady = 6;
+            cur.speed *= 0.5;
+            Arcade.toast('⚡ Steady hands — 6 slow drops that snap to perfect', 'gold', 1600);
+            Arcade.sfx('power');
+            hud();
+        }
+
+        function drop() {
+            if (state !== 'play') return;
+            const last = blocks[blocks.length - 1];
+            let dx = cur.x - last.x;
+            const snap = steady > 0 ? 16 : 5;
+            if (steady > 0) steady--;
+            if (Math.abs(dx) < snap) {
+                meter = Math.min(1, meter + 0.25);
+                if (meter >= 1 && steady <= 0) Arcade.toast('⚡ Power meter full! Press E', 'good', 1200);
+                // perfect!
+                cur.x = last.x; dx = 0;
+                combo++; perfects++;
+                bestStreak = Math.max(bestStreak, combo);
+                let w = cur.w;
+                if (combo >= 3) {
+                    w = Math.min(START_W, w + 14);
+                    cur.x -= (w - cur.w) / 2;
+                    cur.x = Arcade.clamp(cur.x, 0, W - w);
+                    Arcade.toast('Perfect ×' + combo + ' — block grows!', 'gold', 900);
+                }
+                blocks.push({ x: cur.x, w, y: cur.y, i: cur.i });
+                flashes.push({ x: cur.x, w, y: cur.y, t: 0.5 });
+                fx.emit(cur.x + w / 2, cur.y + BH / 2, { n: 20, color: ['#fff', `hsl(${hue(cur.i)},80%,70%)`], speed: 180, life: 0.5 });
+                Arcade.sfx('coin');
+            } else {
+                const overlap = cur.w - Math.abs(dx);
+                if (overlap <= 0) {
+                    falling.push({ x: cur.x, w: cur.w, y: cur.y, vy: 0, vx: cur.dir * 60, rot: 0, vr: cur.dir * 2, i: cur.i });
+                    return gameOver();
+                }
+                combo = 0;
+                meter = Math.max(0, meter - 0.1);
+                const nx = Math.max(cur.x, last.x);
+                blocks.push({ x: nx, w: overlap, y: cur.y, i: cur.i });
+                // the sliced-off piece
+                const cutX = dx > 0 ? nx + overlap : cur.x;
+                falling.push({ x: cutX, w: Math.abs(dx), y: cur.y, vy: 0, vx: (dx > 0 ? 1 : -1) * 70, rot: 0, vr: (dx > 0 ? 1 : -1) * 3, i: cur.i });
+                Arcade.sfx('hit');
+            }
+            const fl = blocks.length - 1;
+            const z = ZONES.reduce((acc, zz, i) => fl >= zz[0] ? i : acc, 0);
+            if (z > zoneIdx) { zoneIdx = z; Arcade.toast(ZONES[z][3] + '!', 'gold', 1400); Arcade.sfx('level'); }
+            else if (fl > 0 && fl % 25 === 0) { Arcade.toast(fl + ' floors!', 'good', 1000); Arcade.sfx('level'); }
+            camT = Math.max(0, (BASE_Y - cur.y) - H * 0.45);
+            nextBlock();
+            hud();
+        }
+
+        function gameOver() {
+            state = 'dead';
+            Arcade.sfx('boom');
+            const h = blocks.length - 1;
+            Arcade.report('floors', h);
+            const isNew = h > best;
+            if (isNew) {
+                const before = best;
+                best = h; Arcade.save('stackerBest', best);
+                const unlocked = THEMES.filter(t => t.need > before && t.need <= best);
+                if (unlocked.length) setTimeout(() => Arcade.toast('🔓 New tower theme: ' + unlocked.map(t => t.icon + ' ' + t.name).join(', '), 'gold', 2600), 1200);
+            }
+            setTimeout(() => {
+                state = 'over';
+                Arcade.text('finalH', h);
+                Arcade.text('finalPerfect', perfects);
+                Arcade.text('finalStreak', bestStreak);
+                Arcade.text('finalBest', best);
+                document.getElementById('newBest').hidden = !isNew;
+                buildThemes();
+                Arcade.show('overOv');
+                hud();
+            }, 900);
+        }
+
+        function update(dt) {
+            if (state === 'play') {
+                cur.x += cur.dir * cur.speed * dt;
+                if (cur.x > W - cur.w * 0.25 && cur.dir > 0) cur.dir = -1;
+                if (cur.x < -cur.w * 0.75 && cur.dir < 0) cur.dir = 1;
+            }
+            cam += (camT - cam) * Math.min(1, dt * 6);
+            for (const f of falling) { f.vy += 1400 * dt; f.y += f.vy * dt; f.x += f.vx * dt; f.rot += f.vr * dt; }
+            falling = falling.filter(f => f.y + cam < H + 120);
+            flashes = flashes.filter(f => (f.t -= dt) > 0);
+            fx.update(dt);
+        }
+
+        function drawBlock(b, alpha) {
+            const y = b.y + cam;
+            ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+            switch (theme) {
+                case 'sky': {
+                    ctx.fillStyle = b.i % 2 ? '#475569' : '#3f4b5f';
+                    ctx.fillRect(b.x, y, b.w, BH);
+                    ctx.fillStyle = '#94a3b8'; ctx.fillRect(b.x, y, b.w, 3);
+                    // windows, some lit
+                    for (let wx = b.x + 5; wx < b.x + b.w - 8; wx += 12) {
+                        const lit = ((Math.floor(wx) * 7 + b.i * 13) % 5) < 2;
+                        ctx.fillStyle = lit ? '#fde68a' : '#1e293b';
+                        ctx.fillRect(wx, y + 8, 7, 12);
+                    }
+                    break;
+                }
+                case 'cake': {
+                    const sponge = ['#f5d0a9', '#8b5a3c', '#f9a8d4', '#fef3c7'][b.i % 4];
+                    ctx.fillStyle = sponge; ctx.fillRect(b.x, y, b.w, BH);
+                    ctx.fillStyle = '#fff7ed'; ctx.fillRect(b.x, y, b.w, 6);
+                    for (let dx = b.x + 4; dx < b.x + b.w - 4; dx += 14) { ctx.beginPath(); ctx.arc(dx + 4, y + 6, 4, 0, Math.PI); ctx.fill(); }
+                    for (let k = 0; k < b.w / 12; k++) {
+                        ctx.fillStyle = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'][(k + b.i) % 4];
+                        ctx.fillRect(b.x + ((k * 37 + b.i * 11) % Math.max(1, b.w - 4)), y + 14 + (k % 3) * 4, 3, 2);
+                    }
+                    break;
+                }
+                case 'ice': {
+                    const g = ctx.createLinearGradient(b.x, y, b.x + b.w, y + BH);
+                    g.addColorStop(0, 'rgba(186,230,253,0.95)'); g.addColorStop(1, 'rgba(56,189,248,0.75)');
+                    ctx.fillStyle = g; ctx.fillRect(b.x, y, b.w, BH);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(b.x + 6, y + 6); ctx.lineTo(b.x + 20, y + BH - 6); ctx.moveTo(b.x + b.w * 0.6, y + 4); ctx.lineTo(b.x + b.w * 0.6 + 10, y + 14); ctx.stroke();
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(b.x, y, b.w, 3);
+                    break;
+                }
+                case 'candy': {
+                    ctx.fillStyle = b.i % 2 ? '#f472b6' : '#c084fc';
+                    ctx.fillRect(b.x, y, b.w, BH);
+                    ctx.save(); ctx.beginPath(); ctx.rect(b.x, y, b.w, BH); ctx.clip();
+                    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                    for (let sx = b.x - BH; sx < b.x + b.w; sx += 18) { ctx.beginPath(); ctx.moveTo(sx, y + BH); ctx.lineTo(sx + 8, y + BH); ctx.lineTo(sx + 8 + BH, y); ctx.lineTo(sx + BH, y); ctx.closePath(); ctx.fill(); }
+                    ctx.restore();
+                    break;
+                }
+                default: {
+                    const h = hue(b.i);
+                    ctx.fillStyle = `hsl(${h}, 70%, 52%)`;
+                    ctx.fillRect(b.x, y, b.w, BH);
+                    ctx.fillStyle = `hsl(${h}, 80%, 68%)`;
+                    ctx.fillRect(b.x, y, b.w, 5);
+                    ctx.fillStyle = `hsl(${h}, 60%, 36%)`;
+                    ctx.fillRect(b.x, y + BH - 4, b.w, 4);
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function render() {
+            // blend between sky zones by the current camera height (in floors)
+            const floors = cam / BH;
+            let zi = 0;
+            while (zi < ZONES.length - 1 && floors >= ZONES[zi + 1][0]) zi++;
+            const za = ZONES[zi], zb = ZONES[Math.min(zi + 1, ZONES.length - 1)];
+            const k = zb === za ? 0 : Arcade.clamp((floors - za[0]) / (zb[0] - za[0]), 0, 1);
+            const top = lerp3(za[1], zb[1], k), bot = lerp3(za[2], zb[2], k);
+            const g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, `hsl(${top[0]}, ${top[1]}%, ${top[2]}%)`);
+            g.addColorStop(1, `hsl(${bot[0]}, ${bot[1]}%, ${bot[2]}%)`);
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            const space = Arcade.clamp((floors - 55) / 35, 0, 1);
+            for (const s of stars) {
+                const y = (s.y + cam * 0.15) % H;
+                ctx.globalAlpha = space * (0.4 + 0.4 * Math.sin(time * 2 + s.x));
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(s.x, y, s.s, s.s);
+            }
+            ctx.globalAlpha = 1;
+            // clouds drift past between floors ~8 and ~50
+            const cloudA = Arcade.clamp((floors - 6) / 8, 0, 1) * (1 - Arcade.clamp((floors - 45) / 15, 0, 1));
+            if (cloudA > 0) {
+                for (const c of clouds) {
+                    const y = ((c.y + cam * 0.6) % (H + 200)) - 100;
+                    const x = (c.x + time * 12 * c.s) % (W + 160) - 80;
+                    ctx.fillStyle = `rgba(255,255,255,${0.55 * cloudA})`;
+                    ctx.beginPath(); ctx.ellipse(x, y, c.w / 2, 14, 0, 0, Math.PI * 2); ctx.ellipse(x - c.w / 4, y + 4, c.w / 3, 11, 0, 0, Math.PI * 2); ctx.ellipse(x + c.w / 4, y + 5, c.w / 3, 10, 0, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+            if (space > 0.5) { // a planet and the moon once you reach space
+                ctx.globalAlpha = (space - 0.5) * 2;
+                const py = 140 + ((cam * 0.05) % 300);
+                const pg = ctx.createRadialGradient(300, py - 10, 5, 310, py, 46);
+                pg.addColorStop(0, '#fbbf24'); pg.addColorStop(1, '#b45309');
+                ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(310, py, 40, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(253,230,138,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(310, py, 64, 12, -0.3, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = '#e2e8f0'; ctx.beginPath(); ctx.arc(70, py + 220, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            // ground
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, BASE_Y + BH + cam, W, H);
+            ctx.fillStyle = 'rgba(45,212,191,0.25)';
+            ctx.fillRect(0, BASE_Y + BH + cam, W, 3);
+
+            for (const b of blocks) if (b.y + cam > -BH && b.y + cam < H) drawBlock(b);
+            for (const f of flashes) {
+                ctx.strokeStyle = `rgba(255,255,255,${f.t * 2})`;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(f.x - (0.5 - f.t) * 30, f.y + cam - (0.5 - f.t) * 12, f.w + (0.5 - f.t) * 60, BH + (0.5 - f.t) * 24);
+            }
+            for (const f of falling) {
+                ctx.save();
+                ctx.translate(f.x + f.w / 2, f.y + cam + BH / 2);
+                ctx.rotate(f.rot);
+                ctx.translate(-(f.x + f.w / 2), -(f.y + cam + BH / 2));
+                drawBlock(f, 0.85);
+                ctx.restore();
+            }
+            if (state === 'play' || state === 'menu') {
+                if (cur) {
+                    drawBlock(cur);
+                    // guide shadow
+                    const last = blocks[blocks.length - 1];
+                    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                    ctx.fillRect(last.x, 0, last.w, last.y + cam);
+                }
+            }
+            fx.draw(ctx);
+            if (combo >= 2 && state === 'play') {
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 18px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('PERFECT ×' + combo, W / 2, 50);
+            }
+            if (state === 'play') {
+                // power meter
+                ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(14, 14, 12, 140);
+                const mh = 140 * (steady > 0 ? steady / 6 : meter);
+                ctx.fillStyle = steady > 0 ? '#38bdf8' : meter >= 1 ? `hsl(45, 95%, ${55 + Math.sin(time * 10) * 12}%)` : '#fbbf24';
+                ctx.fillRect(14, 154 - mh, 12, mh);
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(14.5, 14.5, 11, 139);
+                ctx.fillStyle = '#fff'; ctx.font = '12px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⚡', 20, 172);
+                if (steady > 0) { // guide laser
+                    const last = blocks[blocks.length - 1];
+                    ctx.strokeStyle = 'rgba(56,189,248,0.6)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(last.x, 0); ctx.lineTo(last.x, last.y + cam); ctx.moveTo(last.x + last.w, 0); ctx.lineTo(last.x + last.w, last.y + cam); ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            update(dt);
+            render();
+        });
+
+        function buildThemes() {
+            const host = document.getElementById('themes');
+            host.innerHTML = '';
+            for (const t of THEMES) {
+                const open = best >= t.need;
+                const b = document.createElement('button');
+                b.className = 'btn' + (t.id === theme ? ' active' : '') + (open ? '' : ' locked');
+                b.innerHTML = `<span>${open ? t.icon : '🔒'}</span><b>${t.name}</b><small>${open ? (t.id === theme ? 'Selected' : 'Pick') : 'Reach ' + t.need}</small>`;
+                b.onclick = () => {
+                    if (!open) { Arcade.toast('Stack ' + t.need + ' floors to unlock ' + t.name, 'bad'); return; }
+                    theme = t.id; Arcade.save('arcade.stacker.theme', theme); Arcade.sfx('select'); buildThemes();
+                };
+                host.appendChild(b);
+            }
+            Arcade.text('themeInfo', 'Themes unlock as your best height grows. Best: ' + best + ' floors.');
+        }
+        document.getElementById('powerBtn').onclick = usePower;
+        canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); drop(); });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyE' || e.code === 'ShiftLeft') { usePower(); return; }
+            if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (e.repeat) return;
+                if (state === 'play') drop();
+                else if (state === 'menu' || state === 'over') start();
+            }
+        });
+        document.getElementById('playBtn').onclick = start;
+        document.getElementById('againBtn').onclick = start;
+        document.getElementById('themeBtn').onclick = () => { state = 'menu'; Arcade.hide('overOv'); reset(); buildThemes(); Arcade.show('menuOv'); };
+
+        reset();
+        buildThemes();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

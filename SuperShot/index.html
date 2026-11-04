@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPERSHOT · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #ef4444; --accent-2: #f97316; --accent-ink: #fff; }
+        canvas.screen { cursor: crosshair; }
+        .big-word { font-size: 3rem; font-weight: 900; letter-spacing: 0.15em; color: var(--accent); margin: 4px 0; line-height: 1; }
+        .modes { display: grid; gap: 8px; margin-top: 14px; }
+        .modes .btn { justify-content: space-between; text-align: left; white-space: normal; padding: 12px 14px; }
+        .modes .btn small { display: block; color: var(--muted); font-weight: 500; }
+        .modes .btn .rec { color: var(--gold); font-size: 0.78rem; white-space: nowrap; }
+        .levels { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 14px; }
+        .lv { aspect-ratio: 1; flex-direction: column; gap: 0; padding: 2px; }
+        .lv small { font-size: 0.62rem; color: var(--gold); letter-spacing: -1px; }
+        .lv.locked { opacity: 0.35; }
+        .stars { font-size: 2rem; letter-spacing: 4px; color: var(--gold); }
+        .stars .off { color: var(--surface-3); }
+        .weps { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">SUPERSHOT</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip" id="progChip"><span id="progLbl">Best</span> <b id="prog">0</b></span>
+            <span class="chip">Weapon <b id="wep">Pistol</b></span>
+            <span class="chip">💣 <b id="nades">0</b></span>
+            <span class="chip">EMP <b id="emps">3</b></span>
+            <span class="chip good">Shields <b id="shields">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" id="pauseBtn" title="Menu (Esc)">⏸</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <div class="big-word">SUPER<br>SHOT</div>
+                    <p><b>Time moves only when you move.</b></p>
+                    <ul class="help small">
+                        <li class="desktop-only">Mouse or <kbd>WASD</kbd> to move · <kbd>Click</kbd> to shoot · <kbd>Right-click</kbd>/<kbd>G</kbd> throw a grenade · <kbd>Space</kbd> EMP</li>
+                        <li class="touch-only">Drag to move · you auto-fire at the nearest threat · tap 💣 and ⚡</li>
+                        <li>Grab weapon crates: 🔫 shotgun, ↯ ricochet, 🗡 katana, 💣 grenades. Shielded enemies must be hit from the side or back.</li>
+                    </ul>
+                    <div class="modes">
+                        <button class="btn" data-mode="level"><span><b>★ Levels</b><small>18 hand-made rooms. Clear fast without getting hit for 3 stars.</small></span><span class="rec" id="recLevel"></span></button>
+                        <button class="btn" data-mode="arena"><span><b>⚔ Endless Arena</b><small>Wave after wave. Every wave adds tougher enemies.</small></span><span class="rec" id="recArena"></span></button>
+                        <button class="btn" data-mode="survival"><span><b>⏱ Survival</b><small>The original: enemies never stop coming.</small></span><span class="rec" id="recSurv"></span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="overlay" id="levelOv" hidden>
+                <div class="modal">
+                    <h2>Levels</h2>
+                    <p class="small" id="levelStars"></p>
+                    <div class="levels" id="levelGrid"></div>
+                    <div class="actions"><button class="btn" id="levelBack">Back</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad" id="overTitle">Shattered</h2>
+                    <div class="stars" id="overStars" hidden></div>
+                    <div class="big-num" id="finalScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Kills</small><b id="finalKills">0</b></div>
+                        <div><small>Best combo</small><b id="finalCombo">0</b></div>
+                        <div><small id="finalTimeLbl">Time</small><b id="finalTime">0s</b></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn primary lg" id="nextBtn" hidden>Next level</button>
+                        <button class="btn primary lg" id="againBtn">Again</button>
+                        <button class="btn" id="menuBtn">Menu</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row center touch-only"><button class="btn" id="nadeBtn">💣 Grenade</button><button class="btn" id="empBtn">⚡ EMP</button></div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const W = 900, H = 600, MAX_SPEED = 430, MIN_TIME = 0.08;
+        const canvas = document.getElementById('c');
+        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles(900);
+        const $ = (id) => document.getElementById(id);
+
+        const WEAPONS = {
+            pistol: { name: 'Pistol', reload: 0.22 },
+            shotgun: { name: 'Shotgun', reload: 0.55, ammo: 8, icon: '🔫' },
+            ricochet: { name: 'Ricochet', reload: 0.3, ammo: 12, icon: '↯' },
+            katana: { name: 'Katana', reload: 0.35, ammo: 15, icon: '🗡' },
+        };
+
+        // Level spawns: [game-time seconds, kind, count]. Walls: [x, y, w, h].
+        const LEVELS = [
+            { name: 'First Shot', par: 9, spawns: [[0, 'shard', 3], [2, 'shard', 3]] },
+            { name: 'Hunters', par: 12, spawns: [[0, 'hunter', 3], [3, 'shard', 4]] },
+            { name: 'Crossfire', par: 14, spawns: [[0, 'gunner', 2], [2, 'shard', 4]], walls: [[420, 240, 60, 120]] },
+            { name: 'Close Quarters', par: 12, weapon: 'katana', spawns: [[0, 'hunter', 4], [2, 'rusher', 2]] },
+            { name: 'Buckshot', par: 12, weapon: 'shotgun', spawns: [[0, 'shard', 8], [3, 'hunter', 3]] },
+            { name: 'Shield Wall', par: 16, nades: 2, spawns: [[0, 'shield', 3], [2, 'shard', 3]] },
+            { name: 'Bank Shot', par: 18, weapon: 'ricochet', spawns: [[0, 'gunner', 3], [3, 'shield', 2]], walls: [[200, 120, 40, 160], [660, 320, 40, 160], [380, 280, 140, 40]] },
+            { name: 'Sniper Alley', par: 16, spawns: [[0, 'sniper', 2], [1, 'shard', 5]], walls: [[300, 100, 40, 120], [560, 380, 40, 120], [430, 270, 40, 60]] },
+            { name: 'Rush Hour', par: 15, spawns: [[0, 'rusher', 4], [3, 'rusher', 3]] },
+            { name: 'Splitters', par: 18, spawns: [[0, 'splitter', 3], [3, 'hunter', 3]] },
+            { name: 'Fortress', par: 20, nades: 2, spawns: [[0, 'gunner', 4], [2, 'sniper', 2]], walls: [[330, 190, 240, 24], [330, 386, 240, 24], [330, 214, 24, 60], [546, 326, 24, 60]] },
+            { name: 'Blade Dance', par: 20, weapon: 'katana', spawns: [[0, 'shield', 4], [2, 'rusher', 3], [4, 'hunter', 3]] },
+            { name: 'Boom', par: 18, nades: 6, spawns: [[0, 'hunter', 6], [2, 'shield', 3]] },
+            { name: 'The Gauntlet', par: 24, spawns: [[0, 'shard', 6], [2, 'gunner', 2], [4, 'rusher', 3], [6, 'sniper', 2]], walls: [[150, 270, 120, 60], [630, 270, 120, 60]] },
+            { name: 'Ricochet Room', par: 22, weapon: 'ricochet', spawns: [[0, 'shield', 4], [3, 'gunner', 3]], walls: [[120, 120, 60, 60], [720, 120, 60, 60], [120, 420, 60, 60], [720, 420, 60, 60], [420, 260, 60, 80]] },
+            { name: 'Swarm', par: 24, weapon: 'shotgun', spawns: [[0, 'shard', 12], [3, 'shard', 10], [6, 'hunter', 6]] },
+            { name: 'Elite Squad', par: 24, nades: 3, spawns: [[0, 'sniper', 3], [1, 'shield', 3], [2, 'rusher', 3]], walls: [[260, 200, 30, 200], [610, 200, 30, 200]] },
+            { name: 'SUPERSHOT', par: 30, nades: 3, spawns: [[0, 'splitter', 3], [2, 'gunner', 3], [4, 'sniper', 2], [6, 'rusher', 4], [8, 'shield', 4]], walls: [[430, 120, 40, 90], [430, 390, 40, 90]] },
+        ];
+        const LV_KEY = 'arcade.supershot.levels';
+        let lvStars = Arcade.load(LV_KEY, {}) || {};
+
+        let best = Number(Arcade.load('chronoHighScore', 0)) || 0;
+        let bestArena = Number(Arcade.load('arcade.supershot.arena', 0)) || 0;
+        let state = 'menu', mode = 'survival';
+        let p, enemies = [], shots = [], eshots = [], gems = [], crates = [], nades = [], slashes = [], walls = [];
+        let kills, combo = 1, comboT, bestCombo, gameTime, timeScale = 0.1, reload = 0, spawnT, gemT, crateT, real = 0;
+        let score = 0, emps = 3, shields = 0, grenades = 0, words = [], shake = 0, weapon = { id: 'pistol', ammo: Infinity };
+        let target = { x: W / 2, y: H / 2 }, keys = {}, touchMode = false;
+        let level = 0, queue = [], hurt = false, wave = 0, waveLeft = 0, waveT = 0, breakT = 0;
+
+        function start(m, lvl) {
+            mode = m || mode;
+            if (lvl !== undefined) level = lvl;
+            p = { x: W / 2, y: H / 2, vx: 0, vy: 0 };
+            enemies = []; shots = []; eshots = []; gems = []; crates = []; nades = []; slashes = []; words = [];
+            score = 0; kills = 0; combo = 1; comboT = 0; bestCombo = 1; emps = 3; shields = 0; grenades = 1;
+            gameTime = 0; timeScale = MIN_TIME; reload = 0; spawnT = 1; gemT = 2; crateT = 8; shake = 0;
+            weapon = { id: 'pistol', ammo: Infinity }; walls = []; hurt = false; queue = [];
+            wave = 0; waveLeft = 0; waveT = 0; breakT = 0;
+            if (mode === 'level') {
+                const L = LEVELS[level];
+                walls = (L.walls || []).map(([x, y, w, h]) => ({ x, y, w, h }));
+                if (L.weapon) weapon = { id: L.weapon, ammo: Infinity };
+                grenades = L.nades || 0; emps = 1;
+                for (const [t, kind, n] of L.spawns) for (let i = 0; i < n; i++) queue.push({ t: t + i * 0.45, kind });
+                queue.sort((a, b) => a.t - b.t);
+                words.push({ text: String(level + 1), t: 0.9, small: L.name });
+            }
+            if (mode === 'arena') nextWave();
+            target = { x: W / 2, y: H / 2 };
+            fx.clear();
+            state = 'play';
+            ['menuOv', 'overOv', 'levelOv'].forEach(Arcade.hide);
+            hud();
+            Arcade.sfx('level');
+        }
+
+        function nextWave() {
+            wave++;
+            waveLeft = 4 + wave * 2;
+            waveT = 0.6;
+            breakT = 0;
+            words.push({ text: 'WAVE ' + wave, t: 0.9 });
+            if (wave > 1 && wave % 3 === 1) { emps++; Arcade.toast('+1 EMP', 'good', 900); }
+            hud();
+        }
+
+        function hud() {
+            Arcade.text('score', score);
+            if (mode === 'level') { Arcade.text('progLbl', 'Level'); Arcade.text('prog', (level + 1) + ' · ' + (enemies.length + queue.length) + ' left'); }
+            else if (mode === 'arena') { Arcade.text('progLbl', 'Wave'); Arcade.text('prog', wave); }
+            else { Arcade.text('progLbl', 'Best'); Arcade.text('prog', Math.max(best, score)); }
+            const wd = WEAPONS[weapon.id];
+            Arcade.text('wep', wd.name + (isFinite(weapon.ammo) ? ' ×' + weapon.ammo : ''));
+            Arcade.text('nades', grenades);
+            Arcade.text('emps', emps);
+            Arcade.text('shields', shields);
+        }
+
+        /* ---------- Walls ---------- */
+        function inWall(x, y, r) {
+            for (const w of walls) if (x + r > w.x && x - r < w.x + w.w && y + r > w.y && y - r < w.y + w.h) return w;
+            return null;
+        }
+        /** Pushes a circle out of any wall it overlaps. */
+        function pushOut(o, r) {
+            for (const w of walls) {
+                const cx = Arcade.clamp(o.x, w.x, w.x + w.w), cy = Arcade.clamp(o.y, w.y, w.y + w.h);
+                const dx = o.x - cx, dy = o.y - cy, d = Math.hypot(dx, dy);
+                if (d < r) {
+                    if (d > 0.01) { o.x = cx + dx / d * r; o.y = cy + dy / d * r; }
+                    else { // centre inside the wall: leave by the nearest side
+                        const opts = [[w.x - r, o.y], [w.x + w.w + r, o.y], [o.x, w.y - r], [o.x, w.y + w.h + r]];
+                        let bd = 1e9;
+                        for (const [nx, ny] of opts) { const dd = Math.hypot(nx - o.x, ny - o.y); if (dd < bd) { bd = dd; o.nx = nx; o.ny = ny; } }
+                        o.x = o.nx; o.y = o.ny;
+                    }
+                }
+            }
+        }
+
+        function edgeSpawn() {
+            for (let i = 0; i < 20; i++) {
+                const side = (Math.random() * 4) | 0;
+                let s;
+                if (side === 0) s = { x: Math.random() * W, y: -30 };
+                else if (side === 1) s = { x: W + 30, y: Math.random() * H };
+                else if (side === 2) s = { x: Math.random() * W, y: H + 30 };
+                else s = { x: -30, y: Math.random() * H };
+                if (!inWall(s.x, s.y, 20)) return s;
+            }
+            return { x: -30, y: H / 2 };
+        }
+
+        function makeEnemy(kind) {
+            const d = mode === 'arena' ? wave * 4 : mode === 'level' ? 10 + level * 2 : gameTime;
+            const s = edgeSpawn();
+            const a = Math.atan2(p.y - s.y, p.x - s.x);
+            const e = { kind, x: s.x, y: s.y, a, t: 0, hp: 1 };
+            if (kind === 'shard') { e.sp = 230 + Math.min(150, d * 2); e.vx = Math.cos(a) * e.sp; e.vy = Math.sin(a) * e.sp; e.r = 11; }
+            if (kind === 'hunter') { e.sp = 120 + Math.min(80, d); e.r = 13; e.hp = 2; }
+            if (kind === 'gunner') { e.sp = 90; e.r = 16; e.hp = 2; e.cd = 1.5; }
+            if (kind === 'splitter') { e.sp = 70; e.r = 22; e.hp = 4; }
+            if (kind === 'shield') { e.sp = 85; e.r = 15; e.hp = 2; }
+            if (kind === 'sniper') { e.sp = 70; e.r = 14; e.hp = 1; e.cd = 2; e.aim = 0; }
+            if (kind === 'rusher') { e.sp = 60; e.r = 14; e.hp = 2; e.wind = 0; e.dash = 0; e.rest = 0.5; }
+            enemies.push(e);
+        }
+        function spawnSurvival() {
+            const d = gameTime;
+            const kinds = ['shard', 'shard'];
+            if (d > 10) kinds.push('hunter');
+            if (d > 22) kinds.push('gunner', 'rusher');
+            if (d > 32) kinds.push('shield');
+            if (d > 40) kinds.push('splitter', 'hunter', 'sniper');
+            makeEnemy(Arcade.pick(kinds));
+        }
+        function arenaKind() {
+            const kinds = ['shard', 'shard'];
+            if (wave >= 2) kinds.push('hunter');
+            if (wave >= 3) kinds.push('gunner');
+            if (wave >= 4) kinds.push('shield');
+            if (wave >= 5) kinds.push('rusher');
+            if (wave >= 6) kinds.push('sniper');
+            if (wave >= 7) kinds.push('splitter');
+            return Arcade.pick(kinds);
+        }
+
+        /* ---------- Weapons ---------- */
+        function useAmmo() {
+            if (!isFinite(weapon.ammo)) return;
+            weapon.ammo--;
+            if (weapon.ammo <= 0) { weapon = { id: 'pistol', ammo: Infinity }; Arcade.toast('Out of ammo — back to the pistol', '', 1000); }
+        }
+        function shoot(tx, ty) {
+            if (state !== 'play' || reload > 0) return;
+            const a = Math.atan2(ty - p.y, tx - p.x);
+            const id = weapon.id;
+            const bullet = (ang, extra) => shots.push(Object.assign({ x: p.x + Math.cos(ang) * 14, y: p.y + Math.sin(ang) * 14, vx: Math.cos(ang) * 900, vy: Math.sin(ang) * 900, life: 1.2 }, extra || {}));
+            if (id === 'shotgun') { for (let i = -2; i <= 2; i++) bullet(a + i * 0.16 + Arcade.rand(-0.03, 0.03), { life: 0.38 }); Arcade.sfx('boom'); shake = 0.12; }
+            else if (id === 'ricochet') { bullet(a, { bounces: 3, life: 2.4 }); Arcade.sfx('shoot'); }
+            else if (id === 'katana') { slash(a); }
+            else { bullet(a); Arcade.sfx('shoot'); }
+            reload = WEAPONS[id].reload;
+            timeScale = Math.max(timeScale, 0.55);
+            p.vx -= Math.cos(a) * (id === 'shotgun' ? 160 : 60); p.vy -= Math.sin(a) * (id === 'shotgun' ? 160 : 60);
+            useAmmo();
+            hud();
+        }
+        /** Katana: kills everything (shields too) in a short arc and cuts bullets out of the air. */
+        function slash(a) {
+            const R = 78, ARC = 1.25;
+            slashes.push({ x: p.x, y: p.y, a, t: 0.18 });
+            Arcade.sfx('hit');
+            const inArc = (x, y, r) => {
+                const d = Math.hypot(x - p.x, y - p.y);
+                if (d > R + r) return false;
+                const da = Math.atan2(Math.sin(Math.atan2(y - p.y, x - p.x) - a), Math.cos(Math.atan2(y - p.y, x - p.x) - a));
+                return Math.abs(da) < ARC || d < r + 10;
+            };
+            for (const e of enemies) if (!e.dead && inArc(e.x, e.y, e.r)) { e.hp = 0; killEnemy(e); }
+            for (const b of eshots) if (!b.dead && inArc(b.x, b.y, 4)) { b.dead = true; score += 25; fx.emit(b.x, b.y, { n: 6, color: '#f97316', speed: 120, life: 0.3 }); }
+            p.vx += Math.cos(a) * 140; p.vy += Math.sin(a) * 140;
+        }
+        function throwNade(tx, ty) {
+            if (state !== 'play' || grenades <= 0) return;
+            grenades--;
+            const a = Math.atan2(ty - p.y, tx - p.x), d = Math.min(330, Math.hypot(tx - p.x, ty - p.y));
+            nades.push({ x: p.x, y: p.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, left: d / 520, fuse: 0.25 });
+            timeScale = Math.max(timeScale, 0.55);
+            Arcade.sfx('select');
+            hud();
+        }
+        function explode(n) {
+            const R = 100;
+            fx.emit(n.x, n.y, { n: 50, color: ['#111827', '#f97316', '#fde047'], speed: 320, life: 0.8, size: 6 });
+            shake = 0.4;
+            Arcade.sfx('boom');
+            for (const e of enemies) if (!e.dead && Math.hypot(e.x - n.x, e.y - n.y) < R + e.r) { e.hp -= 3; if (e.hp <= 0) killEnemy(e); }
+            for (const b of eshots) if (Math.hypot(b.x - n.x, b.y - n.y) < R) b.dead = true;
+            if (Math.hypot(p.x - n.x, p.y - n.y) < R * 0.55) hitPlayer({});
+        }
+
+        function emp() {
+            if (state !== 'play' || emps <= 0) return;
+            emps--;
+            for (const e of enemies) { fx.emit(e.x, e.y, { n: 12, color: ['#ef4444', '#111'], speed: 200, life: 0.5 }); }
+            score += enemies.length * 50;
+            kills += enemies.length;
+            enemies = []; eshots = [];
+            shake = 0.4;
+            words.push({ text: 'EMP', t: 0.8 });
+            Arcade.sfx('boom');
+            hud();
+        }
+
+        function killEnemy(e) {
+            if (e.dead) return;
+            e.dead = true;
+            kills++;
+            combo = Math.min(10, combo + (comboT > 0 ? 1 : 0));
+            comboT = 1.6;
+            bestCombo = Math.max(bestCombo, combo);
+            score += 100 * combo;
+            fx.emit(e.x, e.y, { n: 18, color: ['#ef4444', '#b91c1c', '#fca5a5'], speed: 260, life: 0.8, shape: 'square', size: 5 });
+            Arcade.sfx('hit');
+            if (e.kind === 'splitter') {
+                for (const s of [-0.6, 0.6]) {
+                    const a = Math.atan2(p.y - e.y, p.x - e.x) + s;
+                    enemies.push({ kind: 'shard', x: e.x, y: e.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, sp: 260, r: 10, t: 0, hp: 1, a });
+                }
+            }
+            if (kills % 10 === 0) words.push({ text: kills % 20 === 0 ? 'SHOT' : 'SUPER', t: 0.9 });
+            hud();
+        }
+
+        function hitPlayer(source) {
+            hurt = true;
+            if (shields > 0) {
+                shields--;
+                shake = 0.3;
+                fx.emit(p.x, p.y, { n: 24, color: ['#22d3ee', '#fff'], speed: 220, life: 0.5 });
+                Arcade.sfx('power');
+                source.dead = true;
+                if (source.kind === 'rusher') { source.dash = 0; source.rest = 1; }
+                hud();
+                return;
+            }
+            die();
+        }
+
+        function die() {
+            state = 'dead';
+            shake = 0.6;
+            fx.emit(p.x, p.y, { n: 80, color: ['#111827', '#374151', '#ef4444'], speed: 340, life: 1.3, size: 6 });
+            Arcade.sfx('die');
+            let isNew = false;
+            if (mode === 'survival') { isNew = score > best; if (isNew) { best = score; Arcade.save('chronoHighScore', best); } Arcade.report('score', score); }
+            if (mode === 'arena') {
+                isNew = wave > bestArena; if (isNew) { bestArena = wave; Arcade.save('arcade.supershot.arena', wave); }
+                Arcade.report('arenawave', wave);
+                if (score > best) { best = score; Arcade.save('chronoHighScore', best); }
+                Arcade.report('score', score);
+            }
+            setTimeout(() => showOver(mode === 'level' ? 'Shattered' : 'Shattered', isNew, 0), 1100);
+        }
+
+        function clearLevel() {
+            state = 'won';
+            const L = LEVELS[level];
+            const stars = (gameTime <= L.par && !hurt) ? 3 : gameTime <= L.par * 1.5 ? 2 : 1;
+            const isNew = stars > (lvStars[level] || 0);
+            if (isNew) { lvStars[level] = stars; Arcade.save(LV_KEY, lvStars); }
+            Arcade.report('stars', Object.values(lvStars).reduce((a, b) => a + b, 0));
+            Arcade.sfx('win');
+            words.push({ text: 'CLEAR', t: 0.9 });
+            setTimeout(() => showOver('Room clear', false, stars), 900);
+        }
+
+        function showOver(title, isNew, stars) {
+            state = 'over';
+            const t = $('overTitle');
+            t.textContent = mode === 'level' && stars ? 'Level ' + (level + 1) + ' clear' : mode === 'arena' ? 'Fell on wave ' + wave : title;
+            t.className = stars ? 'good' : 'bad';
+            $('overStars').hidden = !stars;
+            $('overStars').innerHTML = [1, 2, 3].map(n => n <= stars ? '★' : '<span class="off">★</span>').join('');
+            Arcade.text('finalScore', score);
+            Arcade.text('finalKills', kills);
+            Arcade.text('finalCombo', '×' + bestCombo);
+            Arcade.text('finalTimeLbl', mode === 'level' ? 'Time (par ' + LEVELS[level].par + 's)' : 'Time survived');
+            Arcade.text('finalTime', gameTime.toFixed(1) + 's');
+            $('newBest').hidden = !isNew;
+            $('newBest').textContent = mode === 'arena' ? '★ New best wave ★' : '★ New best ★';
+            $('nextBtn').hidden = !(mode === 'level' && stars && level < LEVELS.length - 1);
+            $('againBtn').textContent = mode === 'level' ? 'Retry' : 'Again';
+            Arcade.show('overOv');
+            hud();
+        }
+
+        /* ---------- Update ---------- */
+        function update(rdt) {
+            // --- player movement (real time) ---
+            let tx = target.x, ty = target.y;
+            const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+            const ky = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
+            let desiredVX = 0, desiredVY = 0;
+            if (kx || ky) {
+                const l = Math.hypot(kx, ky);
+                desiredVX = kx / l * MAX_SPEED; desiredVY = ky / l * MAX_SPEED;
+                target = { x: p.x, y: p.y };
+            } else {
+                const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+                if (d > 4) { const s = Math.min(MAX_SPEED, d * 6); desiredVX = dx / d * s; desiredVY = dy / d * s; }
+            }
+            const k = Math.min(1, rdt * 12);
+            p.vx += (desiredVX - p.vx) * k; p.vy += (desiredVY - p.vy) * k;
+            p.x = Arcade.clamp(p.x + p.vx * rdt, 12, W - 12);
+            p.y = Arcade.clamp(p.y + p.vy * rdt, 12, H - 12);
+            pushOut(p, 10);
+
+            // --- time scale follows how fast you're moving ---
+            const speed = Math.hypot(p.vx, p.vy);
+            const want = MIN_TIME + (1 - MIN_TIME) * Math.min(1, speed / MAX_SPEED);
+            timeScale += (want - timeScale) * Math.min(1, rdt * 10);
+            const dt = rdt * timeScale;
+            gameTime += dt;
+            reload = Math.max(0, reload - dt);
+
+            if (touchMode && reload <= 0 && enemies.length && speed > 40) {
+                let n = null, bd = 1e9;
+                for (const e of enemies) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; n = e; } }
+                for (const s of eshots) { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd * 0.6) { bd = d / 0.6; n = s; } }
+                if (n && bd < (weapon.id === 'katana' ? 90 : 420)) shoot(n.x, n.y);
+            }
+
+            // --- spawning (game time) ---
+            if (mode === 'survival') {
+                spawnT -= dt;
+                if (spawnT <= 0) { spawnSurvival(); spawnT = Math.max(0.28, 1.25 - gameTime * 0.012) * Arcade.rand(0.7, 1.3); }
+            } else if (mode === 'level') {
+                while (queue.length && queue[0].t <= gameTime) { makeEnemy(queue.shift().kind); hud(); }
+                if (!queue.length && !enemies.length) return clearLevel();
+            } else if (mode === 'arena') {
+                if (waveLeft > 0) { waveT -= dt; if (waveT <= 0) { makeEnemy(arenaKind()); waveLeft--; waveT = Math.max(0.25, 0.8 - wave * 0.03) * Arcade.rand(0.6, 1.3); } }
+                else if (!enemies.length) {
+                    if (breakT === 0) { const bonus = 300 * wave; score += bonus; words.push({ text: 'CLEAR', t: 0.8 }); Arcade.sfx('win'); hud(); }
+                    breakT += rdt;
+                    if (breakT > 1.6) nextWave();
+                }
+            }
+            if (mode !== 'level') {
+                gemT -= dt;
+                if (gemT <= 0) {
+                    const s = edgeSpawn();
+                    const a = Math.atan2(Arcade.rand(100, H - 100) - s.y, Arcade.rand(100, W - 100) - s.x);
+                    gems.push({ x: s.x, y: s.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90, shield: Math.random() < 0.12, t: 0 });
+                    gemT = Arcade.rand(1.8, 3.2);
+                }
+                crateT -= dt;
+                if (crateT <= 0) {
+                    crateT = Arcade.rand(9, 15);
+                    for (let i = 0; i < 20; i++) {
+                        const c = { x: Arcade.rand(80, W - 80), y: Arcade.rand(80, H - 80), kind: Arcade.pick(['shotgun', 'ricochet', 'katana', 'nade']), t: 0, life: 14 };
+                        if (!inWall(c.x, c.y, 20) && Math.hypot(c.x - p.x, c.y - p.y) > 120) { crates.push(c); break; }
+                    }
+                }
+            }
+            comboT -= dt;
+            if (comboT <= 0) combo = 1;
+
+            // --- shots ---
+            for (const s of shots) {
+                s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+                if (s.bounces !== undefined) {
+                    let bounced = false;
+                    if (s.x < 4 || s.x > W - 4) { s.vx = -s.vx; s.x = Arcade.clamp(s.x, 4, W - 4); bounced = true; }
+                    if (s.y < 4 || s.y > H - 4) { s.vy = -s.vy; s.y = Arcade.clamp(s.y, 4, H - 4); bounced = true; }
+                    const w = inWall(s.x, s.y, 3);
+                    if (w) {
+                        const px = s.x - s.vx * dt, py = s.y - s.vy * dt;
+                        if (px < w.x || px > w.x + w.w) s.vx = -s.vx; else s.vy = -s.vy;
+                        s.x = px; s.y = py; bounced = true;
+                    }
+                    if (bounced) { if (s.bounces-- <= 0) s.dead = true; s.hits = null; fx.emit(s.x, s.y, { n: 3, color: '#111827', speed: 80, life: 0.2 }); }
+                } else if (inWall(s.x, s.y, 2)) { s.dead = true; fx.emit(s.x, s.y, { n: 4, color: '#6b7280', speed: 90, life: 0.25 }); continue; }
+                for (const e of enemies) if (!e.dead && Math.hypot(e.x - s.x, e.y - s.y) < e.r + 4) {
+                    s.dead = true;
+                    if (e.kind === 'shield') {
+                        // the shield faces the player; shots that arrive from in front bounce off
+                        const from = Math.atan2(-s.vy, -s.vx);
+                        const diff = Math.abs(Math.atan2(Math.sin(from - e.a), Math.cos(from - e.a)));
+                        if (diff < 1.05) { fx.emit(s.x, s.y, { n: 6, color: ['#93c5fd', '#fff'], speed: 140, life: 0.3 }); Arcade.sfx('tick'); break; }
+                    }
+                    e.hp--;
+                    if (e.hp <= 0) killEnemy(e); else fx.emit(s.x, s.y, { n: 5, color: '#ef4444', speed: 120, life: 0.3 });
+                    break;
+                }
+                for (const b of eshots) if (!b.dead && Math.hypot(b.x - s.x, b.y - s.y) < 10) {
+                    s.dead = true; b.dead = true; score += 25;
+                    fx.emit(b.x, b.y, { n: 6, color: '#f97316', speed: 100, life: 0.3 });
+                }
+            }
+            shots = shots.filter(s => !s.dead && s.life > 0 && s.x > -20 && s.x < W + 20 && s.y > -20 && s.y < H + 20);
+
+            for (const n of nades) {
+                if (n.left > 0) { const st = Math.min(n.left, dt); n.x += n.vx * st; n.y += n.vy * st; n.left -= dt; if (inWall(n.x, n.y, 5)) n.left = 0; }
+                else { n.fuse -= dt; if (n.fuse <= 0) { n.dead = true; explode(n); } }
+            }
+            nades = nades.filter(n => !n.dead);
+
+            // --- enemies ---
+            for (const e of enemies) {
+                if (e.dead) continue;
+                e.t += dt;
+                const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                if (e.kind === 'shard') { e.x += e.vx * dt; e.y += e.vy * dt; if (inWall(e.x, e.y, e.r)) { e.dead = true; fx.emit(e.x, e.y, { n: 8, color: '#ef4444', speed: 120, life: 0.4 }); continue; } }
+                else if (e.kind === 'rusher') {
+                    if (e.dash > 0) { e.x += Math.cos(e.a) * 560 * dt; e.y += Math.sin(e.a) * 560 * dt; e.dash -= dt; if (e.dash <= 0) e.rest = 0.9; }
+                    else if (e.wind > 0) { e.wind -= dt; if (e.wind <= 0) e.dash = 0.55; }
+                    else {
+                        e.a = Math.atan2(p.y - e.y, p.x - e.x);
+                        e.rest -= dt;
+                        if (dist < 330 && e.rest <= 0) e.wind = 0.55;
+                        else { e.x += Math.cos(e.a) * e.sp * dt; e.y += Math.sin(e.a) * e.sp * dt; }
+                    }
+                } else if (e.kind === 'sniper') {
+                    e.a = Math.atan2(p.y - e.y, p.x - e.x);
+                    if (e.aim > 0) {
+                        e.aim -= dt;
+                        if (e.aim <= 0) { eshots.push({ x: e.x, y: e.y, vx: Math.cos(e.a) * 560, vy: Math.sin(e.a) * 560, fast: true }); e.cd = 2.4; Arcade.sfx('shoot'); }
+                    } else {
+                        const sp = dist > 420 ? e.sp : dist < 300 ? -e.sp : 0;
+                        e.x += Math.cos(e.a) * sp * dt; e.y += Math.sin(e.a) * sp * dt;
+                        e.x = Arcade.clamp(e.x, 20, W - 20); e.y = Arcade.clamp(e.y, 20, H - 20);
+                        e.cd -= dt;
+                        if (e.cd <= 0 && dist < 700) e.aim = 1.1;
+                    }
+                } else {
+                    const a = Math.atan2(p.y - e.y, p.x - e.x);
+                    e.a = a;
+                    let sp = e.sp;
+                    if (e.kind === 'gunner' && dist < 230) sp = -40;
+                    e.x += Math.cos(a) * sp * dt; e.y += Math.sin(a) * sp * dt;
+                    if (e.kind === 'gunner') {
+                        e.cd -= dt;
+                        if (e.cd <= 0 && dist < 600) {
+                            eshots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200 });
+                            e.cd = Math.max(1.1, 2.4 - gameTime * 0.01);
+                        }
+                    }
+                }
+                if (e.kind !== 'shard') pushOut(e, e.r);
+                if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + 8) { hitPlayer(e); if (state !== 'play') return; }
+                if (e.kind === 'shard' && (e.x < -80 || e.x > W + 80 || e.y < -80 || e.y > H + 80)) e.dead = true;
+            }
+            const before = enemies.length;
+            enemies = enemies.filter(e => !e.dead);
+            if (enemies.length !== before && mode === 'level') hud();
+
+            for (const b of eshots) {
+                b.x += b.vx * dt; b.y += b.vy * dt;
+                if (inWall(b.x, b.y, 3)) { b.dead = true; continue; }
+                if (Math.hypot(b.x - p.x, b.y - p.y) < 10) { hitPlayer(b); if (state !== 'play') return; b.dead = true; }
+            }
+            eshots = eshots.filter(b => !b.dead && b.x > -20 && b.x < W + 20 && b.y > -20 && b.y < H + 20);
+
+            for (const g of gems) {
+                g.x += g.vx * dt; g.y += g.vy * dt; g.t += dt;
+                if (Math.hypot(g.x - p.x, g.y - p.y) < 20) {
+                    g.dead = true;
+                    if (g.shield) { shields++; Arcade.toast('🛡 Shield', 'good', 900); Arcade.sfx('power'); }
+                    else { score += 50 * combo; Arcade.sfx('coin'); }
+                    fx.emit(g.x, g.y, { n: 10, color: ['#22d3ee', '#a5f3fc'], speed: 140, life: 0.4 });
+                    hud();
+                }
+            }
+            gems = gems.filter(g => !g.dead && g.x > -60 && g.x < W + 60 && g.y > -60 && g.y < H + 60);
+            for (const c of crates) {
+                c.t += dt; c.life -= dt;
+                if (Math.hypot(c.x - p.x, c.y - p.y) < 24) {
+                    c.dead = true;
+                    if (c.kind === 'nade') { grenades += 2; Arcade.toast('💣 +2 grenades', 'good', 900); }
+                    else { weapon = { id: c.kind, ammo: WEAPONS[c.kind].ammo }; Arcade.toast(WEAPONS[c.kind].icon + ' ' + WEAPONS[c.kind].name + '!', 'good', 900); }
+                    Arcade.sfx('power');
+                    hud();
+                }
+            }
+            crates = crates.filter(c => !c.dead && c.life > 0);
+            slashes = slashes.filter(s => (s.t -= rdt) > 0);
+            fx.update(dt * 0.7 + rdt * 0.3);
+        }
+
+        /* ---------- Render ---------- */
+        function render() {
+            ctx.save();
+            if (shake > 0) ctx.translate(Arcade.rand(-8, 8) * shake, Arcade.rand(-8, 8) * shake);
+            // white room
+            ctx.fillStyle = '#e5e7eb'; ctx.fillRect(-10, -10, W + 20, H + 20);
+            ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            const ts = state === 'play' ? timeScale : 0.1;
+            if (state === 'play' || state === 'dead') {
+                ctx.fillStyle = `rgba(30,41,59,${(1 - ts) * 0.12})`; ctx.fillRect(0, 0, W, H);
+            }
+            for (const w of walls) {
+                ctx.fillStyle = '#9ca3af'; ctx.fillRect(w.x, w.y, w.w, w.h);
+                ctx.fillStyle = '#d1d5db'; ctx.fillRect(w.x, w.y, w.w, 5);
+                ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 1.5; ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+            }
+
+            for (const g of gems) {
+                ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(g.t * 2);
+                ctx.fillStyle = g.shield ? '#0ea5e9' : '#06b6d4';
+                ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, 0); ctx.lineTo(0, 9); ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill();
+                if (g.shield) { ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke(); }
+                ctx.restore();
+            }
+            for (const c of crates) {
+                ctx.globalAlpha = c.life < 3 && Math.floor(real * 8) % 2 ? 0.4 : 1;
+                ctx.fillStyle = '#111827'; ctx.fillRect(c.x - 13, c.y - 13, 26, 26);
+                ctx.fillStyle = '#f9fafb'; ctx.font = 'bold 15px "Segoe UI", "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(c.kind === 'nade' ? '💣' : WEAPONS[c.kind].icon, c.x, c.y + 1);
+                ctx.globalAlpha = 1;
+            }
+            for (const e of enemies) {
+                if (e.kind === 'sniper' && e.aim > 0) {
+                    ctx.strokeStyle = `rgba(220,38,38,${0.25 + (1.1 - e.aim) * 0.6})`; ctx.lineWidth = 1 + (1.1 - e.aim) * 2;
+                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(e.a) * 1200, e.y + Math.sin(e.a) * 1200); ctx.stroke();
+                }
+                ctx.save(); ctx.translate(e.x, e.y);
+                if (e.kind === 'rusher' && e.wind > 0) ctx.translate(Arcade.rand(-2, 2), Arcade.rand(-2, 2));
+                ctx.rotate(e.kind === 'shard' ? Math.atan2(e.vy, e.vx) : e.a || 0);
+                ctx.fillStyle = '#dc2626'; ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 2;
+                ctx.beginPath();
+                if (e.kind === 'shard') { ctx.moveTo(e.r + 4, 0); ctx.lineTo(-e.r, -e.r * 0.7); ctx.lineTo(-e.r * 0.5, 0); ctx.lineTo(-e.r, e.r * 0.7); }
+                else if (e.kind === 'hunter' || e.kind === 'shield') { ctx.rect(-e.r, -e.r, e.r * 2, e.r * 2); }
+                else if (e.kind === 'gunner') { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * e.r, Math.sin(a) * e.r); } }
+                else if (e.kind === 'sniper') { ctx.moveTo(e.r, 0); ctx.lineTo(-e.r, -e.r * 0.8); ctx.lineTo(-e.r * 0.4, 0); ctx.lineTo(-e.r, e.r * 0.8); }
+                else if (e.kind === 'rusher') { ctx.moveTo(e.r + 6, 0); ctx.lineTo(0, -e.r); ctx.lineTo(-e.r, 0); ctx.lineTo(0, e.r); }
+                else { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? e.r * 0.7 : e.r; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } }
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                if (e.kind === 'gunner') { ctx.fillStyle = '#7f1d1d'; ctx.fillRect(e.r - 4, -3, 12, 6); }
+                if (e.kind === 'sniper') { ctx.fillStyle = '#7f1d1d'; ctx.fillRect(e.r - 2, -2, 22, 4); }
+                if (e.kind === 'rusher' && e.wind > 0) { ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, e.r + 5, 0, Math.PI * 2); ctx.stroke(); }
+                if (e.kind === 'shield') { // frontal shield
+                    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.arc(0, 0, e.r + 7, -1.0, 1.0); ctx.stroke();
+                }
+                if (e.hp > 1) { ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.rotate(-(e.a || 0)); ctx.fillText(e.hp, 0, 1); }
+                ctx.restore();
+            }
+            for (const b of eshots) { ctx.fillStyle = b.fast ? '#b91c1c' : '#ea580c'; ctx.beginPath(); ctx.arc(b.x, b.y, b.fast ? 4 : 5, 0, Math.PI * 2); ctx.fill(); }
+            // bullet trails
+            ctx.strokeStyle = '#111827'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+            for (const s of shots) { ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 0.025, s.y - s.vy * 0.025); ctx.stroke(); }
+            for (const n of nades) {
+                ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.arc(n.x, n.y, 6, 0, Math.PI * 2); ctx.fill();
+                if (n.left <= 0) { ctx.strokeStyle = 'rgba(239,68,68,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(n.x, n.y, 100, 0, Math.PI * 2); ctx.stroke(); }
+            }
+            for (const s of slashes) {
+                ctx.strokeStyle = `rgba(17,24,39,${s.t / 0.18})`; ctx.lineWidth = 6; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.arc(s.x, s.y, 64, s.a - 1.2, s.a + 1.2); ctx.stroke();
+            }
+
+            if (p && state === 'play') {
+                if (!touchMode) {
+                    ctx.strokeStyle = 'rgba(17,24,39,0.12)'; ctx.setLineDash([4, 6]);
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(target.x, target.y); ctx.stroke(); ctx.setLineDash([]);
+                }
+                ctx.fillStyle = '#111827';
+                ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, Math.PI * 2); ctx.fill();
+                const rl = WEAPONS[weapon.id].reload;
+                ctx.strokeStyle = reload > 0 ? '#9ca3af' : '#111827'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - reload / rl)); ctx.stroke();
+                if (shields > 0) { ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y, 19, 0, Math.PI * 2); ctx.stroke(); }
+            }
+            fx.draw(ctx);
+
+            for (const w of words) {
+                ctx.globalAlpha = Math.min(1, w.t * 2.5);
+                ctx.fillStyle = '#dc2626';
+                ctx.font = `900 ${110 + (0.9 - w.t) * 40}px "Segoe UI", sans-serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(w.text, W / 2, H / 2);
+                if (w.small) { ctx.font = '800 26px "Segoe UI", sans-serif'; ctx.fillStyle = '#111827'; ctx.fillText(w.small.toUpperCase(), W / 2, H / 2 + 80); }
+            }
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = 'rgba(17,24,39,0.15)'; ctx.fillRect(0, H - 6, W, 6);
+            ctx.fillStyle = ts > 0.6 ? '#dc2626' : '#111827';
+            ctx.fillRect(0, H - 6, W * ts, 6);
+            if (combo > 1 && state === 'play') {
+                ctx.fillStyle = '#111827'; ctx.font = 'bold 18px "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+                ctx.fillText('×' + combo, 14, 12);
+            }
+            if (state === 'play' && mode === 'level') {
+                ctx.fillStyle = gameTime <= LEVELS[level].par ? '#111827' : '#dc2626';
+                ctx.font = 'bold 14px "Segoe UI", sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+                ctx.fillText(gameTime.toFixed(1) + 's / par ' + LEVELS[level].par + 's' + (hurt ? '' : ' · untouched'), W - 14, 12);
+            }
+            ctx.restore();
+        }
+
+        const loop = Arcade.loop((dt) => {
+            real += dt;
+            if (state === 'play') update(dt);
+            else fx.update(dt * 0.4);
+            words = words.filter(w => (w.t -= dt) > 0);
+            shake = Math.max(0, shake - dt);
+            render();
+        });
+
+        /* ---------- Menus ---------- */
+        function buildMenu() {
+            const total = Object.values(lvStars).reduce((a, b) => a + b, 0);
+            Arcade.text('recLevel', '★ ' + total + '/' + LEVELS.length * 3);
+            Arcade.text('recArena', bestArena ? 'Wave ' + bestArena : '');
+            Arcade.text('recSurv', best ? 'Best ' + best : '');
+        }
+        function buildLevels() {
+            const total = Object.values(lvStars).reduce((a, b) => a + b, 0);
+            Arcade.text('levelStars', `★ ${total} / ${LEVELS.length * 3} — 3 stars: beat par time without getting hit.`);
+            const g = $('levelGrid');
+            g.innerHTML = '';
+            LEVELS.forEach((L, i) => {
+                const open = i === 0 || lvStars[i - 1] > 0;
+                const b = document.createElement('button');
+                b.className = 'btn lv' + (open ? '' : ' locked');
+                b.disabled = !open;
+                b.title = L.name;
+                const st = lvStars[i] || 0;
+                b.innerHTML = `${open ? i + 1 : '🔒'}<small>${'★'.repeat(st)}${'☆'.repeat(3 - st)}</small>`;
+                b.onclick = () => start('level', i);
+                g.appendChild(b);
+            });
+        }
+        function toMenu() { state = 'menu'; ['overOv', 'levelOv'].forEach(Arcade.hide); buildMenu(); Arcade.show('menuOv'); }
+        document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+            if (b.dataset.mode === 'level') { Arcade.hide('menuOv'); buildLevels(); Arcade.show('levelOv'); Arcade.sfx('select'); }
+            else start(b.dataset.mode);
+        });
+        $('levelBack').onclick = toMenu;
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse' && !e.buttons) return;
+            const q = Arcade.pointer(canvas, e, W, H);
+            target = e.pointerType === 'mouse' ? q : { x: q.x, y: q.y - 50 };
+        });
+        canvas.addEventListener('pointerdown', (e) => {
+            const q = Arcade.pointer(canvas, e, W, H);
+            touchMode = e.pointerType !== 'mouse';
+            if (touchMode) { target = { x: q.x, y: q.y - 50 }; canvas.setPointerCapture(e.pointerId); }
+            else if (e.button === 0) shoot(q.x, q.y);
+            else if (e.button === 2) throwNade(q.x, q.y);
+        });
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') { e.preventDefault(); if (state === 'play') emp(); }
+            if (e.code === 'KeyG' && state === 'play') throwNade(target.x, target.y);
+            if (e.code === 'Escape' && (state === 'play')) { state = 'over'; toMenu(); }
+            if (e.code === 'KeyR' && (state === 'over' || state === 'play')) start();
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+        $('againBtn').onclick = () => start();
+        $('nextBtn').onclick = () => start('level', level + 1);
+        $('menuBtn').onclick = () => { if (mode === 'level') { state = 'menu'; Arcade.hide('overOv'); buildLevels(); Arcade.show('levelOv'); } else toMenu(); };
+        $('pauseBtn').onclick = () => { if (state === 'play') { state = 'over'; toMenu(); } };
+        $('empBtn').onclick = emp;
+        $('nadeBtn').onclick = () => {
+            let n = null, bd = 1e9;
+            for (const e of enemies) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; n = e; } }
+            if (n) throwNade(n.x, n.y);
+        };
+
+        buildMenu();
+        hud();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

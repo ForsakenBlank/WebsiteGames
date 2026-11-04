@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounce Lab · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f43f5e; --accent-2: #fb923c; --accent-ink: #1f0309; }
+        .stage { gap: 10px; padding: 10px 12px 12px; }
+        .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .phone { position: relative; line-height: 0; }
+        .phone canvas { display: block; border-radius: 18px; border: 1px solid var(--line-2); background: #05060d; box-shadow: var(--shadow), 0 0 70px -30px var(--accent); touch-action: none; }
+        .side-btns { position: absolute; right: 10px; bottom: 90px; display: flex; flex-direction: column; gap: 12px; z-index: 5; line-height: 1.2; }
+        .side-btns button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(15, 23, 42, 0.6); color: #fff; font-size: 1.25rem; cursor: pointer; backdrop-filter: blur(6px); display: grid; place-items: center; }
+        .side-btns button:hover { background: rgba(244, 63, 94, 0.55); }
+        .side-btns button.on { background: var(--accent); }
+        .side-btns small { display: block; text-align: center; font-size: 0.62rem; color: #cbd5e1; margin-top: -8px; }
+        .pal { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+        .pal button { min-width: 38px; height: 34px; border-radius: 8px; border: 2px solid transparent; color: #fff; font-weight: 800; cursor: pointer; font-size: 0.85rem; }
+        .pal button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+        .lv-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; text-align: left; margin-top: 10px; }
+        .lv-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .lv-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88rem; }
+        .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 10px; }
+        .lv-grid button { padding: 8px 4px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.8rem; }
+        .lv-grid button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .lv-grid button b { display: block; font-size: 1rem; }
+        .rm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; text-align: left; font-size: 0.85rem; }
+        .rm-row span { width: 90px; color: var(--muted); }
+        .rm-row input[type=range] { flex: 1; accent-color: var(--accent); }
+        .rm-row input[type=text] { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; }
+        .types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 6px; }
+        .types button { padding: 7px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.78rem; text-align: left; }
+        .types button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg-2)); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Bounce Lab</h1>
+        <div class="stats">
+            <span class="chip accent"><span id="cAl">Watched</span> <b id="cA">0</b></span>
+            <span class="chip gold"><span id="cBl">Liked</span> <b id="cB">0</b></span>
+            <span class="chip" id="cCw"><span id="cCl">Best</span> <b id="cC">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="seg" id="modes">
+            <button class="btn sm active" data-mode="shorts">📱 Physics Shorts</button>
+            <button class="btn sm" data-mode="bricks">🧱 Brick Breaker</button>
+            <button class="btn sm" data-mode="editor">✏️ Level Editor</button>
+        </div>
+        <div class="tbar" id="barShorts">
+            <button class="btn sm" id="autoBtn" title="Go to the next simulation by itself when one ends">▶ Autoplay on</button>
+            <button class="btn sm" id="remixBtn">🎛 Remix</button>
+            <button class="btn sm" id="likedBtn">❤ Liked</button>
+        </div>
+        <div class="tbar" id="barBricks" hidden>
+            <button class="btn sm" id="lvBtn">📋 Levels</button>
+            <button class="btn sm" id="myBtn">⭐ My levels</button>
+            <button class="btn sm" id="pauseBtn">⏸ Pause</button>
+        </div>
+        <div class="tbar" id="barEditor" hidden>
+            <div class="pal" id="pal"></div>
+            <button class="btn sm" id="mirBtn" title="Paint both halves at once">⇋ Mirror</button>
+            <button class="btn sm" id="testBtn">▶ Test</button>
+            <button class="btn sm" id="saveBtn">💾 Save</button>
+            <button class="btn sm" id="codeBtn">🔗 Code</button>
+            <button class="btn sm danger" id="clearBtn">Clear</button>
+        </div>
+        <div class="canvas-box" id="box">
+            <div class="phone" id="phone">
+                <canvas id="cv"></canvas>
+                <div class="side-btns" id="sideBtns">
+                    <button id="likeBtn" title="Like (L)">❤</button><small id="likeN">Like</small>
+                    <button id="replayBtn" title="Replay (R)">↻</button><small>Replay</small>
+                    <button id="shareBtn" title="Copy this simulation's code">🔗</button><small>Code</small>
+                    <button id="upBtn" title="Previous (↑)">▲</button>
+                    <button id="downBtn" title="Next (↓ · swipe up · scroll)">▼</button>
+                </div>
+            </div>
+
+            <div class="overlay" id="remixOv" hidden>
+                <div class="modal">
+                    <h2>Remix a simulation</h2>
+                    <p class="small">Pick a type and tweak it — or paste a code someone shared.</p>
+                    <div class="types" id="rmTypes"></div>
+                    <div class="rm-row"><span>Balls</span><input type="range" id="rmBalls" min="0" max="6" value="0"><b id="rmBallsV">auto</b></div>
+                    <div class="rm-row"><span>Gravity</span><input type="range" id="rmGrav" min="0" max="10" value="5"><b id="rmGravV">5</b></div>
+                    <div class="rm-row"><span>Speed</span><input type="range" id="rmSpeed" min="1" max="10" value="5"><b id="rmSpeedV">5</b></div>
+                    <div class="rm-row"><span>Seed / code</span><input type="text" id="rmSeed" placeholder="random" spellcheck="false"></div>
+                    <div class="actions">
+                        <button class="btn primary lg" id="rmGo">▶ Play it</button>
+                        <button class="btn" id="rmClose">Close</button>
+                    </div>
+                </div>
+            </div>
+            <div class="overlay" id="likedOv" hidden>
+                <div class="modal">
+                    <h2>❤ Liked simulations</h2>
+                    <div class="lv-list" id="likedList"></div>
+                    <div class="actions"><button class="btn" id="likedClose">Close</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="lvOv" hidden>
+                <div class="modal wide">
+                    <h2>Levels</h2>
+                    <p class="small">Clear a level to unlock the next. After level 12 the levels are generated forever.</p>
+                    <div class="lv-grid" id="lvGrid"></div>
+                    <div class="actions"><button class="btn" id="lvClose">Close</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="myOv" hidden>
+                <div class="modal">
+                    <h2>⭐ My levels</h2>
+                    <p class="small">Levels you saved in the editor, and ones you imported from a code.</p>
+                    <div class="lv-list" id="myList"></div>
+                    <div class="rm-row"><span>Import code</span><input type="text" id="impCode" placeholder="paste a level code" spellcheck="false"><button class="btn sm" id="impBtn">Add</button></div>
+                    <div class="actions"><button class="btn" id="myClose">Close</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">Game over</h2>
+                    <div class="big-num" id="endScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <p id="endText"></p>
+                    <div class="actions">
+                        <button class="btn primary lg" id="endGo">Play again</button>
+                        <button class="btn" id="endLv">Levels</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0" id="help"></p>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const TAU = Math.PI * 2, clamp = Arcade.clamp;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, 360, 640, { parent: $('box'), max: 2 });
+        const c = view.ctx;
+        let mode = 'shorts';
+        const likes = Arcade.load('arcade.physics.likes', []) || [];
+        let watched = Arcade.load('arcade.physics.watched', 0) || 0;
+
+        /* =====================================================================
+           PHYSICS SHORTS — an endless feed of generated bouncing-ball sims
+           ===================================================================== */
+        const CX = 180, CY = 340;
+        const COLORS = ['#f43f5e', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899'];
+        const NAMES = ['Red', 'Orange', 'Yellow', 'Green', 'Cyan', 'Blue', 'Purple', 'Pink'];
+        const TYPES = {
+            grow:   { name: 'Grow on bounce', icon: '🎈' },
+            escape: { name: 'Escape the rings', icon: '⭕' },
+            split:  { name: 'Bounce = new ball', icon: '🫧' },
+            race:   { name: 'Colour race', icon: '🏁' },
+            speed:  { name: 'Faster every bounce', icon: '⚡' },
+            gap:    { name: 'Find the gap', icon: '🔷' },
+            paint:  { name: 'Physics painting', icon: '🎨' },
+            shrink: { name: 'Walls close in', icon: '🫸' },
+        };
+        const TYPE_IDS = Object.keys(TYPES);
+        const noteFreq = (i) => { const st = [0, 2, 4, 7, 9]; const o = Math.floor(i / 5); return 220 * Math.pow(2, (st[((i % 5) + 5) % 5] + 12 * o) / 12); };
+
+        function makeSim(spec) {
+            const rng = Arcade.seeded(spec.seed);
+            const R = (a, b) => a + rng() * (b - a);
+            const grav = spec.grav != null ? spec.grav * 140 : null, spd = spec.speed != null ? spec.speed / 5 : 1;
+            const S = { spec, type: spec.type, rng, balls: [], rings: [], poly: null, circleR: 0, g: 0, t: 0, done: false, doneT: 0, bounces: 0, title: '', sub: '', flash: 0, flashC: '#fff', p: new Arcade.Particles(600), paint: null, lastNote: 0, noteI: 0, winner: null, trail: true };
+            const mel = []; let n = 5 + Math.floor(rng() * 4);
+            for (let i = 0; i < 32; i++) { n = clamp(n + Math.round(R(-2.4, 2.4)), 0, 13); mel.push(n); }
+            S.mel = mel;
+            const ball = (x, y, ang, sp, r, col) => ({ x, y, vx: Math.cos(ang) * sp * spd, vy: Math.sin(ang) * sp * spd, r, c: col, tr: [], cont: undefined, out: false });
+            const nBalls = (def) => (spec.balls ? spec.balls : def);
+            switch (spec.type) {
+                case 'grow':
+                    S.kind = 'circle'; S.circleR = 150; S.g = grav ?? 700; S.grow = R(1.1, 2.2);
+                    S.title = 'Every bounce, it grows';
+                    for (let i = 0; i < nBalls(1); i++) S.balls.push(ball(CX + R(-40, 40), CY - 60, R(0, TAU), R(200, 320), 7, COLORS[(i * 3 + Math.floor(rng() * 8)) % 8]));
+                    break;
+                case 'escape': {
+                    S.kind = 'rings'; S.destroy = true; S.g = grav ?? (rng() < 0.3 ? 0 : R(300, 600));
+                    const k = 8 + Math.floor(rng() * 14);
+                    for (let i = 0; i < k; i++) S.rings.push({ r: 36 + i * (130 / (k - 1)), gap: R(0.55, 0.95), rot: R(0, TAU), spin: (rng() < 0.5 ? -1 : 1) * R(0.5, 1.8), alive: true, hue: (i * 360 / k + R(0, 40)) % 360 });
+                    S.total = k;
+                    S.title = `Can it escape all ${k} rings?`;
+                    for (let i = 0; i < nBalls(rng() < 0.6 ? 1 : 2); i++) S.balls.push(ball(CX + R(-8, 8), CY + R(-8, 8), R(0, TAU), R(220, 300), 5, COLORS[(i * 2 + 1) % 8]));
+                    break;
+                }
+                case 'split':
+                    S.kind = 'circle'; S.circleR = 160; S.g = grav ?? 650; S.cap = Math.round(R(120, 300)); S.trail = false;
+                    S.title = 'Every bounce = a new ball';
+                    for (let i = 0; i < nBalls(1); i++) S.balls.push(ball(CX + R(-30, 30), CY - 70, R(0, TAU), 240, 5, COLORS[i % 8]));
+                    break;
+                case 'race': {
+                    S.kind = 'rings'; S.destroy = false; S.g = grav ?? (rng() < 0.4 ? 0 : R(200, 400));
+                    const k = 4 + Math.floor(rng() * 4);
+                    for (let i = 0; i < k; i++) S.rings.push({ r: 50 + i * (110 / (k - 1)), gap: R(0.45, 0.7), rot: R(0, TAU), spin: (i % 2 ? -1 : 1) * R(0.4, 1.3), alive: true, hue: 210 + i * 18 });
+                    const m = clamp(nBalls(2 + Math.floor(rng() * 3)), 2, 6), off = Math.floor(rng() * 8);
+                    S.title = 'Which colour escapes first?';
+                    for (let i = 0; i < m; i++) { const b = ball(CX + Math.cos(i * TAU / m) * 14, CY + Math.sin(i * TAU / m) * 14, R(0, TAU), R(230, 300), 6, COLORS[(off + i * 3) % 8]); b.name = NAMES[(off + i * 3) % 8]; S.balls.push(b); }
+                    break;
+                }
+                case 'speed': {
+                    S.kind = 'poly'; S.g = grav ?? R(300, 600);
+                    S.poly = { n: 5 + Math.floor(rng() * 4), a: 140, rot: R(0, TAU), spin: (rng() < 0.5 ? -1 : 1) * R(0.4, 1.1), gapEdge: -1, gapFrac: 0 };
+                    S.title = 'Faster every bounce';
+                    for (let i = 0; i < nBalls(1); i++) S.balls.push(ball(CX + R(-20, 20), CY - 30, R(0, TAU), 200, 8, COLORS[Math.floor(rng() * 8)]));
+                    break;
+                }
+                case 'gap': {
+                    S.kind = 'poly'; S.g = grav ?? R(350, 650);
+                    const pn = 4 + Math.floor(rng() * 5);
+                    S.poly = { n: pn, a: Math.min(130, 168 * Math.cos(Math.PI / pn)), rot: R(0, TAU), spin: (rng() < 0.5 ? -1 : 1) * R(0.6, 1.6), gapEdge: Math.floor(rng() * 4), gapFrac: R(0.32, 0.55) };
+                    S.title = 'Will it find the gap?';
+                    for (let i = 0; i < nBalls(1); i++) S.balls.push(ball(CX + R(-20, 20), CY - 20, R(0, TAU), 250, 9, COLORS[Math.floor(rng() * 8)]));
+                    break;
+                }
+                case 'paint': {
+                    S.kind = 'circle'; S.circleR = 165; S.g = grav ?? 0; S.trail = false; S.dur = 22;
+                    S.paint = document.createElement('canvas'); S.paint.width = 720; S.paint.height = 1280;
+                    S.title = 'Painting with physics';
+                    const m = nBalls(3 + Math.floor(rng() * 4)), h0 = R(0, 360);
+                    for (let i = 0; i < m; i++) { const b = ball(CX + R(-60, 60), CY + R(-60, 60), R(0, TAU), R(260, 380), 4, `hsl(${(h0 + i * 360 / m) % 360},90%,62%)`); b.h = (h0 + i * 360 / m) % 360; S.balls.push(b); }
+                    break;
+                }
+                case 'shrink':
+                    S.kind = 'circle'; S.circleR = 175; S.g = grav ?? R(450, 700); S.shrink = R(1.6, 3);
+                    S.title = 'The walls close in every bounce';
+                    for (let i = 0; i < nBalls(1); i++) S.balls.push(ball(CX + R(-30, 30), CY - 40, R(0, TAU), 260, 11, COLORS[Math.floor(rng() * 8)]));
+                    break;
+            }
+            return S;
+        }
+
+        function note(S, i, vol) {
+            const now = performance.now();
+            if (now - S.lastNote < 45) return;
+            S.lastNote = now;
+            Arcade.tone(noteFreq(S.mel[(S.noteI++) % S.mel.length] + (i || 0)), 0.16, 'triangle', vol || 0.06);
+        }
+        const normA = (a) => ((a % TAU) + TAU) % TAU;
+        function inGap(ring, dx, dy, br) {
+            const a = normA(Math.atan2(dy, dx) - ring.rot), half = Math.asin(Math.min(1, br / ring.r));
+            return a > half && a < ring.gap - half;
+        }
+        function reflect(b, nx, ny, S) {
+            const vn = b.vx * nx + b.vy * ny;
+            if (vn <= 0) return false;
+            b.vx -= 2 * vn * nx; b.vy -= 2 * vn * ny;
+            const j = (S.rng() - 0.5) * 0.05, cs = Math.cos(j), sn = Math.sin(j);   // a tiny nudge so no sim loops forever
+            const vx = b.vx * cs - b.vy * sn; b.vy = b.vx * sn + b.vy * cs; b.vx = vx;
+            return true;
+        }
+        function collide(S, b) {
+            const dx = b.x - CX, dy = b.y - CY, d = Math.hypot(dx, dy) || 1e-6, nx = dx / d, ny = dy / d;
+            if (S.kind === 'circle') {
+                if (d + b.r <= S.circleR) return false;
+                const hit = reflect(b, nx, ny, S);
+                const k = Math.max(0, S.circleR - b.r);
+                b.x = CX + nx * k; b.y = CY + ny * k;
+                return hit;
+            }
+            if (S.kind === 'rings') {
+                let cont = null, inner = null;
+                for (const R of S.rings) { if (!R.alive) continue; if (R.r >= d) { if (!cont || R.r < cont.r) cont = R; } else if (!inner || R.r > inner.r) inner = R; }
+                if (b.cont && b.cont !== cont && b.cont.alive && d > b.cont.r) passed(S, b, b.cont);
+                b.cont = cont;
+                if (!cont && !b.out) { b.out = true; escaped(S, b); }
+                let hit = false;
+                if (cont && cont.alive && d + b.r > cont.r && !inGap(cont, dx, dy, b.r)) { hit = reflect(b, nx, ny, S) || hit; b.x = CX + nx * (cont.r - b.r); b.y = CY + ny * (cont.r - b.r); }
+                if (inner && d - b.r < inner.r && !inGap(inner, dx, dy, b.r)) { hit = reflect(b, -nx, -ny, S) || hit; b.x = CX + nx * (inner.r + b.r); b.y = CY + ny * (inner.r + b.r); }
+                return hit;
+            }
+            // rotating polygon
+            const P = S.poly, half = P.a * Math.tan(Math.PI / P.n);
+            let hit = false;
+            for (let i = 0; i < P.n; i++) {
+                const th = P.rot + (i + 0.5) * TAU / P.n, ex = Math.cos(th), ey = Math.sin(th);
+                const ddx = b.x - CX, ddy = b.y - CY;
+                const s = ddx * ex + ddy * ey - P.a;
+                if (s + b.r <= 0 || s - b.r > 0) continue;
+                const tx = -ey, ty = ex, u = ddx * tx + ddy * ty;
+                if (Math.abs(u) > half + b.r * 0.5) continue;
+                if (i === P.gapEdge && Math.abs(u) < half * P.gapFrac - b.r) continue;
+                const px = ex * P.a + tx * u, py = ey * P.a + ty * u;
+                const wvx = -P.spin * py, wvy = P.spin * px;
+                const rvx = b.vx - wvx, rvy = b.vy - wvy, vn = rvx * ex + rvy * ey;
+                if (vn > 0) { b.vx = rvx - 2 * vn * ex + wvx; b.vy = rvy - 2 * vn * ey + wvy; hit = true; }
+                b.x -= (s + b.r) * ex; b.y -= (s + b.r) * ey;
+            }
+            if (P.gapEdge >= 0 && !b.out && Math.hypot(b.x - CX, b.y - CY) > P.a / Math.cos(Math.PI / P.n) + b.r) { b.out = true; escaped(S, b); }
+            return hit;
+        }
+        function passed(S, b, ring) {
+            if (!S.destroy) return;
+            ring.alive = false;
+            const col = `hsl(${ring.hue},90%,62%)`;
+            for (let i = 0; i < 26; i++) { const a = Math.random() * TAU; S.p.emit(CX + Math.cos(a) * ring.r, CY + Math.sin(a) * ring.r, { n: 1, speed: 160, color: col, life: 0.9, size: 4 }); }
+            S.flash = 1; S.flashC = col;
+            Arcade.tone(noteFreq(S.rings.filter(r => !r.alive).length + 4), 0.22, 'square', 0.04);
+            const left = S.rings.filter(r => r.alive).length;
+            if (!left) finish(S, 'Escaped all ' + S.total + ' rings!');
+        }
+        function escaped(S, b) {
+            if (S.type === 'race' && !S.winner) { S.winner = b; Arcade.sfx('win'); finish(S, '🏆 ' + b.name + ' wins!'); }
+            if (S.type === 'gap') { Arcade.sfx('win'); finish(S, 'Escaped in ' + S.t.toFixed(1) + 's'); }
+        }
+        function finish(S, msg) { if (S.done) return; S.done = true; S.doneMsg = msg; S.doneT = 0; }
+
+        function onBounce(S, b) {
+            S.bounces++;
+            note(S, 0, 0.05);
+            S.p.emit(b.x, b.y, { n: 4, speed: 90, color: b.c, life: 0.35, size: 3 });
+            switch (S.type) {
+                case 'grow': b.r = Math.min(b.r + S.grow, S.circleR * 0.93); if (b.r >= S.circleR * 0.9) finish(S, 'Filled the circle in ' + S.bounces + ' bounces!'); break;
+                case 'split':
+                    if (S.balls.length < S.cap) { const a = S.rng() * TAU, sp = Math.hypot(b.vx, b.vy); S.balls.push({ x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: b.r, c: COLORS[S.balls.length % 8], tr: [] }); }
+                    else finish(S, S.balls.length + ' balls!');
+                    break;
+                case 'speed': {
+                    const sp = Math.hypot(b.vx, b.vy), k = Math.min(1.045, 2400 / Math.max(sp, 1));
+                    b.vx *= k; b.vy *= k;
+                    if (sp > 2300) finish(S, 'Top speed after ' + S.bounces + ' bounces!');
+                    break;
+                }
+                case 'shrink': S.circleR = Math.max(b.r * 1.15, S.circleR - S.shrink); if (S.circleR < b.r * 1.6) finish(S, 'Trapped after ' + S.bounces + ' bounces'); break;
+            }
+        }
+        function stepSim(S, dt) {
+            S.t += dt;
+            if (S.done) S.doneT += dt;
+            S.flash = Math.max(0, S.flash - dt * 3);
+            let vmax = 0;
+            for (const b of S.balls) vmax = Math.max(vmax, Math.hypot(b.vx, b.vy));
+            const steps = clamp(Math.ceil(vmax * dt / 3), 1, 40), h = dt / steps;
+            for (let k = 0; k < steps; k++) {
+                for (const R of S.rings) R.rot += R.spin * h;
+                if (S.poly) S.poly.rot += S.poly.spin * h;
+                const list = S.balls;
+                for (let i = 0; i < list.length; i++) {
+                    const b = list[i];
+                    const ox = b.x, oy = b.y;
+                    b.vy += S.g * h;
+                    b.x += b.vx * h; b.y += b.vy * h;
+                    if (!b.out && collide(S, b)) onBounce(S, b);
+                    if (S.paint) {
+                        const pc = S.paint.getContext('2d');
+                        pc.strokeStyle = `hsla(${(b.h + S.t * 20) % 360},90%,62%,0.85)`; pc.lineWidth = 3; pc.lineCap = 'round';
+                        pc.beginPath(); pc.moveTo(ox * 2, oy * 2); pc.lineTo(b.x * 2, b.y * 2); pc.stroke();
+                    }
+                }
+            }
+            if (S.trail && S.balls.length <= 6) for (const b of S.balls) { b.tr.push(b.x, b.y); if (b.tr.length > 40) b.tr.splice(0, 2); }
+            if (S.paint && S.t > S.dur) finish(S, 'Masterpiece complete');
+            if ((S.type === 'race' || S.type === 'escape' || S.type === 'gap') && S.t > 75 && !S.done) finish(S, 'Still trapped after 75s!');
+            if (S.type === 'grow' && S.t > 90 && !S.done) finish(S, 'Grew to ' + Math.round(S.balls[0].r) + ' px');
+            S.p.update(dt);
+        }
+        function liveSub(S) {
+            switch (S.type) {
+                case 'escape': return 'Rings left: ' + S.rings.filter(r => r.alive).length;
+                case 'split': return 'Balls: ' + S.balls.length;
+                case 'grow': return 'Bounces: ' + S.bounces;
+                case 'speed': return 'Speed: ' + Math.round(Math.hypot(S.balls[0].vx, S.balls[0].vy)) + ' px/s';
+                case 'shrink': return 'Bounces: ' + S.bounces;
+                case 'gap': case 'race': return S.t.toFixed(1) + 's';
+                case 'paint': return Math.max(0, S.dur - S.t).toFixed(0) + 's left';
+            }
+            return '';
+        }
+        function drawSim(S, g) {
+            const grd = g.createLinearGradient(0, 0, 0, 640);
+            grd.addColorStop(0, '#0b0820'); grd.addColorStop(1, '#030409');
+            g.fillStyle = grd; g.fillRect(0, 0, 360, 640);
+            if (S.flash > 0) { g.globalAlpha = S.flash * 0.12; g.fillStyle = S.flashC; g.fillRect(0, 0, 360, 640); g.globalAlpha = 1; }
+            if (S.paint) g.drawImage(S.paint, 0, 0, 360, 640);
+            g.lineCap = 'round';
+            if (S.kind === 'circle') {
+                g.strokeStyle = '#e2e8f0'; g.lineWidth = 3; g.shadowColor = '#f43f5e'; g.shadowBlur = 14;
+                g.beginPath(); g.arc(CX, CY, S.circleR + 1.5, 0, TAU); g.stroke(); g.shadowBlur = 0;
+            } else if (S.kind === 'rings') {
+                g.lineWidth = 3.2;
+                for (const R of S.rings) {
+                    if (!R.alive) continue;
+                    g.strokeStyle = `hsl(${R.hue},90%,62%)`;
+                    g.beginPath(); g.arc(CX, CY, R.r + 1.6, R.rot + R.gap, R.rot + TAU); g.stroke();
+                }
+            } else {
+                const P = S.poly, Rv = P.a / Math.cos(Math.PI / P.n);
+                const V = (i) => [CX + Math.cos(P.rot + i * TAU / P.n) * (Rv + 2), CY + Math.sin(P.rot + i * TAU / P.n) * (Rv + 2)];
+                g.strokeStyle = '#e2e8f0'; g.lineWidth = 3.5; g.shadowColor = '#22d3ee'; g.shadowBlur = 12;
+                g.beginPath();
+                for (let i = 0; i < P.n; i++) {
+                    const [x0, y0] = V(i), [x1, y1] = V(i + 1);
+                    if (i === P.gapEdge) {
+                        const f = (1 - P.gapFrac) / 2;
+                        g.moveTo(x0, y0); g.lineTo(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+                        g.moveTo(x1 - (x1 - x0) * f, y1 - (y1 - y0) * f); g.lineTo(x1, y1);
+                    } else { g.moveTo(x0, y0); g.lineTo(x1, y1); }
+                }
+                g.stroke(); g.shadowBlur = 0;
+            }
+            // trails
+            for (const b of S.balls) {
+                if (!b.tr || b.tr.length < 4) continue;
+                g.strokeStyle = b.c;
+                for (let i = 2; i < b.tr.length; i += 2) {
+                    g.globalAlpha = (i / b.tr.length) * 0.5; g.lineWidth = b.r * 2 * (i / b.tr.length) * 0.8;
+                    g.beginPath(); g.moveTo(b.tr[i - 2], b.tr[i - 1]); g.lineTo(b.tr[i], b.tr[i + 1]); g.stroke();
+                }
+                g.globalAlpha = 1;
+            }
+            const glow = S.balls.length < 20;
+            for (const b of S.balls) {
+                g.fillStyle = b.c;
+                if (glow) { g.shadowColor = b.c; g.shadowBlur = 16; }
+                g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill();
+            }
+            g.shadowBlur = 0;
+            if (S.type === 'grow' && S.balls[0]) { const b = S.balls[0]; g.fillStyle = 'rgba(255,255,255,0.85)'; g.font = `800 ${Math.max(10, b.r * 0.6)}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S.bounces, b.x, b.y); }
+            S.p.draw(g);
+            // shorts-style captions
+            g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+            g.fillStyle = '#fff'; g.font = '800 21px system-ui, sans-serif'; g.shadowColor = '#000'; g.shadowBlur = 8;
+            wrapText(g, S.title, 180, 74, 300, 26);
+            g.font = '700 16px system-ui, sans-serif'; g.fillStyle = '#fde68a';
+            g.fillText(liveSub(S), 180, 590 - 40);
+            if (S.type === 'race') {
+                g.font = '600 12px system-ui'; let x = 180 - (S.balls.length - 1) * 30;
+                for (const b of S.balls) { g.fillStyle = b.c; g.fillText(b.name, x, 572); x += 60; }
+            }
+            if (S.done) {
+                g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, 140, 360, 54);
+                g.fillStyle = '#fff'; g.font = '800 20px system-ui'; g.fillText(S.doneMsg, 180, 174);
+                if (auto) { g.font = '600 12px system-ui'; g.fillStyle = '#cbd5e1'; g.fillText('Next in ' + Math.max(0, Math.ceil(3 - S.doneT)) + '…', 180, 210); }
+            }
+            g.shadowBlur = 0;
+            g.font = '600 11px ui-monospace, monospace'; g.fillStyle = 'rgba(255,255,255,0.55)'; g.textAlign = 'left';
+            g.fillText('@bouncelab · ' + TYPES[S.type].icon + ' ' + codeOf(S.spec), 14, 622);
+            if (paused) { g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(0, 0, 360, 640); g.fillStyle = '#fff'; g.font = '800 48px system-ui'; g.textAlign = 'center'; g.fillText('❚❚', 180, 340); }
+        }
+        function wrapText(g, text, x, y, maxW, lh) {
+            const words = text.split(' '); let line = '', yy = y;
+            for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { g.fillText(line, x, yy); line = w; yy += lh; } else line = t; }
+            g.fillText(line, x, yy);
+        }
+
+        /* ---------- feed ---------- */
+        const feed = [];
+        let idx = 0, sim = null, auto = Arcade.load('arcade.physics.auto', true) !== false, paused = false;
+        let slide = null;      // {from: canvas snapshot, t, dir}
+        const snap = document.createElement('canvas');
+        const codeOf = (sp) => sp.type + '-' + sp.seed.toString(36) + (sp.balls ? '-b' + sp.balls : '') + (sp.grav != null ? '-g' + sp.grav : '') + (sp.speed != null ? '-s' + sp.speed : '');
+        function parseCode(str) {
+            const m = /^([a-z]+)-([0-9a-z]+)((?:-[bgs]\d+)*)$/i.exec((str || '').trim());
+            if (!m || !TYPES[m[1].toLowerCase()]) return null;
+            const sp = { type: m[1].toLowerCase(), seed: parseInt(m[2], 36) };
+            for (const part of m[3].split('-').filter(Boolean)) { const v = +part.slice(1); if (part[0] === 'b') sp.balls = v; if (part[0] === 'g') sp.grav = v; if (part[0] === 's') sp.speed = v; }
+            return sp;
+        }
+        function specAt(i) {
+            while (feed.length <= i) {
+                let t;
+                do t = TYPE_IDS[Math.floor(Math.random() * TYPE_IDS.length)]; while (feed.length && feed[feed.length - 1].type === t);
+                feed.push({ type: t, seed: (Math.random() * 2147483647) | 0 });
+            }
+            return feed[i];
+        }
+        function go(i, dir) {
+            if (i < 0) { Arcade.toast('This is the first one — swipe up for more', null, 1200); return; }
+            if (sim) { snap.width = cv.width; snap.height = cv.height; snap.getContext('2d').drawImage(cv, 0, 0); slide = { t: 0, dir: dir || 1 }; }
+            idx = i;
+            sim = makeSim(specAt(i));
+            paused = false;
+            watched++; Arcade.save('arcade.physics.watched', watched);
+            if (watched % 10 === 0) Arcade.addXP(5, true);
+            syncSide();
+            hud();
+        }
+        function replay() { sim = makeSim(sim.spec); paused = false; Arcade.sfx('select'); }
+        function syncSide() {
+            const liked = likes.some(l => codeOf(l) === codeOf(sim.spec));
+            $('likeBtn').classList.toggle('on', liked);
+            $('likeN').textContent = liked ? 'Liked' : 'Like';
+        }
+        function toggleLike() {
+            const code = codeOf(sim.spec), i = likes.findIndex(l => codeOf(l) === code);
+            if (i >= 0) likes.splice(i, 1); else { likes.unshift({ ...sim.spec, title: sim.title }); Arcade.sfx('coin'); }
+            Arcade.save('arcade.physics.likes', likes.slice(0, 200));
+            syncSide(); hud();
+        }
+        $('likeBtn').onclick = toggleLike;
+        $('replayBtn').onclick = replay;
+        $('shareBtn').onclick = () => { const code = codeOf(sim.spec); navigator.clipboard && navigator.clipboard.writeText(code).catch(() => { }); Arcade.toast('Code ' + code + ' copied — paste it in Remix', 'good', 2500); };
+        $('upBtn').onclick = () => go(idx - 1, -1);
+        $('downBtn').onclick = () => go(idx + 1, 1);
+        $('autoBtn').onclick = () => { auto = !auto; Arcade.save('arcade.physics.auto', auto); $('autoBtn').textContent = auto ? '▶ Autoplay on' : '⏸ Autoplay off'; };
+        $('autoBtn').textContent = auto ? '▶ Autoplay on' : '⏸ Autoplay off';
+
+        // remix dialog
+        let rmType = 'escape';
+        function buildRemix() {
+            const host = $('rmTypes'); host.innerHTML = '';
+            for (const t of TYPE_IDS) {
+                const b = document.createElement('button');
+                b.textContent = TYPES[t].icon + ' ' + TYPES[t].name;
+                b.className = t === rmType ? 'on' : '';
+                b.onclick = () => { rmType = t; buildRemix(); };
+                host.appendChild(b);
+            }
+            $('rmBallsV').textContent = +$('rmBalls').value || 'auto';
+            $('rmGravV').textContent = $('rmGrav').value; $('rmSpeedV').textContent = $('rmSpeed').value;
+        }
+        ['rmBalls', 'rmGrav', 'rmSpeed'].forEach(id => { $(id).oninput = buildRemix; });
+        $('remixBtn').onclick = () => { rmType = sim ? sim.type : 'escape'; buildRemix(); Arcade.show('remixOv'); };
+        $('rmClose').onclick = () => Arcade.hide('remixOv');
+        $('rmGo').onclick = () => {
+            const txt = $('rmSeed').value.trim();
+            let sp = parseCode(txt);
+            if (!sp) {
+                sp = { type: rmType, seed: txt ? (/^\d+$/.test(txt) ? +txt : Arcade.hash(txt)) : (Math.random() * 2147483647) | 0 };
+                if (+$('rmBalls').value) sp.balls = +$('rmBalls').value;
+                if ($('rmGrav').value !== '5') sp.grav = +$('rmGrav').value;
+                if ($('rmSpeed').value !== '5') sp.speed = +$('rmSpeed').value;
+            }
+            feed.splice(idx + 1, 0, sp);
+            Arcade.hide('remixOv');
+            go(idx + 1, 1);
+        };
+        $('likedBtn').onclick = () => {
+            const host = $('likedList'); host.innerHTML = '';
+            if (!likes.length) host.innerHTML = '<p class="small muted center">Tap ❤ on a simulation to keep it here.</p>';
+            likes.forEach((sp, i) => {
+                const row = document.createElement('div'); row.className = 'lv-row';
+                row.innerHTML = `<span>${TYPES[sp.type].icon}</span><b></b><button class="btn sm primary">▶</button><button class="btn sm ghost">✕</button>`;
+                row.querySelector('b').textContent = (sp.title || TYPES[sp.type].name) + ' · ' + codeOf(sp);
+                row.querySelector('.primary').onclick = () => { feed.splice(idx + 1, 0, { type: sp.type, seed: sp.seed, balls: sp.balls, grav: sp.grav, speed: sp.speed }); Arcade.hide('likedOv'); go(idx + 1, 1); };
+                row.querySelector('.ghost').onclick = () => { likes.splice(i, 1); Arcade.save('arcade.physics.likes', likes); $('likedBtn').onclick(); syncSide(); hud(); };
+                host.appendChild(row);
+            });
+            Arcade.show('likedOv');
+        };
+        $('likedClose').onclick = () => Arcade.hide('likedOv');
+
+        /* =====================================================================
+           BRICK BREAKER
+           ===================================================================== */
+        const BW = 480, BH = 640, COLS = 12, ROWS = 14, CW = 38, CH = 18, LEFT = (BW - COLS * CW) / 2, TOP = 70;
+        const BRICK = {
+            '1': { hp: 1, c: '#38bdf8' }, '2': { hp: 2, c: '#22c55e' }, '3': { hp: 3, c: '#facc15' }, '4': { hp: 4, c: '#f97316' }, '5': { hp: 5, c: '#ef4444' },
+            X: { hp: Infinity, c: '#64748b' }, B: { hp: 1, c: '#a855f7' }, P: { hp: 1, c: '#f472b6' },
+        };
+        const HP_C = ['#000', '#38bdf8', '#22c55e', '#facc15', '#f97316', '#ef4444'];
+        const LEVELS = [
+            ['Warm-up', ['............', '.1111111111.', '.1111111111.', '.2222222222.', '.2222222222.']],
+            ['Pyramid', ['.....33.....', '....2222....', '...111P11...', '..22222222..', '.1111111111.']],
+            ['Checkers', ['1.2.1.2.1.2.', '.2.1.2.1.2.1', '1.2.P.2.1.2.', '.2.1.2.1.2.1', '1.2.1.2.1.2.']],
+            ['Invader', ['...3....3...', '....3..3....', '...333333...', '..33.33.33..', '.3333333333.', '.3.3PPP3.3..', '.3.3....3.3.', '....33.33...']],
+            ['Bombs away', ['222222222222', '2B22B22B22B2', '333333333333', '3B33B33B33B3', '111111111111']],
+            ['Fortress', ['XXXXX..XXXXX', 'X4444444444X', 'X3333333333X', 'X2222BB2222X', 'X1111111111X', 'X....PP....X']],
+            ['Heart', ['..44....44..', '.4444..4444.', '444444444444', '44442BB24444', '.4444224444.', '..44444444..', '...444444...', '....4444....', '.....44.....']],
+            ['Zigzag', ['11..........', '2211........', '332211......', '44332211....', '.44332211...', '...44332211.', '.....443322.', '.......4433.', '.........44.']],
+            ['Steel maze', ['5555555555.5', 'XXXXXXXXX..X', '4444444444..', '..XXXXXXXXXX', '3333333333P3', 'XXXXXXXX..XX', '222222222222']],
+            ['Rainbow', ['555555555555', '444444444444', '333333333333', '222222222222', '111111111111', 'P.P.P.P.P.P.']],
+            ['Chain reaction', ['BBBBBBBBBBBB', '5.5.5.5.5.5.', 'BBBBBBBBBBBB', '.4.4.4.4.4.4', 'BBBBBBBBBBBB']],
+            ['The vault', ['XXXXXXXXXXXX', 'X5555555555X', 'X5XXXXXXXX5X', 'X5X3PPPP3X5X', 'X5X333333X5X', 'X5XXXX.XXX5X', 'X5555555555X', 'XXXXX..XXXXX']],
+        ];
+        function genLevel(n) {
+            const rng = Arcade.seeded(Arcade.hash('bricks' + n)), rows = 5 + Math.min(7, Math.floor(n / 3)), out = [];
+            const maxHp = Math.min(5, 2 + Math.floor(n / 4));
+            for (let r = 0; r < rows; r++) {
+                let half = '';
+                const rowHp = 1 + Math.floor(rng() * maxHp);
+                for (let col = 0; col < 6; col++) {
+                    const x = rng();
+                    half += x < 0.16 ? '.' : x < 0.2 ? 'X' : x < 0.25 ? 'B' : x < 0.29 ? 'P' : String(clamp(rowHp + (rng() < 0.3 ? 1 : 0), 1, 5));
+                }
+                out.push(half + half.split('').reverse().join(''));
+            }
+            return ['Generated #' + (n + 1), out];
+        }
+        const levelAt = (n) => (n < LEVELS.length ? LEVELS[n] : genLevel(n));
+        const POWERS = {
+            multi: { c: '#22d3ee', l: '×3', t: 'Multi-ball' }, wide: { c: '#22c55e', l: '⟷', t: 'Wide paddle' }, slow: { c: '#60a5fa', l: '🐢', t: 'Slow ball' },
+            fire: { c: '#f97316', l: '🔥', t: 'Fireball' }, laser: { c: '#ef4444', l: '⚡', t: 'Lasers' }, life: { c: '#f472b6', l: '❤', t: 'Extra life' },
+        };
+        let unlocked = Arcade.load('arcade.physics.level', 0) || 0;
+        let custom = Arcade.load('arcade.physics.custom', []) || [];
+        let G = null, bbPaused = false;
+
+        function newGame(levelNo, rows, name, test) {
+            G = { level: levelNo, rows, name, test: !!test, score: 0, lives: 3, balls: [], bricks: [], drops: [], bolts: [], p: { x: BW / 2, y: 600, w: 84, tw: 84, h: 12 }, pw: { wide: 0, slow: 0, fire: 0, laser: 0 }, combo: 0, laserCd: 0, fx: new Arcade.Particles(500), msg: '', msgT: 0, serveT: 0, over: false };
+            loadBricks(rows);
+            serve();
+            bbPaused = false;
+            hud();
+        }
+        function loadBricks(rows) {
+            G.bricks = [];
+            rows.forEach((row, r) => { for (let col = 0; col < COLS; col++) { const ch = row[col]; if (!ch || !BRICK[ch]) continue; const d = BRICK[ch]; G.bricks.push({ col, r, x: LEFT + col * CW + 1, y: TOP + r * CH + 1, w: CW - 2, h: CH - 2, t: ch, hp: d.hp, alive: true, hit: 0 }); } });
+        }
+        function serve() { G.balls = [{ x: G.p.x, y: G.p.y - 7, vx: 0, vy: 0, r: 6, stuck: true }]; G.combo = 0; G.serveT = 0; }
+        const baseSpeed = () => Math.min(520, 360 + (G.level >= 0 ? G.level : 3) * 9) * (G.pw.slow > 0 ? 0.68 : 1) + Math.min(120, G.serveT * 4);
+        function launch() {
+            for (const b of G.balls) if (b.stuck) { b.stuck = false; const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.6, sp = baseSpeed(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
+        }
+        function damage(k, n, fromBomb) {
+            if (!k.alive || k.t === 'X') return;
+            k.hp -= n; k.hit = 0.15;
+            G.score += 10;
+            if (k.hp > 0) { Arcade.tone(300 + k.hp * 90, 0.06, 'square', 0.03); return; }
+            k.alive = false;
+            G.combo++;
+            const pts = 50 * Math.max(1, Math.floor(G.combo / 4) + 1);
+            G.score += pts;
+            const col = BRICK[k.t].c;
+            G.fx.emit(k.x + k.w / 2, k.y + k.h / 2, { n: 10, speed: 140, color: [col, '#fff'], life: 0.5, size: 3, gravity: 300 });
+            Arcade.tone(520 + Math.min(G.combo, 20) * 40, 0.07, 'triangle', 0.05);
+            if (k.t === 'P' || Math.random() < 0.11) { const ks = Object.keys(POWERS); const t = k.t === 'P' ? ks[Math.floor(Math.random() * 5)] : ks[Math.floor(Math.random() * ks.length)]; G.drops.push({ x: k.x + k.w / 2, y: k.y + k.h / 2, t }); }
+            if (k.t === 'B') {
+                Arcade.sfx('boom');
+                G.fx.emit(k.x + k.w / 2, k.y + k.h / 2, { n: 30, speed: 260, color: ['#a855f7', '#f0abfc', '#fff'], life: 0.6, size: 4 });
+                for (const o of G.bricks) if (o.alive && Math.abs(o.col - k.col) <= 1 && Math.abs(o.r - k.r) <= 1) damage(o, 99, true);
+            }
+        }
+        function applyPower(t) {
+            Arcade.sfx('power');
+            G.msg = POWERS[t].t; G.msgT = 1.6;
+            if (t === 'multi') {
+                const add = [];
+                for (const b of G.balls.slice(0, 8)) { if (b.stuck) continue; const sp = Math.hypot(b.vx, b.vy), a = Math.atan2(b.vy, b.vx); for (const d of [-0.4, 0.4]) add.push({ x: b.x, y: b.y, vx: Math.cos(a + d) * sp, vy: Math.sin(a + d) * sp, r: 6 }); }
+                G.balls.push(...add);
+            } else if (t === 'life') G.lives = Math.min(9, G.lives + 1);
+            else G.pw[t] = t === 'wide' ? 14 : 10;
+        }
+        function stepBB(dt) {
+            if (!G || G.over || bbPaused) return;
+            const p = G.p;
+            G.serveT += dt;
+            for (const k of Object.keys(G.pw)) G.pw[k] = Math.max(0, G.pw[k] - dt);
+            p.tw = G.pw.wide > 0 ? 134 : 84;
+            p.w += (p.tw - p.w) * Math.min(1, dt * 8);
+            if (keys.left) p.x -= 520 * dt;
+            if (keys.right) p.x += 520 * dt;
+            p.x = clamp(p.x, p.w / 2, BW - p.w / 2);
+            G.msgT -= dt;
+            for (const k of G.bricks) if (k.hit > 0) k.hit -= dt;
+            // lasers
+            G.laserCd -= dt;
+            if (G.pw.laser > 0 && (keys.fire || pointerDown) && G.laserCd <= 0) { G.laserCd = 0.28; G.bolts.push({ x: p.x - p.w / 2 + 6, y: p.y }, { x: p.x + p.w / 2 - 6, y: p.y }); Arcade.sfx('shoot'); }
+            for (const bo of G.bolts) {
+                bo.y -= 620 * dt;
+                for (const k of G.bricks) if (k.alive && bo.x > k.x && bo.x < k.x + k.w && bo.y > k.y && bo.y < k.y + k.h) { damage(k, 1); bo.dead = true; break; }
+                if (bo.y < 40) bo.dead = true;
+            }
+            G.bolts = G.bolts.filter(b => !b.dead);
+            // balls
+            const sp = baseSpeed();
+            for (const b of G.balls) {
+                if (b.stuck) { b.x = p.x; b.y = p.y - b.r - 1; continue; }
+                const cur = Math.hypot(b.vx, b.vy) || 1; b.vx *= sp / cur; b.vy *= sp / cur;
+                if (Math.abs(b.vy) < sp * 0.25) { b.vy = Math.sign(b.vy || -1) * sp * 0.25; const k = Math.sqrt(Math.max(0, sp * sp - b.vy * b.vy)); b.vx = Math.sign(b.vx || 1) * k; }
+                const steps = Math.ceil(sp * dt / 4), h = dt / steps;
+                for (let s = 0; s < steps && !b.dead; s++) {
+                    b.x += b.vx * h; b.y += b.vy * h;
+                    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+                    if (b.x > BW - b.r) { b.x = BW - b.r; b.vx = -Math.abs(b.vx); }
+                    if (b.y < 40 + b.r) { b.y = 40 + b.r; b.vy = Math.abs(b.vy); }
+                    if (b.vy > 0 && b.y + b.r >= p.y && b.y - b.r <= p.y + p.h && b.x >= p.x - p.w / 2 - b.r && b.x <= p.x + p.w / 2 + b.r) {
+                        const off = clamp((b.x - p.x) / (p.w / 2), -1, 1), a = -Math.PI / 2 + off * 1.05;
+                        b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; b.y = p.y - b.r;
+                        G.combo = 0; Arcade.tone(220, 0.05, 'sine', 0.06);
+                    }
+                    for (const k of G.bricks) {
+                        if (!k.alive) continue;
+                        const cx = clamp(b.x, k.x, k.x + k.w), cy = clamp(b.y, k.y, k.y + k.h), dx = b.x - cx, dy = b.y - cy;
+                        if (dx * dx + dy * dy > b.r * b.r) continue;
+                        const fire = G.pw.fire > 0 && k.t !== 'X';
+                        damage(k, fire ? 99 : 1);
+                        if (k.t === 'X') Arcade.tone(900, 0.04, 'square', 0.02);
+                        if (!fire) {
+                            const ox = Math.min(b.x + b.r - k.x, k.x + k.w - (b.x - b.r)), oy = Math.min(b.y + b.r - k.y, k.y + k.h - (b.y - b.r));
+                            if (ox < oy) { b.vx = b.x < k.x + k.w / 2 ? -Math.abs(b.vx) : Math.abs(b.vx); b.x += b.vx > 0 ? ox : -ox; }
+                            else { b.vy = b.y < k.y + k.h / 2 ? -Math.abs(b.vy) : Math.abs(b.vy); b.y += b.vy > 0 ? oy : -oy; }
+                            break;
+                        }
+                    }
+                    if (b.y > BH + 20) b.dead = true;
+                }
+            }
+            G.balls = G.balls.filter(b => !b.dead);
+            if (!G.balls.length) {
+                G.lives--; Arcade.sfx('die');
+                G.pw = { wide: 0, slow: 0, fire: 0, laser: 0 }; G.drops = []; G.bolts = [];
+                if (G.lives <= 0) return gameOver(false);
+                serve();
+            }
+            // drops
+            for (const d of G.drops) {
+                d.y += 150 * dt;
+                if (d.y > p.y - 8 && d.y < p.y + p.h + 8 && Math.abs(d.x - p.x) < p.w / 2 + 12) { d.dead = true; applyPower(d.t); }
+                if (d.y > BH) d.dead = true;
+            }
+            G.drops = G.drops.filter(d => !d.dead);
+            G.fx.update(dt);
+            if (!G.bricks.some(k => k.alive && k.t !== 'X')) levelClear();
+            hud();
+        }
+        function levelClear() {
+            const bonus = 500 + G.lives * 250;
+            G.score += bonus;
+            Arcade.sfx('win');
+            if (G.test) { Arcade.toast('Level cleared! Back to the editor', 'good'); setMode('editor'); return; }
+            if (G.level >= 0) {
+                if (G.level + 1 > unlocked) { unlocked = G.level + 1; Arcade.save('arcade.physics.level', unlocked); }
+                Arcade.report('score', G.score); Arcade.count('levels');
+                Arcade.toast(`${G.name} cleared! +${bonus}`, 'gold', 2200);
+                const next = G.level + 1, [nm, rows] = levelAt(next);
+                G.level = next; G.name = nm; G.rows = rows;
+                loadBricks(rows); serve(); G.drops = []; G.bolts = []; G.pw = { wide: 0, slow: 0, fire: 0, laser: 0 };
+            } else gameOver(true);
+        }
+        function gameOver(won) {
+            G.over = true;
+            if (G.test) { Arcade.toast('Out of lives — back to the editor', null, 1500); setMode('editor'); return; }
+            const r = Arcade.best('arcade.physics.best', G.score);
+            Arcade.report('score', G.score);
+            Arcade.addXP(Math.min(60, Math.floor(G.score / 200)), true);
+            $('endTitle').textContent = won ? 'Level cleared!' : 'Game over';
+            $('endTitle').className = won ? 'good' : 'bad';
+            $('endScore').textContent = Arcade.fmt(G.score);
+            $('newBest').hidden = !r.isNew;
+            $('endText').textContent = G.name + (G.level >= 0 ? ' · level ' + (G.level + 1) : '');
+            Arcade.show('endOv');
+            hud();
+        }
+        function drawBrick(g, k, x, y, w, h) {
+            const hp = k.t === 'X' || k.t === 'B' || k.t === 'P' ? 0 : k.hp;
+            const col = hp ? HP_C[Math.max(1, Math.min(5, hp))] : BRICK[k.t].c;
+            const r = 4;
+            g.fillStyle = col;
+            g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(x + 2, y + 2, w - 4, 3);
+            g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x + 2, y + h - 4, w - 4, 2);
+            if (k.hit > 0) { g.fillStyle = `rgba(255,255,255,${k.hit * 4})`; g.fillRect(x, y, w, h); }
+            g.textAlign = 'center'; g.textBaseline = 'middle';
+            if (k.t === 'X') { g.fillStyle = '#cbd5e1'; for (const dx of [5, w - 5]) { g.beginPath(); g.arc(x + dx, y + h / 2, 1.8, 0, TAU); g.fill(); } }
+            else if (k.t === 'B') { g.font = '11px system-ui'; g.fillText('💣', x + w / 2, y + h / 2 + 1); }
+            else if (k.t === 'P') { g.fillStyle = '#fff'; g.font = '800 11px system-ui'; g.fillText('★', x + w / 2, y + h / 2 + 1); }
+            else if (hp > 1) { g.fillStyle = 'rgba(0,0,0,0.45)'; g.font = '800 10px system-ui'; g.fillText(hp, x + w / 2, y + h / 2 + 1); }
+        }
+        function drawBB(g) {
+            const grd = g.createLinearGradient(0, 0, 0, BH);
+            grd.addColorStop(0, '#0c1024'); grd.addColorStop(1, '#05060d');
+            g.fillStyle = grd; g.fillRect(0, 0, BW, BH);
+            g.fillStyle = 'rgba(255,255,255,0.04)'; g.fillRect(0, 0, BW, 40);
+            g.fillStyle = '#e2e8f0'; g.font = '700 13px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle';
+            g.fillText(G.name + (G.level >= 0 ? '  ·  Lv ' + (G.level + 1) : ''), 12, 20);
+            g.textAlign = 'right'; g.fillText('❤'.repeat(Math.min(G.lives, 6)) + (G.lives > 6 ? '+' : ''), BW - 12, 20);
+            let px = 190;
+            for (const [k, v] of Object.entries(G.pw)) if (v > 0) { g.fillStyle = POWERS[k].c; g.textAlign = 'center'; g.fillText(POWERS[k].l + ' ' + Math.ceil(v), px, 20); px += 50; }
+            for (const k of G.bricks) if (k.alive) drawBrick(g, k, k.x, k.y, k.w, k.h);
+            for (const d of G.drops) {
+                const P = POWERS[d.t];
+                g.fillStyle = P.c; g.beginPath(); g.roundRect ? g.roundRect(d.x - 16, d.y - 8, 32, 16, 8) : g.rect(d.x - 16, d.y - 8, 32, 16); g.fill();
+                g.fillStyle = '#fff'; g.font = '800 11px system-ui'; g.textAlign = 'center'; g.fillText(P.l, d.x, d.y + 1);
+            }
+            g.fillStyle = '#fca5a5'; for (const bo of G.bolts) g.fillRect(bo.x - 1.5, bo.y - 8, 3, 12);
+            const p = G.p;
+            const pg = g.createLinearGradient(0, p.y, 0, p.y + p.h);
+            pg.addColorStop(0, G.pw.laser > 0 ? '#fca5a5' : '#fda4af'); pg.addColorStop(1, '#f43f5e');
+            g.fillStyle = pg; g.beginPath(); g.roundRect ? g.roundRect(p.x - p.w / 2, p.y, p.w, p.h, 6) : g.rect(p.x - p.w / 2, p.y, p.w, p.h); g.fill();
+            if (G.pw.laser > 0) { g.fillStyle = '#ef4444'; g.fillRect(p.x - p.w / 2 + 3, p.y - 5, 6, 6); g.fillRect(p.x + p.w / 2 - 9, p.y - 5, 6, 6); }
+            for (const b of G.balls) {
+                g.fillStyle = G.pw.fire > 0 ? '#fb923c' : '#fff';
+                g.shadowColor = G.pw.fire > 0 ? '#f97316' : '#f43f5e'; g.shadowBlur = 12;
+                g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill();
+            }
+            g.shadowBlur = 0;
+            G.fx.draw(g);
+            if (G.combo >= 4) { g.fillStyle = '#fde68a'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.fillText('Combo ×' + (Math.floor(G.combo / 4) + 1), BW / 2, 470); }
+            if (G.msgT > 0) { g.globalAlpha = Math.min(1, G.msgT); g.fillStyle = '#fff'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.fillText(G.msg, BW / 2, 420); g.globalAlpha = 1; }
+            if (G.balls.some(b => b.stuck)) { g.fillStyle = 'rgba(255,255,255,0.75)'; g.font = '600 13px system-ui'; g.textAlign = 'center'; g.fillText('Click, tap or press Space to launch', BW / 2, 540); }
+            if (bbPaused) { g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, 0, BW, BH); g.fillStyle = '#fff'; g.font = '800 30px system-ui'; g.textAlign = 'center'; g.fillText('Paused', BW / 2, BH / 2); }
+        }
+        function startLevel(n) { Arcade.hide('lvOv'); Arcade.hide('endOv'); const [nm, rows] = levelAt(n); newGame(n, rows, nm); }
+        function buildLvGrid() {
+            const host = $('lvGrid'); host.innerHTML = '';
+            const n = Math.max(LEVELS.length, unlocked + 1);
+            for (let i = 0; i < n + 3; i++) {
+                const b = document.createElement('button');
+                b.innerHTML = `<b>${i + 1}</b>${levelAt(i)[0]}`;
+                b.disabled = i > unlocked;
+                b.onclick = () => startLevel(i);
+                host.appendChild(b);
+            }
+        }
+        $('lvBtn').onclick = () => { buildLvGrid(); Arcade.show('lvOv'); };
+        $('lvClose').onclick = () => Arcade.hide('lvOv');
+        $('endLv').onclick = () => { Arcade.hide('endOv'); buildLvGrid(); Arcade.show('lvOv'); };
+        $('endGo').onclick = () => { Arcade.hide('endOv'); if (G.level >= 0) startLevel(G.level); else newGame(-1, G.rows, G.name); };
+        $('pauseBtn').onclick = () => { bbPaused = !bbPaused; $('pauseBtn').textContent = bbPaused ? '▶ Resume' : '⏸ Pause'; };
+        function buildMy() {
+            const host = $('myList'); host.innerHTML = '';
+            if (!custom.length) host.innerHTML = '<p class="small muted center">Nothing yet — build one in the ✏️ Level Editor.</p>';
+            custom.forEach((lv, i) => {
+                const row = document.createElement('div'); row.className = 'lv-row';
+                row.innerHTML = '<b></b><button class="btn sm primary">▶ Play</button><button class="btn sm">✏️</button><button class="btn sm ghost">✕</button>';
+                row.querySelector('b').textContent = lv.name;
+                const [play, edit, del] = row.querySelectorAll('button');
+                play.onclick = () => { Arcade.hide('myOv'); newGame(-1, lv.rows, lv.name); };
+                edit.onclick = () => { Arcade.hide('myOv'); ed.rows = padRows(lv.rows); ed.name = lv.name; setMode('editor'); };
+                del.onclick = () => { custom.splice(i, 1); Arcade.save('arcade.physics.custom', custom); buildMy(); };
+                host.appendChild(row);
+            });
+        }
+        $('myBtn').onclick = () => { buildMy(); Arcade.show('myOv'); };
+        $('myClose').onclick = () => Arcade.hide('myOv');
+        $('impBtn').onclick = () => {
+            const rows = decodeLevel($('impCode').value);
+            if (!rows) { Arcade.toast('That is not a level code', 'bad'); return; }
+            custom.unshift({ name: 'Imported ' + new Date().toLocaleDateString(), rows }); Arcade.save('arcade.physics.custom', custom);
+            $('impCode').value = ''; buildMy(); Arcade.toast('Level added', 'good');
+        };
+
+        /* =====================================================================
+           LEVEL EDITOR
+           ===================================================================== */
+        const padRows = (rows) => Array.from({ length: ROWS }, (_, r) => ((rows[r] || '') + '.'.repeat(COLS)).slice(0, COLS));
+        const trimRows = (rows) => { const out = rows.slice(); while (out.length && /^\.+$/.test(out[out.length - 1])) out.pop(); return out; };
+        const encodeLevel = (rows) => 'BL1:' + trimRows(rows).join('/');
+        function decodeLevel(code) {
+            const m = /^BL1:([.12345XBP/]+)$/.exec((code || '').trim());
+            if (!m) return null;
+            const rows = m[1].split('/').slice(0, ROWS).map(r => (r + '.'.repeat(COLS)).slice(0, COLS));
+            return rows.some(r => /[12345BP]/.test(r)) ? rows : null;
+        }
+        const ed = { rows: padRows([]), brush: '1', mirror: Arcade.load('arcade.physics.mirror', true), hover: null, name: '' };
+        const PAL = [['.', 'Erase', '#334155'], ['1', '1', HP_C[1]], ['2', '2', HP_C[2]], ['3', '3', HP_C[3]], ['4', '4', HP_C[4]], ['5', '5', HP_C[5]], ['X', 'Steel', BRICK.X.c], ['B', '💣', BRICK.B.c], ['P', '★', BRICK.P.c]];
+        function buildPal() {
+            const host = $('pal'); host.innerHTML = '';
+            for (const [k, label, col] of PAL) {
+                const b = document.createElement('button');
+                b.textContent = label; b.style.background = col; b.className = k === ed.brush ? 'on' : '';
+                b.title = k === '.' ? 'Erase' : k === 'X' ? 'Unbreakable steel' : k === 'B' ? 'Bomb: blows up its neighbours' : k === 'P' ? 'Power brick: always drops a power-up' : k + ' hit' + (k === '1' ? '' : 's');
+                b.onclick = () => { ed.brush = k; buildPal(); };
+                host.appendChild(b);
+            }
+            $('mirBtn').classList.toggle('primary', ed.mirror);
+        }
+        $('mirBtn').onclick = () => { ed.mirror = !ed.mirror; Arcade.save('arcade.physics.mirror', ed.mirror); buildPal(); };
+        $('clearBtn').onclick = () => { ed.rows = padRows([]); Arcade.toast('Cleared', null, 900); };
+        $('testBtn').onclick = () => {
+            if (!ed.rows.some(r => /[12345BP]/.test(r))) { Arcade.toast('Place some breakable bricks first', 'bad'); return; }
+            setMode('bricks', true);
+            newGame(-1, trimRows(ed.rows), 'Test: ' + (ed.name || 'my level'), true);
+        };
+        $('saveBtn').onclick = () => {
+            if (!ed.rows.some(r => /[12345BP]/.test(r))) { Arcade.toast('Place some breakable bricks first', 'bad'); return; }
+            const name = (prompt('Name your level', ed.name || 'My level ' + (custom.length + 1)) || '').trim();
+            if (!name) return;
+            ed.name = name;
+            const i = custom.findIndex(l => l.name === name), lv = { name, rows: trimRows(ed.rows) };
+            if (i >= 0) custom[i] = lv; else custom.unshift(lv);
+            Arcade.save('arcade.physics.custom', custom);
+            Arcade.toast('Saved "' + name + '" — play it from ⭐ My levels', 'good', 2200);
+        };
+        $('codeBtn').onclick = () => {
+            const code = encodeLevel(ed.rows);
+            navigator.clipboard && navigator.clipboard.writeText(code).catch(() => { });
+            Arcade.toast('Level code copied: ' + (code.length > 40 ? code.slice(0, 40) + '…' : code), 'good', 2600);
+        };
+        function edPaint(pt) {
+            const col = Math.floor((pt.x - LEFT) / CW), r = Math.floor((pt.y - TOP) / CH);
+            if (col < 0 || col >= COLS || r < 0 || r >= ROWS) return;
+            const set = (cc) => { const row = ed.rows[r].split(''); row[cc] = ed.brush; ed.rows[r] = row.join(''); };
+            set(col);
+            if (ed.mirror) set(COLS - 1 - col);
+        }
+        function drawEditor(g) {
+            g.fillStyle = '#080b18'; g.fillRect(0, 0, BW, BH);
+            g.fillStyle = '#94a3b8'; g.font = '600 12px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText('Click or drag to paint · right-click erases' + (ed.mirror ? ' · mirror on' : ''), BW / 2, 30);
+            for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
+                const x = LEFT + col * CW, y = TOP + r * CH, ch = ed.rows[r][col];
+                g.strokeStyle = 'rgba(148,163,184,0.12)'; g.strokeRect(x + 0.5, y + 0.5, CW - 1, CH - 1);
+                if (ch !== '.') drawBrick(g, { t: ch, hp: BRICK[ch].hp, hit: 0 }, x + 1, y + 1, CW - 2, CH - 2);
+            }
+            if (ed.hover) {
+                const { col, r } = ed.hover;
+                g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(LEFT + col * CW + 1, TOP + r * CH + 1, CW - 2, CH - 2);
+                if (ed.mirror) { g.strokeStyle = 'rgba(255,255,255,0.4)'; g.strokeRect(LEFT + (COLS - 1 - col) * CW + 1, TOP + r * CH + 1, CW - 2, CH - 2); }
+                g.lineWidth = 1;
+            }
+            g.fillStyle = 'rgba(244,63,94,0.5)'; g.beginPath(); g.roundRect ? g.roundRect(BW / 2 - 42, 600, 84, 12, 6) : g.rect(BW / 2 - 42, 600, 84, 12); g.fill();
+            g.strokeStyle = 'rgba(244,63,94,0.25)'; g.setLineDash([4, 6]); g.beginPath(); g.moveTo(BW / 2, TOP + ROWS * CH + 8); g.lineTo(BW / 2, 592); g.stroke(); g.setLineDash([]);
+        }
+
+        /* =====================================================================
+           Modes, input, loop
+           ===================================================================== */
+        function setMode(m, keepGame) {
+            mode = m;
+            document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+            $('barShorts').hidden = m !== 'shorts'; $('barBricks').hidden = m !== 'bricks'; $('barEditor').hidden = m !== 'editor';
+            $('sideBtns').hidden = m !== 'shorts';
+            view.setSize(m === 'shorts' ? 360 : BW, 640);
+            if (m === 'bricks' && !keepGame && (!G || G.over || G.test)) startLevel(unlocked);
+            if (m === 'editor') buildPal();
+            $('help').innerHTML = m === 'shorts' ? '<span class="desktop-only">Scroll, <kbd>↓</kbd>/<kbd>↑</kbd> or the arrows to change · <kbd>Space</kbd> pause · <kbd>R</kbd> replay · <kbd>L</kbd> like</span><span class="touch-only">Swipe up for the next simulation · tap to pause</span>'
+                : m === 'bricks' ? '<span class="desktop-only">Mouse or <kbd>←</kbd><kbd>→</kbd> to move · click / <kbd>Space</kbd> launch & fire lasers · <kbd>P</kbd> pause</span><span class="touch-only">Drag to move the paddle · tap to launch</span>'
+                : 'Pick a brick, paint the grid, then ▶ Test it. Save it to ⭐ My levels or share its code.';
+            hud();
+        }
+        document.querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => setMode(b.dataset.mode); });
+        function hud() {
+            if (mode === 'shorts') {
+                Arcade.text('cAl', 'Watched'); Arcade.text('cA', watched);
+                Arcade.text('cBl', 'Liked'); Arcade.text('cB', likes.length);
+                Arcade.text('cCl', 'Best'); Arcade.text('cC', Arcade.fmt(Arcade.load('arcade.physics.best', 0) || 0));
+            } else if (mode === 'bricks' && G) {
+                Arcade.text('cAl', 'Score'); Arcade.text('cA', Arcade.fmt(G.score));
+                Arcade.text('cBl', 'Lives'); Arcade.text('cB', G.lives);
+                Arcade.text('cCl', 'Best'); Arcade.text('cC', Arcade.fmt(Math.max(G.score, Arcade.load('arcade.physics.best', 0) || 0)));
+            } else {
+                Arcade.text('cAl', 'My levels'); Arcade.text('cA', custom.length);
+                Arcade.text('cBl', 'Unlocked'); Arcade.text('cB', unlocked + 1);
+                Arcade.text('cCl', 'Best'); Arcade.text('cC', Arcade.fmt(Arcade.load('arcade.physics.best', 0) || 0));
+            }
+        }
+
+        const keys = { left: false, right: false, fire: false };
+        let pointerDown = false, swipe0 = null, wheelLock = 0;
+        cv.addEventListener('pointerdown', (e) => {
+            const pt = Arcade.pointer(cv, e, view.w, view.h);
+            pointerDown = true;
+            if (mode === 'shorts') { swipe0 = { x: e.clientX, y: e.clientY, t: performance.now() }; return; }
+            if (mode === 'bricks') { if (G && !G.over) { G.p.x = pt.x; launch(); } return; }
+            if (mode === 'editor') { if (e.button === 2) { const b = ed.brush; ed.brush = '.'; edPaint(pt); ed.brush = b; } else edPaint(pt); cv.setPointerCapture(e.pointerId); }
+        });
+        cv.addEventListener('pointermove', (e) => {
+            const pt = Arcade.pointer(cv, e, view.w, view.h);
+            if (mode === 'bricks' && G && !bbPaused && (e.pointerType === 'mouse' || pointerDown)) G.p.x = pt.x;
+            if (mode === 'editor') {
+                const col = Math.floor((pt.x - LEFT) / CW), r = Math.floor((pt.y - TOP) / CH);
+                ed.hover = col >= 0 && col < COLS && r >= 0 && r < ROWS ? { col, r } : null;
+                if (pointerDown) { if (e.buttons === 2) { const b = ed.brush; ed.brush = '.'; edPaint(pt); ed.brush = b; } else edPaint(pt); }
+            }
+        });
+        const up = (e) => {
+            pointerDown = false;
+            if (mode === 'shorts' && swipe0) {
+                const dy = e.clientY - swipe0.y, dx = e.clientX - swipe0.x;
+                if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) go(idx + (dy < 0 ? 1 : -1), dy < 0 ? 1 : -1);
+                else if (Math.abs(dy) < 10 && Math.abs(dx) < 10 && performance.now() - swipe0.t < 400) paused = !paused;
+                swipe0 = null;
+            }
+        };
+        cv.addEventListener('pointerup', up);
+        cv.addEventListener('pointercancel', () => { pointerDown = false; swipe0 = null; });
+        cv.addEventListener('contextmenu', (e) => e.preventDefault());
+        cv.addEventListener('wheel', (e) => {
+            if (mode !== 'shorts') return;
+            e.preventDefault();
+            const now = performance.now();
+            if (now < wheelLock || Math.abs(e.deltaY) < 8) return;
+            wheelLock = now + 500;
+            go(idx + (e.deltaY > 0 ? 1 : -1), e.deltaY > 0 ? 1 : -1);
+        }, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (mode === 'shorts') {
+                if (e.code === 'ArrowDown' || e.code === 'KeyJ') { e.preventDefault(); go(idx + 1, 1); }
+                else if (e.code === 'ArrowUp' || e.code === 'KeyK') { e.preventDefault(); go(idx - 1, -1); }
+                else if (e.code === 'Space') { e.preventDefault(); paused = !paused; }
+                else if (e.code === 'KeyR') replay();
+                else if (e.code === 'KeyL') toggleLike();
+                return;
+            }
+            if (mode === 'bricks') {
+                if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+                if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+                if (e.code === 'Space') { e.preventDefault(); keys.fire = true; if (G && !G.over) launch(); }
+                if (e.code === 'KeyP' || e.code === 'Escape') $('pauseBtn').click();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'Space') keys.fire = false;
+        });
+
+        const loop = Arcade.loop((dt) => {
+            c.setTransform(1, 0, 0, 1, 0, 0);
+            const k = view.scale * Math.min(window.devicePixelRatio || 1, 2);
+            c.setTransform(k, 0, 0, k, 0, 0);
+            if (mode === 'shorts') {
+                if (sim && !paused) stepSim(sim, dt);
+                if (sim && sim.done && auto && sim.doneT > 3 && !slide) go(idx + 1, 1);
+                if (slide) {
+                    slide.t += dt / 0.3;
+                    const t = Math.min(1, slide.t), e = 1 - Math.pow(1 - t, 3), off = 640 * e * slide.dir;
+                    c.save(); c.translate(0, 640 * slide.dir - off); drawSim(sim, c); c.restore();
+                    c.save(); c.setTransform(1, 0, 0, 1, 0, -off * k); c.drawImage(snap, 0, 0); c.restore();
+                    if (t >= 1) slide = null;
+                } else if (sim) drawSim(sim, c);
+            } else if (mode === 'bricks') {
+                if (G) { stepBB(dt); drawBB(c); }
+            } else drawEditor(c);
+        });
+        document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'bricks' && G && !G.over) { bbPaused = true; $('pauseBtn').textContent = '▶ Resume'; } });
+
+        setMode('shorts');
+        go(0, 1);
+        slide = null;
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

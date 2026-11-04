@@ -1,0 +1,123 @@
+/* Chicken Farming — page styles shared by the farm and market pages */
+:root { --accent: #fbbf24; --accent-2: #f97316; --accent-ink: #1f1300; }
+
+.page { width: min(1120px, 100%); margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 16px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+
+.nav-seg .btn { text-decoration: none; }
+
+.hero { text-align: center; position: relative; overflow: hidden; }
+.hero .eggs { font-size: 2.6rem; font-weight: 850; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hero .sub { color: var(--muted); font-size: 0.85rem; }
+.minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+.mini { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.mini small { display: block; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.mini b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+.tap-target {
+    font-size: 5rem; line-height: 1; padding: 10px 26px; border-radius: 26px;
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+    border: 1px solid var(--line); cursor: pointer; user-select: none; transition: transform 0.08s;
+    position: relative; display: inline-block;
+}
+.tap-target:active { transform: scale(0.92); }
+.tap-target.boss { background: radial-gradient(circle at 50% 40%, rgba(248, 113, 113, 0.25), transparent 70%); }
+.tap-target.hit { animation: hitShake 0.15s; }
+@keyframes hitShake { 50% { transform: translateX(4px) rotate(4deg); } }
+
+.floater { position: absolute; pointer-events: none; font-weight: 800; color: var(--accent); animation: floatUp 0.9s ease-out forwards; white-space: nowrap; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+.floater.crit { color: var(--bad); font-size: 1.2rem; }
+@keyframes floatUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -60px); } }
+
+.xp { margin-top: 6px; }
+.bar.hp > i { background: linear-gradient(90deg, #22c55e, #86efac); }
+.bar.hp.boss > i { background: linear-gradient(90deg, #ef4444, #f97316); }
+.bar.evil > i { background: linear-gradient(90deg, #a855f7, #ef4444); }
+.bar.big { height: 16px; }
+
+.evil-panel { border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); }
+.evil-panel h3 { color: var(--bad) !important; }
+
+.farmers { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.farmer { display: flex; flex-direction: column; gap: 8px; }
+.farmer .head { display: flex; gap: 10px; align-items: center; }
+.farmer .icon { font-size: 1.8rem; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--bg-2); }
+.farmer .name { font-weight: 800; }
+.farmer .meta { font-size: 0.78rem; color: var(--muted); }
+.farmer .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.farmer .btns .btn { padding: 7px 6px; font-size: 0.78rem; }
+.farmer .btns .wide { grid-column: span 2; }
+
+.locked { text-align: center; padding: 26px; color: var(--muted); }
+.locked .big { font-size: 2.4rem; }
+
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.up-list { display: flex; flex-direction: column; gap: 8px; }
+.up-item { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.up-item .ic { font-size: 1.5rem; grid-row: span 2; }
+.up-item b { font-size: 0.9rem; }
+.up-item small { color: var(--muted); font-size: 0.75rem; grid-column: 2; }
+.up-item .btn { grid-row: span 2; grid-column: 3; min-width: 96px; }
+.up-item.locked-item { opacity: 0.55; }
+.up-item.owned { border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+
+.modal-list { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-top: 12px; }
+.danger-zone { text-align: center; }
+.page[hidden] { display: none !important; }
+.nav-seg .btn { position: relative; }
+.dotnote { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); }
+
+/* expeditions */
+.trip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+.trip, .art { display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.trip .ti, .art .ti { font-size: 1.8rem; }
+.trip small, .art small { color: var(--muted); font-size: 0.75rem; }
+.trip .btn { margin-top: 6px; }
+.trip-run { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--good) 10%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--good) 40%, transparent); }
+.trip-run .ti { font-size: 2.2rem; }
+.art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.art.missing { opacity: 0.5; }
+.loot-icon { font-size: 3.4rem; }
+
+/* golden coop */
+.golden-panel { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface) 60%); }
+.golden-panel h3 { color: var(--gold) !important; }
+.retire { display: grid; grid-template-columns: 1fr 230px; gap: 16px; align-items: center; }
+.retire-box { text-align: center; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
+.retire-box small { color: var(--muted); font-size: 0.75rem; }
+.retire-box .gain { font-size: 2rem; font-weight: 900; color: var(--gold); }
+.golden-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+@media (max-width: 640px) { .retire { grid-template-columns: 1fr; } .topbar .nav-seg { order: 4; width: 100%; } }
+
+/* egg hunt */
+.field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.field { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.field:hover:not(:disabled) { border-color: var(--accent); }
+.field.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent) inset; }
+.field:disabled { opacity: 0.5; cursor: default; }
+.field .fi { font-size: 1.6rem; }
+.field small { color: var(--muted); font-size: 0.72rem; }
+.hunt-hud { gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.hearts { font-size: 1.15rem; letter-spacing: 2px; }
+.hunt-msg { min-height: 1.4em; text-align: center; font-weight: 700; margin-bottom: 6px; }
+.hunt-wrap { display: flex; justify-content: center; overflow-x: auto; padding: 4px 0; }
+.hunt-board { display: grid; gap: 3px; padding: 8px; border-radius: 14px; background: #2b2113; border: 1px solid var(--line-2); width: max-content; max-width: 100%; touch-action: manipulation; user-select: none; }
+.hunt-board.bite { animation: hitShake 0.25s; }
+.hunt-empty { padding: 30px 20px; color: var(--muted); }
+.hcell { width: var(--cs, 32px); height: var(--cs, 32px); padding: 0; border: 0; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: calc(var(--cs, 32px) * 0.55); line-height: 1; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(160deg, #5fae45, #3f8a33); box-shadow: 0 2px 0 #2c6024; font-family: "Segoe UI", system-ui, "Segoe UI Emoji", sans-serif; }
+.hcell:hover:not(.open) { filter: brightness(1.15); }
+.hcell.open { background: #d8c49a; box-shadow: none; cursor: default; }
+.hcell.open.egg { background: #fde68a; box-shadow: 0 0 8px rgba(251, 191, 36, 0.7) inset; }
+.hcell.open.egg { font-size: calc(var(--cs, 32px) * 0.62); }
+.hcell.flag { background: linear-gradient(160deg, #6fbf55, #468f39); }
+.hcell.fox { background: #f87171; }
+.hcell.ghost { background: #c8b690; opacity: 0.75; }
+.hcell.wrong { background: #7f1d1d; }
+.hcell.n1 { color: #2563eb; } .hcell.n2 { color: #15803d; } .hcell.n3 { color: #dc2626; } .hcell.n4 { color: #7c3aed; }
+.hcell.n5 { color: #9a3412; } .hcell.n6 { color: #0e7490; } .hcell.n7 { color: #1f2937; } .hcell.n8 { color: #6b7280; }
+.hcell.open.n0 { color: transparent; }
+
+/* with more tabs the top bar wraps onto two rows; make sure it grows instead of being squashed over the page */
+.topbar { flex-shrink: 0; }

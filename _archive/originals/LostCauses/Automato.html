@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Circuit Flow | Advanced Evolution</title>
+    <style>
+        body { background: #121212; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; user-select: none; }
+        #sidebar { 
+            position: absolute; top: 10px; left: 10px; width: 290px; 
+            background: rgba(20, 20, 20, 0.95); border: 2px solid #444; 
+            padding: 15px; z-index: 100; max-height: 95vh; overflow-y: auto;
+        }
+        .stat-box { background: #000; padding: 10px; border: 1px solid #0f0; margin-bottom: 10px; font-family: monospace; }
+        .res { color: #0f0; display: block; font-size: 0.9em; }
+        .tool { background: #333; border: 1px solid #555; color: #fff; padding: 8px; margin-bottom: 5px; cursor: pointer; width: 100%; text-align: left; }
+        .tool:hover:not(:disabled) { background: #444; }
+        .tool.active { border-color: #0f0; background: #224422; }
+        .tool:disabled { opacity: 0.3; cursor: not-allowed; }
+        .limit-info { font-size: 0.75em; color: #aaa; margin-bottom: 5px; display: block; }
+        .tier-header { color: #ffcc00; font-weight: bold; margin-top: 15px; display: block; border-bottom: 1px solid #444; padding-bottom: 3px; }
+        #mining-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; height: 10px; background: #333; border: 1px solid #fff; display: none; }
+        #mining-progress { height: 100%; background: #0f0; width: 0%; }
+        kbd { background: #444; padding: 2px 4px; border-radius: 3px; font-size: 0.8em; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="sidebar">
+    <div class="stat-box">
+        <span class="res">WOOD: <span id="res-wood">0</span></span>
+        <span class="res">STONE: <span id="res-stone">0</span></span>
+        <span class="res">CASH: $<span id="res-money">0</span></span>
+    </div>
+
+    <span class="tier-header">Interaction Tools</span>
+    <button class="tool active" id="tool-mine" onclick="setMode('mine')">⛏️ Mining Tool (Hold Click)</button>
+    <button class="tool" id="tool-select" onclick="setMode('select')">🖱️ Selection Tool (Shift+Drag)</button>
+
+    <span class="tier-header">Infrastructure</span>
+    <div class="limit-info">Limit: <span id="count-conveyor">0</span>/<span id="limit-conveyor">10</span> 
+        (<button onclick="buyLimit('conveyor')" style="font-size: 0.8em;">+$50 Upgrade</button>)</div>
+    <button class="tool" id="btn-conveyor" onclick="setBuilding('conveyor', {wood:2})">Conveyor (2 Wood)</button>
+
+    <div class="limit-info">Limit: <span id="count-storage">0</span>/<span id="limit-storage">5</span> 
+        (<button onclick="buyLimit('storage')" style="font-size: 0.8em;">+$100 Upgrade</button>)</div>
+    <button class="tool" id="btn-storage" onclick="setBuilding('storage', {wood:5})">Storage Bin (5 Wood)</button>
+
+    <span class="tier-header">Extraction</span>
+    <div class="limit-info">Limit: <span id="count-extractor">0</span>/<span id="limit-extractor">3</span> 
+        (<button onclick="buyLimit('extractor')" style="font-size: 0.8em;">+$200 Upgrade</button>)</div>
+    <button class="tool" id="btn-ext-wood" onclick="setBuilding('extractor', {wood:10}, 'wood')">Wood Extractor (10 Wood)</button>
+    <button class="tool" id="btn-ext-stone" onclick="setBuilding('extractor', {wood:20, stone:10}, 'stone')">Stone Extractor (20W, 10S)</button>
+
+    <span class="tier-header">Commerce</span>
+    <button class="tool" onclick="setBuilding('export', {stone:25})">Export Hub (25 Stone)</button>
+    <button class="tool" style="color: #f55;" onclick="setBuilding('delete', {})">Demolish Tool</button>
+</div>
+
+<div id="mining-bar"><div id="mining-progress"></div></div>
+<canvas id="factoryCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('factoryCanvas');
+    const ctx = canvas.getContext('2d');
+    const GRID_SIZE = 40;
+    
+    let inventory = { wood: 0, stone: 0, money: 100 };
+    let mode = 'mine'; // 'mine', 'select', 'build', 'delete'
+    let currentBuilding = 'conveyor', buildingCost = {wood:2}, buildingSub = '';
+    let limits = { conveyor: 10, storage: 5, extractor: 3 };
+    let limitCosts = { conveyor: 50, storage: 100, extractor: 200 };
+    let buildingCounts = { conveyor: 0, storage: 0, extractor: 0, export: 0 };
+    
+    let rotation = 0, factory = {}, items = [];
+    let camX = 0, camY = 0, zoom = 1, isPanning = false, lastMouse = {x:0, y:0};
+    let isMouseDown = false, mineTimer = 0, selectionBox = null, selectedKeys = [];
+
+    const colors = { wood: '#8B4513', stone: '#808080', core: '#FFD700', storage: '#44a', export: '#f90', conveyor: '#333' };
+
+    function setMode(newMode) {
+        mode = newMode;
+        document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
+        document.getElementById('tool-' + (newMode === 'select' ? 'select' : 'mine'))?.classList.add('active');
+    }
+
+    function setBuilding(type, cost, sub = '') {
+        mode = (type === 'delete') ? 'delete' : 'build';
+        currentBuilding = type; buildingCost = cost; buildingSub = sub;
+        document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
+        if(event) event.target.classList.add('active');
+    }
+
+    function buyLimit(type) {
+        const cost = limitCosts[type];
+        if(inventory.money >= cost) {
+            inventory.money -= cost;
+            limits[type] += 5;
+            limitCosts[type] = Math.floor(limitCosts[type] * 1.5);
+            updateUI();
+        }
+    }
+
+    function updateUI() {
+        for(let res in inventory) document.getElementById('res-' + res).innerText = Math.floor(inventory[res]);
+        for(let type in limits) {
+            document.getElementById('limit-' + type).innerText = limits[type];
+            document.getElementById('count-' + type).innerText = buildingCounts[type];
+        }
+    }
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.onresize = resize; resize();
+
+    const getMouseWorld = (e) => ({
+        x: Math.floor(((e.clientX) / zoom - camX) / GRID_SIZE),
+        y: Math.floor(((e.clientY) / zoom - camY) / GRID_SIZE)
+    });
+
+    canvas.onmousedown = (e) => {
+        if(e.button === 2) { isPanning = true; return; }
+        isMouseDown = true;
+        const w = getMouseWorld(e);
+        if(mode === 'select' && e.shiftKey) {
+            selectionBox = { x1: w.x, y1: w.y, x2: w.x, y2: w.y };
+        } else if(mode === 'delete') {
+            const key = `${w.x},${w.y}`;
+            if(factory[key]) {
+                buildingCounts[factory[key].type]--;
+                delete factory[key];
+                updateUI();
+            }
+        } else if(mode === 'build') {
+            placeBuilding(w.x, w.y);
+        }
+    };
+
+    window.onmousemove = (e) => {
+        const w = getMouseWorld(e);
+        if(isPanning) {
+            camX += (e.clientX - lastMouse.x) / zoom;
+            camY += (e.clientY - lastMouse.y) / zoom;
+        }
+        if(selectionBox) { selectionBox.x2 = w.x; selectionBox.y2 = w.y; updateSelection(); }
+        lastMouse = {x: e.clientX, y: e.clientY};
+    };
+
+    window.onmouseup = () => {
+        isPanning = false; isMouseDown = false; selectionBox = null;
+        document.getElementById('mining-bar').style.display = 'none';
+        mineTimer = 0;
+    };
+
+    function updateSelection() {
+        selectedKeys = [];
+        const xMin = Math.min(selectionBox.x1, selectionBox.x2), xMax = Math.max(selectionBox.x1, selectionBox.x2);
+        const yMin = Math.min(selectionBox.y1, selectionBox.y2), yMax = Math.max(selectionBox.y1, selectionBox.y2);
+        for(let k in factory) {
+            const [x,y] = k.split(',').map(Number);
+            if(x >= xMin && x <= xMax && y >= yMin && y <= yMax) selectedKeys.push(k);
+        }
+    }
+
+    function placeBuilding(x, y) {
+        const key = `${x},${y}`;
+        if(factory[key]) return;
+        if(buildingCounts[currentBuilding] >= (limits[currentBuilding] || 999)) return;
+        
+        let canAfford = true;
+        for(let res in buildingCost) if((inventory[res] || 0) < buildingCost[res]) canAfford = false;
+        
+        if(canAfford) {
+            for(let res in buildingCost) inventory[res] -= buildingCost[res];
+            factory[key] = { type: currentBuilding, sub: buildingSub, dir: rotation, timer: 0, inv: [] };
+            buildingCounts[currentBuilding] = (buildingCounts[currentBuilding] || 0) + 1;
+            updateUI();
+        }
+    }
+
+    window.onkeydown = (e) => {
+        if(e.key.toLowerCase() === 'r') rotation = (rotation + 1) % 4;
+        const move = {w:{x:0,y:-1}, a:{x:-1,y:0}, s:{x:0,y:1}, d:{x:1,y:0}}[e.key.toLowerCase()];
+        if(move && selectedKeys.length > 0) {
+            let nextBatch = {};
+            selectedKeys.forEach(k => {
+                const [x,y] = k.split(',').map(Number);
+                nextBatch[`${x+move.x},${y+move.y}`] = factory[k];
+                delete factory[k];
+            });
+            Object.assign(factory, nextBatch);
+            selectedKeys = selectedKeys.map(k => {
+                const [x,y] = k.split(',').map(Number);
+                return `${x+move.x},${y+move.y}`;
+            });
+        }
+    };
+
+    function gameLoop() {
+        if(isMouseDown && mode === 'mine') {
+            mineTimer++;
+            document.getElementById('mining-bar').style.display = 'block';
+            document.getElementById('mining-progress').style.width = (mineTimer/50)*100 + '%';
+            if(mineTimer >= 50) { inventory.wood += 1; updateUI(); mineTimer = 0; }
+        }
+
+        for(let k in factory) {
+            let b = factory[k], [x,y] = k.split(',').map(Number);
+            let v = [{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}][b.dir];
+            if(b.type === 'extractor' && ++b.timer >= 100 && factory[`${x+v.x},${y+v.y}`]) {
+                items.push({sx:x, sy:y, tx:x+v.x, ty:y+v.y, p:0, type: b.sub}); b.timer = 0;
+            }
+        }
+
+        for(let i=items.length-1; i>=0; i--) {
+            let it = items[i]; it.p += 0.02;
+            if(it.p >= 1) {
+                let node = factory[`${it.tx},${it.ty}`];
+                if(node && node.type === 'conveyor') {
+                    let v = [{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}][node.dir];
+                    it.sx = it.tx; it.sy = it.ty; it.tx += v.x; it.ty += v.y; it.p = 0;
+                } else if(node && node.type === 'storage') {
+                    inventory[it.type] = (inventory[it.type] || 0) + 1; updateUI(); items.splice(i,1);
+                } else if(node && node.type === 'export') {
+                    inventory.money += (it.type === 'stone' ? 20 : 5); updateUI(); items.splice(i,1);
+                } else items.splice(i,1);
+            }
+        }
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        ctx.setTransform(zoom, 0, 0, zoom, camX * zoom, camY * zoom);
+        ctx.clearRect(-camX, -camY, canvas.width/zoom, canvas.height/zoom);
+
+        for(let k in factory) {
+            let [x,y] = k.split(',').map(Number), b = factory[k];
+            ctx.fillStyle = selectedKeys.includes(k) ? '#0f0' : (colors[b.type] || colors[b.sub] || '#444');
+            ctx.fillRect(x*GRID_SIZE+2, y*GRID_SIZE+2, GRID_SIZE-4, GRID_SIZE-4);
+            ctx.strokeStyle = "white"; ctx.beginPath();
+            let v = [{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}][b.dir];
+            ctx.moveTo((x+0.5)*GRID_SIZE, (y+0.5)*GRID_SIZE); ctx.lineTo((x+0.5+v.x*0.4)*GRID_SIZE, (y+0.5+v.y*0.4)*GRID_SIZE); ctx.stroke();
+        }
+
+        items.forEach(it => { ctx.fillStyle = colors[it.type] || '#fff'; ctx.beginPath(); ctx.arc((it.sx+(it.tx-it.sx)*it.p+0.5)*GRID_SIZE, (it.sy+(it.ty-it.sy)*it.p+0.5)*GRID_SIZE, 5, 0, 7); ctx.fill(); });
+
+        if(selectionBox) { ctx.strokeStyle = '#0f0'; ctx.strokeRect(selectionBox.x1*GRID_SIZE, selectionBox.y1*GRID_SIZE, (selectionBox.x2-selectionBox.x1)*GRID_SIZE, (selectionBox.y2-selectionBox.y1)*GRID_SIZE); }
+
+        if(mode === 'build' || mode === 'delete') {
+            const w = getMouseWorld({clientX: lastMouse.x, clientY: lastMouse.y});
+            ctx.globalAlpha = 0.3; ctx.fillStyle = (mode === 'delete') ? '#f55' : (colors[currentBuilding] || colors[buildingSub] || '#fff');
+            ctx.fillRect(w.x*GRID_SIZE, w.y*GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    updateUI(); gameLoop();
+</script>
+</body>
+</html>

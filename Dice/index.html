@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Poker · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f97316; --accent-2: #facc15; --accent-ink: #1f0b00; }
+        body.no-scroll { overflow: auto; }
+        .stage { justify-content: flex-start; gap: 12px; }
+        .table { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; width: 100%; }
+        .play { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 300px; }
+        .felt { padding: 18px 16px; border-radius: 18px; background: radial-gradient(circle at 50% 30%, #166534, #052e16); border: 1px solid var(--line-2); box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .dice { display: flex; gap: 10px; }
+        .die { width: 58px; height: 58px; border-radius: 13px; background: #f8fafc; border: 0; cursor: pointer; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; box-shadow: 0 4px 0 #cbd5e1, 0 8px 14px rgba(0,0,0,0.4); transition: transform 0.12s; position: relative; }
+        .die i { width: 10px; height: 10px; border-radius: 50%; background: #0f172a; place-self: center; visibility: hidden; }
+        .die.held { transform: translateY(-8px); box-shadow: 0 0 0 3px var(--accent), 0 8px 14px rgba(0,0,0,0.4); }
+        .die.held::after { content: 'HELD'; position: absolute; bottom: -20px; left: 0; right: 0; font-size: 0.6rem; font-weight: 800; color: var(--accent); text-align: center; }
+        .die.roll { animation: roll 0.45s ease-out; }
+        .die:disabled { cursor: default; }
+        @keyframes roll { 0% { transform: rotate(0) scale(0.8); } 50% { transform: rotate(200deg) scale(1.05); } 100% { transform: rotate(360deg) scale(1); } }
+        .turninfo { font-weight: 700; text-align: center; min-height: 1.4em; }
+        table.sheet { border-collapse: collapse; background: var(--surface); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); font-size: 0.86rem; }
+        .sheet th, .sheet td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: center; }
+        .sheet th { background: var(--surface-2); font-size: 0.78rem; }
+        .sheet th.cur { background: color-mix(in srgb, var(--accent) 35%, var(--surface-2)); }
+        .sheet td:first-child, .sheet th:first-child { text-align: left; color: var(--muted); }
+        .sheet td.opt { color: var(--accent); cursor: pointer; font-style: italic; opacity: 0.8; }
+        .sheet td.opt:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); opacity: 1; }
+        .sheet td.zero { color: var(--dim); }
+        .sheet tr.sum td { background: var(--bg-2); font-weight: 800; }
+        .sheet td.last { background: rgba(250, 204, 21, 0.15); }
+        .opts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Dice Poker</h1>
+        <div class="stats">
+            <span class="chip accent">Best <b id="best">0</b></span>
+            <span class="chip">Wins <b id="wins">0</b></span>
+            <span class="chip gold hide-sm">Five of a kind <b id="yz">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="opts">
+            <span class="small muted">Opponents:</span>
+            <div class="seg" id="botSeg"><button class="btn sm" data-v="0">Solo</button><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
+            <button class="btn sm" id="newBtn">⟲ New game</button>
+        </div>
+        <div class="table">
+            <div class="play">
+                <div class="felt">
+                    <div class="turninfo" id="info">Roll the dice!</div>
+                    <div class="dice" id="dice"></div>
+                    <div style="height:10px"></div>
+                    <button class="btn primary lg" id="rollBtn">🎲 Roll (3 left)</button>
+                </div>
+                <p class="tiny dim center" style="max-width:320px;margin:0">Roll up to three times. Click dice to hold them, then pick a box on the score sheet. Upper section total of 63+ earns a 35 bonus. <kbd>Space</kbd> rolls · <kbd>1</kbd>–<kbd>5</kbd> hold.</p>
+            </div>
+            <table class="sheet" id="sheet"></table>
+        </div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">Game over</h2>
+                <div class="big-num" id="endScore">0</div>
+                <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const CATS = [
+            ['ones', 'Ones', 'u'], ['twos', 'Twos', 'u'], ['threes', 'Threes', 'u'], ['fours', 'Fours', 'u'], ['fives', 'Fives', 'u'], ['sixes', 'Sixes', 'u'],
+            ['three', '3 of a kind', 'l'], ['four', '4 of a kind', 'l'], ['full', 'Full house', 'l'], ['small', 'Sm. straight', 'l'], ['large', 'Lg. straight', 'l'], ['yahtzee', 'Five of a kind', 'l'], ['chance', 'Chance', 'l'],
+        ];
+        const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+        const stats = Object.assign({ wins: 0, played: 0, yahtzees: 0 }, Arcade.load('arcade.dice.stats', {}));
+        let bots = Arcade.load('arcade.dice.bots', 1);
+        let players, turn, dice, held, rollsLeft, busy, lastCell = null, round;
+
+        function score(cat, d) {
+            const cnt = [0, 0, 0, 0, 0, 0, 0]; let sum = 0;
+            for (const v of d) { cnt[v]++; sum += v; }
+            const max = Math.max(...cnt), has = (a) => a.every(v => cnt[v]);
+            switch (cat) {
+                case 'ones': return cnt[1]; case 'twos': return cnt[2] * 2; case 'threes': return cnt[3] * 3;
+                case 'fours': return cnt[4] * 4; case 'fives': return cnt[5] * 5; case 'sixes': return cnt[6] * 6;
+                case 'three': return max >= 3 ? sum : 0;
+                case 'four': return max >= 4 ? sum : 0;
+                case 'full': return (cnt.includes(3) && cnt.includes(2)) || max === 5 ? 25 : 0;
+                case 'small': return has([1, 2, 3, 4]) || has([2, 3, 4, 5]) || has([3, 4, 5, 6]) ? 30 : 0;
+                case 'large': return has([1, 2, 3, 4, 5]) || has([2, 3, 4, 5, 6]) ? 40 : 0;
+                case 'yahtzee': return max === 5 ? 50 : 0;
+                case 'chance': return sum;
+            }
+            return 0;
+        }
+        const isYahtzee = (d) => d.every(v => v === d[0]);
+        // Joker rule: an extra five-of-a-kind counts as a full house / straight when its upper box is used
+        function scoreFor(p, cat, d) {
+            let s = score(cat, d);
+            if (isYahtzee(d) && p.sheet.yahtzee === 50 && p.sheet[CATS[d[0] - 1][0]] != null) {
+                if (cat === 'full') s = 25; if (cat === 'small') s = 30; if (cat === 'large') s = 40;
+            }
+            return s;
+        }
+        const upper = (p) => CATS.slice(0, 6).reduce((a, [k]) => a + (p.sheet[k] || 0), 0);
+        const bonus = (p) => (upper(p) >= 63 ? 35 : 0);
+        const total = (p) => CATS.reduce((a, [k]) => a + (p.sheet[k] || 0), 0) + bonus(p) + p.ybonus;
+
+        function newGame() {
+            players = [{ name: 'You', bot: false, sheet: {}, ybonus: 0 }];
+            for (let i = 0; i < bots; i++) players.push({ name: ['Ada', 'Rex', 'Moe'][i] + ' 🤖', bot: true, sheet: {}, ybonus: 0 });
+            turn = 0; round = 1; Arcade.hide('endOv');
+            startTurn();
+        }
+        function startTurn() {
+            dice = [1, 2, 3, 4, 5]; held = [false, false, false, false, false]; rollsLeft = 3; busy = false; lastCell = lastCell;
+            const p = players[turn];
+            $('info').textContent = p.bot ? p.name + ' is playing…' : 'Your turn — roll the dice!';
+            render();
+            if (p.bot) botTurn();
+        }
+        function roll(animate = true) {
+            if (rollsLeft <= 0 || busy) return false;
+            rollsLeft--;
+            for (let i = 0; i < 5; i++) if (!held[i]) dice[i] = Arcade.randi(1, 6);
+            Arcade.tone(300, 0.05, 'square', 0.03); setTimeout(() => Arcade.tone(380, 0.05, 'square', 0.03), 80);
+            render(animate);
+            const p = players[turn];
+            if (isYahtzee(dice)) {
+                $('info').textContent = (p.bot ? p.name + ' rolled' : 'You rolled') + ' FIVE OF A KIND! 🎉';
+                if (!p.bot) { Arcade.sfx('win'); stats.yahtzees++; Arcade.save('arcade.dice.stats', stats); Arcade.count('yahtzee'); }
+            } else if (!p.bot) $('info').textContent = rollsLeft ? `${rollsLeft} roll${rollsLeft > 1 ? 's' : ''} left — hold dice or pick a box` : 'Pick a box to score';
+            return true;
+        }
+        function choose(cat) {
+            const p = players[turn];
+            if (p.sheet[cat] != null || rollsLeft === 3) return;
+            if (isYahtzee(dice) && p.sheet.yahtzee === 50) { p.ybonus += 100; if (!p.bot) Arcade.toast('+100 bonus for another five of a kind!', 'gold'); }
+            p.sheet[cat] = scoreFor(p, cat, dice);
+            lastCell = { turn, cat };
+            Arcade.sfx(p.sheet[cat] ? 'score' : 'bad');
+            nextTurn();
+        }
+        function nextTurn() {
+            turn = (turn + 1) % players.length;
+            if (turn === 0) round++;
+            if (players.every(p => CATS.every(([k]) => p.sheet[k] != null))) return end();
+            startTurn();
+        }
+        function end() {
+            render();
+            const me = players[0], my = total(me);
+            const ranking = players.slice().sort((a, b) => total(b) - total(a));
+            const won = bots > 0 && ranking[0] === me && total(ranking[1]) < my;
+            const r = Arcade.best('arcade.dice.best', my);
+            stats.played++; if (won) stats.wins++;
+            Arcade.save('arcade.dice.stats', stats);
+            Arcade.report('score', my);
+            if (won) Arcade.count('win');
+            Arcade.addXP(Math.min(50, Math.floor(my / 8)), true);
+            Arcade.sfx(won || !bots ? 'win' : 'die');
+            $('endTitle').textContent = !bots ? 'Final score' : won ? '🏆 You win!' : ranking[0].name + ' wins';
+            $('endTitle').className = !bots || won ? 'good' : 'bad';
+            $('endScore').textContent = my;
+            $('newBest').hidden = !r.isNew;
+            $('endText').textContent = bots ? ranking.map((p, i) => `${i + 1}. ${p.name} ${total(p)}`).join(' · ') : (my >= 250 ? 'Superb!' : my >= 200 ? 'Great game!' : 'Can you break 200?');
+            Arcade.show('endOv');
+            hud();
+        }
+
+        /* ---------- bot: Monte-Carlo over which dice to hold ---------- */
+        function catValue(p, cat, d) {
+            let s = scoreFor(p, cat, d);
+            const ui = CATS.findIndex(([k]) => k === cat);
+            if (ui < 6) {
+                const face = ui + 1, par = face * 3;
+                s += (s - par) * 0.6;                      // reward beating the "three of each" pace for the bonus
+                if (upper(p) < 63 && upper(p) + scoreFor(p, cat, d) >= 63) s += 30;
+            }
+            if (cat === 'chance') s -= 8;              // keep chance for emergencies
+            if (cat === 'yahtzee' && !s) s -= 6;
+            return s;
+        }
+        function bestCat(p, d) {
+            let best = null, bv = -Infinity;
+            for (const [k] of CATS) if (p.sheet[k] == null) { const v = catValue(p, k, d); if (v > bv) { bv = v; best = k; } }
+            return [best, bv];
+        }
+        function chooseHold(p, d, rolls) {
+            let bestMask = 31, bestEV = -Infinity;
+            for (let mask = 0; mask < 32; mask++) {
+                let ev = 0;
+                const SAMPLES = 70;
+                for (let s = 0; s < SAMPLES; s++) {
+                    let dd = d.map((v, i) => (mask >> i & 1 ? v : Arcade.randi(1, 6)));
+                    if (rolls > 1) { const m2 = chooseQuick(p, dd); dd = dd.map((v, i) => (m2 >> i & 1 ? v : Arcade.randi(1, 6))); }
+                    ev += bestCat(p, dd)[1];
+                }
+                ev /= SAMPLES;
+                if (ev > bestEV) { bestEV = ev; bestMask = mask; }
+            }
+            return bestMask;
+        }
+        function chooseQuick(p, d) {   // cheap heuristic for the look-ahead roll: keep the most common face
+            const cnt = [0, 0, 0, 0, 0, 0, 0]; d.forEach(v => cnt[v]++);
+            let face = 1; for (let f = 2; f <= 6; f++) if (cnt[f] >= cnt[face]) face = f;
+            let m = 0; d.forEach((v, i) => { if (v === face) m |= 1 << i; });
+            return m;
+        }
+        function botTurn() {
+            busy = true;
+            const p = players[turn];
+            const stepT = 750;
+            const doRoll = () => {
+                busy = false; roll(); busy = true;
+                if (rollsLeft > 0) {
+                    const [, now] = bestCat(p, dice);
+                    const mask = chooseHold(p, dice, rollsLeft);
+                    if (mask === 31) return setTimeout(pickBox, stepT);
+                    setTimeout(() => { held = [0, 1, 2, 3, 4].map(i => !!(mask >> i & 1)); render(false); setTimeout(doRoll, stepT); }, stepT);
+                } else setTimeout(pickBox, stepT);
+            };
+            const pickBox = () => { const [cat] = bestCat(p, dice); busy = false; choose(cat); };
+            setTimeout(doRoll, 500);
+        }
+
+        /* ---------- render ---------- */
+        function render(animate) {
+            const p = players[turn], myTurn = !p.bot;
+            const dh = $('dice'); dh.innerHTML = '';
+            dice.forEach((v, i) => {
+                const b = document.createElement('button');
+                b.className = 'die' + (held[i] ? ' held' : '') + (animate && !held[i] ? ' roll' : '');
+                b.innerHTML = Array.from({ length: 9 }, (_, k) => `<i style="visibility:${rollsLeft < 3 && PIPS[v].includes(k) ? 'visible' : 'hidden'}"></i>`).join('');
+                b.disabled = !myTurn || rollsLeft === 3 || rollsLeft === 0 || busy;
+                b.onclick = () => { held[i] = !held[i]; Arcade.sfx('click'); render(false); };
+                dh.appendChild(b);
+            });
+            $('rollBtn').disabled = !myTurn || rollsLeft === 0 || busy;
+            $('rollBtn').textContent = rollsLeft ? `🎲 Roll (${rollsLeft} left)` : 'Pick a box →';
+            const sh = $('sheet');
+            let html = '<tr><th>Box</th>' + players.map((q, i) => `<th class="${i === turn ? 'cur' : ''}">${q.name}</th>`).join('') + '</tr>';
+            const row = (k, label) => '<tr><td>' + label + '</td>' + players.map((q, i) => {
+                const v = q.sheet[k];
+                const last = lastCell && lastCell.turn === i && lastCell.cat === k ? ' last' : '';
+                if (v != null) return `<td class="${v ? '' : 'zero'}${last}">${v}</td>`;
+                if (i === turn && myTurn && rollsLeft < 3 && !busy) return `<td class="opt" data-k="${k}">${scoreFor(q, k, dice)}</td>`;
+                return '<td></td>';
+            }).join('') + '</tr>';
+            CATS.slice(0, 6).forEach(([k, l]) => { html += row(k, l); });
+            html += '<tr class="sum"><td>Bonus (63+)</td>' + players.map(q => `<td>${bonus(q) ? '+35' : upper(q) + '/63'}</td>`).join('') + '</tr>';
+            CATS.slice(6).forEach(([k, l]) => { html += row(k, l); });
+            if (players.some(q => q.ybonus)) html += '<tr><td>Extra 5-kind</td>' + players.map(q => `<td>${q.ybonus ? '+' + q.ybonus : ''}</td>`).join('') + '</tr>';
+            html += '<tr class="sum"><td>Total</td>' + players.map(q => `<td>${total(q)}</td>`).join('') + '</tr>';
+            sh.innerHTML = html;
+            sh.querySelectorAll('td.opt').forEach(td => td.onclick = () => choose(td.dataset.k));
+            hud();
+        }
+        function hud() {
+            Arcade.text('best', Arcade.load('arcade.dice.best', 0) || 0);
+            Arcade.text('wins', stats.wins); Arcade.text('yz', stats.yahtzees);
+            document.querySelectorAll('#botSeg [data-v]').forEach(b => b.classList.toggle('active', +b.dataset.v === bots));
+        }
+        $('rollBtn').onclick = () => roll();
+        window.addEventListener('keydown', (e) => {
+            if (!$('endOv').hidden) { if (e.code === 'Enter') $('againBtn').click(); return; }
+            const p = players[turn]; if (p.bot) return;
+            if (e.code === 'Space') { e.preventDefault(); roll(); }
+            const m = /^Digit([1-5])$/.exec(e.code);
+            if (m && rollsLeft < 3 && rollsLeft > 0) { const i = +m[1] - 1; held[i] = !held[i]; render(false); }
+        });
+        document.querySelectorAll('#botSeg [data-v]').forEach(b => b.onclick = () => {
+            if (players.some(p => Object.keys(p.sheet).length) && !confirm('Start a new game?')) return;
+            bots = +b.dataset.v; Arcade.save('arcade.dice.bots', bots); newGame();
+        });
+        $('newBtn').onclick = () => { if (players.some(p => Object.keys(p.sheet).length) && !confirm('Start a new game?')) return; newGame(); };
+        $('againBtn').onclick = newGame;
+        newGame();
+        window.__dice = { get players() { return players; }, get turn() { return turn; }, roll, choose, get rollsLeft() { return rollsLeft; }, CATS, get busy() { return busy; } };
+    })();
+    </script>
+</body>
+</html>

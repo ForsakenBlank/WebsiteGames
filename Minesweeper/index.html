@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #60a5fa; --accent-2: #a78bfa; --accent-ink: #04122a; --cell: 30px; }
+        .board-wrap { position: relative; flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto; }
+        .board {
+            display: grid;
+            gap: 2px;
+            padding: 10px;
+            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid var(--line-2);
+            box-shadow: var(--shadow), 0 0 60px -30px var(--accent);
+            touch-action: manipulation;
+            margin: auto;
+        }
+        .cell {
+            width: var(--cell);
+            height: var(--cell);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 850;
+            font-size: calc(var(--cell) * 0.56);
+            cursor: pointer;
+            background: linear-gradient(160deg, #2a3866, #1e2a4d);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.25);
+            transition: background 0.12s, transform 0.08s;
+            user-select: none;
+        }
+        .cell:hover { background: linear-gradient(160deg, #34457a, #26345c); }
+        .cell.open { background: #0f1629; box-shadow: none; cursor: default; animation: reveal 0.18s ease-out; }
+        .cell.flag::after { content: "🚩"; font-size: calc(var(--cell) * 0.5); }
+        .cell.mine { background: #3b1220; }
+        .cell.mine::after { content: "💣"; font-size: calc(var(--cell) * 0.52); }
+        .cell.boom { background: #ef4444; }
+        .cell.wrong { background: #3b2412; }
+        .cell.wrong::after { content: "✖"; color: #fb923c; font-size: calc(var(--cell) * 0.6); }
+        .cell.hint { outline: 2px solid var(--good); outline-offset: -2px; }
+        .cell.press { transform: scale(0.92); }
+        .cell.void { visibility: hidden; pointer-events: none; }
+        .n1 { color: #60a5fa; } .n2 { color: #34d399; } .n3 { color: #f87171; } .n4 { color: #a78bfa; }
+        .n5 { color: #fb923c; } .n6 { color: #22d3ee; } .n7 { color: #f472b6; } .n8 { color: #e2e8f0; }
+        @keyframes reveal { from { transform: scale(0.7); opacity: 0.4; } to { transform: none; opacity: 1; } }
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        #face { font-size: 1.3rem; padding: 6px 12px; }
+
+        /* ---------- Custom map editor ---------- */
+        .editor { width: min(880px, 100%); text-align: left; }
+        .editor h2, .editor > p { text-align: center; }
+        .ed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+        .ed-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+        .ed-grid input[type=number], .ed-name { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 9px; font: inherit; }
+        .ed-grid input[type=range] { width: 100%; accent-color: var(--accent); }
+        .ed-check { display: inline-flex; align-items: center; gap: 7px; font-size: .86rem; color: var(--text); cursor: pointer; }
+        .ed-check input { accent-color: var(--accent); width: 16px; height: 16px; }
+        .ed-board-wrap { overflow: auto; max-height: 44vh; display: flex; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; touch-action: none; }
+        .ed-board { display: grid; gap: 1px; user-select: none; margin: auto; }
+        .ed-board div { width: var(--ec); height: var(--ec); border-radius: 3px; background: #2a3866; cursor: crosshair; display: flex; align-items: center; justify-content: center; font-size: calc(var(--ec) * .68); line-height: 1; }
+        .ed-board div.off { background: transparent; outline: 1px dashed rgba(148,163,184,.18); outline-offset: -1px; }
+        .ed-board div.mine { background: #5b1a2b; }
+        .ed-board div.mine::after { content: "💣"; }
+        .ed-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+        .ed-row .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; min-width: 60px; }
+        .ed-saved { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ed-saved .x { margin-left: 2px; opacity: .55; padding: 0 3px; }
+        .ed-saved .x:hover { opacity: 1; color: var(--bad); }
+        .ed-info { font-size: .82rem; color: var(--muted); margin: 6px 0; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Minesweeper</h1>
+        <div class="stats">
+            <span class="chip bad">Mines <b id="mines">10</b></span>
+            <span class="chip accent">Time <b id="time">0</b></span>
+            <span class="chip gold">Best <b id="best">—</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="toolbar">
+            <div class="seg" id="diffs">
+                <button class="btn sm" data-diff="easy">Easy</button>
+                <button class="btn sm" data-diff="medium">Medium</button>
+                <button class="btn sm" data-diff="hard">Hard</button>
+                <button class="btn sm" data-diff="custom">✏️ Custom</button>
+            </div>
+            <button class="btn sm" id="editBtn" title="Edit the custom map" hidden>🛠 Edit map</button>
+            <button class="btn" id="face" title="New game">🙂</button>
+            <button class="btn sm" id="flagMode" aria-pressed="false" title="Tap to flag instead of reveal">🚩 Flag mode</button>
+            <button class="btn sm" id="hintBtn" title="Reveal a safe cell (+15s)">💡 Hint</button>
+            <button class="btn sm" id="noGuessBtn" aria-pressed="false" title="Every board can be solved with logic alone — no 50/50 guesses">🧠 No-guess</button>
+        </div>
+        <div class="board-wrap" id="wrap">
+            <div class="board" id="board"></div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">Cleared!</h2>
+                    <div class="big-num" id="endTime">0s</div>
+                    <div class="new-best" id="newBest" hidden>★ New best time ★</div>
+                    <div class="stat-grid">
+                        <div><small>Difficulty</small><b id="endDiff">Easy</b></div>
+                        <div><small>Hints used</small><b id="endHints">0</b></div>
+                        <div><small>Best</small><b id="endBest">—</b></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn primary lg" id="againBtn">New game</button>
+                        <button class="btn" id="viewBtn">View board</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center desktop-only" style="margin:0">Left click reveal · Right click or <kbd>F</kbd> flag · Click a number to chord · <kbd>R</kbd> new game</p>
+        <p class="tiny dim center touch-only" style="margin:0">Tap to reveal · Long-press to flag · Tap a number to chord</p>
+    </main>
+
+    <div class="overlay fixed" id="edOv" hidden>
+        <div class="modal editor">
+            <h2>Custom map</h2>
+            <p>Pick a size and mine count, then paint the board's shape and hand-place mines if you like.</p>
+            <div class="ed-grid">
+                <label>Rows <input type="number" id="edR" min="3" max="40" value="12"></label>
+                <label>Columns <input type="number" id="edC" min="3" max="60" value="12"></label>
+                <label>Mines <input type="number" id="edM" min="1" value="20"></label>
+                <label>Density <span id="edDv" class="tiny" style="text-transform:none">15%</span><input type="range" id="edD" min="2" max="60" value="15"></label>
+            </div>
+            <div class="ed-row">
+                <span class="lbl">Shape</span>
+                <button class="btn sm" data-shape="rect">▭ Rectangle</button>
+                <button class="btn sm" data-shape="diamond">◇ Diamond</button>
+                <button class="btn sm" data-shape="circle">◯ Circle</button>
+                <button class="btn sm" data-shape="donut">🍩 Donut</button>
+                <button class="btn sm" data-shape="heart">♥ Heart</button>
+                <button class="btn sm" data-shape="cross">✚ Cross</button>
+                <button class="btn sm" data-shape="hourglass">⧗ Hourglass</button>
+                <button class="btn sm" data-shape="rooms">🏠 Rooms</button>
+                <button class="btn sm" data-shape="swiss">🧀 Swiss</button>
+            </div>
+            <div class="ed-row">
+                <span class="lbl">Brush</span>
+                <div class="seg" id="edBrush">
+                    <button class="btn sm active" data-brush="toggle">Toggle</button>
+                    <button class="btn sm" data-brush="add">＋ Cells</button>
+                    <button class="btn sm" data-brush="erase">－ Cells</button>
+                    <button class="btn sm" data-brush="mine">💣 Mine</button>
+                </div>
+                <button class="btn sm ghost" id="edMirror" aria-pressed="false" title="Mirror every stroke left ↔ right">⇋ Mirror</button>
+                <button class="btn sm ghost" id="edInvert">Invert</button>
+                <button class="btn sm ghost" id="edClearMines">Clear 💣</button>
+            </div>
+            <div class="ed-board-wrap"><div class="ed-board" id="edBoard"></div></div>
+            <div class="ed-row" style="margin-top:10px; gap:16px">
+                <label class="ed-check"><input type="checkbox" id="edSafe" checked> Safe first click</label>
+                <label class="ed-check"><input type="checkbox" id="edWrap"> Wrap-around edges</label>
+                <label class="ed-check"><input type="checkbox" id="edFree"> Free hints</label>
+            </div>
+            <p class="ed-info" id="edInfo"></p>
+            <div class="ed-row"><span class="lbl">Saved</span><div class="ed-saved" id="edSaved"></div></div>
+            <div class="ed-row">
+                <input class="ed-name" id="edName" placeholder="Map name" maxlength="24" style="flex:1;min-width:140px">
+                <button class="btn sm" id="edSave">💾 Save map</button>
+            </div>
+            <div class="actions">
+                <button class="btn ghost" id="edCancel">Cancel</button>
+                <button class="btn primary lg" id="edPlay">▶ Play this map</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const DIFFS = {
+            easy:   { name: 'Easy',   r: 9,  c: 9,  m: 10 },
+            medium: { name: 'Medium', r: 16, c: 16, m: 40 },
+            hard:   { name: 'Hard',   r: 16, c: 30, m: 99 },
+        };
+        const $ = (id) => document.getElementById(id);
+        const boardEl = $('board');
+        const wrap = $('wrap');
+        let diff = Arcade.load('arcade.mines.diff', 'easy');
+        if (!DIFFS[diff] && diff !== 'custom') diff = 'easy';
+        let cells, R, C, M, opened, flags, over, started, timer, seconds, hover, hints, flagMode = false;
+        let playable = 0, wrapEdges = false, safeStart = true, freeHints = false;
+        let noGuess = !!Arcade.load('arcade.mines.noguess', false);
+
+        /* Custom map: mask is one char per cell — '0' hole, '1' cell, '2' hand-placed mine */
+        const blankCustom = () => ({ r: 12, c: 12, m: 20, mask: '1'.repeat(144), safe: true, wrap: false, free: false });
+        let custom = Object.assign(blankCustom(), Arcade.load('arcade.mines.custom', {}));
+        if (typeof custom.mask !== 'string' || custom.mask.length !== custom.r * custom.c) custom = blankCustom();
+        let savedMaps = Arcade.load('arcade.mines.maps', []);
+
+        function customId(cfg) {
+            const str = [cfg.r, cfg.c, cfg.m, cfg.wrap ? 1 : 0, cfg.mask].join(':');
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+            return (h >>> 0).toString(36);
+        }
+        const bestKey = () => 'arcade.mines.best.' + (diff === 'custom' ? 'custom.' + customId(custom) : diff);
+
+        function sizeCells() {
+            const r = wrap.getBoundingClientRect();
+            const s = Math.floor(Math.min((r.width - 32) / C, (r.height - 32) / R)) - 2;
+            document.documentElement.style.setProperty('--cell', Arcade.clamp(s, 14, 44) + 'px');
+        }
+
+        function newGame(d) {
+            if (d) { diff = d; Arcade.save('arcade.mines.diff', d); }
+            let mask = null;
+            if (diff === 'custom') {
+                R = custom.r; C = custom.c; mask = custom.mask;
+                wrapEdges = !!custom.wrap; safeStart = custom.safe !== false; freeHints = !!custom.free;
+            } else {
+                const cfg = DIFFS[diff];
+                R = cfg.r; C = cfg.c; M = cfg.m;
+                wrapEdges = false; safeStart = true; freeHints = false;
+            }
+            opened = 0; flags = 0; over = false; started = false; seconds = 0; hints = 0; playable = 0;
+            clearInterval(timer);
+            cells = [];
+            boardEl.innerHTML = '';
+            boardEl.style.gridTemplateColumns = `repeat(${C}, var(--cell))`;
+            let fixed = 0;
+            for (let i = 0; i < R * C; i++) {
+                const v = mask ? mask[i] : '1';
+                const el = document.createElement('div');
+                el.className = 'cell' + (v === '0' ? ' void' : '');
+                el.dataset.i = i;
+                boardEl.appendChild(el);
+                const cell = { i, r: Math.floor(i / C), c: i % C, mine: false, fixed: v === '2', void: v === '0', open: false, flag: false, n: 0, el };
+                if (!cell.void) playable++;
+                if (cell.fixed) fixed++;
+                cells.push(cell);
+            }
+            if (diff === 'custom') M = Arcade.clamp(Math.max(custom.m, fixed), 1, Math.max(1, playable - 1));
+            document.querySelectorAll('#diffs .btn').forEach(b => b.classList.toggle('active', b.dataset.diff === diff));
+            $('editBtn').hidden = diff !== 'custom';
+            $('hintBtn').title = freeHints ? 'Reveal a safe cell (free)' : 'Reveal a safe cell (+15s)';
+            Arcade.hide('endOv');
+            setFace('🙂');
+            sizeCells();
+            hud();
+        }
+
+        function hud() {
+            Arcade.text('mines', M - flags);
+            Arcade.text('time', seconds);
+            const b = Arcade.load(bestKey(), 0);
+            Arcade.text('best', b ? b + 's' : '—');
+        }
+        const setFace = (f) => { $('face').textContent = f; };
+
+        function neighbors(cell) {
+            const out = [];
+            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                if (!dr && !dc) continue;
+                let r = cell.r + dr, c = cell.c + dc;
+                if (wrapEdges) { r = (r + R) % R; c = (c + C) % C; }
+                if (r < 0 || r >= R || c < 0 || c >= C) continue;
+                const n = cells[r * C + c];
+                if (!n.void && n !== cell && !out.includes(n)) out.push(n);
+            }
+            return out;
+        }
+
+        /**
+         * Logic-only solver used by No-guess mode. Starting from the first click it repeatedly applies
+         * "all mines found → rest safe", "unknowns = mines left → all mines", the subset rule between two
+         * numbers, and the total mine count. Returns true if that clears the whole board.
+         */
+        function solvable(startIdx, nb) {
+            const N = cells.length, st = new Uint8Array(N); // 0 unknown, 1 open, 2 known mine
+            let opened = 0, flagged = 0;
+            const target = playable - M;
+            const open = (i) => {
+                const stack = [i];
+                while (stack.length) {
+                    const k = stack.pop();
+                    if (st[k]) continue;
+                    st[k] = 1; opened++;
+                    if (cells[k].n === 0) for (const j of nb[k]) if (!st[j]) stack.push(j);
+                }
+            };
+            const flag = (i) => { if (!st[i]) { st[i] = 2; flagged++; } };
+            open(startIdx);
+            for (let guard = 0; guard < 400 && opened < target; guard++) {
+                let changed = false;
+                const cons = [];
+                for (let i = 0; i < N; i++) {
+                    if (st[i] !== 1 || !cells[i].n) continue;
+                    const unk = [];
+                    let f = 0;
+                    for (const j of nb[i]) { if (st[j] === 0) unk.push(j); else if (st[j] === 2) f++; }
+                    if (!unk.length) continue;
+                    const need = cells[i].n - f;
+                    if (need === 0) { unk.forEach(open); changed = true; }
+                    else if (need === unk.length) { unk.forEach(flag); changed = true; }
+                    else cons.push({ unk, need, set: new Set(unk) });
+                }
+                if (changed) continue;
+                // subset rule
+                const byCell = new Map();
+                cons.forEach((c, ci) => c.unk.forEach(u => { if (!byCell.has(u)) byCell.set(u, []); byCell.get(u).push(ci); }));
+                outer:
+                for (let a = 0; a < cons.length; a++) {
+                    const A = cons[a];
+                    const near = new Set();
+                    for (const u of A.unk) for (const b of byCell.get(u)) if (b !== a) near.add(b);
+                    for (const b of near) {
+                        const B = cons[b];
+                        if (A.unk.length > B.unk.length || !A.unk.every(u => B.set.has(u))) continue;
+                        const diff = B.unk.filter(u => !A.set.has(u));
+                        if (!diff.length) continue;
+                        const dn = B.need - A.need;
+                        if (dn === 0) { diff.forEach(u => { if (!st[u]) open(u); }); changed = true; break outer; }
+                        if (dn === diff.length) { diff.forEach(flag); changed = true; break outer; }
+                    }
+                }
+                if (changed) continue;
+                // global mine count
+                const left = M - flagged;
+                let unknown = 0;
+                for (let i = 0; i < N; i++) if (!st[i] && !cells[i].void) unknown++;
+                if (left === 0 && unknown) { for (let i = 0; i < N; i++) if (!st[i] && !cells[i].void) open(i); continue; }
+                if (left === unknown && unknown) { for (let i = 0; i < N; i++) if (!st[i] && !cells[i].void) flag(i); continue; }
+                break;
+            }
+            return opened >= target;
+        }
+
+        function plant(safe) {
+            let fixedCount = 0;
+            for (const c of cells) if (c.fixed) { c.mine = true; fixedCount++; }
+            const need = Math.max(0, M - fixedCount);
+            const forbidden = new Set(safeStart || noGuess ? [safe.i, ...neighbors(safe).map(n => n.i)] : [safe.i]);
+            let pool = cells.filter(c => !c.void && !c.fixed && !forbidden.has(c.i));
+            // crowded custom boards: shrink the safe opening so every mine still fits
+            if (pool.length < need) pool = cells.filter(c => !c.void && !c.fixed && c.i !== safe.i);
+            const nb = cells.map(c => c.void ? [] : neighbors(c).map(n => n.i));
+            const layMines = () => {
+                for (const c of cells) if (!c.fixed) c.mine = false;
+                Arcade.shuffle(pool).slice(0, need).forEach(c => c.mine = true);
+                M = cells.filter(c => c.mine).length;
+                for (const c of cells) c.n = nb[c.i].reduce((a, j) => a + (cells[j].mine ? 1 : 0), 0);
+            };
+            layMines();
+            if (noGuess) {
+                const t0 = performance.now();
+                let tries = 1, ok = solvable(safe.i, nb);
+                while (!ok && performance.now() - t0 < 2500) { layMines(); ok = solvable(safe.i, nb); tries++; }
+                if (!ok) Arcade.toast('Could not find a guess-free layout this time — this board may need one guess', 'bad', 3000);
+            }
+            started = true;
+            timer = setInterval(() => { seconds++; hud(); }, 1000);
+            hud();
+        }
+
+        function reveal(start) {
+            if (over || start.open || start.flag) return;
+            if (!started) plant(start);
+            if (start.mine) return lose(start);
+            const stack = [start];
+            let count = 0;
+            while (stack.length) {
+                const cell = stack.pop();
+                if (cell.open || cell.flag) continue;
+                cell.open = true; opened++; count++;
+                cell.el.classList.add('open');
+                cell.el.classList.remove('hint');
+                if (cell.n) { cell.el.textContent = cell.n; cell.el.classList.add('n' + cell.n); }
+                else for (const n of neighbors(cell)) if (!n.open && !n.mine) stack.push(n);
+            }
+            Arcade.sfx(count > 6 ? 'pop' : 'click');
+            if (opened === playable - M) win();
+        }
+
+        function chord(cell) {
+            if (!cell.open || !cell.n || over) return;
+            const ns = neighbors(cell);
+            if (ns.filter(n => n.flag).length !== cell.n) {
+                ns.forEach(n => { if (!n.open && !n.flag) { n.el.classList.add('press'); setTimeout(() => n.el.classList.remove('press'), 120); } });
+                return;
+            }
+            for (const n of ns) if (!n.open && !n.flag) { reveal(n); if (over) return; }
+        }
+
+        function toggleFlag(cell) {
+            if (over || cell.open) return;
+            cell.flag = !cell.flag;
+            flags += cell.flag ? 1 : -1;
+            cell.el.classList.toggle('flag', cell.flag);
+            Arcade.sfx(cell.flag ? 'select' : 'click');
+            hud();
+        }
+
+        function act(cell, isFlag) {
+            if (!cell) return;
+            if (cell.open) return chord(cell);
+            if (isFlag) toggleFlag(cell); else reveal(cell);
+        }
+
+        function lose(hit) {
+            over = true;
+            clearInterval(timer);
+            setFace('😵');
+            Arcade.sfx('boom');
+            hit.el.classList.add('boom');
+            for (const c of cells) {
+                if (c.void) continue;
+                if (c.mine && !c.flag) c.el.classList.add('mine', 'open');
+                else if (!c.mine && c.flag) { c.el.classList.remove('flag'); c.el.classList.add('wrong', 'open'); }
+            }
+            boardEl.classList.add('shake');
+            setTimeout(() => boardEl.classList.remove('shake'), 400);
+            setTimeout(() => showEnd(false), 900);
+        }
+
+        function win() {
+            over = true;
+            clearInterval(timer);
+            setFace('😎');
+            for (const c of cells) if (c.mine && !c.flag) { c.flag = true; c.el.classList.add('flag'); }
+            flags = M; hud();
+            Arcade.sfx('win');
+            Arcade.count('win');
+            if (diff !== 'custom') Arcade.count('win.' + diff);
+            setTimeout(() => showEnd(true), 500);
+        }
+
+        function showEnd(won) {
+            const t = $('endTitle');
+            t.textContent = won ? 'Cleared!' : 'Boom!';
+            t.className = won ? 'good' : 'bad';
+            Arcade.text('endTime', won ? seconds + 's' : opened + ' / ' + (playable - M));
+            Arcade.text('endDiff', (diff === 'custom' ? `Custom ${C}×${R}` : DIFFS[diff].name) + (noGuess ? ' · no-guess' : ''));
+            Arcade.text('endHints', hints);
+            let isNew = false;
+            if (won) isNew = Arcade.best(bestKey(), seconds, true).isNew;
+            const b = Arcade.load(bestKey(), 0);
+            Arcade.text('endBest', b ? b + 's' : '—');
+            $('newBest').hidden = !isNew;
+            Arcade.show('endOv');
+            hud();
+        }
+
+        function hint() {
+            if (over) return;
+            if (!started) {
+                const live = cells.filter(c => !c.void && !c.fixed);
+                const dist = (c) => Math.abs(c.r - (R - 1) / 2) + Math.abs(c.c - (C - 1) / 2);
+                const start = live.sort((a, b) => dist(a) - dist(b))[0];
+                if (start) reveal(start);
+                return;
+            }
+            // prefer safe cells touching the open area
+            let pool = cells.filter(c => !c.void && !c.open && !c.mine && !c.flag && neighbors(c).some(n => n.open));
+            if (!pool.length) pool = cells.filter(c => !c.void && !c.open && !c.mine && !c.flag);
+            if (!pool.length) return;
+            const c = Arcade.pick(pool);
+            hints++;
+            if (!freeHints) seconds += 15;
+            c.el.classList.add('hint');
+            Arcade.toast(freeHints ? 'Hint' : 'Hint: +15s', 'gold', 1200);
+            setTimeout(() => reveal(c), 350);
+            hud();
+        }
+
+        /* ---------- Input ---------- */
+        const cellFrom = (e) => {
+            const el = e.target.closest('.cell');
+            const c = el ? cells[+el.dataset.i] : null;
+            return c && !c.void ? c : null;
+        };
+        let pressTimer = null, pressCell = null, longFired = false;
+
+        boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
+        boardEl.addEventListener('pointerdown', (e) => {
+            const cell = cellFrom(e);
+            if (!cell || over) return;
+            if (e.pointerType === 'mouse') {
+                if (e.button === 2) toggleFlag(cell);
+                else if (e.button === 1) { e.preventDefault(); chord(cell); }
+                else { setFace('😮'); pressCell = cell; }
+                return;
+            }
+            pressCell = cell; longFired = false;
+            pressTimer = setTimeout(() => {
+                longFired = true;
+                if (!cell.open) { toggleFlag(cell); if (navigator.vibrate) navigator.vibrate(25); }
+            }, 380);
+        });
+        boardEl.addEventListener('pointerup', (e) => {
+            clearTimeout(pressTimer);
+            const cell = cellFrom(e);
+            if (!over) setFace('🙂');
+            if (!cell || cell !== pressCell) { pressCell = null; return; }
+            pressCell = null;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (longFired) return;
+            act(cell, flagMode);
+        });
+        boardEl.addEventListener('pointerleave', () => { clearTimeout(pressTimer); if (!over) setFace('🙂'); });
+        boardEl.addEventListener('pointerover', (e) => { hover = cellFrom(e); });
+
+        window.addEventListener('keydown', (e) => {
+            if (!$('edOv').hidden) return;
+            if ((e.code === 'KeyF' || e.code === 'KeyE') && hover) toggleFlag(hover);
+            else if (e.code === 'Space' && hover) { e.preventDefault(); act(hover, false); }
+            else if (e.code === 'KeyR') newGame();
+        });
+
+        /* ---------- Custom map editor ---------- */
+        const ed = { r: 0, c: 0, mask: [], brush: 'toggle', mirror: false, host: $('edBoard') };
+
+        function openEditor() {
+            loadIntoEditor(custom);
+            $('edName').value = '';
+            renderSaved();
+            Arcade.show('edOv');
+        }
+        function loadIntoEditor(cfg) {
+            ed.r = cfg.r; ed.c = cfg.c; ed.mask = cfg.mask.split('');
+            $('edR').value = cfg.r; $('edC').value = cfg.c; $('edM').value = cfg.m;
+            $('edSafe').checked = cfg.safe !== false; $('edWrap').checked = !!cfg.wrap; $('edFree').checked = !!cfg.free;
+            drawEditor();
+        }
+        function counts() {
+            let on = 0, fixed = 0;
+            for (const v of ed.mask) { if (v !== '0') on++; if (v === '2') fixed++; }
+            return { on, fixed };
+        }
+        function mineCount() {
+            const { on, fixed } = counts();
+            return Arcade.clamp(Math.round(+$('edM').value) || 1, Math.max(1, fixed), Math.max(1, on - 1));
+        }
+        function updateInfo() {
+            const { on, fixed } = counts();
+            const m = mineCount();
+            const dens = on ? Math.round(m / on * 100) : 0;
+            $('edD').value = dens;
+            $('edDv').textContent = dens + '%';
+            $('edInfo').textContent = on < 2
+                ? 'Paint at least two cells to make a board.'
+                : `${on} cells · ${m} mines (${fixed} hand-placed, ${Math.max(0, m - fixed)} random) · ${Math.max(0, on - m)} safe cells to uncover`;
+            $('edPlay').disabled = on < 2;
+        }
+        function paintCell(d, v) { d.className = v === '0' ? 'off' : v === '2' ? 'mine' : ''; }
+        function drawEditor() {
+            const avail = Math.min(820, window.innerWidth - 90);
+            const sz = Arcade.clamp(Math.floor(Math.min(avail / ed.c, (window.innerHeight * 0.4) / ed.r)) - 1, 9, 26);
+            ed.host.style.setProperty('--ec', sz + 'px');
+            ed.host.style.gridTemplateColumns = `repeat(${ed.c}, ${sz}px)`;
+            ed.host.innerHTML = '';
+            for (let i = 0; i < ed.r * ed.c; i++) {
+                const d = document.createElement('div');
+                d.dataset.i = i;
+                paintCell(d, ed.mask[i]);
+                ed.host.appendChild(d);
+            }
+            updateInfo();
+        }
+        function resizeMask(nr, nc) {
+            const out = [];
+            for (let r = 0; r < nr; r++) for (let c = 0; c < nc; c++) out.push(r < ed.r && c < ed.c ? ed.mask[r * ed.c + c] : '1');
+            ed.r = nr; ed.c = nc; ed.mask = out;
+        }
+
+        let painting = false, paintValue = '1', lastI = -1;
+        function brushAt(i, first) {
+            const cur = ed.mask[i];
+            let v;
+            if (ed.brush === 'toggle') { if (first) paintValue = cur === '0' ? '1' : '0'; v = paintValue; }
+            else if (ed.brush === 'add') v = cur === '2' ? '2' : '1';
+            else if (ed.brush === 'erase') v = '0';
+            else { if (first) paintValue = cur === '2' ? '1' : '2'; v = paintValue; }
+            const targets = [i];
+            if (ed.mirror) targets.push(Math.floor(i / ed.c) * ed.c + (ed.c - 1 - i % ed.c));
+            for (const t of targets) { ed.mask[t] = v; paintCell(ed.host.children[t], v); }
+            updateInfo();
+        }
+        const edIndex = (e) => {
+            const t = document.elementFromPoint(e.clientX, e.clientY);
+            return t && t.parentElement === ed.host ? +t.dataset.i : -1;
+        };
+        ed.host.addEventListener('pointerdown', (e) => {
+            const i = edIndex(e);
+            if (i < 0) return;
+            e.preventDefault();
+            painting = true; lastI = i;
+            brushAt(i, true);
+        });
+        window.addEventListener('pointermove', (e) => {
+            if (!painting) return;
+            const i = edIndex(e);
+            if (i >= 0 && i !== lastI) { lastI = i; brushAt(i, false); }
+        });
+        window.addEventListener('pointerup', () => { painting = false; });
+
+        // shape presets, all as f(row, col, rows, cols) in normalised coordinates
+        const nx = (c, C) => (c - (C - 1) / 2) / (C / 2);
+        const ny = (r, R) => (r - (R - 1) / 2) / (R / 2);
+        const SHAPES = {
+            rect: () => true,
+            diamond: (r, c, R, C) => Math.abs(nx(c, C)) + Math.abs(ny(r, R)) <= 1.05,
+            circle: (r, c, R, C) => nx(c, C) ** 2 + ny(r, R) ** 2 <= 1.05,
+            donut: (r, c, R, C) => { const d = nx(c, C) ** 2 + ny(r, R) ** 2; return d <= 1.05 && d >= 0.22; },
+            heart: (r, c, R, C) => { const x = nx(c, C) * 1.18, y = -ny(r, R) * 1.16 + 0.1; return (x * x + y * y - 1) ** 3 - x * x * y ** 3 <= 0; },
+            cross: (r, c, R, C) => Math.abs(nx(c, C)) <= 0.36 || Math.abs(ny(r, R)) <= 0.36,
+            hourglass: (r, c, R, C) => Math.abs(nx(c, C)) <= Math.abs(ny(r, R)) + 0.2,
+            rooms: (r, c, R, C) => {
+                const rh = Math.max(4, Math.round(R / 3)), cw = Math.max(4, Math.round(C / 3));
+                const wallR = r % rh === rh - 1 && r !== R - 1, wallC = c % cw === cw - 1 && c !== C - 1;
+                const doorR = wallR && Math.abs((c % cw) - (cw >> 1)) <= 0, doorC = wallC && Math.abs((r % rh) - (rh >> 1)) <= 0;
+                return !(wallR || wallC) || doorR || doorC;
+            },
+            swiss: () => Math.random() > 0.14,
+        };
+        document.querySelectorAll('[data-shape]').forEach(b => b.onclick = () => {
+            const f = SHAPES[b.dataset.shape];
+            for (let i = 0; i < ed.mask.length; i++) {
+                const keep = f(Math.floor(i / ed.c), i % ed.c, ed.r, ed.c);
+                ed.mask[i] = keep ? (ed.mask[i] === '2' ? '2' : '1') : '0';
+            }
+            drawEditor();
+            Arcade.sfx('select');
+        });
+        document.querySelectorAll('#edBrush .btn').forEach(b => b.onclick = () => {
+            ed.brush = b.dataset.brush;
+            document.querySelectorAll('#edBrush .btn').forEach(x => x.classList.toggle('active', x === b));
+        });
+        $('edMirror').onclick = () => { ed.mirror = !ed.mirror; $('edMirror').setAttribute('aria-pressed', ed.mirror); };
+        $('edInvert').onclick = () => { ed.mask = ed.mask.map(v => v === '0' ? '1' : '0'); drawEditor(); };
+        $('edClearMines').onclick = () => { ed.mask = ed.mask.map(v => v === '2' ? '1' : v); drawEditor(); };
+        const onSize = () => {
+            const nr = Arcade.clamp(Math.round(+$('edR').value) || 3, 3, 40);
+            const nc = Arcade.clamp(Math.round(+$('edC').value) || 3, 3, 60);
+            $('edR').value = nr; $('edC').value = nc;
+            if (nr !== ed.r || nc !== ed.c) { resizeMask(nr, nc); drawEditor(); }
+        };
+        $('edR').addEventListener('change', onSize);
+        $('edC').addEventListener('change', onSize);
+        $('edM').addEventListener('input', updateInfo);
+        $('edM').addEventListener('change', () => { $('edM').value = mineCount(); updateInfo(); });
+        $('edD').addEventListener('input', () => {
+            $('edM').value = Math.max(1, Math.round(counts().on * $('edD').value / 100));
+            updateInfo();
+        });
+
+        function readEditor() {
+            return {
+                r: ed.r, c: ed.c, mask: ed.mask.join(''), m: mineCount(),
+                safe: $('edSafe').checked, wrap: $('edWrap').checked, free: $('edFree').checked,
+            };
+        }
+        function renderSaved() {
+            const host = $('edSaved');
+            host.innerHTML = '';
+            if (!savedMaps.length) { host.innerHTML = '<span class="tiny dim">No saved maps yet — name one below and save it.</span>'; return; }
+            savedMaps.forEach((m, idx) => {
+                const b = document.createElement('button');
+                b.className = 'btn sm';
+                const label = document.createElement('span');
+                label.textContent = `${m.name} · ${m.cfg.c}×${m.cfg.r} · ${m.cfg.m}💣`;
+                const x = document.createElement('span');
+                x.className = 'x'; x.textContent = '✕'; x.title = 'Delete map';
+                b.append(label, x);
+                b.onclick = (e) => {
+                    if (e.target === x) {
+                        savedMaps.splice(idx, 1);
+                        Arcade.save('arcade.mines.maps', savedMaps);
+                        renderSaved();
+                        return;
+                    }
+                    loadIntoEditor(m.cfg);
+                    $('edName').value = m.name;
+                };
+                host.appendChild(b);
+            });
+        }
+        $('edSave').onclick = () => {
+            const name = $('edName').value.trim() || 'Map ' + (savedMaps.length + 1);
+            const entry = { name, cfg: readEditor() };
+            const at = savedMaps.findIndex(m => m.name === name);
+            if (at >= 0) savedMaps[at] = entry; else savedMaps.push(entry);
+            savedMaps = savedMaps.slice(-24);
+            Arcade.save('arcade.mines.maps', savedMaps);
+            $('edName').value = name;
+            renderSaved();
+            Arcade.toast(`Saved “${name}”`, 'good');
+        };
+        $('edCancel').onclick = () => Arcade.hide('edOv');
+        $('edPlay').onclick = () => {
+            custom = readEditor();
+            Arcade.save('arcade.mines.custom', custom);
+            Arcade.hide('edOv');
+            newGame('custom');
+        };
+        $('editBtn').onclick = openEditor;
+
+        document.querySelectorAll('#diffs .btn').forEach(b => b.onclick = () => (b.dataset.diff === 'custom' ? openEditor() : newGame(b.dataset.diff)));
+        $('face').onclick = () => newGame();
+        $('againBtn').onclick = () => newGame();
+        $('viewBtn').onclick = () => Arcade.hide('endOv');
+        $('hintBtn').onclick = hint;
+        const syncNoGuess = () => { $('noGuessBtn').setAttribute('aria-pressed', noGuess); $('noGuessBtn').classList.toggle('active', noGuess); };
+        $('noGuessBtn').onclick = () => {
+            noGuess = !noGuess;
+            Arcade.save('arcade.mines.noguess', noGuess);
+            syncNoGuess();
+            Arcade.toast(noGuess ? '🧠 No-guess on: every board can be solved by logic' : 'No-guess off', 'good', 1600);
+            newGame();
+        };
+        syncNoGuess();
+        const fm = $('flagMode');
+        fm.onclick = () => { flagMode = !flagMode; fm.setAttribute('aria-pressed', flagMode); };
+        window.addEventListener('resize', sizeCells);
+
+        newGame();
+    })();
+    </script>
+</body>
+</html>

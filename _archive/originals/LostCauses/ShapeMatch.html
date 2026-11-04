@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sort & Ship</title>
+    <style>
+        body { background: #121417; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        canvas { background: #1e2126; border: 2px solid #f1c40f; border-radius: 10px; cursor: grab; }
+        #overlay { position: absolute; background: rgba(0,0,0,0.8); padding: 30px; border-radius: 15px; text-align: center; }
+        .btn { background: #f1c40f; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div id="menu">
+            <h1>SORT & SHIP</h1>
+            <p>Match the <b>SHAPE</b> and <b>COLOR</b> to the bins.</p>
+            <button class="btn" onclick="startGame()">START MISSION</button>
+        </div>
+        <div id="gameOver" class="hidden">
+            <h1 style="color:#e74c3c">CARGO LOST</h1>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button class="btn" onclick="startGame()">RETRY</button>
+        </div>
+    </div>
+    <div id="hud" class="hidden" style="margin-bottom:10px">SCORE: <span id="s">0</span></div>
+    <canvas id="sortCanvas" width="400" height="500"></canvas>
+<script>
+    const canvas = document.getElementById('sortCanvas'), ctx = canvas.getContext('2d');
+    let items, score, dragging, gameActive = false, spawnTimer;
+    const bins = [
+        {x: 65, c: '#e74c3c', type: 'circle'}, 
+        {x: 200, c: '#3498db', type: 'square'}, 
+        {x: 335, c: '#2ecc71', type: 'triangle'}
+    ];
+
+    function startGame() {
+        gameActive = true; score = 0; items = []; dragging = null;
+        document.getElementById('overlay').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        if(spawnTimer) clearInterval(spawnTimer);
+        spawnTimer = setInterval(() => { if(gameActive) spawn(); }, 1500);
+        update();
+    }
+
+    function spawn() {
+        const bin = bins[Math.floor(Math.random()*3)];
+        items.push({ x: Math.random()*300+50, y: -30, c: bin.c, type: bin.type, r: 20 });
+    }
+
+    function drawShape(ctx, x, y, r, type, color) {
+        ctx.fillStyle = color; ctx.beginPath();
+        if(type === 'circle') ctx.arc(x, y, r, 0, Math.PI*2);
+        else if(type === 'square') ctx.rect(x-r, y-r, r*2, r*2);
+        else if(type === 'triangle') {
+            ctx.moveTo(x, y-r); ctx.lineTo(x-r, y+r); ctx.lineTo(x+r, y+r);
+        }
+        ctx.fill();
+    }
+
+    canvas.onmousedown = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left), my = (e.clientY - rect.top);
+        items.forEach(it => { if(Math.hypot(it.x-mx, it.y-my) < 25) dragging = it; });
+    };
+    window.onmousemove = (e) => { if(dragging) { const rect = canvas.getBoundingClientRect(); dragging.x = e.clientX - rect.left; dragging.y = e.clientY - rect.top; } };
+    window.onmouseup = () => {
+        if(!dragging) return;
+        bins.forEach(b => {
+            if(Math.hypot(dragging.x - b.x, dragging.y - 450) < 50 && dragging.type === b.type) {
+                score += 10; items = items.filter(i => i !== dragging);
+            }
+        });
+        dragging = null; document.getElementById('s').innerText = score;
+    };
+
+    function update() {
+        if(!gameActive) return;
+        ctx.clearRect(0,0,400,500);
+        bins.forEach(b => { ctx.globalAlpha = 0.2; drawShape(ctx, b.x, 450, 40, b.type, b.c); ctx.globalAlpha = 1; });
+        for(let i = items.length-1; i>=0; i--) {
+            let it = items[i]; if(it !== dragging) it.y += 1.5;
+            drawShape(ctx, it.x, it.y, it.r, it.type, it.c);
+            if(it.y > 510) {
+                gameActive = false; document.getElementById('finalScore').innerText = score;
+                document.getElementById('overlay').classList.remove('hidden'); document.getElementById('gameOver').classList.remove('hidden');
+                document.getElementById('menu').classList.add('hidden'); return;
+            }
+        }
+        requestAnimationFrame(update);
+    }
+</script>
+</body>
+</html>

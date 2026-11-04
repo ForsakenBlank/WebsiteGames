@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f59e0b; --accent-2: #f97316; --accent-ink: #1f1300; --n: 4; --cell: 90px; --gap: 10px; }
+        .board {
+            position: relative;
+            width: calc(var(--cell) * var(--n) + var(--gap) * (var(--n) + 1));
+            height: calc(var(--cell) * var(--n) + var(--gap) * (var(--n) + 1));
+            border-radius: 16px;
+            background: #1c2340;
+            border: 1px solid var(--line-2);
+            box-shadow: var(--shadow), 0 0 70px -36px var(--accent);
+            touch-action: none;
+        }
+        .slot, .tile {
+            position: absolute;
+            width: var(--cell);
+            height: var(--cell);
+            border-radius: calc(var(--cell) * 0.12);
+        }
+        .slot { background: rgba(255,255,255,0.05); }
+        .tile {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            transition: transform 0.11s ease-out;
+            will-change: transform;
+            z-index: 1;
+        }
+        .tile .in { width: 100%; height: 100%; border-radius: inherit; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.18); }
+        .tile.new .in { animation: appear 0.18s 0.08s backwards; }
+        .tile.merged { z-index: 2; }
+        .tile.merged .in { animation: merge 0.2s 0.06s; }
+        @keyframes appear { from { transform: scale(0); } to { transform: scale(1); } }
+        @keyframes merge { 50% { transform: scale(1.18); } }
+        .side { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .score-pop { position: absolute; font-weight: 900; color: var(--accent); pointer-events: none; animation: rise 0.7s ease-out forwards; z-index: 5; }
+        @keyframes rise { to { transform: translateY(-36px); opacity: 0; } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">2048</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+            <span class="chip">Top tile <b id="top">2</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="side">
+            <div class="seg" id="sizes"></div>
+            <button class="btn sm" id="undoBtn" title="Undo last move (Z)">↶ Undo</button>
+            <button class="btn sm" id="newBtn">⟲ New game</button>
+        </div>
+        <div class="canvas-box" id="box">
+            <div class="board" id="board"></div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">Game over</h2>
+                    <div class="big-num" id="endScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <p id="endText"></p>
+                    <div class="actions">
+                        <button class="btn primary lg" id="againBtn">New game</button>
+                        <button class="btn" id="keepBtn" hidden>Keep going</button>
+                        <button class="btn" id="undoEndBtn">↶ Undo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only">Arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to slide · <kbd>Z</kbd> undo</span><span class="touch-only">Swipe to slide all tiles</span> · Equal numbers merge. Reach 2048!</p>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const SIZES = [3, 4, 5, 6, 8];
+        const COLORS = {
+            2: ['#eee4da', '#3b2f22'], 4: ['#ede0c8', '#3b2f22'], 8: ['#f2b179', '#fff'], 16: ['#f59563', '#fff'],
+            32: ['#f67c5f', '#fff'], 64: ['#f65e3b', '#fff'], 128: ['#edcf72', '#fff'], 256: ['#edcc61', '#fff'],
+            512: ['#edc850', '#fff'], 1024: ['#edc53f', '#fff'], 2048: ['#edc22e', '#fff'], 4096: ['#a78bfa', '#fff'],
+            8192: ['#818cf8', '#fff'], 16384: ['#38bdf8', '#04121f'], 32768: ['#34d399', '#04130b'],
+        };
+        const board = document.getElementById('board');
+        const box = document.getElementById('box');
+        let N = Arcade.load('arcade.2048.size', 4);
+        if (!SIZES.includes(N)) N = 4;
+        let grid, tiles, score, history, won, keepGoing, over, nextId = 1, cell = 90, gap = 10, busy = false;
+
+        const saveKey = () => 'arcade.2048.game.' + N;
+        const bestKey = () => 'arcade.2048.best.' + N;
+
+        function sizeBoard() {
+            const r = box.getBoundingClientRect();
+            const avail = Math.min(r.width - 16, r.height - 16, 560);
+            gap = N >= 6 ? 6 : 10;
+            cell = Math.floor((avail - gap * (N + 1)) / N);
+            const s = document.documentElement.style;
+            s.setProperty('--n', N); s.setProperty('--cell', cell + 'px'); s.setProperty('--gap', gap + 'px');
+            for (const t of Object.values(tiles || {})) place(t);
+            board.querySelectorAll('.slot').forEach((el, i) => {
+                el.style.left = (gap + (i % N) * (cell + gap)) + 'px';
+                el.style.top = (gap + Math.floor(i / N) * (cell + gap)) + 'px';
+            });
+            board.querySelectorAll('.tile').forEach(el => { el.style.fontSize = fontFor(+el.dataset.v) + 'px'; });
+        }
+        const fontFor = (v) => cell * (v < 100 ? 0.5 : v < 1000 ? 0.42 : v < 10000 ? 0.33 : 0.27);
+        const posOf = (r, c) => [gap + c * (cell + gap), gap + r * (cell + gap)];
+
+        function place(t) {
+            const [x, y] = posOf(t.r, t.c);
+            t.el.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function makeTile(r, c, v, kind) {
+            const el = document.createElement('div');
+            el.className = 'tile' + (kind ? ' ' + kind : '');
+            el.innerHTML = '<div class="in"></div>';
+            const t = { id: nextId++, r, c, v, el };
+            paint(t);
+            board.appendChild(el);
+            place(t);
+            tiles[t.id] = t;
+            grid[r][c] = t;
+            return t;
+        }
+        function paint(t) {
+            const [bg, fg] = COLORS[t.v] || ['#1e1b4b', '#fff'];
+            const inner = t.el.firstChild;
+            inner.style.background = bg;
+            inner.style.color = fg;
+            inner.style.boxShadow = t.v >= 128 ? `inset 0 -4px 0 rgba(0,0,0,0.18), 0 0 ${Math.min(30, Math.log2(t.v) * 2)}px -4px ${bg}` : '';
+            inner.textContent = t.v;
+            t.el.dataset.v = t.v;
+            t.el.style.fontSize = fontFor(t.v) + 'px';
+        }
+
+        function empties() {
+            const out = [];
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!grid[r][c]) out.push([r, c]);
+            return out;
+        }
+        function spawn() {
+            const e = empties();
+            if (!e.length) return;
+            const [r, c] = Arcade.pick(e);
+            makeTile(r, c, Math.random() < 0.9 ? 2 : 4, 'new');
+        }
+
+        function reset(fromSave) {
+            board.innerHTML = '';
+            for (let i = 0; i < N * N; i++) { const s = document.createElement('div'); s.className = 'slot'; board.appendChild(s); }
+            grid = Array.from({ length: N }, () => Array(N).fill(null));
+            tiles = {};
+            score = 0; history = []; won = false; keepGoing = false; over = false;
+            sizeBoard();
+            if (fromSave && fromSave.cells) {
+                score = fromSave.score || 0; won = !!fromSave.won; keepGoing = !!fromSave.keepGoing;
+                fromSave.cells.forEach((v, i) => { if (v) makeTile(Math.floor(i / N), i % N, v, 'new'); });
+            } else {
+                spawn(); spawn();
+            }
+            Arcade.hide('endOv');
+            document.querySelectorAll('#sizes .btn').forEach(b => b.classList.toggle('active', +b.dataset.n === N));
+            hud();
+            persist();
+        }
+
+        const values = () => grid.flat().map(t => (t ? t.v : 0));
+        function persist() {
+            if (over) { Arcade.remove(saveKey()); return; }
+            Arcade.save(saveKey(), { cells: values(), score, won, keepGoing });
+        }
+
+        function hud() {
+            Arcade.text('score', Arcade.fmt(score));
+            const best = Math.max(score, Arcade.load(bestKey(), 0));
+            Arcade.text('best', Arcade.fmt(best));
+            Arcade.text('top', Math.max(2, ...values()));
+            document.getElementById('undoBtn').disabled = !history.length;
+        }
+
+        function move(dir) {
+            if (over || busy || !document.getElementById('endOv').hidden) return;
+            const dr = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+            const dc = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+            const before = { cells: values(), score };
+            const order = [...Array(N).keys()];
+            const rows = dr === 1 ? order.slice().reverse() : order;
+            const cols = dc === 1 ? order.slice().reverse() : order;
+            const mergedInto = new Set();
+            const dying = [];
+            let moved = false, gained = 0;
+            for (const r of rows) for (const c of cols) {
+                const t = grid[r][c];
+                if (!t) continue;
+                let nr = r, nc = c;
+                while (true) {
+                    const rr = nr + dr, cc = nc + dc;
+                    if (rr < 0 || rr >= N || cc < 0 || cc >= N) break;
+                    const o = grid[rr][cc];
+                    if (!o) { nr = rr; nc = cc; continue; }
+                    if (o.v === t.v && !mergedInto.has(o.id)) {
+                        // merge: t slides onto o and disappears, o doubles
+                        grid[r][c] = null;
+                        t.r = rr; t.c = cc; place(t);
+                        dying.push(t);
+                        o.v *= 2; gained += o.v;
+                        mergedInto.add(o.id);
+                        moved = true;
+                        nr = null;
+                    }
+                    break;
+                }
+                if (nr === null) continue;
+                if (nr !== r || nc !== c) {
+                    grid[r][c] = null; grid[nr][nc] = t;
+                    t.r = nr; t.c = nc; place(t);
+                    moved = true;
+                }
+            }
+            if (!moved) { Arcade.sfx('tick'); return; }
+            history.push(before);
+            if (history.length > 50) history.shift();
+            score += gained;
+            busy = true;
+            setTimeout(() => {
+                for (const t of dying) { t.el.remove(); delete tiles[t.id]; }
+                for (const id of mergedInto) {
+                    const t = tiles[id];
+                    t.el.classList.remove('merged', 'new'); void t.el.offsetWidth;
+                    t.el.classList.add('merged');
+                    paint(t);
+                }
+                spawn();
+                busy = false;
+                if (gained) {
+                    const top = Math.max(...[...mergedInto].map(id => tiles[id].v));
+                    Arcade.tone(220 * Math.pow(2, Math.min(Math.log2(top), 16) / 4), 0.09, 'triangle', 0.06);
+                    popScore(gained);
+                } else Arcade.sfx('click');
+                const best = Arcade.load(bestKey(), 0);
+                if (score > best) Arcade.save(bestKey(), score);
+                checkEnd();
+                hud();
+                persist();
+            }, 115);
+        }
+
+        function popScore(n) {
+            const p = document.createElement('div');
+            p.className = 'score-pop';
+            p.textContent = '+' + n;
+            p.style.left = '50%'; p.style.top = '-6px'; p.style.transform = 'translateX(-50%)';
+            board.appendChild(p);
+            setTimeout(() => p.remove(), 700);
+        }
+
+        function canMove() {
+            if (empties().length) return true;
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+                const v = grid[r][c].v;
+                if ((c + 1 < N && grid[r][c + 1].v === v) || (r + 1 < N && grid[r + 1][c].v === v)) return true;
+            }
+            return false;
+        }
+
+        function checkEnd() {
+            const top = Math.max(...values());
+            if (!won && top >= 2048) {
+                won = true;
+                Arcade.sfx('win');
+                showEnd(true);
+                return;
+            }
+            if (!canMove()) {
+                over = true;
+                Arcade.sfx('die');
+                setTimeout(() => showEnd(false), 400);
+            }
+        }
+
+        function showEnd(isWin) {
+            const best = Arcade.load(bestKey(), 0);
+            const h = document.getElementById('endTitle');
+            h.textContent = isWin ? 'You made 2048!' : 'No moves left';
+            h.className = isWin ? 'good' : 'bad';
+            Arcade.text('endScore', Arcade.fmt(score));
+            document.getElementById('newBest').hidden = !(score > 0 && score >= best && !isWin);
+            Arcade.text('endText', isWin ? 'Keep going to chase 4096 and beyond.' : `Top tile ${Math.max(...values())} on a ${N}×${N} board.`);
+            document.getElementById('keepBtn').hidden = !isWin;
+            document.getElementById('undoEndBtn').hidden = isWin || !history.length;
+            Arcade.show('endOv');
+        }
+
+        function undo() {
+            if (busy || !history.length) return;
+            const prev = history.pop();
+            const keep = history;
+            over = false;
+            const w = won, k = keepGoing;
+            reset({ cells: prev.cells, score: prev.score, won: w, keepGoing: k });
+            history = keep;
+            Arcade.sfx('click');
+            hud();
+        }
+
+        /* ---------- Input ---------- */
+        const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right' };
+        window.addEventListener('keydown', (e) => {
+            if (KEYS[e.code]) { e.preventDefault(); move(KEYS[e.code]); }
+            else if (e.code === 'KeyZ') undo();
+        });
+        Arcade.swipe(document.querySelector('.stage'), move, 22);
+        // mouse drag for desktop users without a keyboard handy
+        let drag = null;
+        board.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') drag = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('pointerup', (e) => {
+            if (!drag) return;
+            const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+            drag = null;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
+            move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+        });
+
+        const sizes = document.getElementById('sizes');
+        for (const n of SIZES) {
+            const b = document.createElement('button');
+            b.className = 'btn sm';
+            b.dataset.n = n;
+            b.textContent = n + '×' + n;
+            b.onclick = () => { if (n === N) return; N = n; Arcade.save('arcade.2048.size', N); reset(Arcade.load(saveKey(), null)); Arcade.sfx('select'); };
+            sizes.appendChild(b);
+        }
+        document.getElementById('newBtn').onclick = () => { over = true; persist(); reset(); };
+        document.getElementById('againBtn').onclick = () => { over = true; persist(); reset(); };
+        document.getElementById('keepBtn').onclick = () => { keepGoing = true; Arcade.hide('endOv'); persist(); };
+        document.getElementById('undoBtn').onclick = undo;
+        document.getElementById('undoEndBtn').onclick = undo;
+        window.addEventListener('resize', sizeBoard);
+
+        reset(Arcade.load(saveKey(), null));
+    })();
+    </script>
+</body>
+</html>

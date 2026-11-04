@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snakes &amp; Ladders · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #84cc16; --accent-2: #facc15; --accent-ink: #0f1a02; }
+        .slots { display: grid; gap: 8px; margin-top: 10px; }
+        .slot { display: flex; align-items: center; gap: 8px; }
+        .slot i { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+        .slot .seg { flex: 1; }
+        .opt-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+        #cv { cursor: pointer; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Snakes &amp; Ladders</h1>
+        <div class="stats">
+            <span class="chip accent">Wins <b id="wins">0</b></span>
+            <span class="chip">Played <b id="played">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="newBtn">⟲ New game</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="setupOv">
+                <div class="modal">
+                    <h2>🪜 Snakes &amp; Ladders</h2>
+                    <p class="small">Up to four players — mix bots and friends sharing this device.</p>
+                    <div class="slots" id="slots"></div>
+                    <div class="opt-row">
+                        <div class="seg" id="boardSeg"><button class="btn sm" data-v="classic">Classic board</button><button class="btn sm" data-v="random">Random board</button></div>
+                    </div>
+                    <div class="opt-row">
+                        <button class="btn sm" id="exactBtn"></button>
+                        <button class="btn sm" id="sixBtn"></button>
+                        <div class="seg" id="speedSeg"><button class="btn sm" data-v="1">Normal</button><button class="btn sm" data-v="2">Fast</button></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="startBtn">Start</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">You win!</h2>
+                    <p id="endText"></p>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button><button class="btn" id="setupBtn">Change players</button></div>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0">Click the dice or press <kbd>Space</kbd> to roll. Ladders lift you up, snakes slide you down. First to 100 wins!</p>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 880, H = 620, B = 600, CS = 60, OX = 10, OY = 10, TAU = Math.PI * 2;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.5 });
+        const c = view.ctx;
+        const PCOL = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'];
+        const PNAME = ['Red', 'Blue', 'Green', 'Yellow'];
+        const CLASSIC = { ladders: [[1, 38], [4, 14], [9, 31], [21, 42], [28, 84], [36, 44], [51, 67], [71, 91], [80, 100]], snakes: [[16, 6], [47, 26], [49, 11], [56, 53], [62, 19], [64, 60], [87, 24], [93, 73], [95, 75], [98, 78]] };
+        const cfg = Object.assign({ slots: ['you', 'bot', 'bot', 'off'], board: 'classic', exact: true, six: true, speed: 1 }, Arcade.load('arcade.snl.cfg', {}));
+        const stats = Object.assign({ wins: 0, played: 0, ladders: 0, snakes: 0 }, Arcade.load('arcade.snl.stats', {}));
+        let board, jumps, players, turn, phase, dice, diceAnim, anim, log, winner, rng, timer = 0;
+
+        function randomBoard() {
+            const used = new Set([1, 100]), ladders = [], snakes = [];
+            const ok = (a, b) => !used.has(a) && !used.has(b) && Math.floor((a - 1) / 10) !== Math.floor((b - 1) / 10);
+            let tries = 0;
+            while (ladders.length < 8 && tries++ < 500) { const a = Arcade.randi(2, 80), b = Math.min(99, a + Arcade.randi(10, 40)); if (ok(a, b)) { ladders.push([a, b]); used.add(a); used.add(b); } }
+            tries = 0;
+            while (snakes.length < 9 && tries++ < 500) { const a = Arcade.randi(20, 99), b = Math.max(2, a - Arcade.randi(10, 45)); if (ok(a, b)) { snakes.push([a, b]); used.add(a); used.add(b); } }
+            return { ladders, snakes };
+        }
+        function cellXY(n) {
+            const r = Math.floor((n - 1) / 10); let col = (n - 1) % 10;
+            if (r % 2) col = 9 - col;
+            return [OX + col * CS + CS / 2, OY + B - r * CS - CS / 2];
+        }
+        function setup() {
+            Arcade.save('arcade.snl.cfg', cfg);
+            board = cfg.board === 'random' ? randomBoard() : CLASSIC;
+            jumps = {};
+            for (const [a, b] of board.ladders) jumps[a] = { to: b, kind: 'ladder' };
+            for (const [a, b] of board.snakes) jumps[a] = { to: b, kind: 'snake' };
+            board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#16a34a', '#ea580c', '#7c3aed', '#db2777', '#0891b2'][i % 5] }));
+            players = cfg.slots.map((s, i) => s === 'off' ? null : { i, kind: s, pos: 0, shown: 0, x: 0, y: 0, name: s === 'you' ? 'You' : s === 'bot' ? PNAME[i] + ' bot' : PNAME[i] }).filter(Boolean);
+            for (const p of players) { [p.x, p.y] = [OX - 30, OY + B - 20 - p.i * 6]; }
+            turn = 0; phase = 'roll'; dice = 1; diceAnim = 0; anim = null; log = []; winner = null;
+            say(players[0].name + (players[0].kind === 'you' ? ' go first — roll the dice!' : ' goes first'));
+            Arcade.hide('setupOv'); Arcade.hide('endOv');
+            schedule();
+        }
+        const say = (s) => { log.unshift(s); log = log.slice(0, 6); };
+        const cur = () => players[turn];
+        const human = (p) => p.kind !== 'bot';
+        function schedule() { clearTimeout(timer); if (phase === 'roll' && !human(cur())) timer = setTimeout(roll, 650 / cfg.speed); }
+        function roll() {
+            if (phase !== 'roll' || winner) return;
+            phase = 'rolling'; diceAnim = 0.55 / cfg.speed;
+            Arcade.sfx('click');
+        }
+        function afterRoll() {
+            const p = cur();
+            dice = Arcade.randi(1, 6);
+            Arcade.tone(400 + dice * 60, 0.08, 'triangle', 0.05);
+            let target = p.pos + dice;
+            if (target > 100) {
+                if (cfg.exact) { say(`${p.name} rolled ${dice} — needs exactly ${100 - p.pos}`); return nextTurn(false); }
+                target = 100;
+            }
+            say(`${p.name} rolled ${dice}`);
+            const steps = [];
+            for (let k = p.pos + 1; k <= target; k++) steps.push(k);
+            anim = { p, steps, t: 0, after: null };
+            p.pos = target;
+            phase = 'moving';
+        }
+        function finishMove() {
+            const p = anim.p;
+            anim = null;
+            const j = jumps[p.pos];
+            if (j) {
+                const from = p.pos;
+                p.pos = j.to;
+                anim = { p, slide: { from, to: j.to, kind: j.kind }, t: 0 };
+                if (j.kind === 'ladder') { Arcade.sfx('power'); say(`🪜 ${p.name} climbed ${from} → ${j.to}`); if (p.kind === 'you') stats.ladders++; }
+                else { Arcade.sfx('bad'); say(`🐍 ${p.name} slid ${from} → ${j.to}`); if (p.kind === 'you') stats.snakes++; }
+                return;
+            }
+            if (p.pos === 100) return win(p);
+            nextTurn(dice === 6 && cfg.six);
+        }
+        function nextTurn(again) {
+            if (again) say(`${cur().name} rolled a 6 — roll again!`);
+            else turn = (turn + 1) % players.length;
+            phase = 'roll';
+            schedule();
+        }
+        function win(p) {
+            winner = p; phase = 'over';
+            const youPlaying = players.some(q => q.kind === 'you');
+            if (youPlaying) stats.played++;
+            if (p.kind === 'you') { stats.wins++; Arcade.count('win'); Arcade.addXP(15, true); }
+            Arcade.save('arcade.snl.stats', stats);
+            Arcade.sfx(p.kind === 'bot' && youPlaying ? 'die' : 'win');
+            $('endTitle').textContent = p.kind === 'you' ? '🏆 You win!' : `🏆 ${p.name} wins!`;
+            $('endTitle').className = p.kind === 'bot' && youPlaying ? 'bad' : 'good';
+            $('endText').textContent = `Your record: ${stats.wins} wins in ${stats.played} games · ${stats.ladders} ladders climbed, ${stats.snakes} snakes met`;
+            setTimeout(() => Arcade.show('endOv'), 700);
+            hud();
+        }
+        function hud() { Arcade.text('wins', stats.wins); Arcade.text('played', stats.played); }
+
+        function tokenOffset(p) {
+            const same = players.filter(q => q.pos === p.pos && q.pos > 0);
+            if (same.length < 2) return [0, 0];
+            const k = same.indexOf(p);
+            return [(k % 2 ? 1 : -1) * 11, (k > 1 ? 1 : -1) * 11];
+        }
+        function step(dt) {
+            if (phase === 'rolling') { diceAnim -= dt; dice = Arcade.randi(1, 6); if (diceAnim <= 0) afterRoll(); }
+            if (anim) {
+                const p = anim.p, sp = cfg.speed;
+                if (anim.steps) {
+                    anim.t += dt * sp;
+                    const k = Math.min(anim.steps.length - 1, Math.floor(anim.t / 0.17));
+                    const n = anim.steps[k], prev = k ? anim.steps[k - 1] : anim.steps[0] - 1;
+                    const f = Math.min(1, (anim.t - k * 0.17) / 0.17);
+                    const [ax, ay] = prev > 0 ? cellXY(prev) : [OX - 30, OY + B - 20];
+                    const [bx, by] = cellXY(n);
+                    p.x = ax + (bx - ax) * f; p.y = ay + (by - ay) * f - Math.sin(f * Math.PI) * 14;
+                    if (f >= 1 && k !== p._lastHop) { p._lastHop = k; Arcade.tone(600, 0.03, 'sine', 0.03); }
+                    if (anim.t >= anim.steps.length * 0.17) { p._lastHop = -1; finishMove(); }
+                } else {
+                    anim.t += dt * sp / 0.8;
+                    const f = Math.min(1, anim.t), e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+                    const s = anim.slide;
+                    if (s.kind === 'snake') { const pt = snakePoint(board.snakeShapes.find(x => x.a === s.from), e); p.x = pt[0]; p.y = pt[1]; }
+                    else { const [ax, ay] = cellXY(s.from), [bx, by] = cellXY(s.to); p.x = ax + (bx - ax) * e; p.y = ay + (by - ay) * e; }
+                    if (f >= 1) { anim = null; if (p.pos === 100) win(p); else nextTurn(dice === 6 && cfg.six); }
+                }
+            } else for (const p of players || []) {
+                if (p.pos > 0) { const [x, y] = cellXY(p.pos), [dx, dy] = tokenOffset(p); p.x += (x + dx - p.x) * Math.min(1, dt * 12); p.y += (y + dy - p.y) * Math.min(1, dt * 12); }
+            }
+        }
+        function snakePoint(s, t) {
+            const [ax, ay] = cellXY(s.a), [bx, by] = cellXY(s.b);
+            const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+            const w = Math.sin(t * Math.PI * 3 * s.wig) * Math.min(26, L * 0.12) * Math.sin(t * Math.PI);
+            return [ax + dx * t + nx * w, ay + dy * t + ny * w];
+        }
+        function drawSnake(s) {
+            const N = 40, pts = [];
+            for (let i = 0; i <= N; i++) pts.push(snakePoint(s, i / N));
+            c.lineCap = 'round'; c.lineJoin = 'round';
+            for (let i = 1; i <= N; i++) {
+                const t = i / N, w = 4 + 10 * (1 - t) ** 0.7;
+                c.strokeStyle = '#052e16'; c.lineWidth = w + 3; c.beginPath(); c.moveTo(...pts[i - 1]); c.lineTo(...pts[i]); c.stroke();
+            }
+            for (let i = 1; i <= N; i++) {
+                const t = i / N, w = 4 + 10 * (1 - t) ** 0.7;
+                c.strokeStyle = i % 4 < 2 ? s.col : '#fde68a'; c.lineWidth = w; c.beginPath(); c.moveTo(...pts[i - 1]); c.lineTo(...pts[i]); c.stroke();
+            }
+            const [hx, hy] = pts[0], [nx2, ny2] = pts[2], a = Math.atan2(hy - ny2, hx - nx2);
+            c.save(); c.translate(hx, hy); c.rotate(a);
+            c.fillStyle = s.col; c.strokeStyle = '#052e16'; c.lineWidth = 2;
+            c.beginPath(); c.ellipse(2, 0, 13, 10, 0, 0, TAU); c.fill(); c.stroke();
+            c.fillStyle = '#fff'; c.beginPath(); c.arc(6, -5, 3.2, 0, TAU); c.arc(6, 5, 3.2, 0, TAU); c.fill();
+            c.fillStyle = '#000'; c.beginPath(); c.arc(7, -5, 1.6, 0, TAU); c.arc(7, 5, 1.6, 0, TAU); c.fill();
+            c.strokeStyle = '#dc2626'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(14, 0); c.lineTo(20, 0); c.lineTo(23, -3); c.moveTo(20, 0); c.lineTo(23, 3); c.stroke();
+            c.restore();
+        }
+        function drawLadder(a, b) {
+            const [ax, ay] = cellXY(a), [bx, by] = cellXY(b);
+            const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy), nx = -dy / L * 11, ny = dx / L * 11;
+            c.strokeStyle = '#78350f'; c.lineWidth = 6; c.lineCap = 'round';
+            c.beginPath(); c.moveTo(ax + nx, ay + ny); c.lineTo(bx + nx, by + ny); c.moveTo(ax - nx, ay - ny); c.lineTo(bx - nx, by - ny); c.stroke();
+            c.strokeStyle = '#b45309'; c.lineWidth = 4;
+            c.beginPath(); c.moveTo(ax + nx, ay + ny); c.lineTo(bx + nx, by + ny); c.moveTo(ax - nx, ay - ny); c.lineTo(bx - nx, by - ny); c.stroke();
+            c.strokeStyle = '#d97706'; c.lineWidth = 3.5;
+            const n = Math.max(2, Math.floor(L / 20));
+            c.beginPath();
+            for (let i = 1; i < n; i++) { const t = i / n, x = ax + dx * t, y = ay + dy * t; c.moveTo(x + nx, y + ny); c.lineTo(x - nx, y - ny); }
+            c.stroke();
+        }
+        function drawDie(x, y, s, v, col) {
+            c.fillStyle = '#f8fafc'; c.strokeStyle = col; c.lineWidth = 4;
+            c.beginPath(); c.roundRect ? c.roundRect(x, y, s, s, s * 0.18) : c.rect(x, y, s, s); c.fill(); c.stroke();
+            const P = { 1: [[0.5, 0.5]], 2: [[0.25, 0.25], [0.75, 0.75]], 3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]], 4: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]], 5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]], 6: [[0.25, 0.22], [0.75, 0.22], [0.25, 0.5], [0.75, 0.5], [0.25, 0.78], [0.75, 0.78]] };
+            c.fillStyle = '#0f172a';
+            for (const [px, py] of P[v]) { c.beginPath(); c.arc(x + px * s, y + py * s, s * 0.085, 0, TAU); c.fill(); }
+        }
+        function draw() {
+            c.fillStyle = '#0b1020'; c.fillRect(0, 0, W, H);
+            if (!board) return;
+            for (let n = 1; n <= 100; n++) {
+                const [x, y] = cellXY(n), r = Math.floor((n - 1) / 10), col = (n - 1) % 10;
+                c.fillStyle = (r + col) % 2 ? '#fef3c7' : '#fde68a';
+                if (n === 100) c.fillStyle = '#fbbf24';
+                c.fillRect(x - CS / 2, y - CS / 2, CS, CS);
+                c.fillStyle = 'rgba(120,53,15,0.55)'; c.font = '700 12px system-ui'; c.textAlign = 'left'; c.textBaseline = 'top';
+                c.fillText(n, x - CS / 2 + 4, y - CS / 2 + 3);
+            }
+            c.font = '22px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            const [fx, fy] = cellXY(100); c.fillText('👑', fx + 6, fy + 6);
+            c.strokeStyle = '#78350f'; c.lineWidth = 3; c.strokeRect(OX, OY, B, B);
+            for (const [a, b] of board.ladders) drawLadder(a, b);
+            for (const s of board.snakeShapes) drawSnake(s);
+            // tokens
+            for (const p of players.slice().sort((a, b) => (a === cur()) - (b === cur()))) {
+                c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(p.x, p.y + 12, 12, 4, 0, 0, TAU); c.fill();
+                c.fillStyle = PCOL[p.i]; c.strokeStyle = '#0f172a'; c.lineWidth = 2.5;
+                c.beginPath(); c.arc(p.x, p.y, 13, 0, TAU); c.fill(); c.stroke();
+                c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.arc(p.x - 4, p.y - 4, 4, 0, TAU); c.fill();
+                if (p === cur() && phase !== 'over') { c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y, 17 + Math.sin(performance.now() / 150) * 2, 0, TAU); c.stroke(); }
+                if (p.kind === 'you') { c.fillStyle = '#fff'; c.font = '800 10px system-ui'; c.fillText('YOU', p.x, p.y + 1); }
+            }
+            // side panel
+            const px = OX + B + 20, pw = W - px - 10;
+            c.fillStyle = '#111a30'; c.beginPath(); c.roundRect ? c.roundRect(px, OY, pw, B, 14) : c.rect(px, OY, pw, B); c.fill();
+            c.textAlign = 'left';
+            players.forEach((p, k) => {
+                const y = OY + 20 + k * 44, on = p === cur();
+                if (on) { c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(px + 8, y - 6, pw - 16, 38); }
+                c.fillStyle = PCOL[p.i]; c.beginPath(); c.arc(px + 26, y + 13, 10, 0, TAU); c.fill();
+                c.fillStyle = '#e2e8f0'; c.font = (on ? '800' : '600') + ' 15px system-ui'; c.fillText(p.name, px + 44, y + 6);
+                c.fillStyle = '#94a3b8'; c.font = '600 12px system-ui'; c.fillText(p.pos ? 'Square ' + p.pos : 'Waiting to start', px + 44, y + 24);
+            });
+            const dx = px + pw / 2 - 48, dy = OY + 230;
+            drawDie(dx, dy, 96, dice, PCOL[cur().i]);
+            c.textAlign = 'center'; c.fillStyle = '#e2e8f0'; c.font = '700 14px system-ui';
+            const myTurn = phase === 'roll' && human(cur());
+            c.fillText(phase === 'over' ? 'Game over' : myTurn ? (cur().kind === 'you' ? 'Your turn — tap to roll' : cur().name + ': tap to roll') : phase === 'roll' ? cur().name + ' is thinking…' : '', px + pw / 2, dy + 120);
+            if (myTurn) { c.strokeStyle = PCOL[cur().i]; c.lineWidth = 2; c.globalAlpha = 0.5 + Math.sin(performance.now() / 200) * 0.3; c.strokeRect(dx - 8, dy - 8, 112, 112); c.globalAlpha = 1; }
+            c.textAlign = 'left'; c.font = '500 12px system-ui';
+            log.forEach((s, k) => { c.fillStyle = k ? '#64748b' : '#cbd5e1'; c.fillText(s, px + 14, OY + 400 + k * 22, pw - 24); });
+            Object.assign(diceRect, { x: dx, y: dy, w: 96, h: 96 });
+        }
+        const diceRect = { x: 0, y: 0, w: 0, h: 0 };
+        cv.addEventListener('pointerdown', (e) => {
+            if (!players || phase !== 'roll' || !human(cur())) return;
+            const p = Arcade.pointer(cv, e, W, H);
+            if (p.x > OX + B) roll();
+        });
+        window.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter') && players && phase === 'roll' && human(cur()) && $('setupOv').hidden) { e.preventDefault(); roll(); } });
+
+        // setup dialog
+        function buildSetup() {
+            const host = $('slots'); host.innerHTML = '';
+            cfg.slots.forEach((s, i) => {
+                const row = document.createElement('div'); row.className = 'slot';
+                row.innerHTML = `<i style="background:${PCOL[i]}"></i><div class="seg"></div>`;
+                const seg = row.querySelector('.seg');
+                for (const [v, label] of [['you', 'You'], ['bot', 'Bot'], ['friend', 'Friend'], ['off', 'Off']]) {
+                    if (v === 'you' && i > 0) continue;
+                    if (v === 'off' && i < 1) continue;
+                    const b = document.createElement('button'); b.className = 'btn sm' + (s === v ? ' active' : ''); b.textContent = label;
+                    b.onclick = () => { cfg.slots[i] = v; buildSetup(); };
+                    seg.appendChild(b);
+                }
+                host.appendChild(row);
+            });
+            document.querySelectorAll('#boardSeg [data-v]').forEach(b => { b.classList.toggle('active', cfg.board === b.dataset.v); b.onclick = () => { cfg.board = b.dataset.v; buildSetup(); }; });
+            document.querySelectorAll('#speedSeg [data-v]').forEach(b => { b.classList.toggle('active', String(cfg.speed) === b.dataset.v); b.onclick = () => { cfg.speed = +b.dataset.v; buildSetup(); }; });
+            $('exactBtn').textContent = (cfg.exact ? '✓' : '✗') + ' Exact roll to finish';
+            $('sixBtn').textContent = (cfg.six ? '✓' : '✗') + ' Six rolls again';
+            $('startBtn').disabled = cfg.slots.filter(s => s !== 'off').length < 2;
+        }
+        $('exactBtn').onclick = () => { cfg.exact = !cfg.exact; buildSetup(); };
+        $('sixBtn').onclick = () => { cfg.six = !cfg.six; buildSetup(); };
+        $('startBtn').onclick = setup;
+        $('againBtn').onclick = setup;
+        $('setupBtn').onclick = () => { Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
+        $('newBtn').onclick = () => { clearTimeout(timer); Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
+        buildSetup(); hud();
+        board = CLASSIC; board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#16a34a', '#ea580c', '#7c3aed', '#db2777', '#0891b2'][i % 5] }));
+        players = [{ i: 0, kind: 'you', pos: 0, x: -50, y: 0, name: 'You' }]; turn = 0; phase = 'idle'; dice = 6; log = [];
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__snl = { setup, cfg, get players() { return players; }, get phase() { return phase; }, roll };
+    })();
+    </script>
+</body>
+</html>

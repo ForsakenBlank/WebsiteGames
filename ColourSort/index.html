@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colour Sort · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f472b6; --accent-2: #a78bfa; --accent-ink: #2a0718; --bh: 36px; --tw: 54px; --cap: 4; --gx: 18px; --gy: 30px; }
+        .canvas-box { overflow-y: auto; overflow-x: hidden; align-items: safe center; }
+        .tubes {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--gy);
+            width: 100%;
+            max-width: 1180px;
+            padding: 26px 10px 14px;
+            margin: auto;
+        }
+        .shelf {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: var(--gx);
+            padding: 0 calc(var(--gx) * 0.9) 10px;
+        }
+        .shelf::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 8px;
+            border-radius: 6px;
+            background: linear-gradient(180deg, rgba(203,213,225,0.28), rgba(203,213,225,0.08));
+            box-shadow: 0 6px 16px -6px rgba(0,0,0,0.8);
+        }
+        .shelves-1 .shelf::after { display: none; }
+        .tube {
+            position: relative;
+            width: var(--tw);
+            height: calc(var(--bh) * var(--tcap, var(--cap)) + 2px * (var(--tcap, var(--cap)) - 1) + 12px);
+            padding: 0 4px 5px;
+            border: 3px solid rgba(203, 213, 225, 0.35);
+            border-top: none;
+            border-radius: 0 0 calc(var(--tw) / 2) calc(var(--tw) / 2);
+            background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.09) 30%, rgba(255,255,255,0.02));
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+            cursor: pointer;
+            transition: transform 0.18s cubic-bezier(.3,1.5,.5,1), border-color 0.2s, box-shadow 0.2s;
+        }
+        .tube::before {
+            content: "";
+            position: absolute;
+            top: -6px; left: -7px; right: -7px;
+            height: 6px;
+            border-radius: 4px;
+            background: rgba(203, 213, 225, 0.35);
+        }
+        .tube:hover { border-color: rgba(203, 213, 225, 0.55); }
+        .tube.sel { transform: translateY(-18px); border-color: var(--accent); box-shadow: 0 14px 30px -12px var(--accent); }
+        .tube.sel::before { background: var(--accent); }
+        .tube.done { border-color: color-mix(in srgb, var(--good) 70%, transparent); box-shadow: 0 0 26px -8px var(--good); }
+        .tube.done::before { background: var(--good); }
+        .tube.bump { animation: bump 0.3s; }
+        .tube.nope { animation: shake 0.3s; }
+        .tube .badge { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; font-weight: 800; white-space: nowrap; color: var(--muted); pointer-events: none; }
+        .tube.locked { opacity: 0.55; border-style: dashed; cursor: not-allowed; }
+        .tube.locked::after { content: "🔒"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: calc(var(--tw) * 0.45); }
+        .tube.out { border-color: rgba(251, 191, 36, 0.55); }
+        .tube.out::before { background: rgba(251, 191, 36, 0.7); }
+        .tube.mono::before { background: var(--mc); height: 8px; top: -8px; box-shadow: 0 0 12px var(--mc); }
+        .tube.mono { border-color: color-mix(in srgb, var(--mc) 60%, transparent); }
+        .tube.tall { border-color: rgba(56, 189, 248, 0.55); background: linear-gradient(90deg, rgba(56,189,248,0.05), rgba(56,189,248,0.12) 30%, rgba(56,189,248,0.03)); }
+        .block {
+            height: var(--bh);
+            flex: none;
+            border-radius: min(8px, calc(var(--bh) / 3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--bh) * 0.5);
+            color: rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.18), inset 0 3px 0 rgba(255,255,255,0.25);
+            animation: drop 0.22s ease-out;
+        }
+        .block.dark { color: rgba(255, 255, 255, 0.6); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), inset 0 3px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(255,255,255,0.18); }
+        .tube .block:first-child { border-radius: 8px 8px calc(var(--tw) / 2 - 4px) calc(var(--tw) / 2 - 4px); }
+        .block.hidden { background: repeating-linear-gradient(45deg, #2a3358, #2a3358 6px, #222a4a 6px, #222a4a 12px) !important; color: var(--muted); }
+        .block.hidden::after { content: "?"; font-weight: 800; }
+        body:not(.symbols) .block:not(.hidden) span { display: none; }
+        @keyframes drop { from { transform: translateY(-14px); opacity: 0.3; } to { transform: none; opacity: 1; } }
+        @keyframes bump { 40% { transform: scale(1.06, 0.96); } }
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .level-tag { display: inline-flex; gap: 6px; align-items: center; padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: color-mix(in srgb, var(--tc, var(--accent)) 18%, transparent); color: var(--tc, var(--accent)); border: 1px solid color-mix(in srgb, var(--tc, var(--accent)) 40%, transparent); }
+        .level-tag[data-kind="normal"] { display: none; }
+        .diff-row .btn small { color: var(--muted); font-weight: 600; margin-left: 2px; }
+        .diff-row .btn.active small { color: inherit; opacity: 0.75; }
+        .cust-grid { display: grid; gap: 14px; margin: 16px 0 6px; text-align: left; }
+        .cust-grid label { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-weight: 650; font-size: .9rem; }
+        .cust-grid label small { grid-column: 1 / -1; color: var(--muted); font-weight: 500; font-size: .76rem; }
+        .cust-grid input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+        .cust-grid output { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 800; }
+        .cust-check { display: flex !important; gap: 8px !important; align-items: center; cursor: pointer; }
+        .cust-check input { accent-color: var(--accent); width: 17px; height: 17px; }
+        .cust-preview { font-size: .82rem; color: var(--muted); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Colour Sort</h1>
+        <div class="stats">
+            <span class="chip accent">Level <b id="level">1</b></span>
+            <span class="chip">Moves <b id="moves">0</b></span>
+            <span class="chip">Colours <b id="colourCount">0</b></span>
+            <span class="chip gold">Mode <b id="modeName">Classic</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" id="symBtn" title="Colour-blind symbols">◆</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="toolbar diff-row">
+            <div class="seg" id="diffs"></div>
+        </div>
+        <div class="toolbar">
+            <div class="seg" id="modes">
+                <button class="btn sm" data-mode="classic">Classic</button>
+                <button class="btn sm" data-mode="mystery">Mystery</button>
+            </div>
+            <button class="btn sm" id="undoBtn" title="Undo (unlimited)">↶ Undo</button>
+            <button class="btn sm" id="customBtn" hidden>⚙ Custom setup</button>
+            <button class="btn sm" id="tubeBtn">+ Tube</button>
+            <button class="btn sm" id="restartBtn">⟲ Restart</button>
+            <span class="level-tag" id="levelTag" data-kind="normal"></span>
+        </div>
+        <div class="canvas-box">
+            <div class="tubes" id="tubes"></div>
+            <div class="overlay" id="winOv" hidden>
+                <div class="modal">
+                    <h2 class="good">Sorted!</h2>
+                    <p id="winText">Level 1 cleared</p>
+                    <div class="stat-grid">
+                        <div><small>Moves</small><b id="winMoves">0</b></div>
+                        <div><small>Colours</small><b id="winColours">0</b></div>
+                        <div><small>Tube size</small><b id="winCap">4</b></div>
+                        <div><small>Undos used</small><b id="winUndos">0</b></div>
+                    </div>
+                    <p class="small" id="nextPreview"></p>
+                    <div class="actions"><button class="btn primary lg" id="nextBtn">Next level</button></div>
+                </div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="custOv" hidden>
+            <div class="modal">
+                <h2>Custom game</h2>
+                <p>Build your own puzzle. Settings are kept for every custom level.</p>
+                <div class="cust-grid">
+                    <label>Colours <output id="cColOut">8</output><input type="range" id="cCol" min="2" max="20" value="8"><small>How many different colours to sort.</small></label>
+                    <label>Tube height <output id="cCapOut">4</output><input type="range" id="cCap" min="2" max="10" value="4"><small>Blocks per tube — taller tubes are harder.</small></label>
+                    <label>Empty tubes <output id="cEmptyOut">2</output><input type="range" id="cEmpty" min="1" max="6" value="2"><small>Spare tubes you start with. Fewer = harder.</small></label>
+                    <label class="cust-check"><input type="checkbox" id="cExtra" checked> Allow the +Tube helper</label>
+                </div>
+                <p class="cust-preview" id="cPreview"></p>
+                <div class="actions">
+                    <button class="btn ghost" id="cCancel">Cancel</button>
+                    <button class="btn primary lg" id="cPlay">Play</button>
+                </div>
+            </div>
+        </div>
+        <p class="tiny dim center" style="margin:0">Tap a tube, then tap where to pour. Only matching colours stack. <span class="desktop-only"><kbd>Z</kbd> undo · <kbd>R</kbd> restart</span></p>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const COLORS = [
+            ['#ef4444', '●'], ['#3b82f6', '■'], ['#22c55e', '▲'], ['#facc15', '◆'],
+            ['#a855f7', '★'], ['#22d3ee', '✚'], ['#f97316', '⬟'], ['#f472b6', '♥'],
+            ['#a3e635', '✦'], ['#f1f5f9', '◐'], ['#a16207', '▼'], ['#64748b', '✕'],
+            ['#1e3a8a', '☾', 1], ['#9f1239', '♠', 1], ['#0f766e', '♣', 1], ['#c4b5fd', '✿'],
+            ['#fdba74', '☀'], ['#18181b', '⬢', 1], ['#6ee7b7', '♪'], ['#d946ef', '⚑'],
+        ];
+        // start/step/max: colour count at level 1, levels per extra colour, cap on colours.
+        const DIFFS = [
+            { id: 'easy', name: 'Easy', start: 3, step: 3, max: 7, undos: 99, extra: true, varied: 0.35, col: '#34d399' },
+            { id: 'normal', name: 'Normal', start: 3, step: 2, max: 12, undos: 5, extra: true, varied: 0.45, col: '#f472b6' },
+            { id: 'hard', name: 'Hard', start: 5, step: 2, max: 14, undos: 3, extra: true, varied: 0.5, col: '#fbbf24' },
+            { id: 'expert', name: 'Expert', start: 7, step: 2, max: 16, undos: 2, extra: true, varied: 0.55, col: '#fb923c' },
+            { id: 'master', name: 'Master', start: 9, step: 2, max: 18, undos: 1, extra: true, varied: 0.6, col: '#f87171' },
+            { id: 'insane', name: 'Insane', start: 12, step: 3, max: 20, undos: 0, extra: false, varied: 0.65, col: '#c084fc' },
+            { id: 'custom', name: '⚙ Custom', custom: true, col: '#38bdf8' },
+        ];
+        let custom = Object.assign({ colours: 8, cap: 4, empty: 2, extra: true }, Arcade.load('arcade.coloursort.custom', {}));
+        // Level shapes. Which one a level gets is decided by the level number, so level 12 is always
+        // the same kind of level (the colours are still shuffled fresh each time).
+        const KINDS = {
+            normal: { label: '', icon: '' },
+            long: { label: 'Long tubes', icon: '📏', col: '#38bdf8' },
+            party: { label: 'Tube party', icon: '🎉', col: '#fbbf24' },
+            short: { label: 'Short tubes', icon: '🧃', col: '#4ade80' },
+            mega: { label: 'MEGA level', icon: '💥', col: '#f87171' },
+        };
+        // Special tubes some levels add (decided by level number, like KINDS).
+        const SPECIALS = {
+            lock: { label: 'Locked tube', icon: '🔒', tip: 'A spare tube that opens once you finish 2 tubes' },
+            out: { label: 'Pour-out tube', icon: '⬆', tip: 'The gold tube can only be poured out of, never into' },
+            mono: { label: 'One-colour tube', icon: '🎯', tip: 'The glowing tube only accepts its own colour' },
+            tall: { label: 'XL tube', icon: '📦', tip: 'A double-height spare tube that can hold several colours — it must end empty' },
+        };
+        const MODES = { classic: 'Classic', mystery: 'Mystery' };
+        const host = document.getElementById('tubes');
+
+        let mode = Arcade.load('arcade.coloursort.mode', 'classic');
+        if (!MODES[mode]) mode = 'classic';
+        let diff = DIFFS.find(d => d.id === Arcade.load('arcade.coloursort.diff', 'normal')) || DIFFS[1];
+        let tubes, hidden, sel, moves, history, undosUsed, extraUsed, colours, startState, CAP, kind, proven, specs, special;
+
+        // Normal keeps the original save keys so existing progress carries over.
+        const levelKey = (d, m) => 'arcade.coloursort.level.' + (m || mode) + ((d || diff).id === 'normal' ? '' : '.' + (d || diff).id);
+        const level = () => Arcade.load(levelKey(), 1);
+
+        if (Arcade.load('arcade.coloursort.symbols', false)) document.body.classList.add('symbols');
+
+        /* ---------- Level design ---------- */
+        function hash(a, b) {
+            let h = Math.imul(a ^ 0x9E3779B1, 0x85EBCA77) ^ Math.imul(b + 0x632BE5AB, 0xC2B2AE35);
+            h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12;
+            return (h >>> 0) / 4294967296;
+        }
+
+        function design(lv, d) {
+            if (d.custom) return { kind: 'normal', cap: custom.cap, colours: custom.colours, empty: custom.empty };
+            const di = DIFFS.indexOf(d);
+            const base = Math.min(d.max, d.start + Math.floor((lv - 1) / d.step));
+            const r = hash(lv, di + 7), r2 = hash(lv, di + 101);
+            let k = 'normal';
+            if (lv >= 3 && r < d.varied) {
+                const x = r / d.varied;
+                if (x < 0.42) k = 'long';
+                else if (x < 0.72) k = 'party';
+                else if (x < 0.88) k = 'short';
+                else k = lv >= 8 && di >= 1 ? 'mega' : 'long';
+            }
+            let cap = 4, n = base;
+            switch (k) {
+                case 'long': cap = 5 + Math.floor(r2 * (2 + Math.min(3, di))); n = Math.max(3, Math.round(base * 0.8)); break;   // 5–9 high
+                case 'party': n = Math.min(COLORS.length, base + 4 + di + Math.floor(r2 * 4)); break;                            // loads of tubes
+                case 'short': cap = 3; n = Math.min(COLORS.length, base + 2); break;
+                case 'mega': cap = 6 + Math.floor(r2 * 3); n = Math.min(COLORS.length, base + 3 + di); break;                    // long AND lots
+            }
+            let sp = null;
+            if (lv >= 5) {
+                const r3 = hash(lv, di + 333);
+                if (r3 < 0.16) sp = 'lock'; else if (r3 < 0.3) sp = 'out'; else if (r3 < 0.44) sp = 'mono'; else if (r3 < 0.58 || k === 'party') sp = 'tall';
+            }
+            return { kind: k, cap, colours: n, empty: 2, special: sp };
+        }
+
+        /* ---------- Tube rules ---------- */
+        const capOf = (sp, i) => sp[i].cap;
+        const doneIn = (s, sp, i) => sp[i].type !== 'tall' && s[i].length === sp[i].cap && s[i].every(c => c === s[i][0]);
+        const doneCount = (s, sp) => s.reduce((a, t, i) => a + (t.length && doneIn(s, sp, i) ? 1 : 0), 0);
+        const isLocked = (s, sp, i) => sp[i].type === 'lock' && doneCount(s, sp) < sp[i].unlockAt;
+        /** Can the top run of tube a go into tube b (ignoring hidden blocks)? */
+        function canPour(s, sp, a, b, top) {
+            if (a === b || sp[b].type === 'out') return false;
+            if (isLocked(s, sp, a) || isLocked(s, sp, b)) return false;
+            const B = s[b];
+            if (B.length >= capOf(sp, b)) return false;
+            if (sp[b].type === 'mono' && top !== sp[b].color) return false;
+            return !B.length || B[B.length - 1] === top;
+        }
+
+        function solvable(start, sp, limit) {
+            const seen = new Set();
+            const plain = sp.every(x => x.type === 'normal');
+            // tubes are interchangeable only when they all follow the same rules
+            const key = plain ? (t) => t.map(x => x.join(',')).sort().join('|') : (t) => t.map(x => x.join(',')).join('|');
+            const stack = [start.map(t => t.slice())];
+            let nodes = 0;
+            while (stack.length) {
+                const s = stack.pop();
+                if (s.every((t, i) => t.length === 0 || doneIn(s, sp, i))) return true;
+                const k = key(s);
+                if (seen.has(k)) continue;
+                seen.add(k);
+                if (++nodes > limit) return null;
+                for (let a = 0; a < s.length; a++) {
+                    const A = s[a];
+                    if (!A.length) continue;
+                    const top = A[A.length - 1];
+                    if (doneIn(s, sp, a)) continue;
+                    let run = 0; for (let i = A.length - 1; i >= 0 && A[i] === top; i--) run++;
+                    let movedToEmpty = false;
+                    for (let b = 0; b < s.length; b++) {
+                        if (!canPour(s, sp, a, b, top)) continue;
+                        const B = s[b];
+                        if (!B.length && sp[b].type === 'normal' && sp[a].type === 'normal') { if (run === A.length || movedToEmpty) continue; movedToEmpty = true; }
+                        const n = s.map(t => t.slice());
+                        const k2 = Math.min(run, capOf(sp, b) - B.length);
+                        for (let i = 0; i < k2; i++) n[b].push(n[a].pop());
+                        stack.push(n);
+                    }
+                }
+            }
+            return false;
+        }
+
+        function generate(n, cap, empty, special) {
+            let best = null;
+            const budget = n * cap > 48 ? 15000 : 50000;
+            for (let attempt = 0; attempt < 24; attempt++) {
+                const deck = [];
+                for (let c = 0; c < n; c++) for (let i = 0; i < cap; i++) deck.push(c);
+                Arcade.shuffle(deck);
+                const t = [], sp = [];
+                for (let i = 0; i < n; i++) { t.push(deck.slice(i * cap, i * cap + cap)); sp.push({ type: 'normal', cap }); }
+                for (let e = 0; e < empty; e++) { t.push([]); sp.push({ type: 'normal', cap }); }
+                if (special === 'lock') { t.push([]); sp.push({ type: 'lock', cap, unlockAt: 2 }); }
+                if (special === 'out') sp[0] = { type: 'out', cap };
+                if (special === 'mono') { t.push([]); sp.push({ type: 'mono', cap, color: Arcade.randi(0, n - 1) }); }
+                if (special === 'tall') sp[n] = { type: 'tall', cap: cap * 2 };
+                if (t.some((x, i) => doneIn(t, sp, i) && x.length)) continue;
+                best = { t, sp };
+                const ok = solvable(t, sp, budget);
+                if (ok === true) return { tubes: t, specs: sp, proven: true };
+                if (ok === null && attempt > 3) return { tubes: t, specs: sp, proven: false };
+            }
+            return { tubes: best.t, specs: best.sp, proven: false };
+        }
+
+        /* ---------- Game ---------- */
+        function newLevel() {
+            const d = design(level(), diff);
+            CAP = d.cap; colours = d.colours; kind = d.kind; special = mode === 'mystery' && d.special === 'mono' ? null : d.special;
+            const g = generate(colours, CAP, d.empty, special);
+            tubes = g.tubes; proven = g.proven; specs = g.specs;
+            hidden = tubes.map(t => t.map((_, i) => mode === 'mystery' && i < t.length - 1));
+            startState = snapshot();
+            resetCounters();
+            const tag = document.getElementById('levelTag');
+            tag.dataset.kind = kind;
+            const K = KINDS[kind];
+            const S = special && SPECIALS[special];
+            if (S && kind === 'normal') tag.dataset.kind = 'special';
+            tag.textContent = [K.label ? `${K.icon} ${K.label} · ${colours} colours × ${CAP}` : '', S ? `${S.icon} ${S.label}` : ''].filter(Boolean).join(' · ');
+            tag.title = S ? S.tip : '';
+            tag.style.setProperty('--tc', K.col || (S ? '#38bdf8' : ''));
+            if (K.label) Arcade.toast(`${K.icon} ${K.label}!`, 'gold', 1400);
+            if (S) setTimeout(() => Arcade.toast(`${S.icon} ${S.tip}`, 'gold', 3000), K.label ? 900 : 0);
+            render();
+        }
+
+        function resetCounters() {
+            sel = null; moves = 0; history = []; undosUsed = 0; extraUsed = false;
+            Arcade.hide('winOv');
+            hud();
+        }
+
+        function restart() {
+            restore(startState);
+            resetCounters();
+            render();
+        }
+
+        const snapshot = () => ({ tubes: tubes.map(t => t.slice()), hidden: hidden.map(h => h.slice()), specs: specs.map(s => ({ ...s })) });
+        function restore(s) { tubes = s.tubes.map(t => t.slice()); hidden = s.hidden.map(h => h.slice()); specs = s.specs.map(x => ({ ...x })); }
+
+        // The +Tube helper is always offered when a level could not be proven solvable in time.
+        const extraAllowed = () => (diff.custom ? custom.extra : diff.extra) || !proven;
+
+        function hud() {
+            Arcade.text('level', level());
+            Arcade.text('moves', moves);
+            Arcade.text('colourCount', colours);
+            Arcade.text('modeName', MODES[mode]);
+            document.getElementById('undoBtn').disabled = !history.length;
+            document.getElementById('customBtn').hidden = !diff.custom;
+            const tb = document.getElementById('tubeBtn');
+            tb.disabled = extraUsed || !extraAllowed();
+            tb.title = extraAllowed() ? 'Add one empty tube (once per level)' : 'No extra tubes on ' + diff.name;
+            document.querySelectorAll('#modes .btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            buildDiffs();
+        }
+
+        function buildDiffs() {
+            const box = document.getElementById('diffs');
+            if (!box.children.length) {
+                for (const d of DIFFS) {
+                    const b = document.createElement('button');
+                    b.className = 'btn sm';
+                    b.dataset.diff = d.id;
+                    b.onclick = () => {
+                        if (d.custom) { openCustom(); return; }
+                        if (d === diff) return;
+                        diff = d; Arcade.save('arcade.coloursort.diff', d.id); Arcade.sfx('select'); newLevel();
+                    };
+                    box.appendChild(b);
+                }
+            }
+            for (const b of box.children) {
+                const d = DIFFS.find(x => x.id === b.dataset.diff);
+                const lv = Arcade.load(levelKey(d), 1);
+                b.innerHTML = `${d.name} <small>Lv ${lv}</small>`;
+                b.classList.toggle('active', d === diff);
+            }
+        }
+
+        const isDone = (i) => doneIn(tubes, specs, i) && !hidden[i].some(Boolean);
+
+        // Picks tubes-per-row so blocks end up as large as possible for this many tubes and this tube height.
+        // Rows never get wider than MAX_PER_ROW tubes; once they would, the tubes move onto extra shelves.
+        // If even the smallest sensible blocks don't fit on screen, the board scrolls instead of shrinking further.
+        const MAX_PER_ROW = 10;
+        let perRow = 1;
+        function sizeBlocks() {
+            const box = document.querySelector('.canvas-box').getBoundingClientRect();
+            const n = tubes.length;
+            const TALL = Math.max(...specs.map(s => s.cap));
+            const Wd = Math.min(box.width, 1180) - 24, Hd = box.height - 50 - (specs.some(s => s.type !== 'normal') ? 26 : 0);
+            const maxPer = Math.min(n, MAX_PER_ROW, Math.max(2, Math.floor((Wd + 10) / 40)));
+            let best = { bh: 0 };
+            for (let per = Math.ceil(n / Math.ceil(n / maxPer)); per <= maxPer; per++) {
+                const rows = Math.ceil(n / per);
+                const gx = per > 8 ? 12 : 18, gy = rows > 1 ? 34 : 28;
+                const tw = Math.min(64, (Wd - gx * (per + 1)) / per);
+                if (tw < 30) continue;
+                const bhH = ((Hd - gy * (rows - 1)) / rows - 24 - 2 * (TALL - 1)) / TALL;
+                const bh = Math.min(bhH, (tw - 14) * 0.78, 42);
+                // prefer fewer rows when the difference is small
+                const score = bh - rows * 0.6;
+                if (score > (best.score ?? -1e9)) best = { bh, tw, gx, gy, per, score };
+            }
+            if (!best.per) best = { bh: 14, tw: 30, gx: 10, gy: 30, per: maxPer };
+            perRow = best.per;
+            const bh = Math.max(14, Math.floor(best.bh));
+            const tw = Math.max(30, Math.round(Math.min(best.tw, bh * 1.45 + 14)));
+            const s = document.documentElement.style;
+            s.setProperty('--bh', bh + 'px');
+            s.setProperty('--tw', tw + 'px');
+            s.setProperty('--cap', CAP);
+            s.setProperty('--gx', best.gx + 'px');
+            s.setProperty('--gy', best.gy + 'px');
+        }
+
+        // Splits n tubes into balanced rows (e.g. 13 with 7 per row -> 7 + 6, not 10 + 3).
+        function rowSizes(n) {
+            const rows = Math.ceil(n / perRow);
+            const base = Math.floor(n / rows), extra = n % rows;
+            return Array.from({ length: rows }, (_, r) => base + (r < extra ? 1 : 0));
+        }
+
+        function render(bumpIdx, nopeIdx) {
+            sizeBlocks();
+            host.innerHTML = '';
+            const sizes = rowSizes(tubes.length);
+            host.className = 'tubes shelves-' + sizes.length;
+            const shelves = sizes.map(() => { const s = document.createElement('div'); s.className = 'shelf'; host.appendChild(s); return s; });
+            let shelfIdx = 0, inShelf = 0;
+            tubes.forEach((t, i) => {
+                const el = document.createElement('div');
+                const S = specs[i];
+                const locked = isLocked(tubes, specs, i);
+                el.className = 'tube' + (sel === i ? ' sel' : '') + (isDone(i) ? ' done' : '') + (bumpIdx === i ? ' bump' : '') + (nopeIdx === i ? ' nope' : '')
+                    + (S.type !== 'normal' ? ' ' + S.type : '') + (locked ? ' locked' : '');
+                if (S.cap !== CAP) el.style.setProperty('--tcap', S.cap);
+                if (S.type === 'mono') el.style.setProperty('--mc', COLORS[S.color][0]);
+                const badge = S.type === 'lock' ? (locked ? `🔒 ${doneCount(tubes, specs)}/${S.unlockAt}` : '🔓') : S.type === 'out' ? '⬆ out only' : S.type === 'mono' ? '🎯 only' : S.type === 'tall' ? '📦 XL' : '';
+                if (badge) { const bd = document.createElement('div'); bd.className = 'badge'; bd.textContent = badge; el.appendChild(bd); }
+                t.forEach((c, j) => {
+                    const b = document.createElement('div');
+                    b.className = 'block' + (hidden[i][j] ? ' hidden' : '') + (!hidden[i][j] && COLORS[c][2] ? ' dark' : '');
+                    if (!hidden[i][j]) { b.style.background = COLORS[c][0]; b.innerHTML = '<span>' + COLORS[c][1] + '</span>'; }
+                    if (bumpIdx !== i) b.style.animation = 'none';
+                    el.appendChild(b);
+                });
+                el.onclick = () => tap(i);
+                if (inShelf >= sizes[shelfIdx]) { shelfIdx++; inShelf = 0; }
+                shelves[shelfIdx].appendChild(el);
+                inShelf++;
+            });
+        }
+
+        function tap(i) {
+            if (!document.getElementById('winOv').hidden) return;
+            if (sel === null) {
+                if (!tubes[i].length || isDone(i)) return;
+                if (isLocked(tubes, specs, i)) { Arcade.sfx('bad'); render(undefined, i); return; }
+                sel = i; Arcade.sfx('select'); render();
+                return;
+            }
+            if (sel === i) { sel = null; render(); return; }
+            const from = sel;
+            sel = null;
+            if (!pour(from, i)) {
+                if (tubes[i].length && !isDone(i)) { sel = i; Arcade.sfx('select'); render(); }
+                else { Arcade.sfx('bad'); render(undefined, i); }
+            }
+        }
+
+        function pour(a, b) {
+            const A = tubes[a], B = tubes[b];
+            if (!A.length) return false;
+            const top = A[A.length - 1];
+            if (!canPour(tubes, specs, a, b, top)) {
+                if (specs[b].type === 'out') Arcade.toast('⬆ That tube only pours out', 'bad', 1000);
+                else if (specs[b].type === 'mono' && B.length < specs[b].cap) Arcade.toast('🎯 That tube only takes its own colour', 'bad', 1000);
+                else if (isLocked(tubes, specs, b)) Arcade.toast('🔒 Finish ' + specs[b].unlockAt + ' tubes to open it', 'bad', 1000);
+                return false;
+            }
+            if (B.length && hidden[b][B.length - 1]) return false;
+            const wasLocked = specs.map((_, i) => isLocked(tubes, specs, i));
+            history.push(snapshot());
+            while (A.length && A[A.length - 1] === top && !hidden[a][A.length - 1] && B.length < specs[b].cap) {
+                B.push(A.pop()); hidden[a].pop(); hidden[b].push(false);
+            }
+            if (A.length) hidden[a][A.length - 1] = false;
+            if (wasLocked.some((w, i) => w && !isLocked(tubes, specs, i))) { Arcade.toast('🔓 Locked tube opened!', 'good', 1200); Arcade.sfx('power'); }
+            moves++;
+            Arcade.sfx(isDone(b) ? 'score' : 'pop');
+            hud();
+            render(b);
+            if (tubes.every((t, i) => !t.length || isDone(i))) setTimeout(win, 350);
+            return true;
+        }
+
+        function undo() {
+            if (!history.length) return;
+            restore(history.pop());
+            undosUsed++; moves = Math.max(0, moves - 1); sel = null;
+            Arcade.sfx('click');
+            hud(); render();
+        }
+
+        function addTube() {
+            if (extraUsed || !extraAllowed()) return;
+            extraUsed = true;
+            tubes.push([]); hidden.push([]); specs.push({ type: 'normal', cap: CAP });
+            Arcade.sfx('power');
+            hud(); render();
+        }
+
+        function win() {
+            Arcade.sfx('win');
+            const lv = level();
+            Arcade.text('winText', `${diff.custom ? 'Custom' : diff.name} level ${lv} cleared` + (kind !== 'normal' ? ` · ${KINDS[kind].icon} ${KINDS[kind].label}` : ''));
+            Arcade.text('winMoves', moves);
+            Arcade.text('winColours', colours);
+            Arcade.text('winCap', CAP);
+            Arcade.text('winUndos', undosUsed);
+            Arcade.save(levelKey(), lv + 1);
+            Arcade.count('win');
+            const nd = design(lv + 1, diff);
+            Arcade.text('nextPreview', diff.custom ? `Next up: another ${nd.colours} × ${nd.cap} custom puzzle` : nd.kind !== 'normal' ? `Next up: ${KINDS[nd.kind].icon} ${KINDS[nd.kind].label}!` : `Next up: ${nd.colours} colours`);
+            Arcade.show('winOv');
+            buildDiffs();
+        }
+
+        /* ---------- Custom setup ---------- */
+        const cEl = (id) => document.getElementById(id);
+        function custPreview() {
+            const n = +cEl('cCol').value, cap = +cEl('cCap').value, e = +cEl('cEmpty').value;
+            cEl('cColOut').textContent = n; cEl('cCapOut').textContent = cap; cEl('cEmptyOut').textContent = e;
+            const tubesN = n + e;
+            const rows = Math.ceil(tubesN / MAX_PER_ROW);
+            let feel = 'Relaxed';
+            const pressure = (n * cap) / (e * cap + 1) + cap * 0.6;
+            if (pressure > 30) feel = 'Brutal'; else if (pressure > 18) feel = 'Very hard'; else if (pressure > 11) feel = 'Hard'; else if (pressure > 6) feel = 'Medium';
+            cEl('cPreview').textContent = `${tubesN} tubes · ${n * cap} blocks · ${rows > 1 ? rows + ' shelves' : '1 shelf'} · feels ${feel}`;
+        }
+        function openCustom() {
+            cEl('cCol').value = custom.colours; cEl('cCap').value = custom.cap; cEl('cEmpty').value = custom.empty; cEl('cExtra').checked = custom.extra;
+            custPreview();
+            Arcade.show('custOv');
+        }
+        ['cCol', 'cCap', 'cEmpty'].forEach(id => cEl(id).addEventListener('input', custPreview));
+        cEl('cCancel').onclick = () => Arcade.hide('custOv');
+        cEl('cPlay').onclick = () => {
+            custom = { colours: +cEl('cCol').value, cap: +cEl('cCap').value, empty: +cEl('cEmpty').value, extra: cEl('cExtra').checked };
+            Arcade.save('arcade.coloursort.custom', custom);
+            diff = DIFFS.find(d => d.custom);
+            Arcade.save('arcade.coloursort.diff', 'custom');
+            Arcade.hide('custOv');
+            Arcade.sfx('select');
+            newLevel();
+        };
+        cEl('customBtn').onclick = openCustom;
+
+        document.getElementById('nextBtn').onclick = newLevel;
+        document.getElementById('undoBtn').onclick = undo;
+        document.getElementById('tubeBtn').onclick = addTube;
+        document.getElementById('restartBtn').onclick = restart;
+        document.querySelectorAll('#modes .btn').forEach(b => b.onclick = () => {
+            mode = b.dataset.mode; Arcade.save('arcade.coloursort.mode', mode); newLevel();
+        });
+        document.getElementById('symBtn').onclick = () => {
+            const on = document.body.classList.toggle('symbols');
+            Arcade.save('arcade.coloursort.symbols', on);
+        };
+        window.addEventListener('keydown', (e) => {
+            if (!document.getElementById('custOv').hidden) return;
+            if (e.code === 'KeyZ') undo();
+            else if (e.code === 'KeyR') restart();
+            else if (e.code === 'Escape') { sel = null; render(); }
+        });
+        window.addEventListener('resize', () => render());
+        window.__coloursort = { design, DIFFS }; // for automated tests
+
+        newLevel();
+    })();
+    </script>
+</body>
+</html>

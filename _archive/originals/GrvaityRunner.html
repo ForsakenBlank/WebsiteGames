@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gravity Flip</title>
+    <style>
+        body { background: #121417; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        canvas { background: #1e2126; border: 2px solid #3498db; border-radius: 10px; cursor: pointer; }
+        #uiOverlay { position: absolute; text-align: center; pointer-events: none; }
+        .btn { pointer-events: auto; background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="uiOverlay">
+        <div id="menu">
+            <h1>GRAVITY FLIP</h1>
+            <p>Press <b>SPACE</b> or <b>Click</b> to flip.</p>
+            <button class="btn" onclick="startGame()">START</button>
+        </div>
+        <div id="gameOver" class="hidden">
+            <h1 style="color:#e74c3c">VOIDED</h1>
+            <p>Score: <span id="finalScore">0</span></p>
+            <button class="btn" onclick="startGame()">RESTART</button>
+        </div>
+    </div>
+    <div id="scoreHUD" class="hidden" style="margin-bottom:10px">SCORE: <span id="score">0</span></div>
+    <canvas id="gravCanvas" width="600" height="300"></canvas>
+<script>
+    const canvas = document.getElementById('gravCanvas'), ctx = canvas.getContext('2d');
+    let p, obstacles, score, gameActive = false;
+
+    function startGame() {
+        gameActive = true; score = 0; p = { y: 150, v: 0, side: 1 }; obstacles = [];
+        document.getElementById('menu').classList.add('hidden');
+        document.getElementById('gameOver').classList.add('hidden');
+        document.getElementById('scoreHUD').classList.remove('hidden');
+        update();
+    }
+
+    window.onkeydown = (e) => { if(e.code === 'Space' && gameActive) p.side *= -1; };
+    canvas.onclick = () => { if(gameActive) p.side *= -1; };
+
+    function update() {
+        if(!gameActive) return;
+        p.v += 0.5 * p.side; p.y += p.v;
+        if(p.y > 270) { p.y = 270; p.v = 0; }
+        if(p.y < 10) { p.y = 10; p.v = 0; }
+
+        if(Math.random() > 0.98) obstacles.push({ x: 600, y: Math.random() > 0.5 ? 10 : 250, w: 30, h: 40 });
+
+        for(let i = obstacles.length - 1; i >= 0; i--) {
+            obstacles[i].x -= 5;
+            if(obstacles[i].x < -50) { obstacles.splice(i, 1); score++; }
+            else if(obstacles[i].x < 70 && obstacles[i].x > 30 && p.y > obstacles[i].y - 20 && p.y < obstacles[i].y + 40) {
+                gameActive = false;
+                document.getElementById('finalScore').innerText = score;
+                document.getElementById('gameOver').classList.remove('hidden');
+                return;
+            }
+        }
+        document.getElementById('score').innerText = score;
+        draw(); requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,600,300);
+        ctx.fillStyle = "#3498db"; ctx.fillRect(50, p.y, 20, 20);
+        ctx.fillStyle = "#e74c3c"; obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+    }
+</script>
+</body>
+</html>

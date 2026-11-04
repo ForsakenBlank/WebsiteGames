@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypter · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #4ade80; --accent-2: #22d3ee; --accent-ink: #021a0b; }
+        canvas.screen { cursor: none; }
+        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; text-align: left; margin-top: 12px; font-size: 0.82rem; color: var(--muted); }
+        .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+        .ups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+        @media (max-width: 560px) { .ups { grid-template-columns: 1fr; } }
+        .ups .btn { flex-direction: column; gap: 6px; padding: 14px 10px; white-space: normal; height: auto; }
+        .ups .btn span { font-size: 1.8rem; }
+        .ups .btn small { color: var(--muted); font-weight: 500; }
+        .opts { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Encrypter</h1>
+        <div class="stats">
+            <span class="chip accent">Score <b id="score">0</b></span>
+            <span class="chip">Level <b id="wave">1</b></span>
+            <span class="chip bad">Lives <b id="lives">3</b></span>
+            <span class="chip gold">Best <b id="best">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm icon" id="pauseBtn">⏸</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+
+    <main class="stage">
+        <div class="canvas-box">
+            <canvas class="screen" id="c"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>Encrypter</h2>
+                    <p>Your cursor drags a data trail. <b>Close a loop</b> around viruses to encrypt them — the more in one loop, the bigger the bonus.</p>
+                    <div class="legend">
+                        <span><i style="background:#f87171"></i>Bug — bounces</span>
+                        <span><i style="background:#fb923c"></i>Seeker — hunts you</span>
+                        <span><i style="background:#c084fc"></i>Cutter — slices trails</span>
+                        <span><i style="background:#38bdf8"></i>Shielded — loop twice</span>
+                        <span><i style="background:#facc15"></i>Swarm — tiny & fast</span>
+                        <span><i style="background:#e879f9"></i>Splitter — splits in two</span>
+                        <span><i style="background:#f43f5e"></i>Darter — sudden dashes</span>
+                        <span><i style="background:#94a3b8"></i>Armoured — loop 3 times</span>
+                        <span><i style="background:#2dd4bf"></i>Tracer — rides your trail</span>
+                        <span><i style="background:#dc2626;border-radius:50%"></i>Boss — every 5th level</span>
+                        <span><i style="background:#fff;border-radius:50%"></i>Power-ups — loop them too</span>
+                    </div>
+                    <p class="small" style="margin-top:12px">Don't let a virus touch your cursor head. Clear a level, then pick an upgrade.</p>
+                    <div class="opts">
+                        <div class="seg" id="diffSeg"></div>
+                        <div class="row center"><span class="small muted">Start at</span><div class="seg" id="startSeg"></div></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="playBtn">Connect</button></div>
+                </div>
+            </div>
+            <div class="overlay" id="upOv" hidden>
+                <div class="modal wide">
+                    <h2 class="good" id="upTitle">Level clear</h2>
+                    <p>Pick one upgrade for this run.</p>
+                    <div class="ups" id="upList"></div>
+                </div>
+            </div>
+            <div class="overlay" id="pauseOv" hidden>
+                <div class="modal"><h2>Paused</h2><div class="actions"><button class="btn primary lg" id="resumeBtn">Resume</button></div></div>
+            </div>
+            <div class="overlay" id="overOv" hidden>
+                <div class="modal">
+                    <h2 class="bad">System breached</h2>
+                    <div class="big-num" id="finalScore">0</div>
+                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="stat-grid">
+                        <div><small>Encrypted</small><b id="finalKills">0</b></div>
+                        <div><small>Level</small><b id="finalWave">1</b></div>
+                        <div><small>Biggest loop</small><b id="finalLoop">0</b></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Re-encrypt</button></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        const W = 900, H = 600, HEAD_SPEED = 950;
+        const canvas = document.getElementById('c');
+        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
+        const ctx = view.ctx;
+        const fx = new Arcade.Particles(800);
+
+        let best = Arcade.load('arcade.encrypter.best', 0);
+        const DIFFS = {
+            easy: { name: 'Easy', lives: 5, speed: 0.75, trail: 1.25, count: 0.8 },
+            normal: { name: 'Normal', lives: 3, speed: 1, trail: 1, count: 1 },
+            hard: { name: 'Hard', lives: 2, speed: 1.25, trail: 0.85, count: 1.3 },
+        };
+        let diffId = Arcade.load('arcade.encrypter.diff', 'normal');
+        if (!DIFFS[diffId]) diffId = 'normal';
+        let progress = Arcade.load('arcade.encrypter.progress', {}) || {};
+        let startLevel = 1;
+        const UPGRADES = [
+            { id: 'trail', icon: '➰', name: 'Longer trail', desc: '+18% trail length' },
+            { id: 'speed', icon: '💨', name: 'Faster cursor', desc: '+12% cursor speed' },
+            { id: 'life', icon: '♥', name: 'Extra life', desc: '+1 life right now' },
+            { id: 'mult', icon: '✖️', name: 'Encryption bonus', desc: '+25% score from loops' },
+            { id: 'freeze', icon: '❄', name: 'Deep freeze', desc: 'Freeze power-ups last +3s' },
+            { id: 'items', icon: '🎁', name: 'Lucky drops', desc: 'Power-ups appear 50% more often' },
+            { id: 'armor', icon: '🛡', name: 'Recovery', desc: '+1s invulnerability after a hit' },
+            { id: 'pulse', icon: '📡', name: 'Wide loops', desc: 'Loops also catch viruses touching their edge' },
+        ];
+        let up = {};
+        const D = () => DIFFS[diffId];
+        let state = 'menu', time = 0;
+        let head, aim, trail = [], maxLen = 900, enemies = [], items = [], flashes = [];
+        let score = 0, wave = 1, lives = 3, kills = 0, bigLoop = 0, inv = 0, freezeT = 0, longT = 0, waveBreak = 0;
+
+        function start() {
+            head = { x: W / 2, y: H / 2 };
+            aim = { x: W / 2, y: H / 2 };
+            trail = [];
+            enemies = []; items = []; flashes = [];
+            score = 0; wave = startLevel - 1; lives = D().lives; kills = 0; bigLoop = 0; inv = 1.5; freezeT = 0; longT = 0; waveBreak = 0;
+            up = { trail: 0, speed: 0, mult: 0, freeze: 0, items: 0, armor: 0, pulse: 0 };
+            fx.clear();
+            nextWave();
+            state = 'play';
+            Arcade.hide('menuOv'); Arcade.hide('overOv'); Arcade.hide('upOv');
+            hud();
+        }
+
+        function hud() {
+            Arcade.text('score', score);
+            Arcade.text('wave', Math.max(1, wave));
+            Arcade.text('lives', '♥'.repeat(Math.max(0, lives)));
+            Arcade.text('best', Math.max(best, score));
+        }
+
+        function nextWave() {
+            wave++;
+            const boss = wave % 5 === 0;
+            const n = Math.round((boss ? 2 + wave / 5 : 2 + wave) * D().count);
+            const pool = [['bug', 1]];
+            if (wave >= 2) pool.push(['seeker', 0.8]);
+            if (wave >= 3) pool.push(['cutter', 0.6]);
+            if (wave >= 4) pool.push(['shield', 0.6], ['splitter', 0.5]);
+            if (wave >= 6) pool.push(['swarm', 0.5], ['darter', 0.6]);
+            if (wave >= 8) pool.push(['armor', 0.5]);
+            if (wave >= 9) pool.push(['tracer', 0.45]);
+            const total = pool.reduce((a, p) => a + p[1], 0);
+            for (let i = 0; i < n; i++) {
+                let r = Math.random() * total, kind = 'bug';
+                for (const [k, w] of pool) { if ((r -= w) <= 0) { kind = k; break; } }
+                if (kind === 'swarm') for (let k = 0; k < 3; k++) spawn('swarm'); else spawn(kind);
+            }
+            if (boss) { spawn('boss'); Arcade.toast('⚠ Boss virus — loop it ' + (3 + Math.floor(wave / 5)) + ' times!', 'bad', 1800); Arcade.sfx('bad'); }
+            else if (wave > startLevel) { Arcade.toast('Level ' + wave, 'good', 1000); Arcade.sfx('level'); }
+            hud();
+        }
+
+        function spawn(kind) {
+            let x, y;
+            do { x = Arcade.rand(40, W - 40); y = Arcade.rand(40, H - 40); } while (Math.hypot(x - head.x, y - head.y) < 200);
+            const sp = (60 + Math.min(wave, 30) * 7) * D().speed * ({ swarm: 1.8, seeker: 0.7, armor: 0.6, boss: 0.45, tracer: 0.9 }[kind] || 1);
+            const a = Math.random() * Math.PI * 2;
+            const e = { kind, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, sp, r: kind === 'swarm' ? 6 : 10, shield: kind === 'shield', t: Math.random() * 6, spawn: 0.8 };
+            if (kind === 'armor') { e.armor = 2; e.r = 12; }
+            if (kind === 'splitter') e.r = 12;
+            if (kind === 'darter') e.dashT = Arcade.rand(1, 2.5);
+            if (kind === 'boss') { e.r = 34; e.hp = e.max = 3 + Math.floor(wave / 5); e.spawnT = 4; e.spawn = 1.2; }
+            enemies.push(e);
+            return e;
+        }
+
+        function maybeItem(dt) {
+            if (items.length < 2 && Math.random() < dt * 0.06 * (1 + up.items * 0.5)) {
+                const kind = Arcade.pick(['freeze', 'long', 'long', 'life']);
+                if (kind === 'life' && lives >= 5) return;
+                items.push({ kind, x: Arcade.rand(60, W - 60), y: Arcade.rand(60, H - 60), t: 12 });
+            }
+        }
+
+        /* ---------- Geometry ---------- */
+        function segHit(p1, p2, p3, p4) {
+            const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+            if (d === 0) return null;
+            const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / d;
+            const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / d;
+            if (ua <= 0 || ua >= 1 || ub <= 0 || ub >= 1) return null;
+            return { x: p1.x + ua * (p2.x - p1.x), y: p1.y + ua * (p2.y - p1.y) };
+        }
+        function inside(pt, poly) {
+            let c = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const a = poly[i], b = poly[j];
+                if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < (b.x - a.x) * (pt.y - a.y) / (b.y - a.y) + a.x) c = !c;
+            }
+            return c;
+        }
+        function distToSeg(p, a, b) {
+            const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
+            let t = l ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l : 0;
+            t = Arcade.clamp(t, 0, 1);
+            return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+        }
+        function trailLength() {
+            let L = 0;
+            for (let i = 1; i < trail.length; i++) L += Math.hypot(trail[i].x - trail[i - 1].x, trail[i].y - trail[i - 1].y);
+            return L;
+        }
+
+        /* ---------- Capture ---------- */
+        function capture(poly) {
+            let n = 0;
+            const caught = (e) => {
+                if (inside(e, poly)) return true;
+                if (!up.pulse) return false;
+                for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) if (distToSeg(e, poly[i], poly[j]) < e.r + 8) return true;
+                return false;
+            };
+            const born = [];
+            for (const e of enemies) {
+                if (e.dead || !caught(e)) continue;
+                if (e.kind === 'boss') {
+                    e.hp--; e.spawn = 0.6;
+                    fx.emit(e.x, e.y, { n: 30, color: ['#dc2626', '#4ade80', '#fff'], speed: 220, life: 0.7 });
+                    Arcade.sfx('boom');
+                    if (e.hp > 0) { Arcade.toast('Boss integrity ' + e.hp + '/' + e.max, 'gold', 900); continue; }
+                    e.dead = true; n += 5; kills++;
+                    score += 1500 * Math.ceil(wave / 5);
+                    Arcade.toast('☠ Boss encrypted! +' + 1500 * Math.ceil(wave / 5), 'gold', 1600);
+                    continue;
+                }
+                if (e.armor > 0) {
+                    e.armor--;
+                    fx.emit(e.x, e.y, { n: 10, color: '#94a3b8', speed: 150, life: 0.4 });
+                    Arcade.sfx('hit');
+                    continue;
+                }
+                if (e.kind === 'splitter') for (const s of [-1, 1]) born.push({ x: e.x + s * 8, y: e.y });
+                if (e.shield) {
+                    e.shield = false;
+                    fx.emit(e.x, e.y, { n: 12, color: '#38bdf8', speed: 160, life: 0.4 });
+                    continue;
+                }
+                e.dead = true; n++; kills++;
+                fx.emit(e.x, e.y, { n: 16, color: ['#4ade80', '#bbf7d0', '#fff'], speed: 180, life: 0.6 });
+            }
+            for (const it of items) {
+                if (it.dead || !inside(it, poly)) continue;
+                it.dead = true;
+                if (it.kind === 'freeze') { freezeT = 5 + up.freeze * 3; Arcade.toast('❄ Viruses frozen', 'good', 1000); }
+                if (it.kind === 'long') { longT = 10; Arcade.toast('➰ Long trail', 'good', 1000); }
+                if (it.kind === 'life') { lives++; Arcade.toast('♥ Extra life', 'good', 1000); }
+                Arcade.sfx('power');
+            }
+            for (const b of born) {
+                const a = Math.random() * Math.PI * 2, sp = (80 + wave * 6) * D().speed;
+                enemies.push({ kind: 'bug', x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, sp, r: 7, t: 0, spawn: 0.6, mini: true });
+            }
+            flashes.push({ poly, t: 0.5, n });
+            if (n) {
+                const gain = Math.round(100 * n * n * (1 + up.mult * 0.25));
+                score += gain;
+                bigLoop = Math.max(bigLoop, n);
+                let cx = 0, cy = 0; for (const p of poly) { cx += p.x; cy += p.y; }
+                flashes[flashes.length - 1].label = { x: cx / poly.length, y: cy / poly.length, text: '+' + gain + (n > 1 ? ' ×' + n : '') };
+                Arcade.sfx(n > 2 ? 'win' : 'score');
+            }
+            enemies = enemies.filter(e => !e.dead);
+            items = items.filter(i => !i.dead);
+            hud();
+        }
+
+        function hurt() {
+            if (inv > 0) return;
+            lives--;
+            inv = 2 + up.armor;
+            trail = [];
+            Arcade.sfx('hit');
+            fx.emit(head.x, head.y, { n: 30, color: ['#f87171', '#fff'], speed: 240, life: 0.6 });
+            hud();
+            if (lives <= 0) gameOver();
+        }
+
+        function gameOver() {
+            state = 'over';
+            Arcade.sfx('die');
+            Arcade.report('score', score);
+            const isNew = score > best;
+            if (isNew) { best = score; Arcade.save('arcade.encrypter.best', best); }
+            const gb = Number(Arcade.load('gridBest', 0)) || 0;
+            if (kills > gb) Arcade.save('gridBest', kills);
+            Arcade.text('finalScore', score);
+            Arcade.text('finalKills', kills);
+            Arcade.text('finalWave', wave);
+            Arcade.text('finalLoop', bigLoop);
+            document.getElementById('newBest').hidden = !isNew;
+            setTimeout(() => Arcade.show('overOv'), 600);
+            hud();
+        }
+
+        /* ---------- Update ---------- */
+        function update(dt) {
+            inv = Math.max(0, inv - dt);
+            freezeT = Math.max(0, freezeT - dt);
+            longT = Math.max(0, longT - dt);
+            maxLen = (1100 + wave * 30) * (longT > 0 ? 1.6 : 1) * D().trail * (1 + up.trail * 0.18);
+
+            // head follows the pointer, capped speed
+            const dx = aim.x - head.x, dy = aim.y - head.y, d = Math.hypot(dx, dy);
+            const step = Math.min(d, HEAD_SPEED * (1 + up.speed * 0.12) * dt);
+            const prev = { x: head.x, y: head.y };
+            if (d > 0.1) { head.x += dx / d * step; head.y += dy / d * step; }
+
+            const last = trail.length ? trail[trail.length - 1] : prev;
+            if (Math.hypot(head.x - last.x, head.y - last.y) >= 4) {
+                // closing a loop?
+                for (let i = 0; i < trail.length - 6; i++) {
+                    const hit = segHit(last, head, trail[i], trail[i + 1]);
+                    if (hit) {
+                        const poly = [hit, ...trail.slice(i + 1)];
+                        if (poly.length > 4) capture(poly);
+                        trail = [];
+                        break;
+                    }
+                }
+                trail.push({ x: head.x, y: head.y });
+                while (trail.length > 2 && trailLength() > maxLen) trail.shift();
+            }
+
+            // enemies
+            const slow = freezeT > 0 ? 0.15 : 1;
+            for (const e of enemies) {
+                e.t += dt;
+                e.spawn = Math.max(0, e.spawn - dt);
+                if (e.kind === 'seeker' || e.kind === 'boss') {
+                    const a = Math.atan2(head.y - e.y, head.x - e.x);
+                    e.vx += Math.cos(a) * 220 * dt; e.vy += Math.sin(a) * 220 * dt;
+                    const s = Math.hypot(e.vx, e.vy); if (s > e.sp) { e.vx *= e.sp / s; e.vy *= e.sp / s; }
+                }
+                if (e.kind === 'boss' && e.spawn <= 0) {
+                    e.spawnT -= dt * slow;
+                    if (e.spawnT <= 0) { e.spawnT = Math.max(2.2, 5 - wave * 0.08); const m = spawn(Arcade.pick(['bug', 'seeker', 'darter'])); m.x = e.x; m.y = e.y; m.spawn = 0.9; }
+                }
+                if (e.kind === 'darter') {
+                    e.dashT -= dt * slow;
+                    if (e.dashT <= 0 && !e.dash) { e.dash = 0.4; const a = Math.atan2(head.y - e.y, head.x - e.x); e.vx = Math.cos(a) * e.sp * 3.4; e.vy = Math.sin(a) * e.sp * 3.4; }
+                    if (e.dash) { e.dash -= dt * slow; if (e.dash <= 0) { e.dash = 0; e.dashT = Arcade.rand(1.5, 3); e.vx /= 3.4; e.vy /= 3.4; } }
+                }
+                if (e.kind === 'tracer') {
+                    // rides along your trail towards the head
+                    let tgt = head;
+                    if (trail.length > 6) {
+                        if (e.ti === undefined || e.ti >= trail.length) {
+                            let bi = 0, bd = 1e9;
+                            for (let i = 0; i < trail.length; i += 3) { const dd = Math.hypot(trail[i].x - e.x, trail[i].y - e.y); if (dd < bd) { bd = dd; bi = i; } }
+                            e.ti = bi;
+                        }
+                        tgt = trail[e.ti];
+                        if (Math.hypot(tgt.x - e.x, tgt.y - e.y) < 10) e.ti = Math.min(trail.length - 1, e.ti + 2);
+                    } else e.ti = undefined;
+                    const a = Math.atan2(tgt.y - e.y, tgt.x - e.x);
+                    e.vx = Math.cos(a) * e.sp; e.vy = Math.sin(a) * e.sp;
+                }
+                e.x += e.vx * dt * slow; e.y += e.vy * dt * slow;
+                if (e.x < e.r || e.x > W - e.r) { e.vx *= -1; e.x = Arcade.clamp(e.x, e.r, W - e.r); }
+                if (e.y < e.r || e.y > H - e.r) { e.vy *= -1; e.y = Arcade.clamp(e.y, e.r, H - e.r); }
+                if (e.spawn <= 0 && Math.hypot(e.x - head.x, e.y - head.y) < e.r + 6) hurt();
+                if (e.kind === 'cutter' && trail.length > 3) {
+                    for (let i = 0; i < trail.length - 1; i++) {
+                        if (distToSeg(e, trail[i], trail[i + 1]) < e.r) {
+                            fx.emit(trail[i].x, trail[i].y, { n: 8, color: '#c084fc', speed: 120, life: 0.3 });
+                            trail = trail.slice(i + 1);
+                            Arcade.sfx('bad');
+                            break;
+                        }
+                    }
+                }
+            }
+            for (const it of items) it.t -= dt;
+            items = items.filter(i => i.t > 0);
+            maybeItem(dt);
+            flashes = flashes.filter(f => (f.t -= dt) > 0);
+
+            if (!enemies.length) {
+                waveBreak += dt;
+                if (waveBreak > 1.0) { waveBreak = 0; score += wave * 50; levelClear(); }
+            }
+        }
+
+        function levelClear() {
+            const p = progress[diffId] || 1;
+            if (wave + 1 > p) { progress[diffId] = wave + 1; Arcade.save('arcade.encrypter.progress', progress); }
+            Arcade.report('level', wave + 1);
+            state = 'upgrade';
+            trail = [];
+            Arcade.sfx('win');
+            Arcade.text('upTitle', 'Level ' + wave + ' clear');
+            const host = document.getElementById('upList');
+            host.innerHTML = '';
+            const choices = Arcade.shuffle(UPGRADES.filter(u => !(u.id === 'pulse' && up.pulse) && !(u.id === 'life' && lives >= 7))).slice(0, 3);
+            for (const u of choices) {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.innerHTML = `<span>${u.icon}</span><b>${u.name}</b><small>${u.desc}${up[u.id] ? ' (have ' + up[u.id] + ')' : ''}</small>`;
+                b.onclick = () => {
+                    if (u.id === 'life') lives++; else up[u.id] = (up[u.id] || 0) + 1;
+                    Arcade.sfx('power');
+                    Arcade.hide('upOv');
+                    state = 'play'; inv = Math.max(inv, 1);
+                    nextWave();
+                };
+                host.appendChild(b);
+            }
+            setTimeout(() => Arcade.show('upOv'), 250);
+        }
+
+        /* ---------- Render ---------- */
+        const COLORS = { bug: '#f87171', seeker: '#fb923c', cutter: '#c084fc', shield: '#f87171', swarm: '#facc15', splitter: '#e879f9', darter: '#f43f5e', armor: '#94a3b8', tracer: '#2dd4bf', boss: '#dc2626' };
+        function render() {
+            ctx.fillStyle = '#020a06'; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(74,222,128,0.06)'; ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            if (freezeT > 0) { ctx.fillStyle = 'rgba(56,189,248,0.05)'; ctx.fillRect(0, 0, W, H); }
+
+            for (const f of flashes) {
+                ctx.fillStyle = `rgba(74,222,128,${f.t * 0.5})`;
+                ctx.beginPath(); f.poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill();
+                if (f.label) {
+                    ctx.fillStyle = `rgba(220,252,231,${Math.min(1, f.t * 3)})`;
+                    ctx.font = 'bold 22px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+                    ctx.fillText(f.label.text, f.label.x, f.label.y - (0.5 - f.t) * 30);
+                }
+            }
+
+            if (trail && trail.length > 1) {
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                for (let i = 1; i < trail.length; i++) {
+                    const k = i / trail.length;
+                    ctx.strokeStyle = longT > 0 ? `rgba(34,211,238,${0.15 + k * 0.85})` : `rgba(74,222,128,${0.15 + k * 0.85})`;
+                    ctx.lineWidth = 1.5 + k * 2.5;
+                    ctx.beginPath(); ctx.moveTo(trail[i - 1].x, trail[i - 1].y); ctx.lineTo(trail[i].x, trail[i].y); ctx.stroke();
+                }
+            }
+
+            for (const it of items) {
+                const a = it.t < 3 ? (Math.floor(time * 8) % 2 ? 0.4 : 1) : 1;
+                ctx.globalAlpha = a;
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(it.x, it.y, 13 + Math.sin(time * 5) * 1.5, 0, Math.PI * 2); ctx.stroke();
+                ctx.font = '15px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff';
+                ctx.fillText({ freeze: '❄', long: '➰', life: '♥' }[it.kind], it.x, it.y + 1);
+                ctx.globalAlpha = 1;
+            }
+
+            for (const e of enemies || []) {
+                ctx.save(); ctx.translate(e.x, e.y);
+                ctx.globalAlpha = e.spawn > 0 ? 0.35 + 0.3 * Math.sin(time * 20) : 1;
+                ctx.fillStyle = COLORS[e.kind]; ctx.shadowColor = COLORS[e.kind]; ctx.shadowBlur = 10;
+                if (e.kind === 'cutter') { ctx.rotate(e.t * 6); ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? e.r * 0.45 : e.r * 1.2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }
+                else if (e.kind === 'seeker' || e.kind === 'darter') { ctx.rotate(Math.atan2(e.vy, e.vx)); ctx.beginPath(); ctx.moveTo(e.r * 1.3, 0); ctx.lineTo(-e.r, -e.r * 0.8); ctx.lineTo(-e.r, e.r * 0.8); ctx.closePath(); ctx.fill(); if (e.dash) { ctx.fillStyle = 'rgba(244,63,94,0.35)'; ctx.fillRect(-e.r * 3, -e.r * 0.5, e.r * 2, e.r); } }
+                else if (e.kind === 'boss') {
+                    ctx.rotate(e.t * 0.8);
+                    ctx.beginPath();
+                    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? e.r * 0.72 : e.r * (1.05 + Math.sin(time * 6 + i) * 0.06); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+                    ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#020a06'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.4, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#fca5a5'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.18, 0, Math.PI * 2); ctx.fill();
+                }
+                else if (e.kind === 'splitter') { ctx.rotate(e.t); ctx.beginPath(); ctx.arc(-4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.arc(4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.fill(); }
+                else if (e.kind === 'tracer') { ctx.beginPath(); ctx.arc(0, 0, e.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#020a06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, Math.PI * 2); ctx.stroke(); }
+                else if (e.kind === 'armor') {
+                    ctx.rotate(e.t * 0.5); ctx.beginPath();
+                    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * e.r, Math.sin(a) * e.r); }
+                    ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#020a06'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.rotate(-e.t * 0.5); ctx.fillText(e.armor + 1, 0, 1);
+                }
+                else { ctx.rotate(e.t); ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2); }
+                ctx.shadowBlur = 0;
+                if (e.shield) { ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, e.r + 7, 0, Math.PI * 2); ctx.stroke(); }
+                ctx.restore();
+            }
+            ctx.globalAlpha = 1;
+            const boss = (enemies || []).find(e => e.kind === 'boss');
+            if (boss) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W / 2 - 140, 14, 280, 10);
+                ctx.fillStyle = '#dc2626'; ctx.fillRect(W / 2 - 140, 14, 280 * boss.hp / boss.max, 10);
+                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS — LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
+            }
+            fx.draw(ctx);
+
+            if (head && state === 'play') {
+                const blink = inv > 0 && Math.floor(time * 12) % 2;
+                if (!blink) {
+                    ctx.fillStyle = '#fff'; ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 16;
+                    ctx.beginPath(); ctx.arc(head.x, head.y, 6, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+                // trail meter
+                const k = Math.min(1, trailLength() / maxLen);
+                ctx.fillStyle = 'rgba(74,222,128,0.15)'; ctx.fillRect(12, H - 14, 160, 5);
+                ctx.fillStyle = longT > 0 ? '#22d3ee' : '#4ade80'; ctx.fillRect(12, H - 14, 160 * k, 5);
+            }
+        }
+
+        const loop = Arcade.loop((dt) => {
+            time += dt;
+            if (state === 'play') update(dt);
+            fx.update(dt);
+            render();
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse' && !e.buttons) return;
+            const p = Arcade.pointer(canvas, e, W, H);
+            aim = { x: Arcade.clamp(p.x, 0, W), y: Arcade.clamp(p.y, 0, H) };
+        });
+        canvas.addEventListener('pointerdown', (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            const p = Arcade.pointer(canvas, e, W, H);
+            aim = { x: p.x, y: p.y };
+            if (e.pointerType !== 'mouse' && head) { head.x = head.x; trail = []; }
+        });
+        function setPaused(on) {
+            if (on && state === 'play') { state = 'pause'; Arcade.show('pauseOv'); }
+            else if (!on && state === 'pause') { state = 'play'; Arcade.hide('pauseOv'); }
+        }
+        window.addEventListener('keydown', (e) => { if (e.code === 'KeyP' || e.code === 'Escape') setPaused(state === 'play'); });
+        document.getElementById('pauseBtn').onclick = () => setPaused(state === 'play');
+        document.getElementById('resumeBtn').onclick = () => setPaused(false);
+        function buildMenu() {
+            const ds = document.getElementById('diffSeg');
+            ds.innerHTML = '';
+            for (const [id, d] of Object.entries(DIFFS)) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (id === diffId ? ' active' : '');
+                b.textContent = d.name + ' · ' + d.lives + '♥';
+                b.onclick = () => { diffId = id; Arcade.save('arcade.encrypter.diff', id); startLevel = 1; Arcade.sfx('select'); buildMenu(); };
+                ds.appendChild(b);
+            }
+            const ss = document.getElementById('startSeg');
+            ss.innerHTML = '';
+            const reached = progress[diffId] || 1;
+            for (let l = 1; l <= reached; l += 5) {
+                const b = document.createElement('button');
+                b.className = 'btn sm' + (l === startLevel ? ' active' : '');
+                b.textContent = 'Lv ' + l;
+                b.onclick = () => { startLevel = l; Arcade.sfx('select'); buildMenu(); };
+                ss.appendChild(b);
+            }
+        }
+        buildMenu();
+        document.getElementById('playBtn').onclick = start;
+        document.getElementById('againBtn').onclick = () => { state = 'menu'; Arcade.hide('overOv'); buildMenu(); Arcade.show('menuOv'); };
+        document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+
+        hud();
+        loop.start();
+    })();
+    </script>
+</body>
+</html>

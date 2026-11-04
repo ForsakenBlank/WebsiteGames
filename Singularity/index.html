@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singularity · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="no-scroll no-select" data-site="0">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Singularity</h1>
+        <div class="stats" id="chips">
+            <span class="chip gold" title="Cash (income per second)">💵 <b id="cCash">$0</b><small id="cInc" class="inc"></small></span>
+            <span class="chip" id="chCoin" hidden title="CrypToken">🪙 <b id="cCoin">0</b></span>
+            <span class="chip" id="chRp" hidden title="Research points">🔬 <b id="cRp">0</b></span>
+            <span class="chip" id="chRep" title="Reputation">⭐ <b id="cRep">0</b></span>
+            <span class="chip" id="chInfl" hidden title="Influence">🏛️ <b id="cInfl">0</b></span>
+            <span class="chip" id="chPow" title="Power used / available">⚡ <b id="cPow">0W</b></span>
+            <span class="chip" id="chTemp" title="Heat vs cooling">🌡️ <b id="cTemp">20°</b></span>
+            <span class="chip accent" id="chAi" title="Your AI">🧠 <b id="cAi">—</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm" id="helpBtn" title="How to play">❔</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="game">
+        <aside class="palette" id="palette">
+            <div class="pal-head"><h3>Build</h3><span class="slots" id="slots" title="Machines placed / slots at this site">0/0</span></div>
+            <div class="pal-cats" id="palCats"></div>
+            <div class="pal-list" id="palList"></div>
+        </aside>
+
+        <section class="desk" id="desk">
+            <canvas id="graph"></canvas>
+            <div class="goal-card" id="goalCard" hidden></div>
+            <div class="alerts" id="alerts"></div>
+            <div class="zoom">
+                <button class="btn sm icon" id="zIn" title="Zoom in">＋</button>
+                <button class="btn sm icon" id="zOut" title="Zoom out">－</button>
+                <button class="btn sm icon" id="zFit" title="Fit everything">⤢</button>
+                <button class="btn sm icon" id="selBtn" title="Select mode — drag to box-select (or hold Shift)">⬚</button>
+            </div>
+            <div class="insp" id="insp" hidden></div>
+            <div class="selbar" id="selBar" hidden></div>
+        </section>
+
+        <aside class="side" id="side">
+            <div class="scene-wrap"><canvas id="scene"></canvas><div class="scene-cap"><b id="siteName"></b><span id="siteSub"></span></div></div>
+            <nav class="tabs" id="tabs"></nav>
+            <div class="tab-body" id="tabBody"></div>
+        </aside>
+    </main>
+
+    <div class="overlay fixed" id="modalOv" hidden><div class="modal wide" id="modal"></div></div>
+
+    <script src="../_shared/arcade.js"></script>
+    <script src="data.js"></script>
+    <script src="engine.js"></script>
+    <script src="graph.js"></script>
+    <script src="tasks.js"></script>
+    <script src="scenes.js"></script>
+    <script src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VOID PROTECTOR: OVERDRIVE</title>
+    <style>
+        body { margin: 0; background: #050505; color: #00f2ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #game-container { position: relative; border: 2px solid #00f2ff; box-shadow: 0 0 20px #00f2ff55; }
+        canvas { background: #000; cursor: crosshair; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; width: 580px; display: flex; justify-content: space-between; z-index: 10; }
+        .hud-item { background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid #00f2ff; text-shadow: 0 0 5px #00f2ff; }
+        #menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,5,5,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; overflow-y: auto; }
+        .upgrade-row { margin: 8px; display: flex; width: 85%; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding: 5px; }
+        .btn { background: transparent; color: #00f2ff; border: 1px solid #00f2ff; padding: 8px 15px; cursor: pointer; font-family: inherit; transition: 0.2s; }
+        .btn:hover:not(:disabled) { background: #00f2ff; color: #000; box-shadow: 0 0 10px #00f2ff; }
+        .btn:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+        .ability-card { border: 1px solid #ff0055; padding: 10px; width: 25%; text-align: center; font-size: 0.7rem; color: #ff0055; cursor: pointer; }
+        .ability-card.unlocked { border-color: #00f2ff; color: #00f2ff; }
+        .ability-card.equipped { background: #00f2ff; color: #000; }
+        .locked-text { font-size: 0.6rem; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gCanvas"></canvas>
+        <div id="ui">
+            <div class="hud-item">WAVE: <span id="wave-txt">1</span></div>
+            <div class="hud-item">SCRAP: <span id="scrap-txt">0</span></div>
+            <div class="hud-item">CORE: <span id="hp-txt">100</span>%</div>
+        </div>
+
+        <div id="menu">
+            <h1 id="menu-title" style="text-shadow: 0 0 10px #00f2ff;">WAVE CLEARED</h1>
+            <p>WALLET: <span id="menu-scrap">0</span> SCRAP</p>
+            
+            <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+                <div class="upgrade-row"><span>REPAIR (+20 HP)</span><button class="btn" onclick="buy('repair', 25)">25s</button></div>
+                <div class="upgrade-row"><span>DMG (Lvl <span id="dmg-lvl">1</span>)</span><button class="btn" id="btn-dmg" onclick="buy('dmg')">Cost: 50</button></div>
+                <div class="upgrade-row"><span>SPEED (Lvl <span id="spd-lvl">1</span>)</span><button class="btn" id="btn-spd" onclick="buy('speed')">Cost: 75</button></div>
+            </div>
+
+            <h3 style="margin: 15px 0 10px 0; color: #ff0055;">PERMANENT ABILITIES</h3>
+            <div style="display:flex; gap:10px; width:90%; justify-content:center;">
+                <div id="ab-none" class="ability-card unlocked" onclick="equip('none')">BASIC<br><span class="locked-text">Standard Fire</span></div>
+                <div id="ab-multi" class="ability-card" onclick="equip('multi')">MULTI<br><span id="lock-multi" class="locked-text">LOCKED (Wave 5)</span></div>
+                <div id="ab-pierce" class="ability-card" onclick="equip('pierce')">BOLT<br><span id="lock-pierce" class="locked-text">LOCKED (Wave 10)</span></div>
+            </div>
+
+            <button class="btn" style="margin-top:25px; padding: 15px 40px; font-weight:bold;" onclick="startWave()">START NEXT WAVE</button>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600; canvas.height = 600;
+
+    // Persistent Save Data
+    let save = { 
+        scrap: 0, wave: 1, maxWave: 1, 
+        hp: 100, maxHp: 100, dmg: 1, speed: 300, 
+        equipped: 'none', 
+        costs: { dmg: 50, speed: 75 } 
+    };
+
+    let enemies = [], bullets = [], gameActive = false, lastFire = 0;
+    let spawnTotal = 0, spawnedCount = 0;
+
+    function startWave() {
+        gameActive = true; spawnedCount = 0;
+        spawnTotal = 5 + (save.wave * 3);
+        enemies = []; bullets = [];
+        document.getElementById('menu').style.display = 'none';
+        updateUI();
+        requestAnimationFrame(loop);
+    }
+
+    function updateUI() {
+        document.getElementById('wave-txt').innerText = save.wave;
+        document.getElementById('scrap-txt').innerText = save.scrap;
+        document.getElementById('menu-scrap').innerText = save.scrap;
+        document.getElementById('hp-txt').innerText = Math.max(0, save.hp);
+        document.getElementById('dmg-lvl').innerText = save.dmg;
+        document.getElementById('spd-lvl').innerText = Math.floor((325-save.speed)/25);
+        
+        // Unlock Logic
+        if(save.maxWave >= 5) { 
+            document.getElementById('ab-multi').classList.add('unlocked');
+            document.getElementById('lock-multi').innerText = "Triple Shot";
+        }
+        if(save.maxWave >= 10) {
+            document.getElementById('ab-pierce').classList.add('unlocked');
+            document.getElementById('lock-pierce').innerText = "Piercing Bolt";
+        }
+
+        document.querySelectorAll('.ability-card').forEach(c => c.classList.remove('equipped'));
+        document.getElementById('ab-' + save.equipped).classList.add('equipped');
+    }
+
+    function buy(item, fixedCost) {
+        let cost = fixedCost || save.costs[item];
+        if(save.scrap < cost) return;
+        save.scrap -= cost;
+        if(item === 'repair') save.hp = Math.min(save.maxHp, save.hp + 25);
+        if(item === 'dmg') { save.dmg++; save.costs.dmg = Math.floor(save.costs.dmg * 1.7); }
+        if(item === 'speed') { save.speed = Math.max(75, save.speed - 25); save.costs.speed = Math.floor(save.costs.speed * 1.8); }
+        
+        document.getElementById('btn-dmg').innerText = "Cost: " + save.costs.dmg;
+        document.getElementById('btn-spd').innerText = "Cost: " + save.costs.speed;
+        updateUI();
+    }
+
+    function equip(type) {
+        if(type === 'multi' && save.maxWave < 5) return;
+        if(type === 'pierce' && save.maxWave < 10) return;
+        save.equipped = type;
+        updateUI();
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        if(!gameActive || Date.now() - lastFire < save.speed) return;
+        lastFire = Date.now();
+        const rect = canvas.getBoundingClientRect();
+        const angle = Math.atan2(e.clientY - rect.top - 300, e.clientX - rect.left - 300);
+        
+        if(save.equipped === 'multi') {
+            [-0.15, 0, 0.15].forEach(a => spawnBullet(angle + a, false));
+        } else if(save.equipped === 'pierce') {
+            spawnBullet(angle, true);
+        } else {
+            spawnBullet(angle, false);
+        }
+    });
+
+    function spawnBullet(angle, pierce) {
+        bullets.push({ 
+            x: 300, y: 300, 
+            vx: Math.cos(angle) * 8, vy: Math.sin(angle) * 8, 
+            pierce: pierce 
+        });
+    }
+
+    function loop() {
+        if(!gameActive) return;
+        ctx.fillStyle = 'rgba(5,5,5,0.3)';
+        ctx.fillRect(0,0,600,600);
+
+        // Neon Core
+        ctx.strokeStyle = '#00f2ff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(300,300,20,0,Math.PI*2); ctx.stroke();
+        ctx.shadowBlur = 10; ctx.shadowColor = "#00f2ff";
+
+        // Spawning
+        if(spawnedCount < spawnTotal && Math.random() < 0.03) {
+            const isBoss = (save.wave % 5 === 0 && spawnedCount === spawnTotal - 1);
+            const dist = 350; const ang = Math.random() * Math.PI * 2;
+            enemies.push({
+                x: 300 + Math.cos(ang) * dist, y: 300 + Math.sin(ang) * dist,
+                hp: isBoss ? save.wave * 8 : Math.ceil(save.wave/2),
+                maxHp: isBoss ? save.wave * 8 : Math.ceil(save.wave/2),
+                size: isBoss ? 45 : 18,
+                speed: isBoss ? 0.4 : 1 + (save.wave * 0.1),
+                isBoss: isBoss
+            });
+            spawnedCount++;
+        }
+
+        bullets.forEach((b, bi) => {
+            b.x += b.vx; b.y += b.vy;
+            ctx.fillStyle = b.pierce ? '#ff0055' : '#fff';
+            ctx.fillRect(b.x-2, b.y-2, 5, 5);
+            if(Math.hypot(b.x-300, b.y-300) > 400) bullets.splice(bi, 1);
+        });
+
+        enemies.forEach((e, ei) => {
+            const angle = Math.atan2(300 - e.y, 300 - e.x);
+            e.x += Math.cos(angle) * e.speed; e.y += Math.sin(angle) * e.speed;
+
+            ctx.strokeStyle = e.isBoss ? '#ffaa00' : '#ff0055';
+            ctx.strokeRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+
+            if(Math.hypot(e.x-300, e.y-300) < 25) {
+                save.hp -= 10; enemies.splice(ei, 1); updateUI();
+                if(save.hp <= 0) { gameActive = false; location.reload(); }
+            }
+
+            bullets.forEach((b, bi) => {
+                if(Math.hypot(e.x-b.x, e.y-b.y) < e.size) {
+                    e.hp -= save.dmg;
+                    if(!b.pierce) bullets.splice(bi, 1);
+                    if(e.hp <= 0) {
+                        enemies.splice(ei, 1); save.scrap += e.isBoss ? 75 : 5; updateUI();
+                    }
+                }
+            });
+        });
+
+        if(spawnedCount >= spawnTotal && enemies.length === 0) {
+            gameActive = false;
+            save.maxWave = Math.max(save.maxWave, save.wave);
+            save.wave++;
+            document.getElementById('menu').style.display = 'flex';
+            document.getElementById('menu-title').innerText = "WAVE " + (save.wave-1) + " SECURED";
+            updateUI();
+        }
+        requestAnimationFrame(loop);
+    }
+
+    startWave();
+</script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #e2e8f0; --accent-2: #94a3b8; --accent-ink: #0b1020; }
+        .opts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; align-items: center; }
+        .opts .seg { justify-content: center; }
+        .opts label { font-size: 0.8rem; color: var(--muted); }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Pong</h1>
+        <div class="stats">
+            <span class="chip accent">Wins vs AI <b id="wins">0</b></span>
+            <span class="chip">Played <b id="played">0</b></span>
+        </div>
+        <div class="actions"><button class="btn sm" id="menuBtn">☰ Menu</button><button class="btn sm icon" data-mute>🔊</button></div>
+    </header>
+    <main class="stage">
+        <div class="canvas-box" id="box">
+            <canvas class="screen" id="cv"></canvas>
+            <div class="overlay" id="menuOv">
+                <div class="modal">
+                    <h2>🏓 Pong</h2>
+                    <div class="opts">
+                        <label>Opponent</label>
+                        <div class="seg" id="oppSeg">
+                            <button class="btn sm" data-v="easy">AI · Easy</button>
+                            <button class="btn sm" data-v="normal">AI · Normal</button>
+                            <button class="btn sm" data-v="hard">AI · Hard</button>
+                            <button class="btn sm" data-v="2p">2 players</button>
+                        </div>
+                        <label>First to</label>
+                        <div class="seg" id="toSeg"><button class="btn sm" data-v="5">5</button><button class="btn sm" data-v="7">7</button><button class="btn sm" data-v="11">11</button></div>
+                        <label>Style</label>
+                        <div class="seg" id="styleSeg"><button class="btn sm" data-v="classic">Classic</button><button class="btn sm" data-v="party">Party (power-ups)</button></div>
+                    </div>
+                    <div class="actions"><button class="btn primary lg" id="playBtn">Play</button></div>
+                    <ul class="help">
+                        <li>Left player: <kbd>W</kbd>/<kbd>S</kbd> — or the mouse / your finger on the left half</li>
+                        <li>Right player (2P): <kbd>↑</kbd>/<kbd>↓</kbd> — or a finger on the right half</li>
+                        <li>Hitting the ball while your paddle moves adds spin. <kbd>P</kbd> pauses.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="overlay" id="endOv" hidden>
+                <div class="modal">
+                    <h2 id="endTitle">You win!</h2>
+                    <div class="big-num" id="endScore">7 – 3</div>
+                    <p id="endText"></p>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Rematch</button><button class="btn" id="endMenu">Menu</button></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 900, H = 540, PW = 14, TAU = Math.PI * 2;
+        const cv = $('cv');
+        const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
+        const c = view.ctx;
+        const opts = Object.assign({ opp: 'normal', to: 7, style: 'classic' }, Arcade.load('arcade.pong.opts', {}));
+        const stats = Object.assign({ wins: 0, losses: 0, played: 0, byLevel: {} }, Arcade.load('arcade.pong.stats', {}));
+        const AI = { easy: { sp: 260, react: 0.22, err: 60 }, normal: { sp: 400, react: 0.12, err: 28 }, hard: { sp: 620, react: 0.04, err: 8 } };
+        const POW = { big: { c: '#22c55e', l: '⬆', t: 'Big paddle' }, small: { c: '#ef4444', l: '⬇', t: 'Shrink opponent' }, multi: { c: '#38bdf8', l: '×3', t: 'Multi-ball' }, fast: { c: '#facc15', l: '⚡', t: 'Fast ball' } };
+        let L, Rp, balls, score, running, paused, serveT, server, trail = [], powers, powT, flash = 0, aiTarget, aiT, msg;
+        let fx = new Arcade.Particles(300);
+        function seg(id, key, conv = (v) => v) {
+            document.querySelectorAll('#' + id + ' [data-v]').forEach(b => {
+                b.classList.toggle('active', String(opts[key]) === b.dataset.v);
+                b.onclick = () => { opts[key] = conv(b.dataset.v); Arcade.save('arcade.pong.opts', opts); seg(id, key, conv); };
+            });
+        }
+        seg('oppSeg', 'opp'); seg('toSeg', 'to', Number); seg('styleSeg', 'style');
+        const paddle = (x) => ({ x, y: H / 2, h: 96, vy: 0, target: null, big: 0, small: 0 });
+        function start() {
+            L = paddle(30); Rp = paddle(W - 30 - PW);
+            score = [0, 0]; balls = []; powers = []; powT = 6; fx = new Arcade.Particles(300); trail = []; flash = 0; aiT = 0; aiTarget = H / 2; msg = null;
+            server = Math.random() < 0.5 ? 1 : -1;
+            running = true; paused = false;
+            newServe();
+            Arcade.hide('menuOv'); Arcade.hide('endOv');
+        }
+        function newServe() { balls = [{ x: W / 2, y: H / 2, vx: 0, vy: 0, r: 8, sp: 420, spin: 0, last: 0 }]; serveT = 1.1; }
+        function launch(b) { const a = (Math.random() - 0.5) * 0.9; b.vx = Math.cos(a) * b.sp * server; b.vy = Math.sin(a) * b.sp; }
+        const ph = (p) => p.h * (p.big > 0 ? 1.5 : 1) * (p.small > 0 ? 0.6 : 1);
+        function point(side) {
+            score[side]++;
+            server = side === 0 ? 1 : -1;
+            Arcade.sfx(side === 0 ? 'score' : 'bad');
+            flash = 0.6;
+            if (score[side] >= opts.to) return endMatch(side);
+            newServe();
+        }
+        function endMatch(side) {
+            running = false;
+            const vsAI = opts.opp !== '2p';
+            stats.played++;
+            if (vsAI) {
+                if (side === 0) { stats.wins++; stats.byLevel[opts.opp] = (stats.byLevel[opts.opp] || 0) + 1; Arcade.count('win'); Arcade.addXP(opts.opp === 'hard' ? 40 : opts.opp === 'normal' ? 20 : 10, true); }
+                else stats.losses++;
+            }
+            Arcade.save('arcade.pong.stats', stats);
+            Arcade.sfx(side === 0 || !vsAI ? 'win' : 'die');
+            $('endTitle').textContent = vsAI ? (side === 0 ? 'You win!' : 'The AI wins') : (side === 0 ? 'Left player wins!' : 'Right player wins!');
+            $('endTitle').className = vsAI && side === 1 ? 'bad' : 'good';
+            $('endScore').textContent = score[0] + ' – ' + score[1];
+            $('endText').textContent = vsAI ? `Record vs AI: ${stats.wins} wins, ${stats.losses} losses` : '';
+            Arcade.show('endOv');
+            hud();
+        }
+        function hud() { Arcade.text('wins', stats.wins); Arcade.text('played', stats.played); }
+        const keys = {};
+        const touches = new Map();
+        function movePaddle(p, dt, up, down, touchY) {
+            const prev = p.y;
+            if (touchY != null) p.y += (touchY - p.y) * Math.min(1, dt * 20);
+            else { const sp = 560; if (up) p.y -= sp * dt; if (down) p.y += sp * dt; }
+            const h = ph(p);
+            p.y = Arcade.clamp(p.y, h / 2, H - h / 2);
+            p.vy = (p.y - prev) / Math.max(dt, 1e-3);
+        }
+        function predictY(b, x) {
+            if (b.vx === 0) return H / 2;
+            let t = (x - b.x) / b.vx; if (t < 0) return H / 2;
+            let y = b.y + b.vy * t;
+            const span = H - 2 * b.r;
+            y -= b.r; y = ((y % (2 * span)) + 2 * span) % (2 * span); if (y > span) y = 2 * span - y;
+            return y + b.r;
+        }
+        function aiMove(p, dt) {
+            const A = AI[opts.opp];
+            aiT -= dt;
+            const incoming = balls.filter(b => b.vx > 0).sort((a, b2) => (W - a.x) / a.vx - (W - b2.x) / b2.vx)[0];
+            if (aiT <= 0) {
+                aiT = A.react;
+                aiTarget = incoming ? predictY(incoming, p.x) + (Math.random() - 0.5) * A.err * 2 : H / 2 + (balls[0] ? (balls[0].y - H / 2) * 0.3 : 0);
+            }
+            const prev = p.y, d = aiTarget - p.y, step = A.sp * dt;
+            p.y += Math.abs(d) < step ? d : Math.sign(d) * step;
+            const h = ph(p); p.y = Arcade.clamp(p.y, h / 2, H - h / 2);
+            p.vy = (p.y - prev) / Math.max(dt, 1e-3);
+        }
+        function collidePaddle(b, p, dir) {
+            const h = ph(p);
+            const px = dir > 0 ? p.x + PW : p.x;
+            if ((dir > 0 && b.vx < 0 && b.x - b.r <= px && b.x > p.x - 4) || (dir < 0 && b.vx > 0 && b.x + b.r >= px && b.x < p.x + PW + 4)) {
+                if (b.y > p.y - h / 2 - b.r && b.y < p.y + h / 2 + b.r) {
+                    const off = (b.y - p.y) / (h / 2);
+                    b.sp = Math.min(1100, b.sp * 1.06);
+                    const a = Arcade.clamp(off, -1, 1) * 0.95;
+                    b.vx = Math.cos(a) * b.sp * dir; b.vy = Math.sin(a) * b.sp;
+                    b.spin = Arcade.clamp(p.vy / 600, -1.2, 1.2);
+                    b.x = dir > 0 ? px + b.r : px - b.r;
+                    b.last = dir > 0 ? 0 : 1;
+                    Arcade.tone(dir > 0 ? 440 : 520, 0.06, 'square', 0.05);
+                    fx.emit(b.x, b.y, { n: 10, speed: 160, color: ['#fff', '#cbd5e1'], life: 0.35, size: 3, angle: dir > 0 ? 0 : Math.PI, spread: 1.4 });
+                }
+            }
+        }
+        function step(dt) {
+            fx.update(dt);
+            flash = Math.max(0, flash - dt);
+            if (!running || paused) return;
+            let lt = null, rt = null;
+            for (const t of touches.values()) { if (t.x < W / 2) lt = t.y; else rt = t.y; }
+            movePaddle(L, dt, keys.KeyW, keys.KeyS, lt ?? mouseY);
+            if (opts.opp === '2p') movePaddle(Rp, dt, keys.ArrowUp, keys.ArrowDown, rt);
+            else aiMove(Rp, dt);
+            for (const p of [L, Rp]) { p.big = Math.max(0, p.big - dt); p.small = Math.max(0, p.small - dt); }
+            if (serveT > 0) { serveT -= dt; if (serveT <= 0) launch(balls[0]); return; }
+            const steps = 3, h = dt / steps;
+            for (let s = 0; s < steps; s++) for (const b of balls) {
+                b.vy += b.spin * 700 * h; b.spin *= Math.pow(0.4, h);
+                b.x += b.vx * h; b.y += b.vy * h;
+                if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); Arcade.tone(300, 0.04, 'sine', 0.04); }
+                if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy); Arcade.tone(300, 0.04, 'sine', 0.04); }
+                collidePaddle(b, L, 1); collidePaddle(b, Rp, -1);
+                for (const pw of powers) if (!pw.dead && Math.hypot(pw.x - b.x, pw.y - b.y) < 22) { pw.dead = true; applyPower(pw.t, b.last); }
+            }
+            trail.push(...balls.map(b => ({ x: b.x, y: b.y, t: 0.25 })));
+            for (const t of trail) t.t -= dt;
+            trail = trail.filter(t => t.t > 0);
+            const out = balls.filter(b => b.x < -30 || b.x > W + 30);
+            if (out.length) {
+                const side = out[0].x > W ? 0 : 1;
+                balls = balls.filter(b => !out.includes(b));
+                if (!balls.length) point(side);
+            }
+            if (opts.style === 'party') {
+                powT -= dt;
+                if (powT <= 0) { powT = 5 + Math.random() * 5; const ks = Object.keys(POW); powers.push({ x: W / 2 + (Math.random() - 0.5) * 300, y: 60 + Math.random() * (H - 120), t: ks[Math.floor(Math.random() * ks.length)], life: 9 }); }
+                for (const p of powers) { p.life -= dt; if (p.life <= 0) p.dead = true; }
+                powers = powers.filter(p => !p.dead);
+            }
+            if (msg) { msg.t -= dt; if (msg.t <= 0) msg = null; }
+        }
+        function applyPower(t, who) {
+            const me = who === 0 ? L : Rp, them = who === 0 ? Rp : L;
+            Arcade.sfx('power');
+            msg = { s: POW[t].t + '!', t: 1.4, c: POW[t].c };
+            if (t === 'big') me.big = 10;
+            else if (t === 'small') them.small = 8;
+            else if (t === 'fast') for (const b of balls) { b.sp = Math.min(1200, b.sp * 1.35); const k = b.sp / Math.hypot(b.vx, b.vy); b.vx *= k; b.vy *= k; }
+            else { const b = balls[0]; for (const d of [-0.35, 0.35]) { const a = Math.atan2(b.vy, b.vx) + d; balls.push({ x: b.x, y: b.y, vx: Math.cos(a) * b.sp, vy: Math.sin(a) * b.sp, r: 8, sp: b.sp, spin: 0, last: b.last }); } }
+        }
+        function draw() {
+            c.fillStyle = '#05070f'; c.fillRect(0, 0, W, H);
+            if (flash > 0) { c.fillStyle = `rgba(255,255,255,${flash * 0.08})`; c.fillRect(0, 0, W, H); }
+            c.strokeStyle = 'rgba(226,232,240,0.18)'; c.lineWidth = 4; c.setLineDash([14, 14]);
+            c.beginPath(); c.moveTo(W / 2, 0); c.lineTo(W / 2, H); c.stroke(); c.setLineDash([]);
+            c.fillStyle = 'rgba(226,232,240,0.85)'; c.font = '900 72px ui-monospace, monospace'; c.textAlign = 'center'; c.textBaseline = 'top';
+            if (score) { c.fillText(score[0], W / 2 - 90, 24); c.fillText(score[1], W / 2 + 90, 24); }
+            for (const t of trail) { c.globalAlpha = t.t * 1.6; c.fillStyle = '#94a3b8'; c.beginPath(); c.arc(t.x, t.y, 8 * t.t * 4, 0, TAU); c.fill(); }
+            c.globalAlpha = 1;
+            for (const p of powers || []) { c.fillStyle = POW[p.t].c; c.globalAlpha = Math.min(1, p.life); c.beginPath(); c.arc(p.x, p.y, 16, 0, TAU); c.fill(); c.fillStyle = '#05070f'; c.font = '800 14px system-ui'; c.textBaseline = 'middle'; c.fillText(POW[p.t].l, p.x, p.y + 1); c.globalAlpha = 1; }
+            if (L) for (const p of [L, Rp]) {
+                const h = ph(p);
+                c.fillStyle = p.big > 0 ? '#86efac' : p.small > 0 ? '#fca5a5' : '#e2e8f0';
+                c.shadowColor = c.fillStyle; c.shadowBlur = 16;
+                c.fillRect(p.x, p.y - h / 2, PW, h);
+            }
+            c.shadowBlur = 0;
+            for (const b of balls || []) { c.fillStyle = '#fff'; c.shadowColor = '#fff'; c.shadowBlur = 18; c.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2); }
+            c.shadowBlur = 0;
+            fx.draw(c);
+            c.textBaseline = 'middle';
+            if (running && serveT > 0) { c.fillStyle = '#cbd5e1'; c.font = '700 18px system-ui'; c.fillText(server > 0 ? 'Serving →' : '← Serving', W / 2, H / 2 + 60); }
+            if (msg) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.c; c.font = '900 26px system-ui'; c.fillText(msg.s, W / 2, H - 50); c.globalAlpha = 1; }
+            if (paused) { c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 36px system-ui'; c.fillText('Paused', W / 2, H / 2); }
+            if (opts.opp !== '2p' && running) { c.fillStyle = 'rgba(148,163,184,0.5)'; c.font = '600 12px system-ui'; c.fillText('YOU', W / 2 - 90, 112); c.fillText('AI · ' + opts.opp.toUpperCase(), W / 2 + 90, 112); }
+        }
+        let mouseY = null;
+        cv.addEventListener('pointermove', (e) => {
+            const p = Arcade.pointer(cv, e, W, H);
+            if (e.pointerType === 'mouse') { if (p.x < W / 2 || opts.opp !== '2p') mouseY = p.y; }
+            else if (touches.has(e.pointerId)) touches.set(e.pointerId, p);
+        });
+        cv.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { touches.set(e.pointerId, Arcade.pointer(cv, e, W, H)); cv.setPointerCapture(e.pointerId); } });
+        const rel = (e) => touches.delete(e.pointerId);
+        cv.addEventListener('pointerup', rel); cv.addEventListener('pointercancel', rel);
+        cv.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') mouseY = null; });
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (['ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+            if (['KeyW', 'KeyS'].includes(e.code)) mouseY = null;
+            if ((e.code === 'KeyP' || e.code === 'Escape') && running) paused = !paused;
+            if (e.code === 'Enter' && !$('menuOv').hidden) start();
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+        $('playBtn').onclick = start;
+        $('againBtn').onclick = start;
+        $('endMenu').onclick = () => { Arcade.hide('endOv'); Arcade.show('menuOv'); };
+        $('menuBtn').onclick = () => { running = false; Arcade.hide('endOv'); Arcade.show('menuOv'); };
+        document.addEventListener('visibilitychange', () => { if (document.hidden && running) paused = true; });
+        hud();
+        const loop = Arcade.loop((dt) => { step(dt); draw(); });
+        loop.start();
+        window.__pong = { start, get balls() { return balls; }, get score() { return score; }, opts };
+    })();
+    </script>
+</body>
+</html>

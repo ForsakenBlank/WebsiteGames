@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #22c55e; --accent-2: #eab308; --accent-ink: #03140a; --hit: #22a355; --near: #c9a20f; --miss: #353c57; --tile: 58px; }
+        body.contrast { --hit: #f5793a; --near: #85c0f9; }
+        .stage { justify-content: space-between; gap: 10px; padding: 10px 8px 12px; }
+        .modes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .grid { display: grid; grid-template-rows: repeat(var(--rows, 6), var(--tile)); gap: 6px; margin: auto 0; }
+        .row { display: grid; grid-template-columns: repeat(var(--len, 5), var(--tile)); gap: 6px; }
+        .row.shake { animation: shake 0.35s; }
+        .tile {
+            width: var(--tile); height: var(--tile);
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--line-2); border-radius: 8px;
+            font-size: calc(var(--tile) * 0.52); font-weight: 900; text-transform: uppercase;
+            background: transparent; color: var(--text);
+            user-select: none;
+        }
+        .tile.filled { border-color: #6b7599; animation: pop 0.1s; }
+        .tile.hit, .tile.near, .tile.miss { border-color: transparent; color: #fff; }
+        .tile.hit { background: var(--hit); }
+        .tile.near { background: var(--near); }
+        .tile.miss { background: var(--miss); }
+        .tile.flip { animation: flip 0.5s ease forwards; }
+        .tile.bounce { animation: bounce 0.6s ease; }
+        @keyframes pop { 50% { transform: scale(1.1); } }
+        @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+        @keyframes bounce { 0%, 20% { transform: translateY(0); } 40% { transform: translateY(-22px); } 60% { transform: translateY(4px); } 80% { transform: translateY(-6px); } 100% { transform: none; } }
+        .kb { display: flex; flex-direction: column; gap: 7px; width: min(520px, 100%); }
+        .kb .krow { display: flex; gap: 5px; justify-content: center; }
+        .key {
+            flex: 1; max-width: 46px; height: 54px; border: none; border-radius: 7px;
+            background: #4b5578; color: var(--text); font: inherit; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
+            cursor: pointer; touch-action: manipulation; transition: background 0.2s, transform 0.06s;
+        }
+        .key:active { transform: scale(0.94); }
+        .key.wide { max-width: 70px; flex: 1.5; font-size: 0.72rem; }
+        .key.hit { background: var(--hit); color: #fff; }
+        .key.near { background: var(--near); color: #fff; }
+        .key.miss { background: #262b40; color: #6b7392; }
+        .dist { text-align: left; margin-top: 12px; }
+        .dist .bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.85rem; }
+        .dist .bar-row b { width: 12px; }
+        .dist .bar-row span { background: var(--miss); color: #fff; font-weight: 700; padding: 1px 8px; border-radius: 4px; text-align: right; min-width: 24px; }
+        .dist .bar-row.cur span { background: var(--hit); }
+        .settings { text-align: left; display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+        .settings label { display: flex; justify-content: space-between; gap: 10px; align-items: center; cursor: pointer; }
+        .settings label small { display: block; color: var(--muted); font-size: 0.76rem; }
+        .settings input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+        .poople { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: auto 0; width: min(420px, 100%); }
+        .poople .plead { text-align: center; color: var(--muted); font-size: 0.9rem; line-height: 1.35; }
+        .poople .plead b { color: var(--text); }
+        .pchain { display: flex; flex-direction: column; gap: 5px; max-height: calc(100vh - 470px); min-height: 150px; overflow-y: auto; padding: 4px 8px; width: 100%; align-items: center; }
+        .prow { display: flex; gap: 5px; align-items: center; }
+        .prow .tile { width: 44px; height: 44px; font-size: 1.4rem; }
+        .prow .tile.start { background: #4b5578; border-color: transparent; color: #fff; }
+        .prow .tile.chg { background: var(--near); border-color: transparent; color: #fff; }
+        .prow .tile.same { background: var(--miss); border-color: transparent; color: #cdd3ea; }
+        .prow .tile.goal { border-color: transparent; background: #7a4a24; color: #fff; }
+        .prow .tile.goal.got { background: var(--hit); }
+        .prow .tile.typing { border-color: #6b7599; border-style: dashed; color: var(--muted); }
+        .prow .tile.typing.filled { color: var(--text); border-style: solid; }
+        .prow .num { width: 22px; text-align: right; color: var(--dim); font-size: 0.78rem; font-weight: 700; }
+        .pbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .pdots { color: var(--dim); font-weight: 900; line-height: 0.6; }
+        .answer { font-size: 1.6rem; font-weight: 900; letter-spacing: 0.2em; color: var(--text); text-transform: uppercase; }
+        @media (max-height: 700px) { :root { --tile: 48px; } .key { height: 46px; } }
+        @media (max-height: 600px) { :root { --tile: 40px; } .key { height: 40px; } }
+    </style>
+</head>
+<body class="no-scroll no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Wordle</h1>
+        <div class="stats">
+            <span class="chip accent">Streak <b id="streak">0</b></span>
+            <span class="chip gold">Wins <b id="winsChip">0</b></span>
+        </div>
+        <div class="actions">
+            <button class="btn sm icon" id="statsBtn" title="Statistics">📊</button>
+            <button class="btn sm icon" id="setBtn" title="Settings">⚙</button>
+            <button class="btn sm icon" data-mute>🔊</button>
+        </div>
+    </header>
+
+    <main class="stage">
+        <div class="modes">
+            <div class="seg" id="modeSeg">
+                <button class="btn sm" data-mode="daily">📅 Daily</button>
+                <button class="btn sm" data-mode="unlimited">♾ Unlimited</button>
+                <button class="btn sm" data-mode="poople" title="Word ladder: change one letter at a time until you reach POOP">💩 Poople</button>
+            </div>
+            <div class="seg" id="lenSeg" title="Word length">
+                <button class="btn sm" data-len="4">4</button>
+                <button class="btn sm" data-len="5">5</button>
+                <button class="btn sm" data-len="6">6</button>
+                <button class="btn sm" data-len="7">7</button>
+            </div>
+            <button class="btn sm" id="newBtn" hidden>New word</button>
+            <span class="tag" id="hardTag" hidden>Hard mode</span>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="poople" id="poople" hidden>
+            <div class="plead">Change <b>one letter at a time</b> — every step must be a real word — until you reach <b>POOP</b>.</div>
+            <div class="pchain" id="pchain"></div>
+            <div class="pbtns">
+                <button class="btn sm" id="pUndo">↩ Undo</button>
+                <button class="btn sm" id="pHint">💡 Hint</button>
+                <button class="btn sm" id="pNew">🔄 New puzzle</button>
+            </div>
+        </div>
+        <div class="kb" id="kb"></div>
+
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">Splendid!</h2>
+                <p>The word was</p>
+                <div class="answer" id="endWord"></div>
+                <div class="stat-grid" id="endStats"></div>
+                <div class="dist" id="endDist"></div>
+                <p class="small" id="nextDaily"></p>
+                <div class="actions">
+                    <button class="btn primary lg" id="againBtn">Play unlimited</button>
+                    <button class="btn" id="shareBtn">📋 Share</button>
+                    <button class="btn ghost" id="closeEnd">Close</button>
+                </div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="setOv" hidden>
+            <div class="modal">
+                <h2>Settings</h2>
+                <div class="settings">
+                    <label><span>Hard mode<small>Any revealed hints must be used in later guesses. Starts with your next word.</small></span><input type="checkbox" id="optHard"></label>
+                    <label><span>High contrast colours<small>Orange and blue instead of green and yellow.</small></span><input type="checkbox" id="optContrast"></label>
+                    <label><span>Accept any letters<small>Skip the dictionary check for guesses.</small></span><input type="checkbox" id="optAny"></label>
+                </div>
+                <div class="actions"><button class="btn primary" id="closeSet">Done</button></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../_shared/arcade.js"></script>
+    <script src="words5.js"></script>
+    <script>
+    (() => {
+        /* ---------- Words ---------- */
+        const ANSWERS_RAW = `about above abuse actor acute admit adopt adult after again agent agree ahead alarm album alert alike alive allow alone along alter among anger angle angry apart apple apply arena argue arise array aside asset audio audit avoid award aware badly baker basic basis beach began begin being below bench birth black blame blind block blood board boost booth bound brain brand bread break breed brief bring broad broke brown build built buyer cable carry catch cause chain chair chart chase cheap check chest chief child chose civil claim class clean clear click clock close coach coast could count court cover craft crash cream crime cross crowd crown curve cycle daily dance dealt death debut delay depth doing doubt dozen draft drama drawn dream dress drill drink drive drove dying eager early earth eight elite empty enemy enjoy enter entry equal error event every exact exist extra faith false fault fiber field fifth fifty fight final first fixed flash fleet floor fluid focus force forth forty forum found frame fraud fresh front fruit fully funny giant given glass globe going grace grade grand grant grass great green gross group grown guard guess guest guide happy heart heavy horse hotel house human ideal image index inner input issue joint judge known label large laser later laugh layer learn lease least leave legal level light limit local logic loose lower lucky lunch lying magic major maker march match maybe mayor meant media metal might minor mixed model money month moral motor mount mouse mouth movie music never newly night noise north noted novel nurse occur ocean offer often order other ought paint panel paper party peace phase phone photo piece pilot pitch place plain plane plant plate point pound power press price pride prime print prior prize proof proud prove queen quick quiet quite radio raise range rapid ratio reach ready refer right rival river robin rough round route royal rural scale scene scope score sense serve seven shall shape share sharp sheet shelf shell shift shirt shock shoot short shown sight since sixth sixty skill sleep slide small smart smile smoke solid solve sorry sound south space spare speak speed spend spent split spoke sport staff stage stake stand start state steam steel stick still stock stone stood store storm story strip stuck study stuff style sugar suite super sweet table taken taste teach teeth thank theft their theme there these thick thing think third those three threw throw tight tired title today topic total touch tough tower track trade train treat trend trial tried truck truly trust truth twice under union unity until upper upset urban usage usual valid value video virus visit vital voice waste watch water wheel where which while white whole whose woman world worry worse worst worth would wound write wrong wrote yield young youth adore agile aisle alien align alley alpha amber amuse angel ankle apron arrow aroma badge bagel banjo barge basin batch beard beast berry bingo blade blank blast blaze bleak blend bless bliss bloom blown blunt blush boast bonus brace braid brave brass bribe brick bride brine brink brisk broom broth brush buddy bulky bunch burst cabin cadet camel candy canoe cargo carol cedar chalk champ charm cheek cheer chess chick chili chime chirp choir chunk cider cigar cinch civic clamp clang clash clasp cliff climb cling cloak cloth cloud clown cobra cocoa comet comic coral couch cough crane crank crate crave crawl crazy creek crepe crisp crumb crush crust cubic cupid curly daisy dairy decay decoy delta demon denim dense diary digit diner dingy disco ditch dizzy dodge dough drain drape dried drift drool droop dusty dwarf eagle easel eaten ebony elbow elder elect ember enact envoy epoch equip erase essay evade exile expel fable facet fairy fancy feast fence ferry fetch fever fizzy flair flake flame flank flare flask flick fling flint float flock flood flora flour flute foamy focal foggy folly forge frail freak frisk frost froze fudge fungi fuzzy gauge gecko ghost gizmo glade gland glare gleam glide glint gloom glory gloss glove gnome goose gourd grape graph grasp grate gravy graze greed greet grief grill grime grind groan groom grove growl gruel grunt guava guild guilt gulch gummy gusto habit hairy halve handy hardy harsh haste hasty hatch haunt haven hazel hedge hefty helix hello hippo hobby hoist holly honey honor horde hound hover howdy humid humor hunch hurry husky hutch hyena icing igloo inbox irony itchy ivory jaunt jazzy jelly jewel jiffy joker jolly juice juicy jumbo jumpy kayak kebab khaki kiosk kitty knack knead kneel knelt knife knock koala lager lance lapel lapse latch latte lemon leapt ledge lilac limbo linen liner llama lobby lodge lofty loyal lunar lunge lyric macho mango manor maple marsh mason medal melon mercy merit merry messy midst mimic mince minty mirth miser misty mocha moist molar moody moose morph mossy motel motto mould mound mourn muddy mural murky mushy nacho naive nanny nasal nasty naval nerdy nerve nifty ninja noble nomad notch nudge nylon oasis olive omega onion opera orbit organ otter outdo owner oxide ozone paddy panda panic pansy parka parry pasta patch pause peach pearl pecan pedal penny perch peril perky pesky petal petty phony piano picky pinch pixel pizza plaid plank plaza pleat pluck plumb plume plump plush poach poker polar polka poppy porch poser pouch prank prawn preen prism probe prong prune psalm pudgy puffy pulse punch pupil puppy purse quack quail qualm quart quest quill quilt quirk quota quote radar rainy rally ranch raven razor realm rebel recap reign relax relay relic remix renew repay rhino rhyme ridge rifle rinse ripen risky roast robot rocky rodeo rogue roomy roost rouge rowdy ruddy rugby ruler rumba rusty sadly saint salad salon salsa salty sandy sassy satin sauce sauna savor savvy scald scalp scamp scant scarf scary scent scoff scold scone scoop scoot scorn scout scowl scrap scrub sedan seize serum setup shack shade shady shaft shake shaky shame shark shawl shear sheen sheep shine shiny shore shout shove shrub shrug sieve siege silky silly siren skate skirt skull skunk slack slang slant slash sleek sleet slept slice slime slimy sling sloth slump slurp slush smack smash smear smell smelt smirk snack snail snake snare sneak sneer sniff snore snort snout snowy soapy sober sonic spade spark spawn spear speck spell spice spicy spied spike spiky spill spine spiny spite splat spoil spook spool spoon spore spout spray spree sprig squad squat squid stack stain stair stale stalk stall stamp stare stark stash steak steep steer stern stiff sting stink stint stomp stool stoop stork stout stove strap straw stray strut stump stung stunt suave sulky sunny surge sushi swamp swarm swear sweat sweep swell swept swift swine swing swirl sword swore sworn swung syrup tabby taboo tacky taffy talon tango tangy tapir tardy tarot tasty tawny teary tease tempo tenor tense tepid thief thigh thorn thumb thump tiara tidal tiger timid tipsy toast token tonic topaz torch torso totem toxic trail trait tramp trash trawl tread trick troll troop trout truce trunk tulip tumor tuner tunic turbo tutor twang tweak tweed twirl twist udder ulcer ultra uncle unify unite unlit untie usher utter vague valet valor vapor vault vegan venom verge verse vigor vinyl viola viper vivid vocal vogue vouch vowel wacky wafer wager wagon waist waltz weary weave wedge weedy weird whale wheat whiff whirl whisk widen widow width wield wince winch windy wiser witch witty woken wordy woven wrath wreck wrist yacht yearn yeast yodel zebra zesty`;
+        const EXTRA_RAW = `adieu arose stare slate trace crate irate saute tares rates aeros soare roate raile ratio tears teary lanes notes tones onset stone rites tires cries dries fries tries lives times taxes bases needs links sites lines mines nines pines vines wines bikes likes hikes kites mites bites rides hides sides tides wides codes modes nodes rodes poles holes moles roles soles tolls bolls dolls polls rolls calls falls halls malls walls balls cells bells fells hells sells tells wells yells pulls bulls fulls hulls mulls lulls nulls dulls gulls cult? adapt adept agony aider aired aimed asked acted added ended owned armed eased oiled urged used? ached aches acres acorn acrid actin adobe aegis afoot aloft aloud alpha amass amaze amble amend amiss ample angst anime annex antic anvil aorta aphid apnea arbor ardor argon arson ascot ashen askew aspen assay atoll atone attic augur avail avert avian awake awash awful axial axiom azure bacon bagel balmy banal baron basal baste baton bawdy bayou beady beefy befit beget beige belch belie belly beret bevel bicep bigot bilge biome birch bison bitty blare blimp blurb blurt bogus bongo booby boozy borax bough boule bowel boxer brawl brawn briar briny broil brook brunt brute budge buggy bugle bulge bully bumpy bushy butch butte cacti caddy cameo canal caper carat carve caste cater caulk cavil chafe chaff chant chard cheat chide chimp chock chord chore chump churn chute cinema? claps clerk clink cloak clout clove cluck clump clung coach cocky colon colts? conch condo corny couch coupe coven covet cower coyly crack craze credo creed creep crest crick cried crier croak crone crony crook croon cruel crypt cuddy cumin curio curry curse cyber cynic dally dandy daunt dazed deity delve depot derby deter detox deuce devil diode dirge dirty disco ditto ditty diver dogma dolly donor dopey dowdy dowel downy dowry dozed drawl dread dregs droll drone druid drunk dryer dryly duchy dully dummy dumpy dunce duvet dwell dwelt eaves edict eerie egret eject elfin elope elude email embed emcee enema ennui ensue epoxy equid erode erupt ether ethic ethos evoke exalt excel exert extol exult fakir farce fatal fatty feign feint felon femur feral ferny fetal fetid fiend fiery filly filmy filth finch finer first fishy flail flaky flaunt? fleck flesh flier flirt flown fluff fluke flung flunk flush foist foray forte fossil? foyer freed friar frill frock frond froth frown fruit fryer gaffe gaily gamer gamma gassy gaudy gaunt gauze gavel gawky geeky genie genre ghoul giddy girth gleam gloat glyph gnash godly golem golly gooey goofy gorge gouge grail grand graze grimy gripe grout gruff guile gully gumbo gypsy hammy happy harem harpy hatch? heath heave heist hello hence heron hilly hinge hippy hitch hoard homey hoops? horny howdy hussy hydro hymen hyper icily idiom idiot idler idyll igloo iliac imbue impel inane inept inert infer ingot inlay inlet inter intro ionic islet jaunt jeans? jerky jetty jiffy joist joust judo? kappa karma kazoo knave knoll label? laden ladle lanky lapse larva lasso latte lathe leafy leaky leash leech leery lefty leggy lemur leper libel liege lifer limey lingo lipid lithe liver livid loamy loath lofty loopy lorry louse lousy lover lowly lumen lumpy lurch lusty madam madly mafia mamba mambo mammy mange mangy mania manic manly marry matey matte mauve maxim mealy meaty mecca melee merge midge milky mince minim miner minus missy moldy money? mongo monty? moped moron mossy mover mower mucky mulch mummy munch mushy musky musty mynah myrrh naiad natal needy neigh nervy never niche niece night? nitro noble noisy nooks? notch nymph occur octal octet odder offal often ombre opium optic orate order otter ounce outer outgo ovary ovate overt ovine ovoid owing pacer paddy pagan paler palsy paste pasty patio patsy patty payee peaky pecan peeve penal pence peony perky perch peril pesto petal phlox piety pinky pinto piper pique pithy pivot pixie plait plier plonk plunk poesy polyp pooch posse pouty power prick primo privy proxy prude pubic pudgy pulpy pupal purer pushy putty pygmy quash quasi query queue quiche? quell quoth rabid radii rajah ramen randy raspy ratty rayon rearm reedy refit regal rehab reins? renal repel rerun retch retro retry revel rider rigid rigor rinse riper rivet roach robin rocky rotor rough rowdy royal rumor rupee sabre sadly salve salvo sappy sarge satyr saucy scaly scion scrum sepia serif sever sewer shake shalt shank shard sheik shied shiny shirk shoal shone shook shorn showy shrew shunt shush sidle sigma silly sinew singe sissy skein skied skier skiff skimp skulk slain slosh slung slunk slyly smite snaky snipe snoop sooth sooty spasm spiel spurn spurt squib stead steed stein stile stoic stoke stole stony stove strew strum stunk suing sully sumac surly sushi swami swath swill swoon swoop synod tacit taint tamer taper tarry tatty taunt teach tease teddy teeth tepee terse testy thane theta thine thong those three? throb thyme tibia tilde tithe toady today toddy tonal tonga? toned tongs tooth toque torus totem tousy? toxin trace tract trope trove truer truss tryst tubal tuber tummy tunic twain tweet twice twine twixt tying ulcer umbra unbox uncut undid undue unfed unfit unlit unmet unset unzip upend usurp vapid vaunt venue verve vicar vigil viral visor vista vixen voila vomit voter wader wafer wager waive wanly warty washy waste wavy? weepy weigh welch? welsh whack wheel? whelp whoop wimpy wispy woken wooer woozy wordy wormy wound wrack wrung yearn yummy zesty zonal`;
+        const FOUR = `able acid aged also area army away baby back ball band bank base bath bear beat been beer bell belt best bill bird blow blue boat body bomb bond bone book boom born boss both bowl bulk burn bush busy call calm came camp card care case cash cast cell chat chip city club coal coat code cold come cook cool cope copy core cost crew crop dark data date dawn days dead deal dean dear debt deep deny desk diet disc disk does done door dose down draw drew drop drug dual duke dust duty each earn ease east easy edge else even ever evil exit face fact fail fair fall farm fast fate fear feed feel feet fell felt file fill film find fine fire firm fish five flat flow food foot ford form fort four free from fuel full fund gain game gate gave gear gene gift girl give glad goal goes gold golf gone good gray grew grey grow gulf hair half hall hand hang hard harm hate have head hear heat held hell help here hero high hill hire hold hole holy home hope host hour huge hung hunt hurt idea inch into iron item jack jane jean join jump jury just keen keep kept kick kill kind king knee knew know lack lady laid lake land lane last late lead left less life lift like line link list live load loan lock logo long look lord lose loss lost love luck made mail main make male many mark mass matt meal mean meat meet menu mere mile milk mill mind mine miss mode mood moon more most move much must name navy near neck need news next nice nick nine none nose note okay once only onto open oral over pace pack page paid pain pair palm park part pass past path peak pick pink pipe plan play plot plug plus poll pool poor port post pull pure push race rail rain rank rare rate read real rear rely rent rest rice rich ride ring rise risk road rock role roll roof room root rose rule rush safe said sake sale salt same sand save seat seed seek seem seen self sell send sent ship shoe shop shot show shut sick side sign site size skin slip slow snow soft soil sold sole some song soon sort soul spot star stay step stop such suit sure take tale talk tall tank tape task team tech tell tend term test text than that them then they thin this thus tide till time tiny told toll tone tony tool tour town tree trip true tune turn twin type unit upon used user vary vast very vice view vote wage wait wake walk wall want ward warm wash wave ways weak wear week well went were west what when whom wide wife wild will wind wine wing wire wise wish with wood word wore work yard yeah year your zero zone bake bite cake cane cape cave cure dare dine dive dome dove fade fame faze fuse gaze glue hike hive joke lace lake lime mate maze mule mute name pale pave pile pine poke pole race rake rave robe rope rude ruse sage sane tame tile tube vibe wade wipe yoke`;
+        // Extra 4-letter guesses (FOUR above are the 4-letter answers).
+        const FOUR_MORE = `able ache acre afar agog aide ajar akin alas alms aloe alto amid ammo anew apex aqua arch aria arid arms arts atom aunt aura auto avid avow awry axes axis axle babe bald bale balm bard bare bark barn bass bead beak beam bean beef beep bees bend bent bias bike bile bind blab bled blew blip blob blot blur boar bold bolt bony boot bore bout brag bran bred brew brim bulb bull bump bunk buoy burp bust buzz cafe cage calf cart carp cask chef chew chin chop chow chug clad clam clan clap claw clay clip clog clot clue coax coil coin cola colt comb cone cord cork corn cosy cove crab cram crib crow cube cuff cult curb curd curl cusp cute dame damp dart dash daze deaf deck deed deem deer dent dial dice dime dire dirt dish dock doll dorm dote doze drab drag drip drum duck duct dude dull dumb dump dune dusk earl echo eddy edgy envy epic exam fang fawn feat fern feud fist flag flan flap flaw flea fled flee flew flex flip flop flux foal foam foil fold folk fond font fore fork foul fowl fray fret frog fume fury fuzz gale gasp geek germ gild gist glee glib glow glum gnat gnaw goat gong gory gosh gown grab gram grim grin grip grit grub gush gust guts hack hail halo halt hare harp hash haul hawk haze hazy heap heed heel heir helm herb herd hilt hint hiss hoax hoof hook hoop hoot horn hose howl huff hulk hump husk hymn icon idle idol inky iris itch jade jail jazz jeer jerk jest jolt judo kale kelp kiln kilt kiss kite kiwi knit knob knot lamb lame lamp lard lark lash lava lawn lazy leaf leak lean leap lens liar lick limb limp lint lion lisp loaf loft lone loom loop loot lore lump lung lure lurk lush lynx mace malt mane mare mash mast maul meek melt mesh mild mint mist moan moat mock mold mole molt monk moss moth muck muse mush musk mutt myth nail nape neat nest newt nook noon norm nosy nude null numb oath obey odds odor omen opal oven owed oxen pact pane pant pawn peck peel peer pelt perk pest pier pity plea plop plow ploy plum poem poet pony pore pork posh pout pram prey prod prom prop puck puff pulp puma pump punk puny purr quay quip quiz raft rage raid ramp rant rash rasp reed reef reek rein riff rift rind riot ripe roam roar rook rosy rout ruby rung runt rust sack saga sail sash scab scam scan scar seal seam sear sect sewn sham shed shin shoo shun silk sill silo silt sire skid skim skip skit slab slam slap slat slaw sled slew slid slim slit slob slog slot slug slum slur smog smug snag snap snip snob snub snug soak soap soar sock soda sofa soot sore soup sour span spar spat sped spin spit spur stab stag stem stew stir stub stud stun suck sulk sumo swab swam swan swap swat sway swim tack taco tact tang tart taut teak teal tear teen tent thaw thud tick tidy tier tilt toad toil tomb tong torn toss tote trap tray trek trim trio trod trot tuba tuck tuft tusk twig ugly undo urge vain vale vane veal veil vein vent verb vest veto vial vile visa void volt wail waft wand wane wart wavy waxy weed weep weld whim whip whir whiz wick wilt wimp wink wisp woke wolf womb wool wrap wren yawn yell yelp yolk zany zeal zest zinc zoom`;
+        // More 5-letter words: COMMON5 can be answers, MORE5 are accepted guesses.
+        const COMMON5 = `actor alert angel apart arrow badge baker beach bench berry blank blast bloom board boost brain brave bread brick bride brush buddy bunny candy chain chalk charm cheap cheek chess chick chief child chill choir clean clerk cliff climb clock cloud clown coach coral couch cough crane crash crazy cream crowd crown cruel crumb crust cycle daily dairy dance diary diner dizzy dough dozen drama dream dress drink eager eagle early earth eight elbow empty enjoy equal exact extra fairy faith fancy feast fence fever field fifty fight flame flash float flood floor flour fluid flute focus frame fresh frost fruit giant glass globe glove grain grape grass green guest guide happy heart heavy honey horse hotel house human humor image ivory jelly jewel juice knife label laugh lemon level light limit lunch magic mango maple march medal melon metal model money month motor mouse music naval noble north novel ocean olive onion opera orbit owner paint panda panel paper party pasta peace peach pearl phone photo piano pilot pizza plane plant plate polar porch pound power price pride prize proud queen quick quiet radio raven reach ready relax river robin robot rocky round royal ruler salad sauce scale scarf scene score shade shape shark sheep shelf shell shine shirt shore short skate skirt sleep slice smile snack snake solar sound space spark spice spoon sport squad stack stage stamp steak steam stone storm story stove sugar sunny swing sword table taste teach tiger toast today topic torch tower track trail train treat trick truck tulip twist uncle union value video voice waste watch water whale wheat wheel white world worry write yacht young zebra`;
+        const MORE5 = `abbey abode adage admin adorn affix afire afoul agate agave aging aglow alibi allot alloy altar amigo amply annoy aptly armor ascot atlas audio bacon banjo baton begun beret birch bloat bluff bogus booty bossy botch bowel brace brawl brook broth buggy bugle bulge burly cacao cache cameo caper carat cello chant chaos chasm cheat chord chore chute cider cinch circa clone colon comma condo crank creak creed crept crimp crook croon curry cynic dandy debit decal decor deity delve denim detox diver dodgy dogma donut drawl dread dryer duchy dummy dunce dwell easel eerie elegy elude email emoji ensue epoch equip erode erupt ethic evict exalt excel exert expat extol fable faint fatal feign feral ferry fiber fifth filet filth finch flail flair fleck flesh flier flirt flora floss flume flunk foyer freed friar frock gaudy gauze gavel genie genre gland glean gloat glyph gnash golem goner gooey gorge gouge grail greet grimy groin grout guise gully hasty haute hefty heist hence heron hinge hippo hitch homer hound hover humph hunky hurry hyena hyper icily ideal idiom idiot igloo imply inane incur inept inert infer ingot inlet input inter irony jaded joint joust judge juror knave knelt kudos labor laden ladle lapel larva laser latch leach leafy leash ledge leech lemur libel lilac liner liver loath lobby local locus lodge login loopy lousy lover lowly lucid lumpy lunar lurch lyric magma maize mania manly mange matey mauve maxim mayor mealy meant medic melee merge midst might miner minor minus mirth mogul moldy motif motto mount mourn mucus mummy mural myrrh naive natal nerve newly niche ninja ninth nomad nosey notch nudge nurse nutty nylon oaken occur octet offal olden onset optic order organ other ought ounce outdo outer overt oxide parse patio pause payer penal perch peril pesto petty phase piece pinch pique pivot pixel place plaid plain plead pleat plier plunk poise posse pouty prawn prime print prior prism privy probe prone proof prose prove prowl proxy prude psalm pulse purge quake qualm query queue quirk quota radar radii rainy ranch range ratio rayon react realm rebar rebel rebus recur refer regal rehab reign relay relic remit renal repay repel reply resin retch retro revel rider ridge rifle rigid rinse risen rival roach roast rodeo rogue roomy rouse route rover rugby rumor rural rusty saber sadly saint salon salsa sandy satin satyr savor scald scaly scrap scuba seize sense serum sever shaft shall shard shear shift shire shock shone shown shrub shrug siege sight sigma silky since sinew siren sixth skier skill skimp slain sleek sleet slide sling slope sloth smack smart smear smirk smite smock snare sneer snipe snoop snore snort solid sonar south spade spank spare spasm spawn speak spear speed spell spend spine spire spoke squid staff stain stake stale stall stand stank stare steal steed steel steep stern stick stiff still sting stink stock stomp stool strap straw stray strip study stuff stump stunk style suave suite super surge swamp swear sweat sweep swept swift swine swirl synth tacit taker talon tamer tango taper tapir tasty taunt tease teeth tempo tenet tenor tense tenth terse thank theft theme thick thief thing think third thong thorn those three threw throb throw thumb thyme tidal tight timer timid tipsy titan title token tonal tonic total totem touch tough towel toxic trace trade trait tramp trash tread trend triad trial tribe tried tripe trite troll troop trope trout truce truly trump trunk truss trust truth tumor tuner tunic tutor twang tweak twerp twice twine twirl udder ulcer ultra umbra uncut under undue unfit unify unite unity unlit until unwed upper upset urban usage usher usual utter vague valid valve vapor vault vegan venue verge verse vigor villa vinyl viola viper viral virus visor vista vital vivid vocal vodka vogue vouch vowel wacky waist weary weave wedge where which while whine whiny whirl whisk whole whose widen widow width wield wince windy wiper wispy witch woken woman women worse worst worth would wound woven wrath wreak wreck wring wrist wrong wrote yearn yield youth`;
+        const SIX = `action active actual advice afraid agency agenda almost always amount animal answer anyone anyway appeal appear around arrive artist aspect assume attack attend author autumn avenue barely battle beauty became become before behalf behind belief belong better beyond bishop bitter bonnet border borrow bottle bottom bought bounce branch breath bridge bright broken bubble bucket budget burden bureau butter button camera campus cancel candle carbon career carpet carrot castle casual caught center chance change charge cheese cherry choice choose chosen church circle client closed closer coffee column combat coming common copper corner cotton county couple course cousin create credit crisis cruise custom damage danger dealer debate decade decide defeat defend define degree demand dental depend deputy desert design desire detail device dinner direct doctor dollar domain double dragon drawer driven driver during easily eating editor effect effort eighth either eleven emerge empire employ enable ending energy engage engine enough ensure entire escape estate evolve exceed except excuse expand expect expert export extend extent fabric facing factor fairly fallen family famous farmer father fellow female figure filter finger finish flavor flight flower flying follow forest forget formal format former foster fourth freeze friend frozen future galaxy garage garden garlic gather gentle global golden ground growth guilty guitar hammer handle happen harbor hardly health heaven height helmet hidden hockey honest hunger hunter impact import income indeed injury inside insect intend invest island itself jacket jersey jungle junior kidney kitten launch lawyer leader league legacy legend length lesson letter liquid listen little lizard living locate lovely mainly making manage manner marble margin marine market master matter medium member memory mental merely method middle mirror mobile modern modest moment monkey mostly mother motion moving muscle museum mutual myself narrow nation native nature nearby nearly needle nobody normal notice number object obtain office online oppose option orange origin output oxygen palace parade parent pencil people pepper period permit person planet player please pocket poetry police policy potato powder praise prefer pretty priest prince prison profit proper public puzzle rabbit random rarely rather rating reader reason recall recent record reduce reform refuse regard region relate relief remain remote remove repair repeat report rescue resort result retain retire return reveal review reward rhythm ribbon riding ripple rocket rubber ruling safety salmon sample saving scheme school screen script search season second secret sector secure select seller senior series server settle severe shadow shield silent silver simple single sister sketch slight smooth soccer social sorrow source speech spider spirit spread spring square stable statue steady stolen strain strand stream street stress strict strike string stroke strong studio submit sudden suffer summer summit supply surely survey switch symbol system tablet talent target temple tender tennis thanks theory thirty thread threat throat ticket timber tissue toilet tomato tongue toward travel treaty tunnel turkey twelve twenty unfair unique united unless unlike update useful valley vendor versus victim violin vision visual volume walnut wander warmth wealth weapon weekly weight window winner winter wisdom within wizard wonder wooden worker writer yellow zipper`;
+        const SEVEN = `ability absence academy account achieve acquire address advance adviser against airline airport alcohol already amazing ancient another anxiety anybody anymore applied arrange arrival article athlete attempt attract average balance bandage banking bargain barrier battery bearing because bedroom believe beneath benefit besides between bicycle billion biology blanket brother cabinet capable capital captain caption capture careful carrier catalog ceiling central century certain chamber channel chapter charity charter chicken chronic circuit citizen classic climate clothes cluster coastal collect college combine comfort command comment company compare compete complex concept concern concert conduct confirm connect consent consist contact contain content contest context control convert cooking correct council counter country courage culture curious current custody cutting dealing decline default defense deficit deliver density deposit desktop despite destroy develop devoted diamond digital dining discuss disease display dispute distant diverse drawing driving dynamic eastern economy edition elderly element embrace emotion engaged enhance evening evident exactly examine example excited exclude exhibit expense explain explore express extreme factory faculty failure fashion feature federal feeling fiction fifteen finance finding fishing fitness foreign forever formula fortune forward founder freedom further gallery garbage general genetic genuine gesture glimpse graphic gravity greatly growing habitat harmony healthy hearing heavily helpful highway himself history holiday horizon housing however hundred hunting husband illness imagine impress improve include initial inquiry insight inspire install instant instead intense interim involve journal journey justice kitchen landing laundry leading leather library license lifting limited listing loyalty machine manager married massive maximum meaning measure medical meeting mention message million mineral minimum mission mistake mixture monitor monster morning musical mystery natural neither nervous network neutral nothing nowhere nuclear nursing obvious offense officer ongoing opening operate opinion organic outcome outdoor outside overall package painful painter parking partner passage passion patient pattern payment penalty pension percent perfect perform perhaps picture pioneer plastic pleased popular portion portray poverty precise predict premium prepare present prevent primary printer privacy private problem proceed process produce product profile program project promise promote protect protein protest provide publish pumpkin purpose pursuit quality quarter radical railway rainbow reading reality receipt receive recover reflect regular related release remains removal replace request require reserve resolve respect respond restore revenue reverse rolling routine rubbish running satisfy science scratch section segment serious service session setting seventh several shelter sheriff shortly silence similar sitting skating sixteen society soldier somehow someone speaker special sponsor stadium station stomach storage strange stretch student subject success suggest summary support suppose supreme surface surgery surplus survive suspect sustain teacher tension terrain theater thereby thought through tonight totally tourism tourist traffic trouble turning typical uniform unknown unusual upgrade usually utility variety various vehicle venture version veteran victory village vintage violent virtual visible visitor warning weather website wedding weekend welcome welfare western whereas whether willing winning without witness working workout writing written`;
+        const NAMES4 = new Set(['jack', 'jane', 'jean', 'matt', 'nick', 'tony', 'ford', 'dean', 'okay', 'yeah', 'euro']);
+
+        const words = (raw, n) => raw.split(/\s+/).map(w => w.toLowerCase().replace(/[^a-z]/g, '')).filter(w => w.length === n);
+        const clean = (raw) => words(raw, 5);
+        // Every length gets an answer list (common words) and a set of accepted guesses.
+        const LISTS = {};
+        {
+            const a4 = words(FOUR, 4).filter(w => !NAMES4.has(w));
+            const a5 = [...new Set([...clean(ANSWERS_RAW), ...clean(COMMON5)])];
+            const a6 = [...new Set(words(SIX, 6))];
+            const a7 = [...new Set(words(SEVEN, 7))];
+            const v4 = new Set([...a4, ...words(FOUR, 4), ...words(FOUR_MORE, 4)]);
+            const v5 = new Set([...a5, ...clean(EXTRA_RAW), ...clean(MORE5)]); // legacy set: now only used to derive the 6/7-letter guess lists
+            // simple plurals / past tenses keep longer guesses from feeling too strict
+            for (const w of v4) { v5.add(w + 's'); if (w.endsWith('e')) { v5.add(w + 'd'); v5.add(w.slice(0, 3) + 'er'); } }
+            const v6 = new Set(a6), v7 = new Set(a7);
+            for (const w of v5) { v6.add(w + 's'); if (w.endsWith('e')) { v6.add(w + 'd'); v6.add(w + 'r'); } }
+            for (const w of a6) { v7.add(w + 's'); if (w.endsWith('e')) { v7.add(w + 'd'); v7.add(w + 'r'); } }
+            for (const w of v4) { v7.add(w + 'ing'); v6.add(w + 'ed'); if (w.endsWith('e')) v6.add(w.slice(0, 3) + 'ing'); }
+            for (const w of v5) { v7.add(w + 'ed'); v7.add(w + 'er'); if (w.endsWith('e')) v7.add(w.slice(0, 4) + 'ing'); }
+            LISTS[4] = { answers: a4, valid: v4 };
+            // 5 letters = the real Wordle lists (2,315 answers, 12,972 accepted guesses)
+            const off = words(WORDLE5_ANSWERS, 5);
+            LISTS[5] = { answers: off, valid: new Set([...off, ...words(WORDLE5_ALLOWED, 5)]) };
+            LISTS[6] = { answers: a6, valid: v6 };
+            LISTS[7] = { answers: a7, valid: v7 };
+        }
+
+        /* ---------- State ---------- */
+        const $ = (id) => document.getElementById(id);
+        const gridEl = $('grid'), kbEl = $('kb');
+        let opts = Object.assign({ hard: false, contrast: false, any: false }, Arcade.load('arcade.wordle.opts', {}));
+        let mode = Arcade.load('arcade.wordle.mode', 'daily');
+        if (mode !== 'daily' && mode !== 'unlimited' && mode !== 'poople') mode = 'daily';
+        let wlen = Number(Arcade.load('arcade.wordle.len', 5)) || 5;
+        if (!LISTS[wlen]) wlen = 5;
+        const rows = () => (wlen === 7 ? 7 : 6);
+        const CHEERS = ['Genius!', 'Magnificent!', 'Impressive!', 'Splendid!', 'Great!', 'Nice!', 'Phew!'];
+        const cheer = (n) => CHEERS[Math.max(0, n - 1 + (7 - rows()))] || 'Phew!';
+        let game;   // { answer, guesses: [], done, won, hard, day? }
+        let typing = '', busy = false;
+
+        const dayNumber = () => {
+            const d = new Date();
+            return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2024, 0, 1)) / 86400000);
+        };
+        // daily answer: a fixed shuffled order of the answer list so consecutive days aren't alphabetical
+        function dailyAnswer(n) {
+            const list = LISTS[wlen].answers;
+            let h = 0x9E3779B1 ^ n ^ (wlen === 5 ? 0 : wlen * 0x45D9F3B);
+            h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B); h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35); h ^= h >>> 16;
+            const idx = ((h >>> 0) + n * 7919) % list.length;
+            return list[idx];
+        }
+
+        // 5 letters keeps the original keys so old stats and games carry over
+        const sfx = () => (wlen === 5 ? '' : '.' + wlen);
+        const statsKey = () => 'arcade.wordle.stats.' + mode + sfx();
+        const blankStats = () => ({ played: 0, wins: 0, streak: 0, maxStreak: 0, dist: new Array(rows()).fill(0), lastDay: null });
+        const loadStats = () => { const s = Object.assign(blankStats(), Arcade.load(statsKey(), {})); while (s.dist.length < rows()) s.dist.push(0); return s; };
+
+        function newGame(fresh) {
+            const pm = mode === 'poople';
+            gridEl.style.display = pm ? 'none' : '';
+            $('poople').hidden = !pm;
+            $('lenSeg').hidden = pm;
+            if (pm) { startPoople(fresh); return; }
+            if (mode === 'daily') {
+                const day = dayNumber();
+                const saved = Arcade.load('arcade.wordle.daily' + sfx(), null);
+                game = saved && saved.day === day && saved.answer.length === wlen ? saved : { day, answer: dailyAnswer(day), guesses: [], done: false, won: false, hard: opts.hard };
+            } else {
+                const saved = Arcade.load('arcade.wordle.unlimited' + sfx(), null);
+                game = !fresh && saved && !saved.done && saved.answer.length === wlen ? saved : { answer: Arcade.pick(LISTS[wlen].answers), guesses: [], done: false, won: false, hard: opts.hard };
+            }
+            typing = '';
+            persist();
+            sizeTiles();
+            buildGrid();
+            buildKeyboard();
+            hud();
+            if (game.done) setTimeout(showEnd, 300);
+        }
+        const persist = () => Arcade.save('arcade.wordle.' + mode + sfx(), game);
+
+        function score(guess, answer) {
+            const n = answer.length;
+            const res = Array(n).fill('miss');
+            const left = {};
+            for (let i = 0; i < n; i++) {
+                if (guess[i] === answer[i]) res[i] = 'hit';
+                else left[answer[i]] = (left[answer[i]] || 0) + 1;
+            }
+            for (let i = 0; i < n; i++) {
+                if (res[i] !== 'hit' && left[guess[i]]) { res[i] = 'near'; left[guess[i]]--; }
+            }
+            return res;
+        }
+
+        /* ---------- Rendering ---------- */
+        function sizeTiles() {
+            const st = document.querySelector('.stage').getBoundingClientRect();
+            const byW = (Math.min(st.width, 560) - 24) / wlen - 6;
+            const byH = (st.height - 260) / rows() - 6;
+            const t = Math.floor(Arcade.clamp(Math.min(58, byW, byH), 30, 58));
+            document.documentElement.style.setProperty('--tile', t + 'px');
+            document.documentElement.style.setProperty('--len', wlen);
+            document.documentElement.style.setProperty('--rows', rows());
+        }
+        window.addEventListener('resize', sizeTiles);
+        function buildGrid() {
+            gridEl.innerHTML = '';
+            for (let r = 0; r < rows(); r++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let c = 0; c < wlen; c++) { const t = document.createElement('div'); t.className = 'tile'; row.appendChild(t); }
+                gridEl.appendChild(row);
+            }
+            game.guesses.forEach((g, r) => paintRow(r, g, score(g, game.answer), false));
+            paintTyping();
+        }
+        function paintRow(r, word, res, animate) {
+            const tiles = gridEl.children[r].children;
+            for (let c = 0; c < wlen; c++) {
+                const t = tiles[c];
+                t.textContent = word[c];
+                if (!animate) { t.className = 'tile ' + res[c]; continue; }
+                setTimeout(() => {
+                    t.classList.add('flip');
+                    setTimeout(() => { t.className = 'tile flip ' + res[c]; }, 250);
+                    Arcade.tone(500 + c * 60, 0.05, 'triangle', 0.04);
+                }, c * 280);
+            }
+        }
+        function paintTyping() {
+            const r = game.guesses.length;
+            if (r >= rows() || game.done) return;
+            const tiles = gridEl.children[r].children;
+            for (let c = 0; c < wlen; c++) {
+                tiles[c].textContent = typing[c] || '';
+                tiles[c].className = 'tile' + (typing[c] ? ' filled' : '');
+            }
+        }
+
+        const KB = ['qwertyuiop', 'asdfghjkl', '+zxcvbnm-'];
+        function buildKeyboard() {
+            kbEl.innerHTML = '';
+            for (const row of KB) {
+                const r = document.createElement('div');
+                r.className = 'krow';
+                for (const ch of row) {
+                    const b = document.createElement('button');
+                    b.className = 'key' + (ch === '+' || ch === '-' ? ' wide' : '');
+                    b.textContent = ch === '+' ? 'Enter' : ch === '-' ? '⌫' : ch;
+                    b.dataset.k = ch;
+                    b.onclick = () => press(ch === '+' ? 'Enter' : ch === '-' ? 'Backspace' : ch);
+                    r.appendChild(b);
+                }
+                kbEl.appendChild(r);
+            }
+            paintKeys();
+        }
+        function paintKeys() {
+            if (mode === 'poople') { kbEl.querySelectorAll('.key').forEach(k => { k.className = 'key' + (k.classList.contains('wide') ? ' wide' : ''); }); return; }
+            const best = {};
+            const rank = { miss: 1, near: 2, hit: 3 };
+            for (const g of game.guesses) {
+                const res = score(g, game.answer);
+                for (let i = 0; i < wlen; i++) if (!best[g[i]] || rank[res[i]] > rank[best[g[i]]]) best[g[i]] = res[i];
+            }
+            kbEl.querySelectorAll('.key').forEach(k => {
+                const s = best[k.dataset.k];
+                k.className = 'key' + (k.classList.contains('wide') ? ' wide' : '') + (s ? ' ' + s : '');
+            });
+        }
+
+        function hud() {
+            if (mode === 'poople') {
+                const ps = poopleStats();
+                Arcade.text('streak', ps.streak);
+                Arcade.text('winsChip', ps.solved);
+                document.querySelectorAll('#modeSeg .btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+                $('newBtn').hidden = true; $('hardTag').hidden = true;
+                return;
+            }
+            const s = loadStats();
+            Arcade.text('streak', s.streak);
+            Arcade.text('winsChip', s.wins);
+            document.querySelectorAll('#modeSeg .btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            document.querySelectorAll('#lenSeg .btn').forEach(b => b.classList.toggle('active', +b.dataset.len === wlen));
+            $('newBtn').hidden = mode !== 'unlimited';
+            $('hardTag').hidden = !game.hard;
+            document.body.classList.toggle('contrast', opts.contrast);
+        }
+
+        function toast(msg) { Arcade.toast(msg, '', 1400); }
+        function shakeRow() {
+            const row = gridEl.children[game.guesses.length];
+            row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake');
+            Arcade.sfx('bad');
+        }
+
+        // in hard mode: greens must stay put, yellows must be reused
+        function hardModeProblem(guess) {
+            for (const g of game.guesses) {
+                const res = score(g, game.answer);
+                for (let i = 0; i < wlen; i++) if (res[i] === 'hit' && guess[i] !== g[i]) return `Letter ${i + 1} must be ${g[i].toUpperCase()}`;
+                const need = {};
+                for (let i = 0; i < wlen; i++) if (res[i] === 'near' || res[i] === 'hit') need[g[i]] = (need[g[i]] || 0) + 1;
+                for (const [ch, n] of Object.entries(need)) if ([...guess].filter(x => x === ch).length < n) return `Guess must contain ${ch.toUpperCase()}`;
+            }
+            return null;
+        }
+
+        function submit() {
+            if (typing.length < wlen) { shakeRow(); toast('Not enough letters'); return; }
+            if (!opts.any && !LISTS[wlen].valid.has(typing)) { shakeRow(); toast('Not in word list'); return; }
+            if (game.hard) { const p = hardModeProblem(typing); if (p) { shakeRow(); toast(p); return; } }
+            const guess = typing;
+            const r = game.guesses.length;
+            game.guesses.push(guess);
+            typing = '';
+            const res = score(guess, game.answer);
+            busy = true;
+            paintRow(r, guess, res, true);
+            const won = guess === game.answer;
+            if (won || game.guesses.length === rows()) { game.done = true; game.won = won; recordResult(); }
+            persist();
+            setTimeout(() => {
+                busy = false;
+                paintKeys();
+                if (won) {
+                    [...gridEl.children[r].children].forEach((t, i) => setTimeout(() => { t.classList.remove('flip'); t.classList.add('bounce'); }, i * 90));
+                    Arcade.sfx('win');
+                    toast(cheer(r + 1));
+                    setTimeout(showEnd, 1500);
+                } else if (game.done) {
+                    Arcade.sfx('die');
+                    toast(game.answer.toUpperCase());
+                    setTimeout(showEnd, 1200);
+                } else {
+                    paintTyping();
+                }
+            }, wlen * 280 + 260);
+        }
+
+        function recordResult() {
+            const s = loadStats();
+            s.played++;
+            if (game.won) {
+                s.wins++;
+                const continues = mode !== 'daily' || s.lastDay === null || s.lastDay === game.day - 1 || s.lastDay === game.day;
+                s.streak = continues ? s.streak + 1 : 1;
+                s.maxStreak = Math.max(s.maxStreak, s.streak);
+                s.dist[game.guesses.length - 1]++;
+                Arcade.count('win');
+            } else s.streak = 0;
+            if (mode === 'daily') s.lastDay = game.day;
+            Arcade.save(statsKey(), s);
+            hud();
+        }
+
+        function press(k) {
+            if (mode === 'poople') return poopleKey(k);
+            if (busy || game.done || anyOverlay()) return;
+            if (k === 'Enter') return submit();
+            if (k === 'Backspace') { typing = typing.slice(0, -1); paintTyping(); return; }
+            if (/^[a-z]$/i.test(k) && typing.length < wlen) { typing += k.toLowerCase(); paintTyping(); Arcade.sfx('tick'); }
+        }
+        /* ---------- Poople: word ladder to POOP (4-letter words) ---------- */
+        const GOAL = 'poop';
+        const P4 = new Set([...LISTS[4].valid, GOAL]);
+        const pNeighbours = (w) => {
+            const out = [];
+            for (let i = 0; i < 4; i++) for (const c of 'abcdefghijklmnopqrstuvwxyz') {
+                const x = w.slice(0, i) + c + w.slice(i + 1);
+                if (x !== w && P4.has(x)) out.push(x);
+            }
+            return out;
+        };
+        // how many one-letter steps every word is from POOP (breadth-first search outward from the goal)
+        const PDIST = new Map([[GOAL, 0]]);
+        { const q = [GOAL]; for (let h = 0; h < q.length; h++) for (const x of pNeighbours(q[h])) if (!PDIST.has(x)) { PDIST.set(x, PDIST.get(q[h]) + 1); q.push(x); } }
+        const PSTARTS = LISTS[4].answers.filter(w => PDIST.get(w) >= 3);
+        const diffCount = (a, b) => { let n = 0; for (let i = 0; i < 4; i++) if (a[i] !== b[i]) n++; return n; };
+        const poopleStatsKey = 'arcade.wordle.stats.poople';
+        const poopleStats = () => Object.assign({ solved: 0, streak: 0, best: null }, Arcade.load(poopleStatsKey, {}));
+        let pg = null; // { chain: [start, ...], par, hints, done }
+        function startPoople(fresh) {
+            const saved = Arcade.load('arcade.wordle.poople', null);
+            if (!fresh && saved && !saved.done && saved.chain && PDIST.has(saved.chain[0])) pg = saved;
+            else {
+                const start = Arcade.pick(PSTARTS);
+                pg = { chain: [start], par: PDIST.get(start), hints: 0, done: false };
+            }
+            typing = '';
+            Arcade.save('arcade.wordle.poople', pg);
+            buildKeyboard();
+            hud();
+            paintPoople();
+            if (pg.done) setTimeout(poopleEnd, 300);
+        }
+        function paintPoople() {
+            const host = $('pchain');
+            host.innerHTML = '';
+            const cur = pg.chain[pg.chain.length - 1];
+            const row = (word, cls, num) => {
+                const r = document.createElement('div');
+                r.className = 'prow';
+                r.innerHTML = `<span class="num">${num}</span>` + [...word].map((ch, i) => `<div class="tile ${cls(ch, i)}">${ch.trim()}</div>`).join('');
+                host.appendChild(r);
+                return r;
+            };
+            pg.chain.forEach((w, i) => row(w, (ch, k) => i === 0 ? 'start' : ch !== pg.chain[i - 1][k] ? 'chg' : 'same', i === 0 ? '' : i));
+            if (!pg.done) {
+                const t = row(typing.padEnd(4, ' '), (ch) => 'typing' + (ch.trim() ? ' filled' : ''), '');
+                [...t.querySelectorAll('.tile')].forEach((el, i) => { if (!typing[i]) el.textContent = cur[i]; });
+                const dots = document.createElement('div'); dots.className = 'pdots'; dots.textContent = '⋮'; host.appendChild(dots);
+            }
+            row(GOAL, (ch, i) => 'goal' + (cur[i] === ch ? ' got' : ''), '🎯');
+            host.scrollTop = host.scrollHeight;
+        }
+        function poopleKey(k) {
+            if (pg.done || anyOverlay()) return;
+            if (k === 'Backspace') { typing = typing.slice(0, -1); paintPoople(); return; }
+            if (/^[a-z]$/i.test(k) && typing.length < 4) { typing += k.toLowerCase(); paintPoople(); Arcade.sfx('tick'); return; }
+            if (k !== 'Enter') return;
+            const cur = pg.chain[pg.chain.length - 1];
+            if (typing.length < 4) { toast('Not enough letters'); Arcade.sfx('bad'); return; }
+            if (!P4.has(typing)) { toast('Not in word list'); Arcade.sfx('bad'); return; }
+            if (diffCount(cur, typing) !== 1) { toast(typing === cur ? 'That is the same word' : 'Change exactly one letter'); Arcade.sfx('bad'); return; }
+            pg.chain.push(typing);
+            typing = '';
+            if (pg.chain[pg.chain.length - 1] === GOAL) { pg.done = true; poopleRecord(); setTimeout(poopleEnd, 600); Arcade.sfx('win'); }
+            else Arcade.sfx('click');
+            Arcade.save('arcade.wordle.poople', pg);
+            paintPoople();
+        }
+        function poopleRecord() {
+            const ps = poopleStats(), steps = pg.chain.length - 1;
+            ps.solved++; ps.streak++;
+            if (ps.best === null || steps - pg.par < ps.best) ps.best = steps - pg.par;
+            Arcade.save(poopleStatsKey, ps);
+            hud();
+        }
+        function poopleEnd() {
+            const ps = poopleStats(), steps = pg.chain.length - 1;
+            $('endTitle').textContent = pg.done ? (steps <= pg.par ? 'Perfect ladder! 💩' : 'POOP reached! 💩') : 'Poople';
+            $('endTitle').className = pg.done ? 'good' : '';
+            $('endWord').previousElementSibling.hidden = true;
+            $('endWord').textContent = pg.chain.join(' → ');
+            $('endWord').style.cssText = 'font-size:1rem;letter-spacing:0.05em;line-height:1.5';
+            $('endStats').innerHTML = '';
+            for (const [label, v] of [['Steps', steps], ['Shortest', pg.par], ['Hints', pg.hints], ['Solved', ps.solved]]) {
+                const d = document.createElement('div'); d.innerHTML = `<small>${label}</small><b>${v}</b>`; $('endStats').appendChild(d);
+            }
+            $('endDist').innerHTML = ps.best === null ? '' : `<p class="small" style="text-align:center">Closest to shortest: ${ps.best === 0 ? 'a perfect ladder' : '+' + ps.best + ' step' + (ps.best === 1 ? '' : 's')}</p>`;
+            $('nextDaily').textContent = '';
+            $('againBtn').textContent = 'New puzzle';
+            $('shareBtn').hidden = !pg.done;
+            Arcade.show('endOv');
+        }
+        $('pUndo').onclick = () => { if (pg.done || pg.chain.length < 2) return; pg.chain.pop(); typing = ''; Arcade.save('arcade.wordle.poople', pg); paintPoople(); Arcade.sfx('click'); };
+        $('pHint').onclick = () => {
+            if (pg.done) return;
+            const cur = pg.chain[pg.chain.length - 1], d = PDIST.get(cur);
+            const next = pNeighbours(cur).filter(w => PDIST.get(w) === d - 1);
+            if (!next.length) { toast('Try undoing a step — this word is a dead end'); return; }
+            pg.hints++;
+            const w = next[0], i = [...w].findIndex((ch, k) => ch !== cur[k]);
+            toast(pg.hints > 2 ? `Try ${w.toUpperCase()}  (${d} step${d === 1 ? '' : 's'} to go)` : `Try changing letter ${i + 1}  (${d} step${d === 1 ? '' : 's'} to go)`);
+            Arcade.save('arcade.wordle.poople', pg);
+        };
+        $('pNew').onclick = () => {
+            if (!pg.done && pg.chain.length > 1) { if (!sureTwice('Give up on this puzzle?')) return; const ps = poopleStats(); ps.streak = 0; Arcade.save(poopleStatsKey, ps); }
+            startPoople(true);
+        };
+        // in-page replacement for confirm(): browsers can permanently suppress confirm() dialogs, which made buttons silently do nothing
+        let _armed = null;
+        function sureTwice(msg) {
+            if (_armed === msg) { _armed = null; return true; }
+            _armed = msg; Arcade.toast(msg + ' Click again to confirm.', '', 2500);
+            setTimeout(() => { if (_armed === msg) _armed = null; }, 3000);
+            return false;
+        }
+        const anyOverlay = () => !$('endOv').hidden || !$('setOv').hidden;
+
+        /* ---------- End / stats ---------- */
+        function showEnd() {
+            const s = loadStats();
+            const h = $('endTitle');
+            if (game.done) {
+                h.textContent = game.won ? cheer(game.guesses.length) : 'So close!';
+                h.className = game.won ? 'good' : 'bad';
+                $('endWord').textContent = game.answer;
+            } else {
+                h.textContent = 'Statistics'; h.className = '';
+                $('endWord').textContent = '';
+            }
+            $('endWord').previousElementSibling.hidden = !game.done;
+            $('endStats').innerHTML = '';
+            for (const [label, v] of [['Played', s.played], ['Win %', s.played ? Math.round(s.wins / s.played * 100) : 0], ['Streak', s.streak], ['Max streak', s.maxStreak]]) {
+                const d = document.createElement('div');
+                d.innerHTML = `<small>${label}</small><b>${v}</b>`;
+                $('endStats').appendChild(d);
+            }
+            const max = Math.max(1, ...s.dist);
+            $('endDist').innerHTML = '<p class="small" style="text-align:center;margin:0 0 6px">Guess distribution · ' + (mode === 'daily' ? 'Daily' : 'Unlimited') + ' · ' + wlen + ' letters</p>';
+            s.dist.slice(0, rows()).forEach((n, i) => {
+                const row = document.createElement('div');
+                row.className = 'bar-row' + (game.done && game.won && game.guesses.length === i + 1 ? ' cur' : '');
+                row.innerHTML = `<b>${i + 1}</b><span style="width:${8 + n / max * 82}%">${n}</span>`;
+                $('endDist').appendChild(row);
+            });
+            if (mode === 'daily') {
+                const now = new Date(), next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                $('nextDaily').textContent = game.done ? `Next daily word in ${Arcade.time((next - now) / 1000)}` : '';
+            } else $('nextDaily').textContent = '';
+            $('againBtn').textContent = mode === 'daily' ? 'Play unlimited' : 'Next word';
+            $('shareBtn').hidden = !game.done;
+            Arcade.show('endOv');
+        }
+
+        function shareText() {
+            if (mode === 'poople') return `Arcade Poople 💩 ${pg.chain.length - 1} steps (shortest ${pg.par})\n\n` + pg.chain.map(w => w.toUpperCase()).join(' → ');
+            const lines = game.guesses.map(g => score(g, game.answer).map(r => r === 'hit' ? (opts.contrast ? '🟧' : '🟩') : r === 'near' ? (opts.contrast ? '🟦' : '🟨') : '⬛').join(''));
+            const head = `Arcade Wordle ${wlen === 5 ? '' : wlen + '-letter '}${mode === 'daily' ? '#' + game.day : '(unlimited)'} ${game.won ? game.guesses.length : 'X'}/${rows()}${game.hard ? '*' : ''}`;
+            return head + '\n\n' + lines.join('\n');
+        }
+
+        /* ---------- Wiring ---------- */
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === 'Escape') { Arcade.hide('endOv'); Arcade.hide('setOv'); return; }
+            if (e.key === 'Enter' || e.key === 'Backspace' || /^[a-z]$/i.test(e.key)) { e.preventDefault(); press(e.key); }
+        });
+        document.querySelectorAll('#modeSeg .btn').forEach(b => b.onclick = () => {
+            if (b.dataset.mode === mode) return;
+            mode = b.dataset.mode; Arcade.save('arcade.wordle.mode', mode);
+            Arcade.sfx('select');
+            newGame();
+        });
+        document.querySelectorAll('#lenSeg .btn').forEach(b => b.onclick = () => {
+            if (+b.dataset.len === wlen) return;
+            wlen = +b.dataset.len; Arcade.save('arcade.wordle.len', wlen);
+            Arcade.sfx('select');
+            newGame();
+        });
+        $('newBtn').onclick = () => { if (!game.done && game.guesses.length && !sureTwice('Give up on this word?')) return; if (!game.done && game.guesses.length) { game.done = true; game.won = false; recordResult(); } newGame(true); };
+        $('againBtn').onclick = () => {
+            Arcade.hide('endOv');
+            $('endWord').style.cssText = '';
+            if (mode === 'poople') { startPoople(true); return; }
+            if (mode === 'daily') { mode = 'unlimited'; Arcade.save('arcade.wordle.mode', mode); newGame(); if (game.done) newGame(true); }
+            else newGame(true);
+        };
+        $('closeEnd').onclick = () => Arcade.hide('endOv');
+        $('statsBtn').onclick = () => { $('endWord').style.cssText = ''; if (mode === 'poople') poopleEnd(); else showEnd(); };
+        $('shareBtn').onclick = async () => {
+            try { await navigator.clipboard.writeText(shareText()); toast('Copied to clipboard'); }
+            catch (e) { prompt('Copy your result:', shareText()); }
+        };
+        $('setBtn').onclick = () => {
+            $('optHard').checked = opts.hard; $('optContrast').checked = opts.contrast; $('optAny').checked = opts.any;
+            Arcade.show('setOv');
+        };
+        for (const [id, key] of [['optHard', 'hard'], ['optContrast', 'contrast'], ['optAny', 'any']]) {
+            $(id).onchange = () => {
+                opts[key] = $(id).checked;
+                Arcade.save('arcade.wordle.opts', opts);
+                // hard mode can be switched on before the first guess of the current word
+                if (key === 'hard' && !game.guesses.length) { game.hard = opts.hard; persist(); }
+                hud();
+            };
+        }
+        $('closeSet').onclick = () => Arcade.hide('setOv');
+        window.__wordle = { LISTS, score }; // for automated tests
+
+        newGame();
+    })();
+    </script>
+</body>
+</html>
