@@ -50,9 +50,9 @@
                     <h2>Gravity Runner</h2>
                     <p>Flip between floor and ceiling. Dodge spikes, pillars and blocks.</p>
                     <p class="small"><span class="desktop-only"><kbd>Space</kbd> / <kbd>Click</kbd> to flip · <kbd>P</kbd> pause</span><span class="touch-only">Tap anywhere to flip</span></p>
-                    <p class="tiny dim">You can only flip while touching a surface — time it!</p>
+                    <p class="tiny dim">You can only flip while touching a surface, time it!</p>
                     <div class="row center" style="margin-top:10px"><span class="small muted">World</span>
-                        <div class="seg" id="worldSeg"><button class="btn sm" data-world="classic">Classic</button><button class="btn sm" data-world="biomes">🌋 Biomes</button></div></div>
+                        <div class="seg" id="worldSeg"><button class="btn sm" data-world="classic">Classic</button><button class="btn sm" data-world="biomes">Biomes</button></div></div>
                     <p class="tiny dim" id="worldInfo" style="margin:6px 0 0"></p>
                     <div class="diffs" id="diffs"></div>
                     <p class="small diff-info" id="diffInfo"></p>
@@ -77,7 +77,7 @@
                 <div class="modal">
                     <h2 class="bad">Crashed</h2>
                     <div class="big-num" id="finalDist">0m</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <p class="small" id="finalDiff"></p>
                     <div class="stat-grid">
                         <div><small>Coins</small><b id="finalCoins">0</b></div>
@@ -109,7 +109,7 @@
             { id: 'rainbow', name: 'Prism', price: 700 },
         ];
 
-        // Every difficulty has a speed limit except Unleashed, which just keeps accelerating.
+        // every difficulty has a speed limit except Unleashed, which just keeps accelerating.
         // ramp = metres-ish of distance until obstacle patterns reach full difficulty.
         const DIFFS = [
             { id: 'easy', name: 'Easy', col: '#34d399', start: 250, accel: 4, max: 470, ramp: 9000, gapMul: 1.3, coinMul: 0.5, powerChance: 0.18,
@@ -124,7 +124,7 @@
               info: 'NO speed limit. It never stops getting faster. How long can you last? Coins ×3.' },
         ];
 
-        // Classic look, plus the four biomes that cycle every 600m in Biome mode.
+        // classic look, plus the four biomes that cycle every 600m in Biome mode.
         const CLASSIC = { id: 'classic', name: 'Classic', bg: ['#120c2a', '#0b1020'], floor: '#1b1440', line: 'rgba(167,139,250,0.25)', glow: '#a78bfa', obst: '#f472b6', fill: '#2a1650', star: '196,181,253', grav: 1 };
         const BIOMES = [
             { id: 'cave', name: 'The Caves', icon: '🦇', bg: ['#1c140d', '#0b0805'], floor: '#3b2a1c', line: 'rgba(214,164,107,0.22)', glow: '#d6a46b', obst: '#e7b77a', fill: '#4a3424', star: '214,164,107', grav: 1, special: 'faller' },
@@ -146,7 +146,7 @@
         let owned = Arcade.load('arcade.gravity.skins', ['cube']);
         let skin = Arcade.load('arcade.gravity.skin', 'cube');
         let diff = DIFFS.find(d => d.id === Arcade.load('arcade.gravity.diff', 'normal')) || DIFFS[1];
-        // Per-difficulty bests. The old single best counts as Normal.
+        // per-difficulty bests. The old single best counts as Normal.
         const bests = {};
         for (const d of DIFFS) bests[d.id] = Number(Arcade.load('arcade.gravity.best.' + d.id, 0)) || 0;
         bests.normal = Math.max(bests.normal, Number(Arcade.load('arcade.gravity.best', 0)) || 0);
@@ -165,7 +165,7 @@
             fx.clear();
         }
 
-        // Physics scale: above ~700px/s gravity gets stronger so flips stay snappy at ludicrous speed.
+        // physics scale: above ~700px/s gravity gets stronger so flips stay snappy at ludicrous speed.
         const gScale = () => speed > 700 ? Math.pow(speed / 700, 0.55) : 1;
 
         function start() {
@@ -175,7 +175,7 @@
             Arcade.sfx('level');
         }
 
-        /* ---------- Level generation ---------- */
+        /* ---------- level generation ---------- */
         function difficulty() { return Math.min(1, dist / diff.ramp); }
 
         function spawnPattern() {
@@ -253,7 +253,7 @@
                     spikes(x0 + 90, other(side), 2);
                     len = 150; break;
                 }
-                case 'laser': { // a beam that blinks on and off — time your pass
+                case 'laser': { // a beam that blinks on and off, time your pass
                     obstacles.push({ type: 'laser', x: x0, w: 18, period: 1.7 - d * 0.4, ph: Math.random() * 2 });
                     len = 18; break;
                 }
@@ -283,7 +283,7 @@
             }
         }
 
-        /* ---------- Gameplay ---------- */
+        /* ---------- gameplay ---------- */
         function tryFlip() {
             if (state !== 'play') return;
             const air = !(p.grounded || coyote > 0);
@@ -362,7 +362,7 @@
         function update(dt) {
             const tScale = slow > 0 ? 0.6 : 1;
             const sdt = dt * tScale;
-            // Unleashed accelerates a little harder the faster it goes — there is no ceiling.
+            // unleashed accelerates a little harder the faster it goes, there is no ceiling.
             const accel = diff.unleashed ? diff.accel * (1 + dist / 40000) : diff.accel;
             speed = Math.min(diff.max, speed + accel * dt);
             topSpeed = Math.max(topSpeed, speed);
@@ -455,7 +455,7 @@
                     if (u.kind === 'magnet') magnet = 8;
                     if (u.kind === 'slow') slow = 5;
                     if (u.kind === 'double') { airFlip = 10; p.airUsed = false; }
-                    Arcade.toast({ shield: '🛡 Shield!', magnet: '🧲 Magnet!', slow: '⏳ Slow-mo!', double: '🦘 Double jump — flip once in mid-air!' }[u.kind], 'good', 1300);
+                    Arcade.toast({ shield: '🛡 Shield!', magnet: '🧲 Magnet!', slow: '⏳ Slow-mo!', double: '🦘 Double jump, flip once in mid-air!' }[u.kind], 'good', 1300);
                     Arcade.sfx('power');
                 }
             }
@@ -474,13 +474,13 @@
             const m = Math.floor(dist / 10);
             if (m >= lastMilestone + 500) {
                 lastMilestone += 500;
-                if (diff.unleashed) Arcade.toast(lastMilestone + 'm — ' + mps(speed) + ' m/s!', 'gold', 1000); else
+                if (diff.unleashed) Arcade.toast(lastMilestone + 'm, ' + mps(speed) + ' m/s!', 'gold', 1000); else
                 Arcade.toast(lastMilestone + 'm!', 'gold', 1000);
                 Arcade.sfx('score');
             }
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function drawSkin(c, id, x, y, s, rot, alpha) {
             c.save();
             c.translate(x + s / 2, y + s / 2);
@@ -708,7 +708,7 @@
             }
         });
 
-        /* ---------- Menu / difficulty / skins ---------- */
+        /* ---------- menu / difficulty / skins ---------- */
         function buildDiffs() {
             const host = document.getElementById('diffs');
             host.innerHTML = '';

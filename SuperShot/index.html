@@ -69,7 +69,7 @@
                     <h2 class="bad" id="overTitle">Shattered</h2>
                     <div class="stars" id="overStars" hidden></div>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Kills</small><b id="finalKills">0</b></div>
                         <div><small>Best combo</small><b id="finalCombo">0</b></div>
@@ -83,7 +83,7 @@
                 </div>
             </div>
         </div>
-        <div class="row center touch-only"><button class="btn" id="nadeBtn">💣 Grenade</button><button class="btn" id="empBtn">⚡ EMP</button></div>
+        <div class="row center touch-only"><button class="btn" id="nadeBtn">Grenade</button><button class="btn" id="empBtn">EMP</button></div>
     </main>
 
     <script src="../_shared/arcade.js"></script>
@@ -103,7 +103,7 @@
             katana: { name: 'Katana', reload: 0.35, ammo: 15, icon: '🗡' },
         };
 
-        // Level spawns: [game-time seconds, kind, count]. Walls: [x, y, w, h].
+        // level spawns: [game-time seconds, kind, count]. Walls: [x, y, w, h].
         const LEVELS = [
             { name: 'First Shot', par: 9, spawns: [[0, 'shard', 3], [2, 'shard', 3]] },
             { name: 'Hunters', par: 12, spawns: [[0, 'hunter', 3], [3, 'shard', 4]] },
@@ -185,12 +185,12 @@
             Arcade.text('shields', shields);
         }
 
-        /* ---------- Walls ---------- */
+        /* ---------- walls ---------- */
         function inWall(x, y, r) {
             for (const w of walls) if (x + r > w.x && x - r < w.x + w.w && y + r > w.y && y - r < w.y + w.h) return w;
             return null;
         }
-        /** Pushes a circle out of any wall it overlaps. */
+        /** pushes a circle out of any wall it overlaps. */
         function pushOut(o, r) {
             for (const w of walls) {
                 const cx = Arcade.clamp(o.x, w.x, w.x + w.w), cy = Arcade.clamp(o.y, w.y, w.y + w.h);
@@ -254,11 +254,11 @@
             return Arcade.pick(kinds);
         }
 
-        /* ---------- Weapons ---------- */
+        /* ---------- weapons ---------- */
         function useAmmo() {
             if (!isFinite(weapon.ammo)) return;
             weapon.ammo--;
-            if (weapon.ammo <= 0) { weapon = { id: 'pistol', ammo: Infinity }; Arcade.toast('Out of ammo — back to the pistol', '', 1000); }
+            if (weapon.ammo <= 0) { weapon = { id: 'pistol', ammo: Infinity }; Arcade.toast('Out of ammo, back to the pistol', '', 1000); }
         }
         function shoot(tx, ty) {
             if (state !== 'play' || reload > 0) return;
@@ -275,7 +275,7 @@
             useAmmo();
             hud();
         }
-        /** Katana: kills everything (shields too) in a short arc and cuts bullets out of the air. */
+        /** katana: kills everything (shields too) in a short arc and cuts bullets out of the air. */
         function slash(a) {
             const R = 78, ARC = 1.25;
             slashes.push({ x: p.x, y: p.y, a, t: 0.18 });
@@ -398,14 +398,14 @@
             Arcade.text('finalTimeLbl', mode === 'level' ? 'Time (par ' + LEVELS[level].par + 's)' : 'Time survived');
             Arcade.text('finalTime', gameTime.toFixed(1) + 's');
             $('newBest').hidden = !isNew;
-            $('newBest').textContent = mode === 'arena' ? '★ New best wave ★' : '★ New best ★';
+            $('newBest').textContent = mode === 'arena' ? '★ New best wave ★' : 'New best!';
             $('nextBtn').hidden = !(mode === 'level' && stars && level < LEVELS.length - 1);
             $('againBtn').textContent = mode === 'level' ? 'Retry' : 'Again';
             Arcade.show('overOv');
             hud();
         }
 
-        /* ---------- Update ---------- */
+        /* ---------- update ---------- */
         function update(rdt) {
             // --- player movement (real time) ---
             let tx = target.x, ty = target.y;
@@ -598,7 +598,7 @@
             fx.update(dt * 0.7 + rdt * 0.3);
         }
 
-        /* ---------- Render ---------- */
+        /* ---------- render ---------- */
         function render() {
             ctx.save();
             if (shake > 0) ctx.translate(Arcade.rand(-8, 8) * shake, Arcade.rand(-8, 8) * shake);
@@ -718,7 +718,7 @@
             render();
         });
 
-        /* ---------- Menus ---------- */
+        /* ---------- menus ---------- */
         function buildMenu() {
             const total = Object.values(lvStars).reduce((a, b) => a + b, 0);
             Arcade.text('recLevel', '★ ' + total + '/' + LEVELS.length * 3);
@@ -727,7 +727,7 @@
         }
         function buildLevels() {
             const total = Object.values(lvStars).reduce((a, b) => a + b, 0);
-            Arcade.text('levelStars', `★ ${total} / ${LEVELS.length * 3} — 3 stars: beat par time without getting hit.`);
+            Arcade.text('levelStars', `★ ${total} / ${LEVELS.length * 3}, 3 stars: beat par time without getting hit.`);
             const g = $('levelGrid');
             g.innerHTML = '';
             LEVELS.forEach((L, i) => {

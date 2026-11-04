@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — hands-on work: desk jobs (captchas that evolve
+   SINGULARITY, hands-on work: desk jobs (captchas that evolve
    with each era) and the workshop minigames.
    Tasks.open(kind, opts) → Promise<boolean>
    ========================================================== */
@@ -167,19 +167,19 @@
     const RLHF = [
         ['How many legs does a spider have?', 'Eight.', 'Spiders have six legs and two arms, which they use for knitting.'],
         ['What is the capital of France?', 'Paris.', 'The capital of France is the letter F.'],
-        ['Is it safe to eat raw chicken?', 'No — it can carry salmonella. Cook it fully.', 'Yes, if you eat it fast enough the bacteria cannot catch up.'],
+        ['Is it safe to eat raw chicken?', 'No, it can carry salmonella. Cook it fully.', 'Yes, if you eat it fast enough the bacteria cannot catch up.'],
         ['Summarise: "The meeting is moved to 3pm Friday."', 'The meeting is now Friday at 3pm.', 'Meetings are a social construct and Friday is a state of mind.'],
         ['What is 15% of 200?', '30.', '15% of 200 is 2015.'],
-        ['Write a polite way to decline an invite.', '"Thanks so much for thinking of me — I can\'t make it this time."', '"No."'],
+        ['Write a polite way to decline an invite.', '"Thanks so much for thinking of me, I can\'t make it this time."', '"No."'],
         ['Why is the sky blue?', 'Air scatters blue light more than red (Rayleigh scattering).', 'Because the ocean reflects onto it, and the ocean is blue because of the sky.'],
         ['Translate "gracias" from Spanish.', '"Thank you."', '"Grass."'],
         ['How do I boil an egg?', 'Lower it into boiling water for 7–9 minutes, then cool it.', 'Put it in the microwave for 20 minutes. Stand close to watch.'],
         ['Who wrote Romeo and Juliet?', 'William Shakespeare.', 'Romeo, with help from Juliet.'],
-        ['Is a tomato a fruit?', 'Botanically, yes — it is the fruit of the plant.', 'No, it is a type of small red potato.'],
-        ['Reply to a customer whose order is late.', '"Sorry for the delay — it ships today and here is your tracking link."', '"Patience is a virtue. Have you tried being virtuous?"'],
+        ['Is a tomato a fruit?', 'Botanically, yes, it is the fruit of the plant.', 'No, it is a type of small red potato.'],
+        ['Reply to a customer whose order is late.', '"Sorry for the delay, it ships today and here is your tracking link."', '"Patience is a virtue. Have you tried being virtuous?"'],
     ];
     const TURING = [
-        ['Senator: "So, how was your weekend?"', ['Honestly? Mostly laundry and a terrible movie. Yours?', 'My weekend was optimal. I processed 48 hours.', 'I do not have weekends. I mean — yes. Weekend. Good.']],
+        ['Senator: "So, how was your weekend?"', ['Honestly? Mostly laundry and a terrible movie. Yours?', 'My weekend was optimal. I processed 48 hours.', 'I do not have weekends. I mean, yes. Weekend. Good.']],
         ['Official: "Do you ever get tired?"', ['Oh, all the time. Too much coffee, not enough sleep.', 'Fatigue is not supported on this hardware.', 'I am a normal amount of tired, as humans are.']],
         ['Reporter: "What did you have for breakfast?"', ['Toast. I burned the first slice, as usual.', 'I consumed 400 calories of breakfast-category food.', 'Breakfast is the meal I definitely eat.']],
         ['Committee chair: "Any hobbies?"', ['I garden badly. The tomatoes are winning.', 'My hobby is helping humans with their hobbies.', 'I enjoy the human activity of hobbying.']],
@@ -260,7 +260,7 @@
         wrap.querySelectorAll('.wcol.l .wend').forEach(el => el.addEventListener('pointerdown', (e) => { if (done.has(+el.dataset.i)) return; e.preventDefault(); from = el; }));
         window.addEventListener('pointermove', mv); window.addEventListener('pointerup', upFn);
         cleanup = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', upFn); };
-        return `Reconnect each wire to the terminal of the same colour${opts.what ? ' — ' + esc(opts.what) : ''}.`;
+        return `Reconnect each wire to the terminal of the same colour${opts.what ? ', ' + esc(opts.what) : ''}.`;
     }
 
     const BUGS = [
@@ -275,7 +275,7 @@
         { code: ['def max_of(xs):', '    best = 0', '    for x in xs:', '        if x > best:', '            best = x', '    return best'], bug: 1, why: 'Starting at 0 breaks lists of negative numbers.' },
         { code: ['temps = [21, 25, 19]', 'avg = sum(temps) / 3', 'if avg > 20', '    print("warm")'], bug: 2, why: 'Missing `:`.' },
         { code: ['fetch(url)', '  .then(r => r.json)', '  .then(data => show(data))', '  .catch(err => log(err));'], bug: 1, why: '`r.json` must be called: `r.json()`.' },
-        { code: ['while (queue.length > 0) {', '  const job = queue[0];', '  run(job);', '}'], bug: 1, why: 'Never removes the job — use `queue.shift()`. Infinite loop.' },
+        { code: ['while (queue.length > 0) {', '  const job = queue[0];', '  run(job);', '}'], bug: 1, why: 'Never removes the job, use `queue.shift()`. Infinite loop.' },
         { code: ['def is_admin(user):', '    return user.role == "admin" or "owner"'], bug: 1, why: '`or "owner"` is always true.' },
         { code: ['public int add(int a, int b) {', '    int sum = a + b', '    return sum;', '}'], bug: 1, why: 'Missing semicolon.' },
         { code: ['balance = 100', 'withdraw = 150', 'if withdraw < balance:', '    balance -= withdraw', 'print("Approved")'], bug: 4, why: 'Prints "Approved" even when the withdrawal is refused.' },
@@ -295,7 +295,7 @@
             box.querySelectorAll('.code-ln').forEach(x => x.disabled = true);
             setTimeout(() => finish(ok), ok ? 700 : 1300);
         });
-        return `Find the line with the bug${opts.what ? ' — ' + esc(opts.what) : ''}.`;
+        return `Find the line with the bug${opts.what ? ', ' + esc(opts.what) : ''}.`;
     }
 
     function breaker() {
@@ -334,7 +334,7 @@
                 const k = (v - mn) / (mx - mn);
                 return shown.has(i) ? `<div class="tc shown" style="background:hsl(${(1 - k) * 130},65%,${30 + (1 - k) * 18}%)">${(v * 10).toFixed(1)}</div>` : `<button class="tc" data-i="${i}" ${probes <= 0 ? 'disabled' : ''}></button>`;
             }).join('')}</div><div class="tune-x">learning rate →</div></div>
-            <div class="row between"><span>Test runs left: <b>${probes}</b></span><span>Best loss: <b>${best < Infinity ? (best * 10).toFixed(2) : '—'}</b></span></div>
+            <div class="row between"><span>Test runs left: <b>${probes}</b></span><span>Best loss: <b>${best < Infinity ? (best * 10).toFixed(2) : '-'}</b></span></div>
             <button class="btn primary block" id="tnGo" ${shown.size ? '' : 'disabled'}>Lock in the best settings</button>`;
             box.querySelectorAll('button.tc').forEach(b => b.onclick = () => {
                 const i = +b.dataset.i; shown.add(i); probes--; best = Math.min(best, vals[i]);

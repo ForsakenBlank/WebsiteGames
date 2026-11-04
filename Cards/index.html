@@ -64,7 +64,7 @@
             <span class="chip accent">Wins <b id="wins">0</b></span>
             <span class="chip">Played <b id="played">0</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="newBtn">⟲ New game</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="newBtn">New game</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="opps" id="opps"></div>
@@ -84,10 +84,11 @@
         </div>
         <div class="overlay fixed" id="setupOv">
             <div class="modal">
-                <h2>🃏 Crazy Cards</h2>
-                <p class="small">Match the colour or the symbol. Skips, reverses, draw-twos and wilds — and press <b>ONE!</b> before you play down to your last card, or get caught.</p>
+                <h2>Crazy Cards</h2>
+                <p class="small">Match the colour or the symbol. Skips, reverses, draw-twos and wilds, and press <b>ONE!</b> before you play down to your last card, or get caught.</p>
                 <div class="setup">
                     <div class="seg" id="botSeg"><button class="btn sm" data-v="1">1 bot</button><button class="btn sm" data-v="2">2 bots</button><button class="btn sm" data-v="3">3 bots</button></div>
+                    <div class="seg" id="lvlSeg"><button class="btn sm" data-v="easy">Easy bots</button><button class="btn sm" data-v="normal">Normal</button><button class="btn sm" data-v="hard">Hard</button></div>
                     <button class="btn sm" id="stackBtn"></button>
                 </div>
                 <div class="actions"><button class="btn primary lg" id="startBtn">Deal</button></div>
@@ -115,7 +116,7 @@
         const COL = { r: '#ef4444', b: '#3b82f6', g: '#22c55e', y: '#eab308' };
         const CNAME = { r: 'Red', b: 'Blue', g: 'Green', y: 'Yellow' };
         const SYM = { skip: '⊘', rev: '⇄', d2: '+2', wild: '★', d4: '+4' };
-        const cfg = Object.assign({ bots: 2, stack: false }, Arcade.load('arcade.cards.cfg', {}));
+        const cfg = Object.assign({ bots: 2, stack: false, level: 'normal' }, Arcade.load('arcade.cards.cfg', {}));
         const stats = Object.assign({ wins: 0, played: 0 }, Arcade.load('arcade.cards.stats', {}));
         let deck, pile, players, turn, dir, color, pendingDraw, drawnCard, armed, busy, over, timer, vulnerable;
 
@@ -172,8 +173,8 @@
             let msg = `${p.you ? 'You' : p.name} played ${card.c === 'w' ? (card.v === 'd4' ? 'Wild +4' : 'a Wild') + ' → ' + CNAME[color] : CNAME[card.c] + ' ' + (SYM[card.v] || card.v)}`;
             // ONE! rule
             if (p.hand.length === 1) {
-                const said = p.you ? armed : Math.random() < 0.85;
-                if (said) { msg += ' — ONE!'; p.said = true; if (!p.you) Arcade.sfx('select'); }
+                const said = p.you ? armed : Math.random() < ({ easy: 0.6, normal: 0.85, hard: 1 }[cfg.level] || 0.85);
+                if (said) { msg += ', ONE!'; p.said = true; if (!p.you) Arcade.sfx('select'); }
                 else { p.said = false; vulnerable = p; if (p.you) setTimeout(() => botCatch(p), 900 + Math.random() * 900); else msg += ' (forgot to say ONE!)'; }
             }
             armed = false;
@@ -197,7 +198,7 @@
         }
         function botCatch(p) {
             if (over || vulnerable !== p || p.hand.length !== 1) return;
-            if (Math.random() < 0.75) { give(p, 2); say(`Caught! You didn't say ONE! — draw 2`); Arcade.sfx('bad'); }
+            if (Math.random() < ({ easy: 0.25, normal: 0.7, hard: 0.95 }[cfg.level] || 0.7)) { give(p, 2); say(`Caught! You didn't say ONE!, draw 2`); Arcade.sfx('bad'); }
             vulnerable = null;
             render();
         }
@@ -221,7 +222,7 @@
         }
         function botMove(p) {
             if (over) return;
-            if (vulnerable && vulnerable.you && vulnerable.hand.length === 1 && Math.random() < 0.5) botCatch(vulnerable);
+            if (vulnerable && vulnerable.you && vulnerable.hand.length === 1 && Math.random() < ({ easy: 0.2, normal: 0.5, hard: 0.85 }[cfg.level] || 0.5)) botCatch(vulnerable);
             let opts = p.hand.filter(canPlay);
             if (pendingDraw && !opts.length) { give(p, pendingDraw); say(`${p.name} draws ${pendingDraw}`); pendingDraw = 0; return advance(false); }
             if (!opts.length) {
@@ -241,7 +242,14 @@
                 if (c.v === 'd2' || c.v === 'skip') s += 3;
                 return s + Math.random();
             };
-            opts.sort((a, b) => score(b) - score(a));
+            // easy bots just play anything that fits
+            if (cfg.level === 'easy') { const c = Arcade.pick(opts); return play(p, c, Arcade.pick(['r', 'b', 'g', 'y'])); }
+            if (cfg.level === 'hard') {
+                // hard bots also hold back action cards until someone is close to winning
+                const danger = players.some(o => o !== p && o.hand.length <= 3);
+                opts.forEach(c => { if (!danger && ['skip', 'd2', 'rev'].includes(c.v)) c._hold = -6; else c._hold = 0; });
+            }
+            opts.sort((a, b) => (score(b) + (b._hold || 0)) - (score(a) + (a._hold || 0)));
             play(p, opts[0], bestColor(p, opts[0]));
         }
         function bestColor(p, except) {
@@ -269,7 +277,7 @@
             if (!c) { say('No cards left to draw'); return advance(false); }
             p.hand.push(c); p.said = false;
             Arcade.sfx('click');
-            if (canPlay(c)) { drawnCard = c; say('You drew a playable card — play it or keep it'); render(); }
+            if (canPlay(c)) { drawnCard = c; say('You drew a playable card, play it or keep it'); render(); }
             else { say('You drew a card'); advance(false); }
         }
         function finish(p) {
@@ -280,7 +288,7 @@
             Arcade.sfx(p.you ? 'win' : 'die');
             const pts = (c) => (c.c === 'w' ? 50 : isNaN(+c.v) ? 20 : +c.v);
             const scores = players.filter(q => q !== p).map(q => `${q.you ? 'You' : q.name}: ${q.hand.length} cards (${q.hand.reduce((a, c) => a + pts(c), 0)} pts)`);
-            $('endTitle').textContent = p.you ? '🏆 You win!' : `${p.name} wins`;
+            $('endTitle').textContent = p.you ? 'You win!' : `${p.name} wins`;
             $('endTitle').className = p.you ? 'good' : 'bad';
             $('endText').textContent = scores.join(' · ');
             setTimeout(() => Arcade.show('endOv'), 600);
@@ -335,13 +343,14 @@
             $('passBtn').hidden = !drawnCard;
             $('oneBtn').classList.toggle('armed', armed);
             $('oneBtn').disabled = !(me.hand.length === 2 && myTurn);
-            $('youInfo').textContent = over ? '' : myTurn ? (pendingDraw ? `Stack a +${top().v === 'd4' ? 4 : 2} or draw ${pendingDraw}` : drawnCard ? '' : me.hand.some(canPlay) ? 'Your turn — play a raised card' : 'No match — click the deck to draw') : players[turn].name + ' is thinking…';
+            $('youInfo').textContent = over ? '' : myTurn ? (pendingDraw ? `Stack a +${top().v === 'd4' ? 4 : 2} or draw ${pendingDraw}` : drawnCard ? '' : me.hand.some(canPlay) ? 'Your turn, play a raised card' : 'No match, click the deck to draw') : players[turn].name + ' is thinking…';
             Arcade.text('wins', stats.wins); Arcade.text('played', stats.played);
         }
         $('deck').onclick = youDraw;
         $('passBtn').onclick = () => { if (!drawnCard) return; drawnCard = null; say('You kept the card'); advance(false); };
         $('oneBtn').onclick = () => { armed = !armed; if (armed) Arcade.sfx('select'); render(); };
         function buildSetup() {
+            document.querySelectorAll('#lvlSeg [data-v]').forEach(b => { b.classList.toggle('active', b.dataset.v === cfg.level); b.onclick = () => { cfg.level = b.dataset.v; Arcade.save('arcade.cards.cfg', cfg); buildSetup(); }; });
             document.querySelectorAll('#botSeg [data-v]').forEach(b => { b.classList.toggle('active', +b.dataset.v === cfg.bots); b.onclick = () => { cfg.bots = +b.dataset.v; Arcade.save('arcade.cards.cfg', cfg); buildSetup(); }; });
             $('stackBtn').textContent = (cfg.stack ? '✓' : '✗') + ' Stack +2 / +4 on each other';
         }

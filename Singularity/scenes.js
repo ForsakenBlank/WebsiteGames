@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — the little picture of where you are.
+   SINGULARITY, the little picture of where you are.
    It reacts to your setup: day/night, solar panels, generator
    smoke, lit windows, conquered planets and stars.
    ========================================================== */

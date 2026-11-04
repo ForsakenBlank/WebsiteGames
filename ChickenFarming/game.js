@@ -1,5 +1,5 @@
 /* ==========================================================
-   Chicken Farming — game logic.
+   Chicken Farming, game logic.
    Save key and data shape are kept from the original game
    ("ChickenGame") so existing saves keep working.
 
@@ -247,7 +247,7 @@ gen('Multiverse', 'The Multiverse Farmer', '🌐', 4e33, 6e22, [['Parallel Coops
 gen('MotherHen', 'Mother Hen Prime', '👑', 8e34, 4.5e23, [['Broody', 'Damage', 10], ['Warm Embrace', 'AllDamage', 5], ['Peck of Doom', 'CritDamage', 40], ['Queen of All Coops', 'AllDamage', 8]]);
 gen('FirstEgg', 'The First Egg', '🥚', 2e36, 3e24, [['Cracks', 'Damage', 12], ['Primordial Yolk', 'AllDamage', 6], ['Shell of Creation', 'CritChance', 14], ['Which Came First', 'AllDamage', 10]]);
 const FARMER_KEYS = Object.keys(farmerData);
-// Click-Heroes style pricing: after the first four, every new farmer costs ~16x the previous one, so the next
+// click-Heroes style pricing: after the first four, every new farmer costs ~16x the previous one, so the next
 // farmer really is a long wait. Their perk prices scale by the same factor; damage is untouched.
 FARMER_KEYS.forEach((k, i) => {
     if (i < 4) return;
@@ -272,7 +272,7 @@ const Upgrades = {
         { id: 'haggle', name: 'Bulk Orders', icon: '🏷️', desc: '−2% farmer prices', baseCost: 1500000, costIncrease: 1.5, levelReq: 30, maxLevel: 20 },
     ],
     Evil: [
-        { id: 'DarkBarn', name: 'Dark Barn', icon: '🏚️', desc: '+20 evil chicken capacity — the flock can never grow past it', baseCost: 80, costIncrease: 1.35, levelReq: 15, maxLevel: Infinity },
+        { id: 'DarkBarn', name: 'Dark Barn', icon: '🏚️', desc: '+20 evil chicken capacity, the flock can never grow past it', baseCost: 80, costIncrease: 1.35, levelReq: 15, maxLevel: Infinity },
         { id: 'IncubatorGenerator', stat: true, name: 'Incubator Generators', icon: '🏭', desc: '+1 incubator every 5 seconds', increase: 1, baseCost: 10, costIncrease: 2.5, levelReq: 15, maxLevel: Infinity },
         { id: 'DarkFeed', name: 'Dark Feed', icon: '🌑', desc: '+10% evil eggs', baseCost: 300, costIncrease: 1.5, levelReq: 20, maxLevel: Infinity },
         { id: 'EvilChickenConvertAmount', stat: true, name: 'Mass Conversion', icon: '🌀', desc: '+1 chicken converted per evil event', increase: 1, baseCost: 100, costIncrease: 2.2, levelReq: 28, maxLevel: 30 },
@@ -284,7 +284,7 @@ const Upgrades = {
     ],
 };
 
-/* ---------- Hen breeds: one-off purchases per run, each multiplies egg output ---------- */
+/* ---------- hen breeds: one-off purchases per run, each multiplies egg output ---------- */
 const niceNum = (n) => { const e = Math.pow(10, Math.floor(Math.log10(n)) - 1); return Math.round(n / e) * e; };
 const BREEDS = [
     { id: 'leghorn', name: 'Leghorn', icon: '🐔', mult: 1.5, lvl: 4 },
@@ -303,7 +303,7 @@ const BREEDS = [
     { id: 'yolk', name: 'Yolk Avatar', icon: '🍳', mult: 15, lvl: 170 },
 ].map(b => ({ ...b, cost: niceNum(60 * Math.pow(1.4, b.lvl)) }));
 
-/* ---------- Egg Hunt data ---------- */
+/* ---------- egg Hunt data ---------- */
 const FIELDS = [
     { id: 1, name: 'Backyard', icon: '🌱', w: 7, h: 7, foxes: 6, rank: 1, per: 1 },
     { id: 2, name: 'Meadow', icon: '🌼', w: 8, h: 8, foxes: 10, rank: 2, per: 2 },
@@ -344,7 +344,7 @@ const xpTile = (id) => 1 + 0.12 * (id - 1);
 const uLvl = (shop, id) => (gameData.Upgrades[shop] && gameData.Upgrades[shop][id] && gameData.Upgrades[shop][id].lvl) || 0;
 const miles = (lvl, every) => Math.pow(2, Math.floor(lvl / every));
 
-/* ---------- Late game: retirement perks, expeditions, artifacts ---------- */
+/* ---------- late game: retirement perks, expeditions, artifacts ---------- */
 const RETIRE_LEVEL = 40;
 const GOLDEN = [
     { id: 'hens', name: 'Golden Hens', icon: '🐔', desc: 'Start every run with +25 chickens', base: 3, grow: 1.4, max: 60 },
@@ -365,7 +365,7 @@ const GOLDEN = [
     { id: 'breeder', name: 'Master Breeder', icon: '🥚', desc: 'Hen breeds cost 5% less', base: 12, grow: 1.6, max: 12 },
     { id: 'hunter', name: "Hunter's Pride", icon: '🦊', desc: '+10% clovers from the Egg Hunt', base: 10, grow: 1.5, max: 40 },
 ];
-// Second prestige: ascend to the Star Coop. Resets feathers and golden perks too, pays star eggs.
+// second prestige: ascend to the Star Coop. Resets feathers and golden perks too, pays star eggs.
 const ASCEND_LEVEL = 75, ASCEND_REBIRTHS = 3;
 const STAR_UPS = [
     { id: 'starlight', name: 'Starlight', icon: '🌟', desc: '×2 eggs', base: 1, grow: 1.9, max: 30 },
@@ -431,7 +431,7 @@ const xpMult = () => (1 + 0.04 * uLvl('Normal', 'tutor')) * (1 + 0.1 * gLvl('nes
 const huntMult = () => (1 + 0.1 * hLvl('basket')) * (1 + 0.1 * gLvl('hunter')) * (1 + 0.1 * aLvl('hornHunt')) * Math.pow(1.5, sLvl('stellarHunt'));
 const farmerDisc = () => Math.max(0.25, 1 - 0.02 * uLvl('Normal', 'haggle') - 0.01 * hLvl('traps'));
 const breedCost = (b) => Math.floor(b.cost * (1 - 0.05 * gLvl('breeder')));
-// Dark Coop: the evil flock can't grow past its barn, and breeds logistically (fast when small, slowing as it fills)
+// dark Coop: the evil flock can't grow past its barn, and breeds logistically (fast when small, slowing as it fills)
 // capacity comes from many places: farm level, both markets, hunt perks, golden perks, artifacts and star upgrades
 const evilCap = () => Math.floor((40 + 2 * gameData.Level + 20 * uLvl('Evil', 'DarkBarn') + 10 * uLvl('Normal', 'silo') + 10 * hLvl('pens'))
     * (1 + 0.25 * gLvl('darkLedger')) * (1 + 0.2 * aLvl('darkMirror')) * (1 + 0.25 * sLvl('darkDynasty')));
@@ -450,7 +450,7 @@ function starGain() {
     return Math.max(1, Math.floor(Math.pow((gameData.feathersSinceAscend + featherGain()) / 150, 0.6)));
 }
 
-/* ---------- Save / load with migration ---------- */
+/* ---------- save / load with migration ---------- */
 function deepMerge(base, saved) {
     if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return saved === undefined ? structuredClone(base) : saved;
     const out = Array.isArray(base) ? [] : {};
@@ -479,7 +479,7 @@ function loadGame() {
     gameData.Unlocks.Hunt.Unlocked = !!gameData.hunt.unlocked;
     migrate();
 }
-/** One-off fixes for older saves. Safe to run on every load: each step checks the save version. */
+/** one-off fixes for older saves. Safe to run on every load: each step checks the save version. */
 function migrate() {
     if ((gameData.ver || 0) >= 2) return;
     // offline progress is gone: refund the Long Nap perk
@@ -493,7 +493,7 @@ function migrate() {
 }
 loadGame();
 
-// Only one open tab runs the economy; any others just mirror the save.
+// only one open tab runs the economy; any others just mirror the save.
 const TAB_ID = Math.random().toString(36).slice(2);
 function isMasterTab() {
     const lock = Arcade.load(GameSave + '.lock', null), now = Date.now();
@@ -506,7 +506,7 @@ function save() {
     Arcade.save(GameSave, gameData);
 }
 
-/** Every player action goes through here: re-read the save first so a stale
+/** every player action goes through here: re-read the save first so a stale
  *  copy in memory can never overwrite newer progress, then apply and save. */
 function act(fn) {
     loadGame();
@@ -515,7 +515,7 @@ function act(fn) {
     return r;
 }
 
-/* ---------- Core numbers ---------- */
+/* ---------- core numbers ---------- */
 const eggsPerSec = () => gameData.chickens * gameData.EggsPerChicken * eggMult();
 
 // like Click Heroes: every 25 levels a farmer's damage doubles, and past level 200 it quadruples instead
@@ -549,7 +549,7 @@ function maxAffordable(key) {
     return Math.max(0, Math.floor(n));
 }
 
-/* ---------- Combat ---------- */
+/* ---------- combat ---------- */
 function spawnNextChicken() {
     const c = gameData.combatData;
     const level = c.level;
@@ -604,11 +604,11 @@ function combatTick() {
     if (typeof onFarmerHit === 'function') onFarmerHit(dps * (crit ? critDamage() : 1), crit);
 }
 
-/* ---------- Buy amounts (x1 / x10 / x100 / Max) ---------- */
+/* ---------- buy amounts (x1 / x10 / x100 / Max) ---------- */
 let buyAmt = Arcade.load(GameSave + '.buyAmt', 1);
 if (![1, 10, 100, 'max'].includes(buyAmt)) buyAmt = 1;
 function setBuyAmt(v) { buyAmt = v; Arcade.save(GameSave + '.buyAmt', v); }
-/** How many levels can be bought starting at `lvl`, and what they cost in total. costAt(level) is the price of that level. */
+/** how many levels can be bought starting at `lvl`, and what they cost in total. costAt(level) is the price of that level. */
 function bulkQuote(costAt, lvl, maxLvl, budget, amt) {
     const want = amt === 'max' ? Infinity : amt;
     let n = 0, total = 0;
@@ -619,7 +619,7 @@ function bulkQuote(costAt, lvl, maxLvl, budget, amt) {
     }
     return { n, total };
 }
-/** Quote for the current buy amount; when nothing is affordable it still reports the price of the next level. */
+/** quote for the current buy amount; when nothing is affordable it still reports the price of the next level. */
 function quoteFor(costAt, lvl, maxLvl, budget) {
     const q = bulkQuote(costAt, lvl, maxLvl, budget, buyAmt);
     return q.n ? q : { n: 0, total: costAt(lvl) };
@@ -629,14 +629,14 @@ const upgCostAt = (upg) => (lvl) => Math.floor(upg.baseCost * Math.pow(upg.costI
 const goldCostAt = (p) => (lvl) => Math.ceil(p.base * Math.pow(p.grow, lvl));
 const huntCostAt = (p) => (lvl) => Math.ceil(p.base * Math.pow(p.grow, lvl));
 
-/* ---------- Generator chain: generator of generators of ... incubators, without end ---------- */
+/* ---------- generator chain: generator of generators of ... incubators, without end ---------- */
 const GEN_BASE = 5e4, GEN_STEP = 100, GEN_GROW = 1.6, GEN_LEVEL0 = 45, GEN_LEVEL_STEP = 10;
 const genName = (t) => t <= 5 ? 'Incubator ' + 'Generator '.repeat(t).trim() : `Incubator Generator ×${t}`;
 const genLevelReq = (t) => GEN_LEVEL0 + GEN_LEVEL_STEP * (t - 2);
 const genCostAt = (t) => (bought) => Math.floor(GEN_BASE * Math.pow(GEN_STEP, t - 2) * Math.pow(GEN_GROW, bought));
 const genBought = (t) => (gameData.Gens[t] && gameData.Gens[t].bought) || 0;
 const genCount = (t) => (gameData.Gens[t] && gameData.Gens[t].count) || 0;
-/** Tiers that exist for the player: every owned tier plus the next one once the previous tier is owned. */
+/** tiers that exist for the player: every owned tier plus the next one once the previous tier is owned. */
 function genTiersShown() {
     let t = 2;
     while (genBought(t) > 0) t++;
@@ -646,7 +646,7 @@ function genTiersShown() {
 }
 function genUnlocked(t) { return gameData.Level >= genLevelReq(t) && (t === 2 ? gameData.Upgrades.Evil.IncubatorGenerator.lvl > 0 : genBought(t - 1) > 0); }
 
-/* ---------- Purchases ---------- */
+/* ---------- purchases ---------- */
 function upgradeCost(upg, shop) {
     const lvl = gameData.Upgrades[shop][upg.id].lvl;
     return Math.floor(upg.baseCost * Math.pow(upg.costIncrease, lvl));
@@ -736,7 +736,7 @@ function buyNextFarmer() {
     });
 }
 
-/** Hires every farmer you can currently afford, in order. */
+/** hires every farmer you can currently afford, in order. */
 function hireAllFarmers() {
     return act(() => {
         if (!gameData.Unlocks.Farmers.Unlocked) return 0;
@@ -753,7 +753,7 @@ function hireAllFarmers() {
         return n;
     });
 }
-/** Spends eggs on the cheapest farmer levels first, until nothing more is affordable. */
+/** spends eggs on the cheapest farmer levels first, until nothing more is affordable. */
 function levelAllFarmers() {
     return act(() => {
         let bought = 0;
@@ -772,7 +772,7 @@ function levelAllFarmers() {
         return bought;
     });
 }
-/** Buys every farmer perk that is unlocked and affordable, cheapest first. */
+/** buys every farmer perk that is unlocked and affordable, cheapest first. */
 function buyAllFarmerPerks() {
     return act(() => {
         let n = 0;
@@ -869,7 +869,7 @@ function retire() {
         return gain;
     });
 }
-/** Perks that shape the start of every fresh run. */
+/** perks that shape the start of every fresh run. */
 function startingBoosts() {
     gameData.chickens = 1 + 25 * gLvl('hens') + 10 * hLvl('camp');
     gameData.incubators = 50 * sLvl('celestial');
@@ -894,7 +894,7 @@ function buyStar(id) {
     });
 }
 
-/** Second prestige: wipes the farm, feathers and golden perks; keeps artifacts, stats and star upgrades. */
+/** second prestige: wipes the farm, feathers and golden perks; keeps artifacts, stats and star upgrades. */
 function ascend() {
     return act(() => {
         const gain = starGain();
@@ -921,7 +921,7 @@ function ascend() {
     });
 }
 
-/* ---------- Expeditions ---------- */
+/* ---------- expeditions ---------- */
 const expeditionMs = (e) => e.mins * 60000 * Math.max(0.1, (1 - 0.1 * gLvl('scouts')) * (1 - 0.2 * sLvl('comet')) * (1 - 0.04 * aLvl('hourglass')) * (1 - 0.02 * hLvl('nav')));
 const expeditionSend = (e) => Math.max(5, Math.floor(gameData.chickens * e.send));
 function startExpedition(id) {
@@ -937,7 +937,7 @@ function startExpedition(id) {
         return true;
     });
 }
-/** Returns the loot summary when an expedition has finished, otherwise null. */
+/** returns the loot summary when an expedition has finished, otherwise null. */
 function collectExpedition() {
     return act(() => {
         const x = gameData.expedition;
@@ -970,7 +970,7 @@ function deleteSave() {
     location.reload();
 }
 
-/* ---------- Main tick (1s) ---------- */
+/* ---------- main tick (1s) ---------- */
 function levelCheck() {
     let ups = 0;
     while (gameData.exp >= gameData.expReq) {
@@ -1010,7 +1010,7 @@ function tick() {
     }
     levelCheck();
 
-    // Dark Coop: hens turn evil, then the flock breeds towards the barn's capacity
+    // dark Coop: hens turn evil, then the flock breeds towards the barn's capacity
     const cap = evilCap();
     if (Math.random() * 100 < evilChance() && gameData.chickens >= 2 && gameData.EvilChickens < cap) {
         const n = Math.max(0, Math.min(gameData.EvilChickenConvertAmount, cap - gameData.EvilChickens, gameData.chickens - 1));
@@ -1025,9 +1025,9 @@ function tick() {
     combatTick();
     save();
 }
-// There is no offline progress: the farm only runs while this page is open.
+// there is no offline progress: the farm only runs while this page is open.
 
-/* ---------- Shared header ---------- */
+/* ---------- shared header ---------- */
 function refreshHeader() {
     Arcade.text('hEggs', fmt(gameData.eggs));
     Arcade.text('hEvil', fmt(gameData.EvilEggs));
@@ -1052,10 +1052,10 @@ setInterval(() => {
     if (isMasterTab()) tick();
     if (typeof refresh === 'function') refresh();
 }, 1000);
-// Only the tab running the economy writes on the way out; others would write a stale copy.
+// only the tab running the economy writes on the way out; others would write a stale copy.
 function unloadSave() { if (isMasterTab()) save(); }
 window.addEventListener('pagehide', unloadSave);
-// Coming back through the back/forward cache restores an old copy in memory — reload it.
+// coming back through the back/forward cache restores an old copy in memory, reload it.
 window.addEventListener('pageshow', (e) => { if (e.persisted) { loadGame(); if (typeof refresh === 'function') refresh(); } });
-// Another tab changed the save: mirror it straight away.
+// another tab changed the save: mirror it straight away.
 window.addEventListener('storage', (e) => { if (e.key === GameSave) { loadGame(); if (typeof refresh === 'function') refresh(); } });

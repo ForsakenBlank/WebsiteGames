@@ -37,19 +37,19 @@
             <div class="overlay" id="menuOv">
                 <div class="modal">
                     <h2>Encrypter</h2>
-                    <p>Your cursor drags a data trail. <b>Close a loop</b> around viruses to encrypt them — the more in one loop, the bigger the bonus.</p>
+                    <p>Your cursor drags a data trail. <b>Close a loop</b> around viruses to encrypt them, the more in one loop, the bigger the bonus.</p>
                     <div class="legend">
-                        <span><i style="background:#f87171"></i>Bug — bounces</span>
-                        <span><i style="background:#fb923c"></i>Seeker — hunts you</span>
-                        <span><i style="background:#c084fc"></i>Cutter — slices trails</span>
-                        <span><i style="background:#38bdf8"></i>Shielded — loop twice</span>
-                        <span><i style="background:#facc15"></i>Swarm — tiny & fast</span>
-                        <span><i style="background:#e879f9"></i>Splitter — splits in two</span>
-                        <span><i style="background:#f43f5e"></i>Darter — sudden dashes</span>
-                        <span><i style="background:#94a3b8"></i>Armoured — loop 3 times</span>
-                        <span><i style="background:#2dd4bf"></i>Tracer — rides your trail</span>
-                        <span><i style="background:#dc2626;border-radius:50%"></i>Boss — every 5th level</span>
-                        <span><i style="background:#fff;border-radius:50%"></i>Power-ups — loop them too</span>
+                        <span><i style="background:#f87171"></i>Bug, bounces</span>
+                        <span><i style="background:#fb923c"></i>Seeker, hunts you</span>
+                        <span><i style="background:#c084fc"></i>Cutter, slices trails</span>
+                        <span><i style="background:#38bdf8"></i>Shielded, loop twice</span>
+                        <span><i style="background:#facc15"></i>Swarm, tiny & fast</span>
+                        <span><i style="background:#e879f9"></i>Splitter, splits in two</span>
+                        <span><i style="background:#f43f5e"></i>Darter, sudden dashes</span>
+                        <span><i style="background:#94a3b8"></i>Armoured, loop 3 times</span>
+                        <span><i style="background:#2dd4bf"></i>Tracer, rides your trail</span>
+                        <span><i style="background:#dc2626;border-radius:50%"></i>Boss, every 5th level</span>
+                        <span><i style="background:#fff;border-radius:50%"></i>Power-ups, loop them too</span>
                     </div>
                     <p class="small" style="margin-top:12px">Don't let a virus touch your cursor head. Clear a level, then pick an upgrade.</p>
                     <div class="opts">
@@ -73,7 +73,7 @@
                 <div class="modal">
                     <h2 class="bad">System breached</h2>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Encrypted</small><b id="finalKills">0</b></div>
                         <div><small>Level</small><b id="finalWave">1</b></div>
@@ -88,7 +88,9 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        const W = 900, H = 600, HEAD_SPEED = 950;
+        // tall phones get a portrait arena so it fills the screen
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 600 : 900, H = TALL ? 860 : 600, HEAD_SPEED = 950;
         const canvas = document.getElementById('c');
         const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
         const ctx = view.ctx;
@@ -158,7 +160,7 @@
                 for (const [k, w] of pool) { if ((r -= w) <= 0) { kind = k; break; } }
                 if (kind === 'swarm') for (let k = 0; k < 3; k++) spawn('swarm'); else spawn(kind);
             }
-            if (boss) { spawn('boss'); Arcade.toast('⚠ Boss virus — loop it ' + (3 + Math.floor(wave / 5)) + ' times!', 'bad', 1800); Arcade.sfx('bad'); }
+            if (boss) { spawn('boss'); Arcade.toast('⚠ Boss virus, loop it ' + (3 + Math.floor(wave / 5)) + ' times!', 'bad', 1800); Arcade.sfx('bad'); }
             else if (wave > startLevel) { Arcade.toast('Level ' + wave, 'good', 1000); Arcade.sfx('level'); }
             hud();
         }
@@ -185,7 +187,7 @@
             }
         }
 
-        /* ---------- Geometry ---------- */
+        /* ---------- geometry ---------- */
         function segHit(p1, p2, p3, p4) {
             const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
             if (d === 0) return null;
@@ -214,7 +216,7 @@
             return L;
         }
 
-        /* ---------- Capture ---------- */
+        /* ---------- capture ---------- */
         function capture(poly) {
             let n = 0;
             const caught = (e) => {
@@ -305,7 +307,7 @@
             hud();
         }
 
-        /* ---------- Update ---------- */
+        /* ---------- update ---------- */
         function update(dt) {
             inv = Math.max(0, inv - dt);
             freezeT = Math.max(0, freezeT - dt);
@@ -421,7 +423,7 @@
             setTimeout(() => Arcade.show('upOv'), 250);
         }
 
-        /* ---------- Render ---------- */
+        /* ---------- render ---------- */
         const COLORS = { bug: '#f87171', seeker: '#fb923c', cutter: '#c084fc', shield: '#f87171', swarm: '#facc15', splitter: '#e879f9', darter: '#f43f5e', armor: '#94a3b8', tracer: '#2dd4bf', boss: '#dc2626' };
         function render() {
             ctx.fillStyle = '#020a06'; ctx.fillRect(0, 0, W, H);
@@ -493,7 +495,7 @@
             if (boss) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W / 2 - 140, 14, 280, 10);
                 ctx.fillStyle = '#dc2626'; ctx.fillRect(W / 2 - 140, 14, 280 * boss.hp / boss.max, 10);
-                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS — LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
+                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS, LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
             }
             fx.draw(ctx);
 

@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — the factory graph (canvas).
+   SINGULARITY, the factory graph (canvas).
    Machines are drawn in the style of the era they come from,
    so a shack laptop still looks taped-together in the datacenter.
    ========================================================== */
@@ -35,8 +35,8 @@
             bg: 'rgba(6,6,12,0.9)', bg2: 'rgba(6,6,12,0.9)', ink: '#ffffff', sub: '#d4d4f8', head: 'rgba(255,255,255,0.04)', edge: 'iri', r: 20, font: 'system-ui, "Segoe UI", sans-serif', accent: '#a5b4fc', glow: 'rgba(165,180,252,0.25)', bar: 'iri', port: '#ffffff' },
     ];
     const STATUS = {
-        ok: ['#22c55e', 'Working'], flooded: ['#f59e0b', '📉 Market flooded — prices down'], idle: ['#64748b', 'Waiting for input'], full: ['#f59e0b', 'Output full — connect it'], nopower: ['#f97316', 'Not enough power'],
-        hot: ['#ef4444', 'Overheating — throttled'], broken: ['#ef4444', 'Broken — click to repair'], off: ['#475569', 'Switched off'], broke: ['#ef4444', 'Out of cash'],
+        ok: ['#22c55e', 'Working'], flooded: ['#f59e0b', '📉 Market flooded, prices down'], idle: ['#64748b', 'Waiting for input'], full: ['#f59e0b', 'Output full, connect it'], nopower: ['#f97316', 'Not enough power'],
+        hot: ['#ef4444', 'Overheating, throttled'], broken: ['#ef4444', 'Broken, click to repair'], off: ['#475569', 'Switched off'], broke: ['#ef4444', 'Out of cash'],
         nogrid: ['#64748b', 'No grid here'], cut: ['#ef4444', 'Power company cut you off'], done: ['#64748b', 'No model to train'], notarget: ['#f59e0b', 'Pick a target on the Map'], night: ['#64748b', 'Night'],
     };
 
@@ -272,7 +272,7 @@
             if (lt) c.fillText(fitText(lt, NW - 34 - rw), x + 12, y + 60);
             c.font = `600 11px ${s.font}`;
             let info = '';
-            if (n.br) { c.fillStyle = '#ef4444'; info = '🔧 BROKEN — click to repair'; }
+            if (n.br) { c.fillStyle = '#ef4444'; info = '🔧 BROKEN, click to repair'; }
             else if (d.kind === 'dyson') { c.fillStyle = s.ink; info = `${Eng.fmt(n.abs)} panels · ${Eng.fmtW(n.abs * 5e16)}`; }
             else if (d.kind === 'batt') { c.fillStyle = s.ink; info = `${Math.round((Eng.P.battCap ? Eng.S.batt / Eng.P.battCap : 0) * 100)}% charged`; }
             else { const S2 = STATUS[n.st] || STATUS.idle; c.fillStyle = S2[0] === '#22c55e' ? s.ink : S2[0]; info = S2[1]; }

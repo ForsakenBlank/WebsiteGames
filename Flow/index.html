@@ -28,8 +28,8 @@
             <div class="seg" id="sizes"></div>
             <button class="btn sm" id="prevBtn">◀</button>
             <button class="btn sm" id="nextBtn">▶</button>
-            <button class="btn sm" id="hintBtn">💡 Hint</button>
-            <button class="btn sm" id="resetBtn">⟲ Restart</button>
+            <button class="btn sm" id="hintBtn">Hint</button>
+            <button class="btn sm" id="resetBtn">Restart</button>
         </div>
         <div class="canvas-box" id="box">
             <canvas class="screen" id="cv"></canvas>
@@ -163,7 +163,7 @@
                 $('winStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
                 $('winText').textContent = `${N}×${N} level ${level} in ${moves} moves` + (hints ? ` · ${hints} hint${hints > 1 ? 's' : ''}` : '') + (perfect ? '' : ' · Perfect = one move per colour, no hints');
                 setTimeout(() => Arcade.show('winOv'), 350);
-            } else if (allDone && !filled) Arcade.toast('Every pair is linked — now fill the empty squares too', null, 2200);
+            } else if (allDone && !filled) Arcade.toast('Every pair is linked, now fill the empty squares too', null, 2200);
         }
         function hint() {
             if (won) return;

@@ -78,7 +78,7 @@
         <div class="stats">
             <span class="chip accent">Left <b id="left">0</b></span>
             <span class="chip">Time <b id="time">0:00</b></span>
-            <span class="chip gold"><b id="diffName">Easy</b> · <b id="layName">—</b></span>
+            <span class="chip gold"><b id="diffName">Easy</b> · <b id="layName">-</b></span>
         </div>
         <div class="actions">
             <button class="btn sm" id="menuTop">Boards</button>
@@ -120,10 +120,10 @@
 
         <div class="tray" id="tray"></div>
         <div class="powers">
-            <button class="btn sm" id="undoBtn">↶ Undo <b id="undoN">2</b></button>
-            <button class="btn sm" id="shuffleBtn">🔀 Shuffle <b id="shuffleN">1</b></button>
-            <button class="btn sm" id="magicBtn">✨ Magic <b id="magicN">1</b></button>
-            <button class="btn sm ghost" id="restartBtn">⟲ Restart</button>
+            <button class="btn sm" id="undoBtn">Undo <b id="undoN">2</b></button>
+            <button class="btn sm" id="shuffleBtn">Shuffle <b id="shuffleN">1</b></button>
+            <button class="btn sm" id="magicBtn">Magic <b id="magicN">1</b></button>
+            <button class="btn sm ghost" id="restartBtn">Restart</button>
         </div>
     </main>
 
@@ -142,9 +142,9 @@
         const DIFF_IDS = Object.keys(DIFFS);
         const SLOTS = 7;
 
-        /* ---------- Board layouts ----------
+        /* ---------- board layouts ----------
            Compact base shapes that grow tall: upper layers sit on the corner of four tiles (pyramid),
-           between two tiles (brick), straight on top (stack — hides the tile below completely),
+           between two tiles (brick), straight on top (stack, hides the tile below completely),
            or alternate (mixed). Small footprints + deep stacks mean most tiles are buried. */
         const ART = [
             ['heart', 'Heart', 'pyramid', [
@@ -309,7 +309,7 @@
 
         const unlockedExtreme = () => wins.easy >= 3 && wins.medium >= 3 && wins.hard >= 3;
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             const seg = document.getElementById('diffSeg');
             seg.innerHTML = '';
@@ -370,7 +370,7 @@
             }
         }
 
-        /* ---------- Generation (always solvable) ---------- */
+        /* ---------- generation (always solvable) ---------- */
         const overlaps = (a, b) => Math.abs(a.x - b.x) < 0.98 && Math.abs(a.y - b.y) < 0.98;
 
         function buildPositions(L, cfg, preview) {
@@ -449,9 +449,9 @@
                 order.push(pick);
                 remaining.splice(remaining.indexOf(pick), 1);
             }
-            // Deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
+            // deal along that order while simulating the 7-slot tray: triples are opened as early and closed as
             // late as the tray allows (never more than 6 loose tiles), so matching tiles end up far apart and
-            // usually buried — but following this order always clears the board.
+            // usually buried, but following this order always clears the board.
             const kinds = Arcade.shuffle(EMOJI.slice()).slice(0, Math.min(cfg.types, order.length / 3));
             const spread = cfg.spread || 0.5;
             let open = [], held = 0, need = 0, ki = 0;
@@ -481,7 +481,7 @@
             return pos;
         }
 
-        /* ---------- Game ---------- */
+        /* ---------- game ---------- */
         function start(d, L) {
             diff = d || diff;
             if (L) { layout = L; Arcade.save('arcade.tapmatch.layout', L.id); }
@@ -547,7 +547,7 @@
         function hud() {
             Arcade.text('left', tiles.filter(t => !t.gone).length);
             Arcade.text('diffName', DIFFS[diff].name);
-            Arcade.text('layName', layout ? layout.name : '—');
+            Arcade.text('layName', layout ? layout.name : '-');
             Arcade.text('undoN', powers.undo); Arcade.text('shuffleN', powers.shuffle); Arcade.text('magicN', powers.magic);
             document.getElementById('undoBtn').disabled = over || !powers.undo || !history.length;
             document.getElementById('shuffleBtn').disabled = over || !powers.shuffle;
@@ -645,7 +645,7 @@
             }, won ? 500 : 700);
         }
 
-        /* ---------- Power-ups ---------- */
+        /* ---------- power-ups ---------- */
         function undo() {
             if (busy || over || !powers.undo) return;
             const t = history.pop();
@@ -690,7 +690,7 @@
             afterChange();
         }
 
-        /* ---------- Wiring ---------- */
+        /* ---------- wiring ---------- */
         document.getElementById('undoBtn').onclick = undo;
         document.getElementById('shuffleBtn').onclick = shuffle;
         document.getElementById('magicBtn').onclick = magic;

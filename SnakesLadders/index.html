@@ -23,7 +23,7 @@
             <span class="chip accent">Wins <b id="wins">0</b></span>
             <span class="chip">Played <b id="played">0</b></span>
         </div>
-        <div class="actions"><button class="btn sm" id="newBtn">⟲ New game</button><button class="btn sm icon" data-mute>🔊</button></div>
+        <div class="actions"><button class="btn sm" id="newBtn">New game</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
     <main class="stage">
         <div class="canvas-box" id="box">
@@ -31,7 +31,7 @@
             <div class="overlay" id="setupOv">
                 <div class="modal">
                     <h2>🪜 Snakes &amp; Ladders</h2>
-                    <p class="small">Up to four players — mix bots and friends sharing this device.</p>
+                    <p class="small">Up to four players, mix bots and friends sharing this device.</p>
                     <div class="slots" id="slots"></div>
                     <div class="opt-row">
                         <div class="seg" id="boardSeg"><button class="btn sm" data-v="classic">Classic board</button><button class="btn sm" data-v="random">Random board</button></div>
@@ -94,7 +94,7 @@
             players = cfg.slots.map((s, i) => s === 'off' ? null : { i, kind: s, pos: 0, shown: 0, x: 0, y: 0, name: s === 'you' ? 'You' : s === 'bot' ? PNAME[i] + ' bot' : PNAME[i] }).filter(Boolean);
             for (const p of players) { [p.x, p.y] = [OX - 30, OY + B - 20 - p.i * 6]; }
             turn = 0; phase = 'roll'; dice = 1; diceAnim = 0; anim = null; log = []; winner = null;
-            say(players[0].name + (players[0].kind === 'you' ? ' go first — roll the dice!' : ' goes first'));
+            say(players[0].name + (players[0].kind === 'you' ? ' go first, roll the dice!' : ' goes first'));
             Arcade.hide('setupOv'); Arcade.hide('endOv');
             schedule();
         }
@@ -113,7 +113,7 @@
             Arcade.tone(400 + dice * 60, 0.08, 'triangle', 0.05);
             let target = p.pos + dice;
             if (target > 100) {
-                if (cfg.exact) { say(`${p.name} rolled ${dice} — needs exactly ${100 - p.pos}`); return nextTurn(false); }
+                if (cfg.exact) { say(`${p.name} rolled ${dice}, needs exactly ${100 - p.pos}`); return nextTurn(false); }
                 target = 100;
             }
             say(`${p.name} rolled ${dice}`);
@@ -139,7 +139,7 @@
             nextTurn(dice === 6 && cfg.six);
         }
         function nextTurn(again) {
-            if (again) say(`${cur().name} rolled a 6 — roll again!`);
+            if (again) say(`${cur().name} rolled a 6, roll again!`);
             else turn = (turn + 1) % players.length;
             phase = 'roll';
             schedule();
@@ -151,7 +151,7 @@
             if (p.kind === 'you') { stats.wins++; Arcade.count('win'); Arcade.addXP(15, true); }
             Arcade.save('arcade.snl.stats', stats);
             Arcade.sfx(p.kind === 'bot' && youPlaying ? 'die' : 'win');
-            $('endTitle').textContent = p.kind === 'you' ? '🏆 You win!' : `🏆 ${p.name} wins!`;
+            $('endTitle').textContent = p.kind === 'you' ? 'You win!' : `🏆 ${p.name} wins!`;
             $('endTitle').className = p.kind === 'bot' && youPlaying ? 'bad' : 'good';
             $('endText').textContent = `Your record: ${stats.wins} wins in ${stats.played} games · ${stats.ladders} ladders climbed, ${stats.snakes} snakes met`;
             setTimeout(() => Arcade.show('endOv'), 700);
@@ -278,7 +278,7 @@
             drawDie(dx, dy, 96, dice, PCOL[cur().i]);
             c.textAlign = 'center'; c.fillStyle = '#e2e8f0'; c.font = '700 14px system-ui';
             const myTurn = phase === 'roll' && human(cur());
-            c.fillText(phase === 'over' ? 'Game over' : myTurn ? (cur().kind === 'you' ? 'Your turn — tap to roll' : cur().name + ': tap to roll') : phase === 'roll' ? cur().name + ' is thinking…' : '', px + pw / 2, dy + 120);
+            c.fillText(phase === 'over' ? 'Game over' : myTurn ? (cur().kind === 'you' ? 'Your turn, tap to roll' : cur().name + ': tap to roll') : phase === 'roll' ? cur().name + ' is thinking…' : '', px + pw / 2, dy + 120);
             if (myTurn) { c.strokeStyle = PCOL[cur().i]; c.lineWidth = 2; c.globalAlpha = 0.5 + Math.sin(performance.now() / 200) * 0.3; c.strokeRect(dx - 8, dy - 8, 112, 112); c.globalAlpha = 1; }
             c.textAlign = 'left'; c.font = '500 12px system-ui';
             log.forEach((s, k) => { c.fillStyle = k ? '#64748b' : '#cbd5e1'; c.fillText(s, px + 14, OY + 400 + k * 22, pw - 24); });

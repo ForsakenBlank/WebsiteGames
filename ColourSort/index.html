@@ -133,10 +133,10 @@
                 <button class="btn sm" data-mode="classic">Classic</button>
                 <button class="btn sm" data-mode="mystery">Mystery</button>
             </div>
-            <button class="btn sm" id="undoBtn" title="Undo (unlimited)">↶ Undo</button>
-            <button class="btn sm" id="customBtn" hidden>⚙ Custom setup</button>
+            <button class="btn sm" id="undoBtn" title="Undo (unlimited)">Undo</button>
+            <button class="btn sm" id="customBtn" hidden>Custom setup</button>
             <button class="btn sm" id="tubeBtn">+ Tube</button>
-            <button class="btn sm" id="restartBtn">⟲ Restart</button>
+            <button class="btn sm" id="restartBtn">Restart</button>
             <span class="level-tag" id="levelTag" data-kind="normal"></span>
         </div>
         <div class="canvas-box">
@@ -162,7 +162,7 @@
                 <p>Build your own puzzle. Settings are kept for every custom level.</p>
                 <div class="cust-grid">
                     <label>Colours <output id="cColOut">8</output><input type="range" id="cCol" min="2" max="20" value="8"><small>How many different colours to sort.</small></label>
-                    <label>Tube height <output id="cCapOut">4</output><input type="range" id="cCap" min="2" max="10" value="4"><small>Blocks per tube — taller tubes are harder.</small></label>
+                    <label>Tube height <output id="cCapOut">4</output><input type="range" id="cCap" min="2" max="10" value="4"><small>Blocks per tube, taller tubes are harder.</small></label>
                     <label>Empty tubes <output id="cEmptyOut">2</output><input type="range" id="cEmpty" min="1" max="6" value="2"><small>Spare tubes you start with. Fewer = harder.</small></label>
                     <label class="cust-check"><input type="checkbox" id="cExtra" checked> Allow the +Tube helper</label>
                 </div>
@@ -197,7 +197,7 @@
             { id: 'custom', name: '⚙ Custom', custom: true, col: '#38bdf8' },
         ];
         let custom = Object.assign({ colours: 8, cap: 4, empty: 2, extra: true }, Arcade.load('arcade.coloursort.custom', {}));
-        // Level shapes. Which one a level gets is decided by the level number, so level 12 is always
+        // level shapes. Which one a level gets is decided by the level number, so level 12 is always
         // the same kind of level (the colours are still shuffled fresh each time).
         const KINDS = {
             normal: { label: '', icon: '' },
@@ -206,12 +206,12 @@
             short: { label: 'Short tubes', icon: '🧃', col: '#4ade80' },
             mega: { label: 'MEGA level', icon: '💥', col: '#f87171' },
         };
-        // Special tubes some levels add (decided by level number, like KINDS).
+        // special tubes some levels add (decided by level number, like KINDS).
         const SPECIALS = {
             lock: { label: 'Locked tube', icon: '🔒', tip: 'A spare tube that opens once you finish 2 tubes' },
             out: { label: 'Pour-out tube', icon: '⬆', tip: 'The gold tube can only be poured out of, never into' },
             mono: { label: 'One-colour tube', icon: '🎯', tip: 'The glowing tube only accepts its own colour' },
-            tall: { label: 'XL tube', icon: '📦', tip: 'A double-height spare tube that can hold several colours — it must end empty' },
+            tall: { label: 'XL tube', icon: '📦', tip: 'A double-height spare tube that can hold several colours, it must end empty' },
         };
         const MODES = { classic: 'Classic', mystery: 'Mystery' };
         const host = document.getElementById('tubes');
@@ -221,13 +221,13 @@
         let diff = DIFFS.find(d => d.id === Arcade.load('arcade.coloursort.diff', 'normal')) || DIFFS[1];
         let tubes, hidden, sel, moves, history, undosUsed, extraUsed, colours, startState, CAP, kind, proven, specs, special;
 
-        // Normal keeps the original save keys so existing progress carries over.
+        // normal keeps the original save keys so existing progress carries over.
         const levelKey = (d, m) => 'arcade.coloursort.level.' + (m || mode) + ((d || diff).id === 'normal' ? '' : '.' + (d || diff).id);
         const level = () => Arcade.load(levelKey(), 1);
 
         if (Arcade.load('arcade.coloursort.symbols', false)) document.body.classList.add('symbols');
 
-        /* ---------- Level design ---------- */
+        /* ---------- level design ---------- */
         function hash(a, b) {
             let h = Math.imul(a ^ 0x9E3779B1, 0x85EBCA77) ^ Math.imul(b + 0x632BE5AB, 0xC2B2AE35);
             h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12;
@@ -262,12 +262,12 @@
             return { kind: k, cap, colours: n, empty: 2, special: sp };
         }
 
-        /* ---------- Tube rules ---------- */
+        /* ---------- tube rules ---------- */
         const capOf = (sp, i) => sp[i].cap;
         const doneIn = (s, sp, i) => sp[i].type !== 'tall' && s[i].length === sp[i].cap && s[i].every(c => c === s[i][0]);
         const doneCount = (s, sp) => s.reduce((a, t, i) => a + (t.length && doneIn(s, sp, i) ? 1 : 0), 0);
         const isLocked = (s, sp, i) => sp[i].type === 'lock' && doneCount(s, sp) < sp[i].unlockAt;
-        /** Can the top run of tube a go into tube b (ignoring hidden blocks)? */
+        /** can the top run of tube a go into tube b (ignoring hidden blocks)? */
         function canPour(s, sp, a, b, top) {
             if (a === b || sp[b].type === 'out') return false;
             if (isLocked(s, sp, a) || isLocked(s, sp, b)) return false;
@@ -335,7 +335,7 @@
             return { tubes: best.t, specs: best.sp, proven: false };
         }
 
-        /* ---------- Game ---------- */
+        /* ---------- game ---------- */
         function newLevel() {
             const d = design(level(), diff);
             CAP = d.cap; colours = d.colours; kind = d.kind; special = mode === 'mystery' && d.special === 'mono' ? null : d.special;
@@ -372,7 +372,7 @@
         const snapshot = () => ({ tubes: tubes.map(t => t.slice()), hidden: hidden.map(h => h.slice()), specs: specs.map(s => ({ ...s })) });
         function restore(s) { tubes = s.tubes.map(t => t.slice()); hidden = s.hidden.map(h => h.slice()); specs = s.specs.map(x => ({ ...x })); }
 
-        // The +Tube helper is always offered when a level could not be proven solvable in time.
+        // the +Tube helper is always offered when a level could not be proven solvable in time.
         const extraAllowed = () => (diff.custom ? custom.extra : diff.extra) || !proven;
 
         function hud() {
@@ -414,9 +414,9 @@
 
         const isDone = (i) => doneIn(tubes, specs, i) && !hidden[i].some(Boolean);
 
-        // Picks tubes-per-row so blocks end up as large as possible for this many tubes and this tube height.
-        // Rows never get wider than MAX_PER_ROW tubes; once they would, the tubes move onto extra shelves.
-        // If even the smallest sensible blocks don't fit on screen, the board scrolls instead of shrinking further.
+        // picks tubes-per-row so blocks end up as large as possible for this many tubes and this tube height.
+        // rows never get wider than MAX_PER_ROW tubes; once they would, the tubes move onto extra shelves.
+        // if even the smallest sensible blocks don't fit on screen, the board scrolls instead of shrinking further.
         const MAX_PER_ROW = 10;
         let perRow = 1;
         function sizeBlocks() {
@@ -449,7 +449,7 @@
             s.setProperty('--gy', best.gy + 'px');
         }
 
-        // Splits n tubes into balanced rows (e.g. 13 with 7 per row -> 7 + 6, not 10 + 3).
+        // splits n tubes into balanced rows (e.g. 13 with 7 per row -> 7 + 6, not 10 + 3).
         function rowSizes(n) {
             const rows = Math.ceil(n / perRow);
             const base = Math.floor(n / rows), extra = n % rows;
@@ -562,7 +562,7 @@
             buildDiffs();
         }
 
-        /* ---------- Custom setup ---------- */
+        /* ---------- custom setup ---------- */
         const cEl = (id) => document.getElementById(id);
         function custPreview() {
             const n = +cEl('cCol').value, cap = +cEl('cCap').value, e = +cEl('cEmpty').value;

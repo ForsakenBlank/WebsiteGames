@@ -1,0 +1,8 @@
+{
+  "appId": "com.forsakenblank.arcade",
+  "appName": "Arcade",
+  "webDir": "www",
+  "backgroundColor": "#1c1c1fff",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" }
+}

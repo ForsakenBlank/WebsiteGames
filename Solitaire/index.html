@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Solitaire · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f6c445; --accent-ink: #3d2b00; }
+        .stage { justify-content: flex-start; padding-top: 4px; }
+        .felt { position: relative; width: min(100%, 760px); flex: 1; min-height: 520px; border-radius: 26px; background: #2f5a45; touch-action: none; overflow: hidden; }
+        .slot { position: absolute; border-radius: 10px; border: 2px dashed rgba(255,255,255,.18); display: grid; place-items: center; color: rgba(255,255,255,.25); font-family: var(--display); font-size: 1.4rem; }
+        .card { position: absolute; left: 0; top: 0; border-radius: 9px; background: #fffaf1; box-shadow: 0 2px 0 rgba(0,0,0,.25); transition: transform 0.18s ease-out; cursor: pointer; will-change: transform; user-select: none; -webkit-user-select: none; }
+        .card.drag { transition: none; box-shadow: 0 12px 24px rgba(0,0,0,.35); }
+        .card .tl { position: absolute; left: 7%; top: 2%; font-family: var(--display); font-weight: 600; line-height: 1; white-space: nowrap; letter-spacing: -0.02em; }
+        .card .tl i { font-style: normal; margin-left: 1px; }
+        .card .mid { position: absolute; right: 8%; bottom: 6%; line-height: 1; }
+        .card.red { color: #d6476b; } .card.blk { color: #29251f; }
+        .card.down { background: #e8655a; background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 6px, transparent 6px 12px); }
+        .card.down > * { display: none; }
+        .card.hint { box-shadow: 0 0 0 3px #f5c04e, 0 2px 0 rgba(0,0,0,.25); }
+        .tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .opts { display: grid; gap: 8px; text-align: left; }
+        .opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); border: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+        .opt b { font-family: var(--display); font-weight: 600; display: block; }
+        .opt small { color: var(--muted); }
+        .opt.on { box-shadow: inset 0 0 0 3px var(--accent); }
+    </style>
+</head>
+<body class="no-select no-scroll">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Solitaire</h1>
+        <div class="stats"><span class="chip accent">Moves <b id="moves">0</b></span><span class="chip">Time <b id="time">0:00</b></span><span class="chip gold hide-sm">Wins <b id="wins">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="newBtn" title="New deal"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="tools">
+            <button class="btn sm" id="undoBtn">Undo</button>
+            <button class="btn sm" id="hintBtn">Hint</button>
+            <button class="btn sm primary" id="autoBtn" hidden>Finish it</button>
+        </div>
+        <div class="felt" id="felt"></div>
+        <div class="overlay fixed" id="newOv" hidden>
+            <div class="modal">
+                <h2>New deal</h2>
+                <div class="opts">
+                    <button class="opt" data-draw="1"><span><b>Draw 1</b><small>Easier, most games can be won</small></span></button>
+                    <button class="opt" data-draw="3"><span><b>Draw 3</b><small>Classic and much harder</small></span></button>
+                </div>
+                <div class="actions"><button class="btn primary lg" id="dealBtn">Deal</button><button class="btn lg ghost" id="cancelBtn">Cancel</button></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="winOv" hidden>
+            <div class="modal">
+                <h2>You won!</h2>
+                <p id="winText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Deal again</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const red = (c) => c.s === 1 || c.s === 2;
+        const cfg = Object.assign({ draw: 1 }, Arcade.load('arcade.solitaire.cfg', {}));
+        const stats = Object.assign({ wins: 0, played: 0, bestTime: 0 }, Arcade.load('arcade.solitaire.stats', {}));
+        const felt = $('felt');
+        let S, undo, moves, t0, timer, won, L, els = [];
+
+        /* ---------- deal ---------- */
+        function deal() {
+            const deck = [];
+            for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) deck.push({ s, r, up: false, id: s * 13 + r - 1 });
+            Arcade.shuffle(deck);
+            S = { stock: [], waste: [], found: [[], [], [], []], tab: [[], [], [], [], [], [], []] };
+            for (let i = 0; i < 7; i++) for (let j = i; j < 7; j++) S.tab[j].push(deck.pop());
+            S.tab.forEach(p => p[p.length - 1].up = true);
+            S.stock = deck;
+            undo = []; moves = 0; won = false; t0 = 0;
+            clearInterval(timer);
+            Arcade.text('time', '0:00');
+            stats.played++;
+            Arcade.save('arcade.solitaire.stats', stats);
+            layout();
+            render();
+        }
+        const snapshot = () => JSON.stringify(S);
+        function push() { undo.push(snapshot()); if (undo.length > 300) undo.shift(); }
+        function startClock() { if (!t0) { t0 = Date.now(); timer = setInterval(() => Arcade.text('time', Arcade.time((Date.now() - t0) / 1000)), 500); } }
+
+        /* ---------- rules ---------- */
+        const top = (p) => p[p.length - 1];
+        function canFound(c, f) { const t = top(S.found[f]); return t ? t.s === c.s && c.r === t.r + 1 : c.r === 1; }
+        function canTab(c, t) { const tc = top(S.tab[t]); return tc ? tc.up && red(tc) !== red(c) && c.r === tc.r - 1 : c.r === 13; }
+        // where a card lives: { pile: 'tab'|'waste'|'found'|'stock', i, k }
+        function where(id) {
+            for (let i = 0; i < 7; i++) { const k = S.tab[i].findIndex(c => c.id === id); if (k >= 0) return { pile: 'tab', i, k }; }
+            let k = S.waste.findIndex(c => c.id === id); if (k >= 0) return { pile: 'waste', i: 0, k };
+            for (let i = 0; i < 4; i++) { k = S.found[i].findIndex(c => c.id === id); if (k >= 0) return { pile: 'found', i, k }; }
+            k = S.stock.findIndex(c => c.id === id); if (k >= 0) return { pile: 'stock', i: 0, k };
+            return null;
+        }
+        const pileArr = (w) => w.pile === 'tab' ? S.tab[w.i] : w.pile === 'found' ? S.found[w.i] : w.pile === 'waste' ? S.waste : S.stock;
+        function movable(w) {
+            const arr = pileArr(w);
+            if (w.pile === 'tab') return arr[w.k].up;
+            return w.k === arr.length - 1 && w.pile !== 'stock';
+        }
+        // moves cards from w to destination; returns true if legal
+        function tryMove(w, dest) {
+            const arr = pileArr(w);
+            const stack = arr.slice(w.k);
+            const c = stack[0];
+            if (dest.pile === 'found') { if (stack.length !== 1 || !canFound(c, dest.i)) return false; }
+            else if (dest.pile === 'tab') { if (dest.i === w.i && w.pile === 'tab') return false; if (!canTab(c, dest.i)) return false; }
+            else return false;
+            push();
+            arr.splice(w.k);
+            (dest.pile === 'found' ? S.found[dest.i] : S.tab[dest.i]).push(...stack);
+            if (w.pile === 'tab' && arr.length && !top(arr).up) top(arr).up = true;
+            moves++;
+            startClock();
+            Arcade.tone(dest.pile === 'found' ? 700 + S.found[dest.i].length * 25 : 420, 0.06, 'triangle', 0.08);
+            return true;
+        }
+        function bestDest(w) {
+            const arr = pileArr(w);
+            const c = arr[w.k];
+            if (w.k === arr.length - 1) for (let f = 0; f < 4; f++) if (canFound(c, f)) return { pile: 'found', i: f };
+            let empty = null;
+            for (let t = 0; t < 7; t++) {
+                if (w.pile === 'tab' && t === w.i) continue;
+                if (!canTab(c, t)) continue;
+                if (S.tab[t].length) return { pile: 'tab', i: t };
+                if (!empty && !(w.pile === 'tab' && w.k === 0)) empty = { pile: 'tab', i: t };
+            }
+            return empty;
+        }
+        function drawStock() {
+            startClock();
+            push();
+            if (!S.stock.length) {
+                if (!S.waste.length) { undo.pop(); return; }
+                S.stock = S.waste.reverse().map(c => (c.up = false, c));
+                S.waste = [];
+                Arcade.tone(240, 0.08, 'sine', 0.08);
+            } else {
+                for (let i = 0; i < cfg.draw && S.stock.length; i++) { const c = S.stock.pop(); c.up = true; S.waste.push(c); }
+                Arcade.tone(520, 0.04, 'triangle', 0.06);
+            }
+            moves++;
+            render();
+        }
+
+        /* ---------- layout + render ---------- */
+        function layout() {
+            const r = felt.getBoundingClientRect();
+            const pad = Math.max(8, r.width * 0.02), gap = Math.max(5, r.width * 0.014);
+            const cw = Math.min(96, (r.width - pad * 2 - gap * 6) / 7);
+            const ch = cw * 1.42;
+            L = { pad, gap, cw, ch, colX: (i) => pad + i * (cw + gap), topY: pad, tabY: pad + ch + gap * 2.4, H: r.height };
+            felt.querySelectorAll('.slot').forEach(e => e.remove());
+            const slot = (x, y, label) => { const s = document.createElement('div'); s.className = 'slot'; Object.assign(s.style, { left: x + 'px', top: y + 'px', width: cw + 'px', height: ch + 'px', fontSize: cw * 0.34 + 'px' }); s.textContent = label; felt.appendChild(s); return s; };
+            slot(L.colX(0), L.topY, '↻').onclick = drawStock;
+            for (let f = 0; f < 4; f++) slot(L.colX(3 + f), L.topY, 'A');
+            for (let t = 0; t < 7; t++) slot(L.colX(t), L.tabY, 'K');
+        }
+        function cardEl(c) {
+            if (els[c.id]) return els[c.id];
+            const e = document.createElement('div');
+            e.className = 'card ' + (red(c) ? 'red' : 'blk');
+            e.innerHTML = `<div class="tl">${RANKS[c.r]}<i>${SUITS[c.s]}</i></div><div class="mid">${SUITS[c.s]}</div>`;
+            e.dataset.id = c.id;
+            felt.appendChild(e);
+            els[c.id] = e;
+            return e;
+        }
+        function place(c, x, y, z) {
+            const e = cardEl(c);
+            e.classList.toggle('down', !c.up);
+            e.style.width = L.cw + 'px'; e.style.height = L.ch + 'px';
+            e.querySelector('.tl').style.fontSize = L.cw * 0.25 + 'px';
+            e.querySelector('.mid').style.fontSize = L.cw * 0.5 + 'px';
+            e.style.transform = `translate(${x}px, ${y}px)`;
+            e.style.zIndex = z;
+            e._x = x; e._y = y;
+        }
+        function render() {
+            S.stock.forEach((c, k) => place(c, L.colX(0), L.topY, 10 + k));
+            // the waste fans out its last three cards
+            const wv = S.waste.length;
+            S.waste.forEach((c, k) => { const off = Math.max(0, k - (wv - Math.min(3, wv))); place(c, L.colX(1) + off * L.cw * 0.28, L.topY, 100 + k); });
+            S.found.forEach((p, f) => p.forEach((c, k) => place(c, L.colX(3 + f), L.topY, 200 + k)));
+            S.tab.forEach((p, t) => {
+                // squeeze tall columns so they fit the felt
+                const downs = p.filter(c => !c.up).length, ups = p.length - downs;
+                const avail = L.H - L.tabY - L.ch - L.pad;
+                let dGap = L.ch * 0.13, uGap = L.ch * 0.27;
+                const need = downs * dGap + Math.max(0, ups - 1) * uGap;
+                if (need > avail && need > 0) { const s = avail / need; dGap *= s; uGap *= s; }
+                let y = L.tabY;
+                p.forEach((c, k) => { place(c, L.colX(t), y, 300 + k); y += c.up ? uGap : dGap; });
+            });
+            Arcade.text('moves', moves);
+            Arcade.text('wins', stats.wins);
+            $('undoBtn').disabled = !undo.length || won;
+            const canAuto = !won && !S.stock.length && !S.waste.length && S.tab.every(p => p.every(c => c.up));
+            $('autoBtn').hidden = !canAuto;
+            if (S.found.every(p => p.length === 13) && !won) win();
+        }
+
+        /* ---------- input: tap to auto-move, or drag ---------- */
+        let drag = null;
+        felt.addEventListener('pointerdown', (e) => {
+            const ce = e.target.closest('.card');
+            if (!ce || won) return;
+            const id = +ce.dataset.id;
+            const w = where(id);
+            if (!w) return;
+            if (w.pile === 'stock') { drawStock(); return; }
+            if (!movable(w)) return;
+            const arr = pileArr(w);
+            const stack = arr.slice(w.k);
+            drag = { w, stack, sx: e.clientX, sy: e.clientY, moved: false, els: stack.map(c => els[c.id]) };
+            felt.setPointerCapture(e.pointerId);
+        });
+        felt.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+            if (!drag.moved && Math.hypot(dx, dy) < 7) return;
+            drag.moved = true;
+            drag.els.forEach((el, k) => { el.classList.add('drag'); el.style.zIndex = 1000 + k; el.style.transform = `translate(${el._x + dx}px, ${el._y + dy}px)`; });
+        });
+        felt.addEventListener('pointerup', (e) => {
+            if (!drag) return;
+            const d = drag; drag = null;
+            d.els.forEach(el => el.classList.remove('drag'));
+            if (!d.moved) {
+                const dest = bestDest(d.w);
+                if (dest && tryMove(d.w, dest)) render();
+                else { Arcade.sfx('bad'); d.els[0].classList.add('hint'); setTimeout(() => d.els[0].classList.remove('hint'), 400); render(); }
+                return;
+            }
+            // drop on the pile under the pointer
+            const r = felt.getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+            const col = Math.max(0, Math.min(6, Math.floor((x - L.pad + L.gap / 2) / (L.cw + L.gap))));
+            let dest = null;
+            if (y < L.tabY - L.gap) { if (col >= 3) dest = { pile: 'found', i: col - 3 }; }
+            else dest = { pile: 'tab', i: col };
+            if (!(dest && tryMove(d.w, dest))) Arcade.sfx('bad');
+            render();
+        });
+        felt.addEventListener('pointercancel', () => { drag = null; render(); });
+
+        /* ---------- helpers ---------- */
+        function findHint() {
+            const sources = [];
+            if (S.waste.length) sources.push({ pile: 'waste', i: 0, k: S.waste.length - 1 });
+            S.tab.forEach((p, i) => { const k = p.findIndex(c => c.up); if (k >= 0) { sources.push({ pile: 'tab', i, k }); if (k !== p.length - 1) sources.push({ pile: 'tab', i, k: p.length - 1 }); } });
+            for (const w of sources) {
+                const d = bestDest(w);
+                // skip pointless king shuffles between empty columns
+                if (d && !(d.pile === 'tab' && !S.tab[d.i].length && w.pile === 'tab' && w.k === 0)) return w;
+            }
+            return null;
+        }
+        $('hintBtn').onclick = () => {
+            const w = findHint();
+            document.querySelectorAll('.card.hint').forEach(e => e.classList.remove('hint'));
+            if (!w) { Arcade.toast(S.stock.length || S.waste.length ? 'Try drawing from the stock' : 'No moves left. Try undo or a new deal', '', 1800); return; }
+            const el = els[pileArr(w)[w.k].id];
+            el.classList.add('hint');
+            setTimeout(() => el.classList.remove('hint'), 1400);
+        };
+        $('undoBtn').onclick = () => { if (!undo.length || won) return; S = JSON.parse(undo.pop()); moves++; Arcade.sfx('click'); render(); };
+        $('autoBtn').onclick = () => {
+            const step = () => {
+                for (let i = 0; i < 7; i++) {
+                    const p = S.tab[i];
+                    if (!p.length) continue;
+                    for (let f = 0; f < 4; f++) if (canFound(top(p), f)) { tryMove({ pile: 'tab', i, k: p.length - 1 }, { pile: 'found', i: f }); render(); if (!won) setTimeout(step, 90); return; }
+                }
+            };
+            step();
+        };
+        function win() {
+            won = true;
+            clearInterval(timer);
+            const secs = Math.round((Date.now() - (t0 || Date.now())) / 1000);
+            stats.wins++;
+            if (!stats.bestTime || secs < stats.bestTime) stats.bestTime = secs;
+            Arcade.save('arcade.solitaire.stats', stats);
+            Arcade.count('win');
+            Arcade.addXP(cfg.draw === 3 ? 40 : 15);
+            Arcade.sfx('win');
+            $('winText').textContent = `${moves} moves in ${Arcade.time(secs)} (draw ${cfg.draw}). Best time ${Arcade.time(stats.bestTime)}.`;
+            // little bounce on every card
+            els.forEach((e, i) => e && setTimeout(() => { e.style.transform += ' translateY(-10px)'; }, i * 12));
+            setTimeout(() => Arcade.show('winOv'), 900);
+        }
+        function openNew() {
+            document.querySelectorAll('[data-draw]').forEach(b => b.classList.toggle('on', +b.dataset.draw === cfg.draw));
+            Arcade.show('newOv');
+        }
+        document.querySelectorAll('[data-draw]').forEach(b => b.onclick = () => { cfg.draw = +b.dataset.draw; openNew(); });
+        $('dealBtn').onclick = () => { Arcade.save('arcade.solitaire.cfg', cfg); Arcade.hide('newOv'); deal(); };
+        $('cancelBtn').onclick = () => Arcade.hide('newOv');
+        $('newBtn').innerHTML = Arcade.icon('restart');
+        $('newBtn').onclick = openNew;
+        $('againBtn').onclick = () => { Arcade.hide('winOv'); deal(); };
+        window.addEventListener('resize', () => { layout(); render(); });
+        deal();
+        window.__sol = { get S() { return S; }, tryMove, bestDest, where, render, drawStock };
+    })();
+    </script>
+</body>
+</html>

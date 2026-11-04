@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Connect Four · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #82c3ec; --accent-ink: #14324a; --p1: #ef6a5a; --p2: #f6c445; --cell: min(11.2vw, 64px); }
+        .stage { justify-content: flex-start; }
+        .bar2 { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .turn { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 1.25rem; min-height: 1.6em; }
+        .turn .d { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 -3px 0 rgba(0,0,0,.2); }
+        .board { position: relative; display: grid; grid-template-columns: repeat(7, var(--cell)); grid-template-rows: repeat(6, var(--cell)); gap: 6px; padding: 10px; border-radius: 26px; background: #2c6fb0; box-shadow: 0 8px 0 #1f4f80; touch-action: manipulation; }
+        .hole { position: relative; border-radius: 50%; background: var(--bg); box-shadow: inset 0 4px 0 rgba(0,0,0,.25); cursor: pointer; overflow: visible; }
+        .disc { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), inset 0 0 0 5px rgba(255,255,255,.12); }
+        .disc.p1 { background: var(--p1); } .disc.p2 { background: var(--p2); }
+        .disc.drop { animation: drop var(--t) cubic-bezier(.5, 0, .75, 1.35); }
+        @keyframes drop { from { transform: translateY(var(--from)); } to { transform: translateY(0); } }
+        .disc.win { box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), 0 0 0 4px #fff; animation: pulse 0.6s infinite alternate; }
+        .ghost { position: absolute; inset: 0; border-radius: 50%; opacity: 0.35; }
+        .cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 10px; }
+        .cols button { border: 0; background: transparent; cursor: pointer; border-radius: 16px; }
+        .cols button:hover { background: rgba(255,255,255,.06); }
+        .setup { text-align: left; }
+        .setup h2 { text-align: center; }
+        .lab { display: block; margin: 16px 0 8px; font-family: var(--display); font-weight: 600; }
+        .opts { display: grid; gap: 8px; }
+        .opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); border: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+        .opt .em { font-size: 1.5rem; width: 34px; text-align: center; }
+        .opt b { font-family: var(--display); font-weight: 600; display: block; }
+        .opt small { color: var(--muted); }
+        .opt.on { box-shadow: inset 0 0 0 3px var(--accent); }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Connect Four</h1>
+        <div class="stats"><span class="chip accent">Wins <b id="wins">0</b></span><span class="chip">Losses <b id="losses">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="undoBtn" title="Undo"></button><button class="btn icon sm" id="menuBtn" title="New game"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="turn" id="turn"><span class="d" id="turnDot"></span><span id="turnTxt">Your turn</span></div>
+        <div class="board" id="board"></div>
+        <div class="bar2"><span class="tag" id="modeTag"></span></div>
+
+        <div class="overlay fixed" id="setupOv" hidden>
+            <div class="modal setup">
+                <h2>Connect Four</h2>
+                <label class="lab">Opponent</label>
+                <div class="opts" id="modeOpts">
+                    <button class="opt" data-mode="ai"><span class="em">🤖</span><span><b>Computer</b><small>Line up four before it does</small></span></button>
+                    <button class="opt" data-mode="pvp"><span class="em">🤝</span><span><b>2 players</b><small>Take turns on one device</small></span></button>
+                </div>
+                <div id="aiBox">
+                    <label class="lab">Difficulty</label>
+                    <div class="opts" id="diffOpts">
+                        <button class="opt" data-diff="easy"><span class="em">🐣</span><span><b>Easy</b><small>Blocks obvious wins, misses traps</small></span></button>
+                        <button class="opt" data-diff="normal"><span class="em">🙂</span><span><b>Normal</b><small>Thinks a few moves ahead</small></span></button>
+                        <button class="opt" data-diff="hard"><span class="em">😈</span><span><b>Hard</b><small>Looks deep. Good luck</small></span></button>
+                    </div>
+                    <label class="lab">Who goes first</label>
+                    <div class="opts" id="firstOpts" style="grid-template-columns:1fr 1fr 1fr">
+                        <button class="opt" data-first="me"><span><b>Me</b></span></button>
+                        <button class="opt" data-first="ai"><span><b>Computer</b></span></button>
+                        <button class="opt" data-first="swap"><span><b>Take turns</b></span></button>
+                    </div>
+                </div>
+                <div class="actions"><button class="btn primary lg" id="startBtn">Play</button></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">You win!</h2>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Rematch</button><button class="btn lg" id="changeBtn">Change</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const W = 7, H = 6;
+        const cfg = Object.assign({ mode: 'ai', diff: 'normal', first: 'swap' }, Arcade.load('arcade.c4.cfg', {}));
+        const stats = Object.assign({ wins: 0, losses: 0, draws: 0, startedLast: 'ai' }, Arcade.load('arcade.c4.stats', {}));
+        // g[c][r], r = 0 is the bottom row. 0 empty, 1 / 2 players
+        let g, turn, over, moves, busy = false, hoverCol = -1, humanSide = 1;
+
+        const cellEls = [];
+        function buildBoard() {
+            const b = $('board');
+            b.innerHTML = '';
+            for (let r = H - 1; r >= 0; r--) for (let c = 0; c < W; c++) {
+                const h = document.createElement('div');
+                h.className = 'hole';
+                cellEls[c * H + r] = h;
+                b.appendChild(h);
+            }
+            const cols = document.createElement('div');
+            cols.className = 'cols';
+            for (let c = 0; c < W; c++) {
+                const btn = document.createElement('button');
+                btn.setAttribute('aria-label', 'Column ' + (c + 1));
+                btn.onclick = () => humanMove(c);
+                btn.onpointerenter = () => { hoverCol = c; drawGhost(); };
+                btn.onpointerleave = () => { hoverCol = -1; drawGhost(); };
+                cols.appendChild(btn);
+            }
+            b.appendChild(cols);
+        }
+        const height = (c) => { let r = 0; while (r < H && g[c][r]) r++; return r; };
+        const canPlay = (c) => g[c][H - 1] === 0;
+
+        function winLine(c, r, p) {
+            for (const [dc, dr] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+                const line = [[c, r]];
+                for (const s of [1, -1]) {
+                    let x = c + dc * s, y = r + dr * s;
+                    while (x >= 0 && x < W && y >= 0 && y < H && g[x][y] === p) { line.push([x, y]); x += dc * s; y += dr * s; }
+                }
+                if (line.length >= 4) return line;
+            }
+            return null;
+        }
+
+        /* ---------- ai: minimax with alpha-beta ---------- */
+        const ORDER = [3, 2, 4, 1, 5, 0, 6];
+        function scoreWindow(a, b, c, d, p) {
+            const o = 3 - p;
+            let mine = 0, theirs = 0;
+            for (const v of [a, b, c, d]) { if (v === p) mine++; else if (v === o) theirs++; }
+            if (mine && theirs) return 0;
+            if (mine === 3) return 6; if (mine === 2) return 2;
+            if (theirs === 3) return -8; if (theirs === 2) return -2;
+            return 0;
+        }
+        function evaluate(p) {
+            let s = 0;
+            for (let r = 0; r < H; r++) if (g[3][r] === p) s += 3; else if (g[3][r] === 3 - p) s -= 3;
+            for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) {
+                if (c + 3 < W) s += scoreWindow(g[c][r], g[c + 1][r], g[c + 2][r], g[c + 3][r], p);
+                if (r + 3 < H) s += scoreWindow(g[c][r], g[c][r + 1], g[c][r + 2], g[c][r + 3], p);
+                if (c + 3 < W && r + 3 < H) s += scoreWindow(g[c][r], g[c + 1][r + 1], g[c + 2][r + 2], g[c + 3][r + 3], p);
+                if (c + 3 < W && r - 3 >= 0) s += scoreWindow(g[c][r], g[c + 1][r - 1], g[c + 2][r - 2], g[c + 3][r - 3], p);
+            }
+            return s;
+        }
+        let nodes = 0;
+        function negamax(depth, alpha, beta, p, filled) {
+            nodes++;
+            if (filled === W * H) return 0;
+            // win right now?
+            for (const c of ORDER) if (canPlay(c)) {
+                const r = height(c); g[c][r] = p;
+                const w = winLine(c, r, p); g[c][r] = 0;
+                if (w) return 100000 + depth;
+            }
+            if (depth === 0) return evaluate(p);
+            let best = -Infinity;
+            for (const c of ORDER) {
+                if (!canPlay(c)) continue;
+                const r = height(c); g[c][r] = p;
+                const v = -negamax(depth - 1, -beta, -alpha, 3 - p, filled + 1);
+                g[c][r] = 0;
+                if (v > best) best = v;
+                if (v > alpha) alpha = v;
+                if (alpha >= beta) break;
+            }
+            return best;
+        }
+        function aiChoose(p) {
+            const depth = cfg.diff === 'easy' ? 2 : cfg.diff === 'normal' ? 5 : 8;
+            nodes = 0;
+            let scored = [];
+            for (const c of ORDER) {
+                if (!canPlay(c)) continue;
+                const r = height(c); g[c][r] = p;
+                const win = winLine(c, r, p);
+                const v = win ? 1e6 : -negamax(depth - 1, -Infinity, Infinity, 3 - p, moves.length + 1);
+                g[c][r] = 0;
+                scored.push([c, v]);
+            }
+            scored.sort((a, b) => b[1] - a[1]);
+            // easy makes the odd sloppy move as long as it doesn't hand over an instant loss
+            if (cfg.diff === 'easy' && Math.random() < 0.35) {
+                const ok = scored.filter(([, v]) => v > -50000);
+                if (ok.length) return Arcade.pick(ok)[0];
+            }
+            const top = scored.filter(([, v]) => v === scored[0][1]);
+            return Arcade.pick(top)[0];
+        }
+
+        /* ---------- play ---------- */
+        function newGame() {
+            g = Array.from({ length: W }, () => new Array(H).fill(0));
+            moves = []; over = false; busy = false;
+            turn = 1;
+            if (cfg.mode === 'ai') {
+                let aiFirst = cfg.first === 'ai' || (cfg.first === 'swap' && stats.startedLast === 'me');
+                stats.startedLast = aiFirst ? 'ai' : 'me';
+                Arcade.save('arcade.c4.stats', stats);
+                humanSide = aiFirst ? 2 : 1;
+            } else humanSide = 0;
+            $('modeTag').textContent = cfg.mode === 'ai' ? 'vs Computer · ' + cfg.diff : '2 players';
+            draw();
+            if (cfg.mode === 'ai' && turn !== humanSide) aiMove();
+        }
+        function play(c) {
+            const r = height(c);
+            g[c][r] = turn;
+            moves.push(c);
+            const el = cellEls[c * H + r];
+            const disc = document.createElement('div');
+            disc.className = 'disc drop p' + turn;
+            const dist = H - r;
+            disc.style.setProperty('--from', `calc(${-dist} * (var(--cell) + 6px) - 10px)`);
+            disc.style.setProperty('--t', (0.18 + dist * 0.045) + 's');
+            el.appendChild(disc);
+            Arcade.tone(300 + r * 60, 0.08, 'sine', 0.1);
+            setTimeout(() => Arcade.tone(180, 0.06, 'triangle', 0.08), (0.18 + dist * 0.045) * 1000);
+            const w = winLine(c, r, turn);
+            if (w) { finish(turn, w); return; }
+            if (moves.length === W * H) { finish(0); return; }
+            turn = 3 - turn;
+            draw();
+            if (cfg.mode === 'ai' && turn !== humanSide) aiMove();
+        }
+        function humanMove(c) {
+            if (over || busy || !canPlay(c)) return;
+            if (cfg.mode === 'ai' && turn !== humanSide) return;
+            play(c);
+        }
+        function aiMove() {
+            busy = true;
+            draw();
+            setTimeout(() => {
+                const c = aiChoose(turn);
+                busy = false;
+                if (!over) play(c);
+            }, 450);
+        }
+        function finish(winner, line) {
+            over = true;
+            draw();
+            if (line) for (const [c, r] of line) { const d = cellEls[c * H + r].querySelector('.disc'); if (d) d.classList.add('win'); }
+            let title, text;
+            if (cfg.mode === 'ai') {
+                if (winner === humanSide) { stats.wins++; title = 'You win!'; Arcade.count('win'); if (cfg.diff === 'hard') Arcade.count('win.hard'); Arcade.addXP(cfg.diff === 'hard' ? 50 : cfg.diff === 'normal' ? 20 : 8); Arcade.sfx('win'); }
+                else if (winner) { stats.losses++; title = 'Computer wins'; Arcade.sfx('die'); }
+                else { stats.draws++; title = 'Draw!'; }
+                text = `In ${moves.length} moves on ${cfg.diff}.`;
+                Arcade.save('arcade.c4.stats', stats);
+            } else {
+                title = winner ? (winner === 1 ? 'Red' : 'Yellow') + ' wins!' : 'Draw!';
+                text = `In ${moves.length} moves.`;
+                if (winner) Arcade.count('round');
+                Arcade.sfx('win');
+            }
+            $('endTitle').textContent = title;
+            $('endText').textContent = text;
+            setTimeout(() => Arcade.show('endOv'), 1100);
+        }
+        function drawGhost() {
+            document.querySelectorAll('.ghost').forEach(e => e.remove());
+            if (hoverCol < 0 || over || busy || !canPlay(hoverCol) || (cfg.mode === 'ai' && turn !== humanSide)) return;
+            const gh = document.createElement('div');
+            gh.className = 'ghost';
+            gh.style.background = turn === 1 ? 'var(--p1)' : 'var(--p2)';
+            cellEls[hoverCol * H + height(hoverCol)].appendChild(gh);
+        }
+        function draw() {
+            // rebuild discs only when the board was reset or after undo
+            for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) {
+                const el = cellEls[c * H + r];
+                const d = el.querySelector('.disc');
+                if (!g[c][r] && d) d.remove();
+                if (g[c][r] && !d) { const nd = document.createElement('div'); nd.className = 'disc p' + g[c][r]; el.appendChild(nd); }
+            }
+            const col = turn === 1 ? 'var(--p1)' : 'var(--p2)';
+            $('turnDot').style.background = col;
+            const label = cfg.mode === 'ai' ? (turn === humanSide ? 'Your turn' : 'Computer is thinking...') : (turn === 1 ? 'Red' : 'Yellow') + "'s turn";
+            $('turnTxt').textContent = over ? 'Game over' : label;
+            Arcade.text('wins', stats.wins); Arcade.text('losses', stats.losses);
+            $('undoBtn').disabled = over || busy || !moves.length;
+            drawGhost();
+        }
+        $('undoBtn').innerHTML = Arcade.icon('undo');
+        $('undoBtn').onclick = () => {
+            if (over || busy || !moves.length) return;
+            // vs the computer, undo takes back your move and its reply
+            const n = cfg.mode === 'ai' ? (moves.length >= 2 ? 2 : 0) : 1;
+            for (let i = 0; i < n; i++) { const c = moves.pop(); g[c][height(c) - 1] = 0; turn = 3 - turn; }
+            draw();
+        };
+
+        /* ---------- setup ---------- */
+        function syncSetup() {
+            document.querySelectorAll('#modeOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.mode === cfg.mode));
+            document.querySelectorAll('#diffOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.diff === cfg.diff));
+            document.querySelectorAll('#firstOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.first === cfg.first));
+            $('aiBox').hidden = cfg.mode !== 'ai';
+        }
+        document.querySelectorAll('#modeOpts .opt').forEach(b => b.onclick = () => { cfg.mode = b.dataset.mode; Arcade.sfx('select'); syncSetup(); });
+        document.querySelectorAll('#diffOpts .opt').forEach(b => b.onclick = () => { cfg.diff = b.dataset.diff; Arcade.sfx('select'); syncSetup(); });
+        document.querySelectorAll('#firstOpts .opt').forEach(b => b.onclick = () => { cfg.first = b.dataset.first; Arcade.sfx('select'); syncSetup(); });
+        $('startBtn').onclick = () => { Arcade.save('arcade.c4.cfg', cfg); Arcade.hide('setupOv'); newGame(); };
+        $('menuBtn').innerHTML = Arcade.icon('restart');
+        $('menuBtn').onclick = () => { Arcade.hide('endOv'); syncSetup(); Arcade.show('setupOv'); };
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); newGame(); };
+        $('changeBtn').onclick = () => { Arcade.hide('endOv'); syncSetup(); Arcade.show('setupOv'); };
+        window.addEventListener('keydown', (e) => { const n = +e.key; if (n >= 1 && n <= 7) humanMove(n - 1); });
+
+        buildBoard();
+        g = Array.from({ length: W }, () => new Array(H).fill(0)); moves = []; turn = 1; over = true;
+        draw();
+        syncSetup();
+        Arcade.show('setupOv');
+        window.__c4 = { get g() { return g; }, humanMove, aiChoose, get turn() { return turn; }, get over() { return over; }, get nodes() { return nodes; } };
+    })();
+    </script>
+</body>
+</html>

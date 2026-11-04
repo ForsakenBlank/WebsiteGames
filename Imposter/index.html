@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Imposter · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #ff74a6; --accent-ink: #3a0c1f; }
+        .stage { justify-content: flex-start; padding-top: 6px; }
+        .box { width: min(520px, 100%); display: flex; flex-direction: column; gap: 14px; }
+        .screen[hidden] { display: none; }
+        .screen { display: flex; flex-direction: column; gap: 14px; }
+        h2.big { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 6px 0 0; text-align: center; line-height: 1.1; }
+        .sub { color: var(--muted); text-align: center; margin: 0; }
+        .group { background: var(--surface); border-radius: 22px; padding: 16px; }
+        .group > b { display: block; font-family: var(--display); font-weight: 600; margin-bottom: 10px; }
+        .stepper { display: flex; align-items: center; gap: 12px; }
+        .stepper .n { font-family: var(--display); font-size: 1.8rem; min-width: 46px; text-align: center; }
+        .plist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        .plist input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--bg-2); color: var(--text); font: inherit; font-weight: 700; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--bg-2); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+        .toggle { display: flex; align-items: center; gap: 10px; margin-top: 10px; cursor: pointer; }
+        .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+        .card { position: relative; min-height: 300px; border-radius: 30px; background: #2d2442; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; box-shadow: 0 6px 0 rgba(0,0,0,.3); }
+        .card .face { font-size: 4.5rem; }
+        .card .word { font-family: var(--display); font-weight: 600; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.05; }
+        .card .hint { color: #cdbfe6; font-weight: 700; }
+        .card.imp { background: #e8655a; color: #2b0d0a; }
+        .card.imp .hint { color: #4a1813; }
+        .card.word-card { background: #86d4b4; color: #163a2d; }
+        .card.word-card .hint { color: #2f5a45; }
+        .timer { font-family: var(--display); font-size: 4rem; text-align: center; line-height: 1; }
+        .vote { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .vote .btn { padding: 16px 10px; font-size: 1.05rem; }
+        .scores { display: grid; gap: 6px; }
+        .srow { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--bg-2); font-weight: 800; }
+        .srow b { font-family: var(--display); font-size: 1.2rem; }
+        .srow.imp { box-shadow: inset 0 0 0 2px var(--bad); }
+        .rules { color: var(--muted); padding-left: 18px; margin: 0; }
+        .rules li { margin: 4px 0; }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Imposter</h1>
+        <div class="stats"><span class="chip accent">Round <b id="roundN">1</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="helpBtn" title="How to play"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="box">
+            <!-- setup -->
+            <section class="screen" id="sSetup">
+                <h2 class="big">Who's faking it?</h2>
+                <p class="sub">Everyone sees the secret word, except the imposter.</p>
+                <div class="group">
+                    <b>Players</b>
+                    <div class="stepper"><button class="btn icon" id="pMinus">-</button><span class="n" id="pCount">4</span><button class="btn icon" id="pPlus">+</button><span class="small muted">3 to 12</span></div>
+                    <div class="plist" id="plist"></div>
+                </div>
+                <div class="group">
+                    <b>Imposters</b>
+                    <div class="chips" id="impChips"></div>
+                    <label class="toggle"><input type="checkbox" id="hintChk"><span>Imposter sees the category</span></label>
+                </div>
+                <div class="group">
+                    <b>Category</b>
+                    <div class="chips" id="catChips"></div>
+                </div>
+                <div class="group">
+                    <b>Discussion timer</b>
+                    <div class="chips" id="timeChips"></div>
+                </div>
+                <button class="btn primary lg block" id="startBtn">Deal the cards</button>
+            </section>
+
+            <!-- pass + reveal -->
+            <section class="screen" id="sReveal" hidden>
+                <h2 class="big" id="revTitle">Pass to Sam</h2>
+                <p class="sub" id="revSub">Only Sam should look. Tap the card to see your word.</p>
+                <div class="card" id="card"><div class="face">🤫</div><div class="hint">Tap to reveal</div></div>
+                <button class="btn primary lg block" id="nextBtn" disabled>Hide and pass on</button>
+            </section>
+
+            <!-- discussion -->
+            <section class="screen" id="sTalk" hidden>
+                <h2 class="big" id="talkTitle">Sam starts</h2>
+                <p class="sub">Take turns saying one word or a short clue about the secret word. Don't make it too obvious, the imposter is listening.</p>
+                <div class="group"><div class="timer" id="timer">3:00</div><p class="sub" id="timerSub">Discuss, then vote</p></div>
+                <button class="btn lg block" id="pauseBtn">Pause</button>
+                <button class="btn primary lg block" id="voteBtn">Time to vote</button>
+            </section>
+
+            <!-- vote -->
+            <section class="screen" id="sVote" hidden>
+                <h2 class="big">Who's the imposter?</h2>
+                <p class="sub">Point at someone on three, then tap whoever got the most votes.</p>
+                <div class="vote" id="voteGrid"></div>
+            </section>
+
+            <!-- result -->
+            <section class="screen" id="sResult" hidden>
+                <h2 class="big" id="resTitle"></h2>
+                <p class="sub" id="resSub"></p>
+                <div class="group" id="guessBox" hidden>
+                    <b>Last chance for the imposter</b>
+                    <p class="small muted" style="margin:0 0 10px">The imposter says what they think the word was. Did they get it?</p>
+                    <div class="row"><button class="btn primary grow" id="guessYes">They got it</button><button class="btn grow" id="guessNo">Wrong</button></div>
+                </div>
+                <div class="group" id="scoreBox" hidden>
+                    <b>Scores</b>
+                    <div class="scores" id="scores"></div>
+                </div>
+                <div class="row" id="resBtns" hidden><button class="btn primary lg grow" id="againBtn">Next round</button><button class="btn lg" id="setupBtn">Setup</button></div>
+            </section>
+        </div>
+
+        <div class="overlay fixed" id="helpOv" hidden>
+            <div class="modal">
+                <h2>How to play</h2>
+                <ol class="help rules">
+                    <li>Pass the phone around. Everyone secretly looks at their card.</li>
+                    <li>The crew all get the same word. The imposter only knows they're the imposter.</li>
+                    <li>Go round the circle, each person gives one clue about the word.</li>
+                    <li>Vote for who you think is faking. Crew get a point each if they catch the imposter.</li>
+                    <li>An imposter who isn't caught scores 2. A caught imposter can still steal 1 point by guessing the word.</li>
+                </ol>
+                <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const WORDS = {
+            Animals: ['Penguin', 'Giraffe', 'Octopus', 'Kangaroo', 'Hamster', 'Flamingo', 'Crocodile', 'Owl', 'Shark', 'Panda', 'Camel', 'Bee', 'Snail', 'Peacock', 'Dolphin', 'Spider', 'Horse', 'Bat', 'Parrot', 'Tortoise', 'Lobster', 'Sloth', 'Zebra', 'Fox', 'Jellyfish', 'Gorilla', 'Hedgehog', 'Swan', 'Frog', 'Wolf'],
+            Food: ['Pizza', 'Sushi', 'Pancakes', 'Taco', 'Popcorn', 'Spaghetti', 'Burger', 'Ice cream', 'Croissant', 'Curry', 'Doughnut', 'Watermelon', 'Cheese', 'Toast', 'Soup', 'Chips', 'Lasagne', 'Hot dog', 'Cupcake', 'Salad', 'Noodles', 'Popsicle', 'Waffles', 'Kebab', 'Omelette', 'Brownie', 'Pretzel', 'Smoothie', 'Burrito', 'Cereal'],
+            Places: ['Beach', 'Airport', 'Hospital', 'Library', 'Cinema', 'Zoo', 'Supermarket', 'Gym', 'Castle', 'Desert', 'Volcano', 'Museum', 'School', 'Bowling alley', 'Farm', 'Space station', 'Submarine', 'Campsite', 'Theme park', 'Train station', 'Igloo', 'Jungle', 'Bakery', 'Prison', 'Lighthouse', 'Stadium', 'Hotel', 'Ski resort', 'Car wash', 'Pirate ship'],
+            Jobs: ['Firefighter', 'Chef', 'Astronaut', 'Dentist', 'Pilot', 'Teacher', 'Plumber', 'Magician', 'Farmer', 'Detective', 'Lifeguard', 'Hairdresser', 'Vet', 'Builder', 'Postman', 'Scientist', 'Clown', 'Referee', 'Photographer', 'Lawyer', 'Nurse', 'DJ', 'Gardener', 'Baker', 'Judge', 'Mechanic', 'Librarian', 'Youtuber', 'Zookeeper', 'Spy'],
+            Things: ['Umbrella', 'Toothbrush', 'Ladder', 'Candle', 'Backpack', 'Mirror', 'Pillow', 'Scissors', 'Guitar', 'Balloon', 'Microwave', 'Skateboard', 'Glasses', 'Remote control', 'Trampoline', 'Clock', 'Kite', 'Hammer', 'Sock', 'Headphones', 'Fridge', 'Lamp', 'Wallet', 'Bicycle', 'Tent', 'Camera', 'Sandcastle', 'Snowman', 'Rubber duck', 'Treasure chest'],
+            Sports: ['Football', 'Tennis', 'Swimming', 'Basketball', 'Golf', 'Boxing', 'Skiing', 'Surfing', 'Cricket', 'Bowling', 'Darts', 'Karate', 'Volleyball', 'Rugby', 'Cycling', 'Ice hockey', 'Archery', 'Table tennis', 'Gymnastics', 'Climbing', 'Skateboarding', 'Baseball', 'Badminton', 'Fencing', 'Rowing', 'Snooker', 'Wrestling', 'Marathon', 'Chess', 'Dodgeball'],
+            Hobbies: ['Gardening', 'Knitting', 'Fishing', 'Painting', 'Baking', 'Camping', 'Dancing', 'Karaoke', 'Gaming', 'Reading', 'Photography', 'Yoga', 'Hiking', 'Juggling', 'Origami', 'Magic tricks', 'Skating', 'Bird watching', 'Pottery', 'Puzzles', 'Singing', 'Drawing', 'Cooking', 'Collecting', 'Woodwork', 'Writing', 'Sewing', 'Board games', 'Running', 'Lego'],
+            Fantasy: ['Dragon', 'Wizard', 'Unicorn', 'Vampire', 'Mermaid', 'Ghost', 'Zombie', 'Robot', 'Alien', 'Fairy', 'Troll', 'Pirate', 'Knight', 'Witch', 'Superhero', 'Ninja', 'Werewolf', 'Genie', 'Elf', 'Giant', 'Mummy', 'Goblin', 'Phoenix', 'Yeti', 'Cyborg', 'Time machine', 'Magic wand', 'Haunted house', 'Spaceship', 'Potion'],
+        };
+        const CATS = Object.keys(WORDS);
+        const cfg = Object.assign({ n: 4, names: [], imps: 1, hint: true, cat: 'Mixed', time: 180 }, Arcade.load('arcade.imposter.cfg', {}));
+        let scores = {}, round = 1, deal = null, idx = 0, revealed = false, tLeft = 0, tTimer = 0, paused = false;
+
+        function show(id) { for (const s of ['sSetup', 'sReveal', 'sTalk', 'sVote', 'sResult']) $(s).hidden = s !== id; window.scrollTo(0, 0); }
+        const pname = (i) => (cfg.names[i] || '').trim() || 'Player ' + (i + 1);
+
+        /* ---------- setup ---------- */
+        function chips(host, list, cur, set) {
+            host.innerHTML = '';
+            for (const [v, label] of list) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (v === cur ? ' on' : '');
+                b.textContent = label;
+                b.onclick = () => { set(v); Arcade.sfx('select'); renderSetup(); };
+                host.appendChild(b);
+            }
+        }
+        function renderSetup() {
+            $('pCount').textContent = cfg.n;
+            const pl = $('plist');
+            // keep typed names when the list is rebuilt
+            pl.querySelectorAll('input').forEach((inp, i) => { cfg.names[i] = inp.value; });
+            pl.innerHTML = '';
+            for (let i = 0; i < cfg.n; i++) {
+                const inp = document.createElement('input');
+                inp.maxLength = 14; inp.placeholder = 'Player ' + (i + 1); inp.value = cfg.names[i] || '';
+                inp.oninput = () => { cfg.names[i] = inp.value; };
+                pl.appendChild(inp);
+            }
+            const maxImp = cfg.n >= 7 ? 3 : cfg.n >= 5 ? 2 : 1;
+            if (cfg.imps > maxImp) cfg.imps = maxImp;
+            chips($('impChips'), [[1, '1'], [2, '2'], [3, '3'], [0, 'Random']].filter(([v]) => v <= maxImp), cfg.imps, v => cfg.imps = v);
+            $('hintChk').checked = cfg.hint;
+            chips($('catChips'), [['Mixed', 'Mixed'], ...CATS.map(c => [c, c])], cfg.cat, v => cfg.cat = v);
+            chips($('timeChips'), [[0, 'No timer'], [60, '1 min'], [120, '2 min'], [180, '3 min'], [300, '5 min']], cfg.time, v => cfg.time = v);
+        }
+        $('pMinus').onclick = () => { cfg.n = Math.max(3, cfg.n - 1); renderSetup(); };
+        $('pPlus').onclick = () => { cfg.n = Math.min(12, cfg.n + 1); renderSetup(); };
+        $('hintChk').onchange = () => { cfg.hint = $('hintChk').checked; };
+        $('startBtn').onclick = () => {
+            $('plist').querySelectorAll('input').forEach((inp, i) => { cfg.names[i] = inp.value; });
+            cfg.names = cfg.names.slice(0, 12);
+            Arcade.save('arcade.imposter.cfg', cfg);
+            scores = {}; round = 1;
+            newRound();
+        };
+
+        /* ---------- a round ---------- */
+        let used = Arcade.load('arcade.imposter.used', []);
+        function newRound() {
+            const cat = cfg.cat === 'Mixed' ? Arcade.pick(CATS) : cfg.cat;
+            const pool = WORDS[cat].filter(w => !used.includes(w));
+            const word = Arcade.pick(pool.length ? pool : WORDS[cat]);
+            used = [word, ...used].slice(0, 120);
+            Arcade.save('arcade.imposter.used', used);
+            const nImp = cfg.imps || (cfg.n >= 6 && Math.random() < 0.35 ? 2 : 1);
+            const order = Arcade.shuffle([...Array(cfg.n).keys()]);
+            deal = { cat, word, imps: order.slice(0, nImp), starter: Arcade.randi(0, cfg.n - 1) };
+            // don't let the imposter always go first
+            if (deal.imps.includes(deal.starter) && Math.random() < 0.7) deal.starter = order[nImp] !== undefined ? order[nImp] : deal.starter;
+            idx = 0;
+            $('roundN').textContent = round;
+            showPass();
+        }
+        function showPass() {
+            revealed = false;
+            const nm = pname(idx);
+            $('revTitle').textContent = 'Pass to ' + nm;
+            $('revSub').textContent = `Only ${nm} should look. Tap the card to see your role.`;
+            const c = $('card');
+            c.className = 'card';
+            c.innerHTML = '<div class="face">🤫</div><div class="hint">Tap to reveal</div>';
+            $('nextBtn').disabled = true;
+            $('nextBtn').textContent = idx === cfg.n - 1 ? 'Hide and start' : 'Hide and pass on';
+            show('sReveal');
+        }
+        $('card').onclick = () => {
+            const c = $('card');
+            if (revealed) {
+                // tap again to hide
+                c.className = 'card';
+                c.innerHTML = '<div class="face">🙈</div><div class="hint">Hidden. Tap to look again</div>';
+                revealed = false;
+                return;
+            }
+            revealed = true;
+            $('nextBtn').disabled = false;
+            Arcade.sfx('pop'); Arcade.buzz(20);
+            if (deal.imps.includes(idx)) {
+                c.className = 'card imp';
+                c.innerHTML = `<div class="face">🕵️</div><div class="word">You're the imposter</div><div class="hint">${cfg.hint ? 'Category: ' + Arcade.esc(deal.cat) : 'Blend in and work out the word'}${deal.imps.length > 1 ? '<br>There are ' + deal.imps.length + ' imposters' : ''}</div>`;
+            } else {
+                c.className = 'card word-card';
+                c.innerHTML = `<div class="face">📝</div><div class="hint">The word is</div><div class="word">${Arcade.esc(deal.word)}</div><div class="hint">${Arcade.esc(deal.cat)}</div>`;
+            }
+        };
+        $('nextBtn').onclick = () => {
+            Arcade.sfx('click');
+            if (idx < cfg.n - 1) { idx++; showPass(); return; }
+            startTalk();
+        };
+
+        function fmtT(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+        function startTalk() {
+            $('talkTitle').textContent = pname(deal.starter) + ' starts';
+            clearInterval(tTimer);
+            paused = false;
+            $('pauseBtn').textContent = 'Pause';
+            $('pauseBtn').hidden = !cfg.time;
+            tLeft = cfg.time;
+            $('timer').textContent = cfg.time ? fmtT(tLeft) : '∞';
+            $('timerSub').textContent = cfg.time ? 'Discuss, then vote' : 'Vote whenever you are ready';
+            show('sTalk');
+            if (!cfg.time) return;
+            tTimer = setInterval(() => {
+                if (paused) return;
+                tLeft--;
+                $('timer').textContent = fmtT(Math.max(0, tLeft));
+                if (tLeft <= 10 && tLeft > 0) Arcade.sfx('tick');
+                if (tLeft <= 0) { clearInterval(tTimer); Arcade.sfx('power'); Arcade.buzz(200); $('timerSub').textContent = "Time's up!"; }
+            }, 1000);
+        }
+        $('pauseBtn').onclick = () => { paused = !paused; $('pauseBtn').textContent = paused ? 'Resume' : 'Pause'; };
+        $('voteBtn').onclick = () => {
+            clearInterval(tTimer);
+            const g = $('voteGrid');
+            g.innerHTML = '';
+            for (let i = 0; i < cfg.n; i++) {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.textContent = pname(i);
+                b.onclick = () => voted(i);
+                g.appendChild(b);
+            }
+            const skip = document.createElement('button');
+            skip.className = 'btn ghost';
+            skip.textContent = 'No one (tie)';
+            skip.onclick = () => voted(-1);
+            g.appendChild(skip);
+            show('sVote');
+        };
+        function addScore(i, n) { scores[i] = (scores[i] || 0) + n; }
+        function voted(i) {
+            const caught = deal.imps.includes(i);
+            const impNames = deal.imps.map(pname).join(' and ');
+            $('resTitle').textContent = caught ? 'Caught one!' : i < 0 ? 'Nobody was voted out' : pname(i) + ' was innocent';
+            $('resSub').textContent = `${deal.imps.length > 1 ? 'The imposters were' : 'The imposter was'} ${impNames}. The word was "${deal.word}".`;
+            Arcade.sfx(caught ? 'win' : 'bad');
+            if (caught) {
+                $('guessBox').hidden = false;
+                $('scoreBox').hidden = true; $('resBtns').hidden = true;
+                const finish = (guessed) => {
+                    for (let p = 0; p < cfg.n; p++) if (!deal.imps.includes(p)) addScore(p, guessed ? 0 : 1);
+                    if (guessed) deal.imps.forEach(p => addScore(p, 1));
+                    $('resTitle').textContent = guessed ? 'Caught, but they stole a point' : 'Crew wins the round!';
+                    finishRound(deal.imps.includes(i) ? i : -1);
+                };
+                $('guessYes').onclick = () => finish(true);
+                $('guessNo').onclick = () => finish(false);
+            } else {
+                deal.imps.forEach(p => addScore(p, 2));
+                $('resTitle').textContent = (i < 0 ? 'Nobody voted out. ' : '') + 'Imposter wins!';
+                finishRound(-1);
+            }
+            show('sResult');
+        }
+        function finishRound() {
+            $('guessBox').hidden = true;
+            $('scoreBox').hidden = false; $('resBtns').hidden = false;
+            const order = [...Array(cfg.n).keys()].sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
+            $('scores').innerHTML = order.map(p => `<div class="srow ${deal.imps.includes(p) ? 'imp' : ''}"><span>${Arcade.esc(pname(p))}${deal.imps.includes(p) ? ' · imposter' : ''}</span><b>${scores[p] || 0}</b></div>`).join('');
+            Arcade.count('round');
+        }
+        $('againBtn').onclick = () => { round++; newRound(); };
+        $('setupBtn').onclick = () => { renderSetup(); show('sSetup'); };
+
+        $('helpBtn').innerHTML = Arcade.icon('help');
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => Arcade.hide('helpOv'));
+        renderSetup();
+        show('sSetup');
+    })();
+    </script>
+</body>
+</html>

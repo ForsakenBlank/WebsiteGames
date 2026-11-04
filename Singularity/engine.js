@@ -1,5 +1,5 @@
 /* ==========================================================
-   SINGULARITY — simulation.
+   SINGULARITY, simulation.
    window.Eng holds the state (S), derived effects (FX) and every
    action the UI can call. No DOM in here except toasts.
    ========================================================== */
@@ -126,7 +126,7 @@
     const sellable = (it) => ITEMS[it] && !ITEMS[it].cur && ITEMS[it].price > 0;
     const isCur = (it) => ITEMS[it] && ITEMS[it].cur;
     function itemPrice(it) { return (ITEMS[it].price || 0) * fx('price:' + it); }
-    // Buyers are limited: selling lots of one item pushes its price down; it recovers over a minute or two.
+    // buyers are limited: selling lots of one item pushes its price down; it recovers over a minute or two.
     function depth() {
         let reach = 1;
         for (const n of S.nodes) { const d = NODES[n.t]; if (d.kind === 'sell' && d.reach > reach) reach = d.reach; }
@@ -188,7 +188,7 @@
         for (const it in c.items) S.inv[it] -= c.items[it];
     }
 
-    // income per second, smoothed — used to scale contracts, events and desk jobs to your stage of the game
+    // income per second, smoothed, used to scale contracts, events and desk jobs to your stage of the game
     let incRate = 0, incAcc = 0, incT = 0, rpRate = 0, rpAcc = 0, computeRate = 0, compAcc = 0;
     const incUnit = () => Math.max(incRate, TASK_PAY[S.site] / 4);
     const rpUnit = () => Math.max(rpRate, 0.15 * Math.pow(20, S.site));
@@ -365,7 +365,7 @@
         if (gridUse > 0) bill('power', gridUse / 1000 * st.gridPrice * fx('grid') * dt);
         // breaker: early sites trip on a heavy overload unless you own Smart Breakers
         const breakerRisk = (S.site <= 1 || has('fragile')) && !has('nobreaker');
-        // Only overloading a generator or the grid trips it. Not enough sun just means a brownout.
+        // only overloading a generator or the grid trips it. Not enough sun just means a brownout.
         if (breakerRisk && !S.breaker.tripped && sat < 0.75 && fuelCap + gridCap > 0 && D > 0 && !offline) {
             S.breaker.overT += dt;
             if (S.breaker.overT > 4) { S.breaker.tripped = true; S.breaker.overT = 0; note('⚡ Breaker tripped! Your machines are off. Fix it in the 💼 Work tab.', 'bad'); }
@@ -796,7 +796,7 @@
         if (c.kind === 'hack' && has('rival')) S.rival.set += 1800;
         S.con.active = S.con.active.filter(x => x !== c);
         S.con.done++; S.stats.contracts++;
-        note(`${auto ? '🤖 Your agents delivered' : '✅ Contract done'}: ${c.title} — +${money(c.reward.cash)} +${fmt(rg)} ⭐`, 'good');
+        note(`${auto ? '🤖 Your agents delivered' : '✅ Contract done'}: ${c.title}, +${money(c.reward.cash)} +${fmt(rg)} ⭐`, 'good');
         Arcade.count('contract');
         return true;
     }

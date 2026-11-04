@@ -94,7 +94,7 @@
         post(S) { for (const b of S.balls) BL.keepSpeed(b, S.P.speed, S.P.speed); },
         sub: (S) => `Bricks ${left(S)} · Balls ${S.balls.length}`, subY: 640 - 18,
     };
-    /* ---------- Ballz, played by a bot ---------- */
+    /* ---------- ballz, played by a bot ---------- */
     const BZ = { cols: 7, cell: 48, x0: 12, top: 100, floor: 600 };
     M.bballz = {
         label: 'Ballz bot', icon: '🎱', name: 'How long can the bot survive?',
@@ -205,7 +205,7 @@
                 const per = R(0, 1) < 0.3 ? 2 : 1;
                 for (let k = 0; k < per; k++) S.addBall(cx + R(-20, 20), cy + R(-20, 20), R(0, TAU), S.P.speed, S.P.r, i, { team: i, col: lighten(S.teams[i][1]) });
             }
-            S.title = S.teams.map(t => t[0]).join(' vs ') + ' — who takes the board?';
+            S.title = S.teams.map(t => t[0]).join(' vs ') + ', who takes the board?';
             S.limit = 45; S.limitMsg = () => { const n = counts(S), i = n.indexOf(Math.max(...n)); return `🏆 ${S.teams[i][0]} wins with ${Math.round(n[i] / S.grid.t.length * 100)}%`; };
         },
         after(S) {

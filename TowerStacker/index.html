@@ -22,7 +22,7 @@
             <span class="chip accent">Height <b id="height">0</b></span>
             <span class="chip gold">Best <b id="best">0</b></span>
             <span class="chip">Perfect <b id="combo">0</b></span>
-            <button class="btn sm" id="powerBtn" disabled title="Fill the meter with perfect drops (E)">⚡ Power</button>
+            <button class="btn sm" id="powerBtn" disabled title="Fill the meter with perfect drops (E)">Power</button>
         </div>
         <div class="actions"><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
@@ -34,7 +34,7 @@
                 <div class="modal">
                     <h2>Tower Stacker</h2>
                     <p>Drop each block on the one below. Anything hanging over gets sliced off.</p>
-                    <p class="small">Land <b class="accent">3 perfect drops</b> in a row to grow your block back. Perfect drops also charge the <b class="gold">⚡ power meter</b> — fire it for 6 slow, snap-to-perfect drops.</p>
+                    <p class="small">Land <b class="accent">3 perfect drops</b> in a row to grow your block back. Perfect drops also charge the <b class="gold">⚡ power meter</b>, fire it for 6 slow, snap-to-perfect drops.</p>
                     <p class="tiny dim"><span class="desktop-only"><kbd>Space</kbd> / <kbd>Click</kbd> to drop · <kbd>E</kbd> use power</span><span class="touch-only">Tap to drop · tap ⚡ for power</span></p>
                     <div class="themes" id="themes"></div>
                     <p class="tiny dim" id="themeInfo" style="margin-top:8px"></p>
@@ -45,13 +45,13 @@
                 <div class="modal">
                     <h2 class="bad">Collapsed</h2>
                     <div class="big-num" id="finalH">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Perfect drops</small><b id="finalPerfect">0</b></div>
                         <div><small>Best streak</small><b id="finalStreak">0</b></div>
                         <div><small>Best</small><b id="finalBest">0</b></div>
                     </div>
-                    <div class="actions"><button class="btn primary lg" id="againBtn">Rebuild</button><button class="btn" id="themeBtn">🎨 Themes</button></div>
+                    <div class="actions"><button class="btn primary lg" id="againBtn">Rebuild</button><button class="btn" id="themeBtn">Themes</button></div>
                 </div>
             </div>
         </div>
@@ -71,7 +71,7 @@
         const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * W, y: Math.random() * 3000, s: Math.random() * 1.6 + 0.4 }));
 
         const hue = (i) => (170 + i * 9) % 360;
-        // Tower themes unlock as your best height grows.
+        // tower themes unlock as your best height grows.
         const THEMES = [
             { id: 'classic', name: 'Classic', icon: '🌈', need: 0 },
             { id: 'sky', name: 'Skyscraper', icon: '🏢', need: 10 },
@@ -81,7 +81,7 @@
         ];
         let theme = Arcade.load('arcade.stacker.theme', 'classic');
         if (!THEMES.some(t => t.id === theme)) theme = 'classic';
-        // Sky zones you climb through: [floor, top colour, bottom colour, name]
+        // sky zones you climb through: [floor, top colour, bottom colour, name]
         const ZONES = [
             [0, [218, 60, 22], [200, 55, 38], null],
             [15, [205, 70, 45], [200, 70, 62], '☁️ Above the clouds'],
@@ -138,7 +138,7 @@
             if (state !== 'play' || meter < 1 || steady > 0) return;
             meter = 0; steady = 6;
             cur.speed *= 0.5;
-            Arcade.toast('⚡ Steady hands — 6 slow drops that snap to perfect', 'gold', 1600);
+            Arcade.toast('⚡ Steady hands, 6 slow drops that snap to perfect', 'gold', 1600);
             Arcade.sfx('power');
             hud();
         }
@@ -161,7 +161,7 @@
                     w = Math.min(START_W, w + 14);
                     cur.x -= (w - cur.w) / 2;
                     cur.x = Arcade.clamp(cur.x, 0, W - w);
-                    Arcade.toast('Perfect ×' + combo + ' — block grows!', 'gold', 900);
+                    Arcade.toast('Perfect ×' + combo + ', block grows!', 'gold', 900);
                 }
                 blocks.push({ x: cur.x, w, y: cur.y, i: cur.i });
                 flashes.push({ x: cur.x, w, y: cur.y, t: 0.5 });

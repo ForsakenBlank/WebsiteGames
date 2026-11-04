@@ -82,7 +82,7 @@
             <div class="canvas-box"><canvas class="screen" id="c"></canvas></div>
             <aside class="side">
                 <div class="panel turn-card">
-                    <div class="who"><b id="turnName">—</b><small id="turnHint">Roll the dice</small></div>
+                    <div class="who"><b id="turnName">-</b><small id="turnHint">Roll the dice</small></div>
                     <button class="dice" id="dice" title="Roll (Space)"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></button>
                 </div>
                 <div class="panel">
@@ -97,9 +97,9 @@
                         <label class="chk"><input type="checkbox" id="tAll"> I control every colour</label>
                         <label class="chk"><input type="checkbox" id="tTele"> Teleport: click a token, then any square</label>
                         <div class="row">
-                            <button class="btn sm" id="tAuto" title="Let the AI make this move">🤖 AI move</button>
-                            <button class="btn sm" id="tSkip">⏭ Skip turn</button>
-                            <button class="btn sm" id="tUndo">↶ Undo</button>
+                            <button class="btn sm" id="tAuto" title="Let the AI make this move">AI move</button>
+                            <button class="btn sm" id="tSkip">Skip turn</button>
+                            <button class="btn sm" id="tUndo">Undo</button>
                         </div>
                         <div class="row">
                             <button class="btn sm" id="tAllOut">All out</button>
@@ -122,11 +122,11 @@
                 <p class="center">Race all four tokens home. Roll a 6 to leave base, land on rivals to send them back.</p>
                 <div class="sec">Your colour</div>
                 <div class="colors" id="colorPick"></div>
-                <div class="sec">Opponents</div>
+                <div class="sec">Opponents <span class="small muted">(pick Friend to pass the phone)</span></div>
                 <div class="seg" id="botCount">
-                    <button class="btn sm" data-n="1">1 bot</button>
-                    <button class="btn sm" data-n="2">2 bots</button>
-                    <button class="btn sm" data-n="3">3 bots</button>
+                    <button class="btn sm" data-n="1">1</button>
+                    <button class="btn sm" data-n="2">2</button>
+                    <button class="btn sm" data-n="3">3</button>
                 </div>
                 <div class="bots" id="bots" style="margin-top:10px"></div>
                 <div class="sec">Rules</div>
@@ -139,7 +139,7 @@
                     <label><input type="checkbox" id="rAutoMove" checked> Auto-move when only one choice</label>
                 </div>
                 <div class="sec">Mode</div>
-                <label class="chk"><input type="checkbox" id="rTester"> 🧪 Tester mode — pick dice rolls, move any colour, teleport tokens, undo</label>
+                <label class="chk"><input type="checkbox" id="rTester"> 🧪 Tester mode, pick dice rolls, move any colour, teleport tokens, undo</label>
                 <div class="actions">
                     <button class="btn" id="contBtn" hidden>Continue saved game</button>
                     <button class="btn primary lg" id="startBtn">Start</button>
@@ -177,7 +177,7 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        /* ---------- Board geometry (15 × 15 cells) ---------- */
+        /* ---------- board geometry (15 × 15 cells) ---------- */
         const CELL = 40, SIZE = CELL * 15;
         const COLORS = [
             { name: 'Red', c: '#ef4444', d: '#991b1b', l: '#fecaca' },
@@ -223,7 +223,7 @@
         }
         const absOf = (seat, p) => (p >= 0 && p <= 50 ? (START[seat] + p) % 52 : -1);
 
-        /* ---------- State ---------- */
+        /* ---------- state ---------- */
         const canvas = document.getElementById('c');
         const view = Arcade.fitCanvas(canvas, SIZE, SIZE, { max: 2 });
         const ctx = view.ctx;
@@ -253,7 +253,7 @@
             seats.sort((a, b) => ((a - setup.seat + 4) % 4) - ((b - setup.seat + 4) % 4));
             let bi = 0;
             G = {
-                players: seats.map(s => ({ seat: s, human: s === setup.seat, ai: s === setup.seat ? null : setup.diffs[bi++] || 'normal', tokens: [-1, -1, -1, -1], place: 0, caps: 0 })),
+                players: seats.map(s => { const d = s === setup.seat ? null : setup.diffs[bi++] || 'normal'; return { seat: s, human: s === setup.seat, local: d === 'friend', ai: d === 'friend' ? null : d, tokens: [-1, -1, -1, -1], place: 0, caps: 0 }; }),
                 turn: 0, dice: 0, rolled: false, sixes: 0, places: 0, over: false, watching: false,
                 rules: { one: setup.one, capBonus: setup.capBonus, homeBonus: setup.homeBonus, triple: setup.triple, safe: setup.safe, autoMove: setup.autoMove },
                 tester: setup.tester, log: [],
@@ -266,7 +266,7 @@
         }
 
         const cur = () => G.players[G.turn];
-        const controlled = (pl) => pl.human || (G.tester && tester.all);
+        const controlled = (pl) => pl.human || pl.local || (G.tester && tester.all);
         const pname = (pl) => (pl.human ? 'You' : COLORS[pl.seat].name);
 
         function save() {
@@ -282,7 +282,7 @@
             renderSide();
         }
 
-        /* ---------- Rules ---------- */
+        /* ---------- rules ---------- */
         function targetOf(pl, k, d) {
             const p = pl.tokens[k];
             if (p === LAST) return null;
@@ -314,7 +314,7 @@
             return v;
         }
 
-        /* ---------- Turn flow ---------- */
+        /* ---------- turn flow ---------- */
         function startTurn() {
             if (!G || (G.over && !G.watching)) return;
             G.rolled = false; G.dice = G.dice || 0;
@@ -364,7 +364,7 @@
             if (d === 6) G.sixes++;
             if (pl.human && counts()) { stats.rolls++; if (d === 6) stats.sixes++; saveStats(); }
             if (d === 6 && G.rules.triple && G.sixes >= 3) {
-                log(`<b>${pname(pl)}</b> rolled three 6s — turn lost`);
+                log(`<b>${pname(pl)}</b> rolled three 6s, turn lost`);
                 Arcade.sfx('bad');
                 renderSide();
                 return schedule(nextTurn, 900);
@@ -432,7 +432,7 @@
                         saveStats();
                     }
                     if (G.players.filter(p => !p.place).length <= 1) return finishGame();
-                    if (pl.human && !G.tester) return showEnd(false);
+                    if (pl.human && !G.tester && !G.players.some(p => p.local && !p.place)) return showEnd(false);
                     return schedule(nextTurn, 600);
                 }
             }
@@ -538,7 +538,7 @@
             return best;
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function drawStar(x, y, r, col) {
             ctx.fillStyle = col;
             ctx.beginPath();
@@ -667,7 +667,7 @@
             fx.update(dt); fx.draw(ctx);
         }
 
-        /* ---------- Side panel ---------- */
+        /* ---------- side panel ---------- */
         const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
         function showDice(v) {
             [...$('dice').children].forEach((el, i) => el.classList.toggle('on', !!v && PIPS[v].includes(i)));
@@ -678,14 +678,14 @@
             const C = COLORS[pl.seat];
             document.documentElement.style.setProperty('--accent', C.c);
             $('dice').style.setProperty('--pc', C.c);
-            Arcade.text('turnName', pl.human ? 'Your turn' : `${C.name}'s turn`);
+            Arcade.text('turnName', pl.human && !G.players.some(p => p.local) ? 'Your turn' : `${C.name}'s turn`);
             const myTurn = controlled(pl) && !(G.watching && pl.human);
             let hint = '';
             if (G.over && !G.watching) hint = 'Game over';
-            else if (!myTurn) hint = (pl.ai ? DIFFS[pl.ai] + ' bot' : 'Bot') + ' is thinking…';
+            else if (!myTurn) hint = (pl.ai ? DIFFS[pl.ai] + ' bot' : 'Bot') + ' is thinking...';
             else if (!G.rolled) hint = 'Tap the dice to roll';
             else if (G.rolled === 'moving') hint = 'Moving…';
-            else hint = legalMoves(pl, G.dice).length ? `You rolled ${G.dice} — pick a token` : `Rolled ${G.dice} — no moves`;
+            else hint = legalMoves(pl, G.dice).length ? `You rolled ${G.dice}, pick a token` : `Rolled ${G.dice}, no moves`;
             if (tester.tele && G.tester) hint = tester.sel ? 'Now click a square to place it' : 'Teleport: click any token';
             Arcade.text('turnHint', hint);
             const dice = $('dice');
@@ -701,7 +701,7 @@
                 d.style.setProperty('--pc', COLORS[p.seat].c);
                 const home = p.tokens.filter(q => q === LAST).length, out = p.tokens.filter(q => q >= 0 && q < LAST).length;
                 d.innerHTML = `<span class="dot"></span><span class="nm"></span><span class="home">🏠${home} · 🏃${out}</span>${p.place ? `<span class="place">${ord[p.place]}</span>` : ''}`;
-                d.querySelector('.nm').textContent = p.human ? 'You' : `${COLORS[p.seat].name} · ${DIFFS[p.ai]}`;
+                d.querySelector('.nm').textContent = p.human ? 'You' : `${COLORS[p.seat].name} · ${p.local ? 'Friend' : DIFFS[p.ai]}`;
                 host.appendChild(d);
             }
             $('log').innerHTML = G.log.map(m => `<div>${m}</div>`).join('');
@@ -712,7 +712,7 @@
             $('forceRow').querySelectorAll('.btn').forEach(b => b.classList.toggle('active', +b.dataset.v === tester.force));
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         function hitToken(px, py, onlyMovable) {
             const pl = cur();
             let best = null, bd = 0.5;
@@ -773,7 +773,7 @@
             }
         });
 
-        /* ---------- Loop ---------- */
+        /* ---------- loop ---------- */
         const loop = Arcade.loop((dt) => {
             time += dt;
             if (anim) {
@@ -791,7 +791,7 @@
             render(dt);
         });
 
-        /* ---------- Setup screen ---------- */
+        /* ---------- setup screen ---------- */
         function buildSetup() {
             const cp = $('colorPick');
             cp.innerHTML = '';
@@ -817,7 +817,7 @@
                 row.innerHTML = `<span class="dot" style="background:${COLORS[s].c}"></span><span>${COLORS[s].name}</span>`;
                 const seg = document.createElement('div');
                 seg.className = 'seg';
-                for (const [id, name] of Object.entries(DIFFS)) {
+                for (const [id, name] of [...Object.entries(DIFFS), ['friend', 'Friend']]) {
                     const b = document.createElement('button');
                     b.className = 'btn sm' + (setup.diffs[i] === id ? ' active' : '');
                     b.textContent = name;
@@ -833,7 +833,7 @@
             $('contBtn').hidden = !(saved && saved.players && !saved.over);
         }
         function showStats() {
-            const pct = (a, b) => (b ? Math.round(a / b * 100) + '%' : '—');
+            const pct = (a, b) => (b ? Math.round(a / b * 100) + '%' : '-');
             const tile = (l, v) => `<div><small>${l}</small><b>${v}</b></div>`;
             $('statTiles').innerHTML = [
                 tile('Games', stats.played), tile('Wins', stats.wins), tile('Win rate', pct(stats.wins, stats.played)),
@@ -862,7 +862,7 @@
         $('againBtn').onclick = () => { clearTimeout(timerId); anim = null; newGame(); };
         $('watchBtn').onclick = () => { G.watching = true; Arcade.hide('endOv'); schedule(nextTurn, 300); };
 
-        /* ---------- Tester tools ---------- */
+        /* ---------- tester tools ---------- */
         const fr = $('forceRow');
         for (const v of [0, 1, 2, 3, 4, 5, 6]) {
             const b = document.createElement('button');

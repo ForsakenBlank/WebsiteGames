@@ -35,8 +35,8 @@
                     <p>Drag falling shapes into the right bin before they hit the floor.</p>
                     <ul class="help small">
                         <li>Some bins want an exact <b>shape + colour</b>, others only a <b>shape</b> or only a <b>colour</b>.</li>
-                        <li>💣 <b>Tap bombs</b> to defuse them — never bin them! ⭐ Golden shapes fit any bin.</li>
-                        <li>🪆 <b>Double shapes</b> hide a second shape inside — sort the outside, then sort what pops out.</li>
+                        <li>💣 <b>Tap bombs</b> to defuse them, never bin them! ⭐ Golden shapes fit any bin.</li>
+                        <li>🪆 <b>Double shapes</b> hide a second shape inside, sort the outside, then sort what pops out.</li>
                         <li>🫧 Tap bubbles for power-ups: ❄️ freeze, 🤖 auto-sort, ✂️ defuse all bombs.</li>
                         <li>Every 4th level ends with a <b>conveyor bonus round</b>.</li>
                     </ul>
@@ -63,7 +63,7 @@
                 <div class="modal">
                     <h2 class="bad">Shift over</h2>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Sorted</small><b id="finalSorted">0</b></div>
                         <div><small>Level</small><b id="finalLevel">1</b></div>
@@ -87,7 +87,7 @@
             normal: { name: 'Normal', lives: 3, speed: 1, bomb: 1, spawn: 1 },
             hard: { name: 'Hard', lives: 2, speed: 1.3, bomb: 1.4, spawn: 0.8 },
         };
-        const POWERS = { freeze: { e: '❄️', name: 'Freeze — nothing falls for 5s' }, auto: { e: '🤖', name: 'Auto-sort — the next 5 shapes sort themselves' }, defuse: { e: '✂️', name: 'Every bomb defused' } };
+        const POWERS = { freeze: { e: '❄️', name: 'Freeze, nothing falls for 5s' }, auto: { e: '🤖', name: 'Auto-sort, the next 5 shapes sort themselves' }, defuse: { e: '✂️', name: 'Every bomb defused' } };
         const $ = (id) => document.getElementById(id);
 
         const canvas = $('c');
@@ -109,7 +109,7 @@
         const goal = () => 10 + level * 2;
         const isBonusNext = () => level % 4 === 0;
 
-        /* ---------- Bins ---------- */
+        /* ---------- bins ---------- */
         function shapeCount() { return level < 4 ? 3 : level < 8 ? 5 : level < 12 ? 6 : 8; }
         function colorCount() { return level < 4 ? 3 : level < 8 ? 5 : 7; }
         function makeBins() {
@@ -138,7 +138,7 @@
             bins.forEach((b, i) => { b.tx = i * w; b.w = w; if (b.x === undefined) b.x = b.tx; });
         }
         const fits = (it, b) => it.gold || (b.rule === 'both' ? it.shape === b.shape && it.color === b.color : b.rule === 'shape' ? it.shape === b.shape : it.color === b.color);
-        /** Picks traits that some bin accepts, so every shape is sortable. */
+        /** picks traits that some bin accepts, so every shape is sortable. */
         function sortableTraits() {
             const b = Arcade.pick(bins);
             let shape = b.shape, color = b.color;
@@ -147,7 +147,7 @@
             return { shape, color };
         }
 
-        /* ---------- Items ---------- */
+        /* ---------- items ---------- */
         const speed = () => (60 + Math.min(level, 25) * 12) * D().speed;
         function spawnItem() {
             const x = Arcade.rand(40, W - 40);
@@ -167,7 +167,7 @@
             items.push({ x: -30, y: BELT_Y, vx: 120 + level * 4, vy: 0, shape: t.shape, color: t.color, gold: Math.random() < 0.08, r: 22, rot: 0, vr: 0, belt: true });
         }
 
-        /* ---------- Game ---------- */
+        /* ---------- game ---------- */
         function start(fromLevel) {
             level = fromLevel || startLevel;
             items = []; popups = []; score = 0; lives = D().lives; sorted = 0; streak = 0; bestStreak = 0; drag = null;
@@ -181,13 +181,13 @@
             items = []; levelSorted = 0; livesAtStart = lives; levelScore = score; spawnT = 0.5;
             bins = makeBins(); layoutBins(); bins.forEach((b, i) => b.x = (i % 2 ? W : -b.w));
             state = 'play';
-            Arcade.toast('Level ' + level + ' — sort ' + goal() + ' shapes', 'gold', 1400);
+            Arcade.toast('Level ' + level + ', sort ' + goal() + ' shapes', 'gold', 1400);
             hud();
         }
         function beginBonus() {
             items = []; bonusT = 20; spawnT = 0.3;
             state = 'bonus';
-            Arcade.toast('🎁 Conveyor bonus! Sort what you can in 20s — double points, no lives lost', 'gold', 2200);
+            Arcade.toast('🎁 Conveyor bonus! Sort what you can in 20s, double points, no lives lost', 'gold', 2200);
             Arcade.sfx('power');
             hud();
         }
@@ -196,7 +196,7 @@
             Arcade.text('score', score);
             Arcade.text('level', level);
             Arcade.text('goal', state === 'bonus' ? 'BONUS ' + Math.ceil(bonusT) + 's' : Math.min(levelSorted, goal()) + '/' + goal());
-            Arcade.text('lives', lives > 0 ? '♥'.repeat(lives) : '—');
+            Arcade.text('lives', lives > 0 ? '♥'.repeat(lives) : '-');
             const act = [];
             if (freezeT > 0) act.push('❄️ ' + Math.ceil(freezeT));
             if (autoN > 0) act.push('🤖 ' + autoN);
@@ -260,7 +260,7 @@
             items = [];
             Arcade.text('clearTitle', 'Level ' + level + ' clear');
             $('clearStars').innerHTML = [1, 2, 3].map(n => n <= stars ? '★' : '<span class="off">★</span>').join('');
-            Arcade.text('clearInfo', `+${score - levelScore} points this level${lost ? ' · lost ' + lost + ' ♥' : ' · no lives lost!'}${isBonusNext() ? ' — 🎁 bonus round next!' : ''}`);
+            Arcade.text('clearInfo', `+${score - levelScore} points this level${lost ? ' · lost ' + lost + ' ♥' : ' · no lives lost!'}${isBonusNext() ? ', 🎁 bonus round next!' : ''}`);
             $('nextBtn').textContent = isBonusNext() ? '🎁 Bonus round' : 'Next level';
             setTimeout(() => Arcade.show('clearOv'), 400);
         }
@@ -340,7 +340,7 @@
             popups = popups.filter(p => (p.t -= dt) > 0);
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function shapePath(c, shape, x, y, r, rot) {
             c.save(); c.translate(x, y); c.rotate(rot || 0);
             c.beginPath();
@@ -437,7 +437,7 @@
                 for (let x = -30 + bo; x < W; x += 30) ctx.fillRect(x, BELT_Y + 26, 14, 14);
                 ctx.fillStyle = '#facc15'; ctx.fillRect(0, BELT_Y + 22, W, 2);
                 ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
-                ctx.fillText('🎁 BONUS ×2 — ' + Math.ceil(bonusT) + 's', W / 2, 40);
+                ctx.fillText('🎁 BONUS ×2, ' + Math.ceil(bonusT) + 's', W / 2, 40);
             }
             ctx.fillStyle = '#facc15'; ctx.fillRect(0, FLOOR - 2, W, 2);
 
@@ -474,7 +474,7 @@
             render();
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         canvas.addEventListener('pointerdown', (e) => {
             if (state !== 'play' && state !== 'bonus') return;
             const p = Arcade.pointer(canvas, e, W, H);
@@ -515,7 +515,7 @@
         canvas.addEventListener('pointerup', drop);
         canvas.addEventListener('pointercancel', drop);
 
-        /* ---------- Menu ---------- */
+        /* ---------- menu ---------- */
         function buildMenu() {
             const ds = $('diffSeg');
             ds.innerHTML = '';

@@ -2,307 +2,307 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Library</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Arcade</title>
+    <meta name="theme-color" content="#1c1c1f">
+    <meta name="description" content="A pile of offline games in one place. Puzzles, arcade, board games and party games.">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="_shared/arcade.css">
     <script src="_shared/arcade.js"></script>
-    <script>document.documentElement.dataset.theme = Arcade.cosmetic('theme');</script>
+    <script src="_shared/games.js"></script>
     <style>
-        :root { --accent: #38bdf8; --accent-2: #a78bfa; }
-        .wrap { width: min(1200px, 100%); margin: 0 auto; padding: 28px 18px 60px; }
-        .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
-        .hero h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; }
-        .hero h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .hero p { margin: 8px 0 0; color: var(--muted); }
-        .search { flex: 1; max-width: 340px; min-width: 220px; position: relative; }
-        .search input { width: 100%; padding: 11px 14px 11px 38px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: inherit; }
-        .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-        .search::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.7; }
-        .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        :root { --accent: #f2a541; --accent-ink: #2b1c05; --nav-h: 72px; }
+        body { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom)); }
+        .wrap { width: min(1180px, 100%); margin: 0 auto; padding: 0 16px 40px; }
 
-        /* profile strip */
-        .profile { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 16px; flex-wrap: wrap; }
-        .avatar { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.9rem; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, var(--surface-2)), color-mix(in srgb, var(--accent-2) 35%, var(--surface-2))); border: 1px solid var(--line-2); cursor: pointer; flex: none; }
-        .who { min-width: 160px; flex: 1; }
-        .who .pname { font-weight: 800; font-size: 1.05rem; cursor: pointer; }
-        .who .pname:hover { color: var(--accent); }
-        .lvl-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-        .lvl-row .bar { flex: 1; max-width: 280px; }
-        .lvl-badge { font-weight: 800; color: var(--accent); font-size: 0.85rem; white-space: nowrap; }
-        .coins { font-weight: 800; color: var(--gold); font-size: 1.05rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        /* header */
+        .hub-top { position: sticky; top: 0; z-index: 30; background: var(--bg); padding: 12px 0 10px; padding-top: max(12px, env(safe-area-inset-top)); }
+        .hub-top .inner { width: min(1180px, 100%); margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 10px; }
+        .me-btn { display: flex; align-items: center; gap: 10px; padding: 4px; border: 0; background: none; color: var(--text); cursor: pointer; font: inherit; text-align: left; min-width: 0; }
+        .ava { --ring: transparent; position: relative; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem; background: var(--surface); box-shadow: 0 0 0 3px var(--ring); flex: none; }
+        .ava.big { width: 88px; height: 88px; font-size: 3rem; box-shadow: 0 0 0 5px var(--ring); }
+        .ava .lv { position: absolute; right: -5px; bottom: -4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 99px; background: #7c6cf0; color: #fff; font-family: var(--display); font-size: 0.72rem; display: grid; place-items: center; box-shadow: 0 0 0 3px var(--bg); }
+        .ava.big .lv { min-width: 30px; height: 30px; font-size: 0.95rem; }
+        .who { min-width: 0; }
+        .who b { display: block; font-family: var(--display); font-weight: 600; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .who .xpb { width: 110px; height: 7px; border-radius: 9px; background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+        .who .xpb i { display: block; height: 100%; background: #7c6cf0; border-radius: inherit; }
+        .spacer { flex: 1; }
+        .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px; background: var(--pill); color: var(--pill-ink); font-family: var(--display); font-weight: 600; font-size: 1.15rem; border: 0; cursor: pointer; box-shadow: 0 3px 0 var(--lip); }
+        .pill .ci { width: 30px; height: 30px; border-radius: 50%; background: #f5c04e; color: #7a4f00; display: grid; place-items: center; box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); }
+        .pill .ci svg { width: 18px; height: 18px; }
+        .ibtn { position: relative; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer; box-shadow: 0 3px 0 var(--lip); flex: none; }
+        .ibtn svg { width: 22px; height: 22px; }
+        .ibtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
+        .ibtn .dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 3px var(--bg); }
 
-        /* challenges */
-        .challenges { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 22px; }
-        .chal { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
-        .chal .ic { font-size: 1.8rem; flex: none; }
-        .chal .body { flex: 1; min-width: 0; }
-        .chal .kind { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-        .chal .txt { font-weight: 750; margin: 2px 0 6px; }
-        .chal .rew { font-size: 0.74rem; color: var(--gold); }
-        .chal.done { border-color: color-mix(in srgb, var(--good) 55%, transparent); background: color-mix(in srgb, var(--good) 8%, var(--surface)); }
-        .chal.weekly { border-color: color-mix(in srgb, var(--accent-2) 40%, var(--line)); }
+        /* bottom nav */
+        .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--bg-2); padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); display: flex; justify-content: center; }
+        .nav .in { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: min(560px, 100%); }
+        .nav button { position: relative; border: 0; background: none; color: var(--dim); font-family: var(--display); font-weight: 600; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border-radius: 16px; cursor: pointer; }
+        .nav button svg { width: 25px; height: 25px; }
+        .nav button.on { color: var(--text); background: var(--surface); }
+        .nav button .dot { position: absolute; top: 4px; left: calc(50% + 8px); width: 10px; height: 10px; border-radius: 50%; background: var(--bad); }
 
-        .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; }
-        .filters .btn { border-radius: 999px; }
-        .filters .btn b { margin-left: 2px; color: var(--muted); font-weight: 600; font-size: 0.75rem; }
-        h2.sec { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin: 0 0 12px; }
-        h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-        section { margin-bottom: 34px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-        .game {
-            --c: var(--accent);
-            position: relative; display: flex; flex-direction: column; border-radius: 18px; overflow: hidden;
-            background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--text);
-            transition: transform 0.18s cubic-bezier(.3,1.4,.5,1), border-color 0.18s, box-shadow 0.18s;
-        }
-        .game:hover { transform: translateY(-5px); border-color: color-mix(in srgb, var(--c) 60%, transparent); box-shadow: 0 18px 40px -18px var(--c); }
-        .game .art {
-            height: 112px; display: flex; align-items: center; justify-content: center; font-size: 3.4rem;
-            background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--c) 45%, transparent), transparent 60%),
-                        radial-gradient(circle at 80% 90%, color-mix(in srgb, var(--c) 25%, transparent), transparent 55%),
-                        var(--bg-2);
-            border-bottom: 1px solid var(--line);
-        }
-        .game .art span { filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5)); transition: transform 0.2s; }
-        .game:hover .art span { transform: scale(1.12) rotate(-4deg); }
-        .game .info { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-        .game .name { font-weight: 800; font-size: 1.05rem; }
-        .game .desc { font-size: 0.8rem; color: var(--muted); flex: 1; }
-        .game .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.74rem; gap: 6px; }
-        .game .meta .tag { background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
-        .game .best { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
-        .game .new { position: absolute; top: 10px; left: 10px; }
-        .game .ping { font-size: 0.74rem; color: var(--bad); font-weight: 700; }
-        .dot { position: absolute; top: 12px; right: 50px; width: 12px; height: 12px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 30%, transparent); animation: pulse 0.9s infinite alternate; }
-        .star {
-            position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line);
-            background: rgba(5, 8, 18, 0.55); color: var(--dim); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px); transition: color 0.15s, transform 0.1s;
-        }
-        .star:hover { color: var(--gold); }
-        .star.on { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 50%, transparent); }
-        .star:active { transform: scale(0.88); }
-        .empty { color: var(--muted); font-style: italic; padding: 10px 0; }
-        details.lost { border: 1px dashed var(--line-2); border-radius: 14px; padding: 12px 16px; color: var(--muted); }
-        details.lost summary { cursor: pointer; font-weight: 700; color: var(--text); }
-        details.lost .grid { margin-top: 12px; }
-        details.lost .game { opacity: 0.7; }
-        .foot { text-align: center; color: var(--dim); font-size: 0.78rem; margin-top: 30px; }
-        #favSec { padding: 16px 16px 4px; border-radius: 20px; background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 7%, transparent), transparent 85%); border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent); }
-        #favSec > h2.sec { color: var(--gold); }
-        .fav-group { margin-bottom: 14px; }
-        .fav-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; }
-        .fav-group h3 b { color: var(--dim); font-weight: 600; }
-        .filters .btn.fav-filter { border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
-        .filters .btn.fav-filter.active { background: color-mix(in srgb, var(--gold) 22%, var(--surface-2)); border-color: var(--gold); }
+        .view[hidden] { display: none; }
+        h2.sec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-family: var(--display); font-weight: 600; font-size: 1.35rem; margin: 26px 0 12px; }
+        h2.sec small { font-family: var(--font); font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+        .lead { color: var(--muted); margin: -4px 0 14px; max-width: 640px; }
 
-        /* dialogs */
+        /* filters */
+        .filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; margin: 4px -2px 0; scrollbar-width: none; }
+        .filters::-webkit-scrollbar { display: none; }
+        .fchip { flex: none; border: 0; padding: 9px 15px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--display); font-weight: 600; font-size: 0.92rem; cursor: pointer; }
+        .fchip.on { background: var(--pill); color: var(--pill-ink); }
+        .fchip b { font-weight: 600; opacity: 0.5; margin-left: 3px; }
+        .searchbox { display: flex; align-items: center; gap: 8px; background: var(--surface); border-radius: 999px; padding: 0 14px; margin-top: 6px; }
+        .searchbox svg { width: 20px; height: 20px; color: var(--dim); flex: none; }
+        .searchbox input { flex: 1; border: 0; background: none; color: var(--text); font: inherit; font-weight: 700; padding: 12px 0; outline: none; min-width: 0; }
+
+        /* game cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 16px; }
+        @media (max-width: 520px) { .grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
+        .gcard { position: relative; display: block; padding: 6px; border-radius: 30px; background: var(--surface); text-decoration: none; color: inherit; transition: transform 0.18s cubic-bezier(.3,1.4,.5,1); -webkit-tap-highlight-color: transparent; }
+        .gcard:hover { transform: translateY(-4px) rotate(-0.4deg); }
+        .gcard:active { transform: scale(0.97); }
+        .gcard .in { position: relative; aspect-ratio: 4 / 5; border-radius: 24px; background: var(--gbg); color: var(--gink); overflow: hidden; padding: 16px 16px; }
+        .gcard .nm { position: relative; z-index: 2; font-family: var(--display); font-weight: 600; font-size: clamp(1.1rem, 4.4vw, 1.45rem); line-height: 1.04; max-width: 85%; }
+        .gcard .nm::after { content: ""; display: block; width: 46px; height: 5px; border-radius: 5px; background: currentColor; margin-top: 8px; opacity: 0.9; }
+        .gcard .art { position: absolute; right: -24%; bottom: -20%; width: 108%; aspect-ratio: 1; transform: rotate(-13deg); display: grid; grid-template-columns: repeat(3, 1fr); gap: 7%; container-type: inline-size; }
+        .gcard .tile { border-radius: 20%; background: var(--t1); display: grid; place-items: center; font-size: 19cqw; line-height: 1; box-shadow: inset 0 -5px 0 rgba(0,0,0,0.12); }
+        .gcard .tile.b { background: var(--t2); }
+        .gcard .tile.c { background: var(--t3); }
+        .gcard .tile span { transform: rotate(13deg); filter: drop-shadow(0 3px 0 rgba(0,0,0,0.18)); }
+        .gcard .tag { position: absolute; z-index: 3; left: 12px; top: 42%; transform: rotate(-7deg); padding: 5px 11px; border-radius: 10px; background: #ef5b56; color: #fff; font-size: 0.85rem; box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+        .gcard .tag.upd { background: #4f8ef0; }
+        .gcard .best { position: absolute; z-index: 3; left: 10px; bottom: 10px; max-width: calc(100% - 20px); padding: 4px 10px; border-radius: 999px; background: rgba(20, 20, 24, 0.55); color: #fff; font-size: 0.74rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(4px); }
+        .gcard .ppl { position: absolute; z-index: 3; right: 10px; bottom: 10px; padding: 4px 9px; border-radius: 999px; background: rgba(20, 20, 24, 0.55); color: #fff; font-size: 0.74rem; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+        .gcard .ppl svg { width: 14px; height: 14px; }
+        .gcard .star { position: absolute; z-index: 4; top: -4px; right: -4px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--surface-3); }
+        .gcard .star svg { width: 22px; height: 22px; }
+        .gcard .star.on { color: #f5c04e; }
+        .gcard .star.on svg { fill: currentColor; }
+        .gcard .ready { position: absolute; z-index: 3; left: 12px; top: 50%; padding: 5px 10px; border-radius: 10px; background: var(--pill); color: var(--pill-ink); font-size: 0.78rem; font-weight: 800; box-shadow: 0 3px 0 rgba(0,0,0,.2); }
+        .empty { color: var(--muted); padding: 10px 0; }
+
+        /* list rows (party view + jump back in) */
+        .rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+        .grow-row { display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 10px; border-radius: 22px; background: var(--surface); text-decoration: none; color: var(--text); }
+        .grow-row .sq { width: 62px; height: 62px; border-radius: 18px; background: var(--gbg); display: grid; place-items: center; font-size: 2rem; flex: none; box-shadow: inset 0 -5px 0 rgba(0,0,0,.14); }
+        .grow-row b { font-family: var(--display); font-weight: 600; font-size: 1.1rem; display: block; }
+        .grow-row small { color: var(--muted); display: block; font-size: 0.82rem; line-height: 1.3; }
+        .grow-row .pp { margin-left: auto; flex: none; padding: 5px 10px; border-radius: 999px; background: var(--surface-2); font-size: 0.78rem; font-weight: 800; color: var(--muted); }
+        .banner { border-radius: 26px; padding: 20px; background: #7c6cf0; color: #fff; display: flex; gap: 16px; align-items: center; margin-top: 14px; }
+        .banner .big { font-size: 3rem; flex: none; }
+        .banner h3 { margin: 0 0 4px; font-size: 1.35rem; }
+        .banner p { margin: 0; opacity: 0.9; }
+
+        /* quests */
+        .daily { border-radius: 26px; background: var(--surface); padding: 18px; }
+        .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 14px 0 0; }
+        .day { border-radius: 16px; background: var(--bg-2); padding: 10px 2px 8px; text-align: center; font-family: var(--display); font-weight: 600; color: var(--muted); font-size: 0.72rem; white-space: nowrap; }
+        .day .c { display: block; font-size: 1.05rem; color: var(--text); margin-top: 4px; }
+        .day.got { background: color-mix(in srgb, var(--good) 22%, var(--bg-2)); color: var(--good); }
+        .day.next { background: var(--pill); color: var(--pill-ink); }
+        .day.next .c { color: var(--pill-ink); }
+        .day.big { background: color-mix(in srgb, #f5c04e 22%, var(--bg-2)); }
+        .day.big.next { background: #f5c04e; color: #4a3200; }
+        .qlist { display: grid; gap: 10px; }
+        .quest { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 22px; background: var(--surface); }
+        .quest .qi { width: 48px; height: 48px; border-radius: 16px; background: var(--bg-2); display: grid; place-items: center; font-size: 1.5rem; flex: none; }
+        .quest .qb { flex: 1; min-width: 0; }
+        .quest .qt { font-family: var(--display); font-weight: 600; font-size: 1.02rem; }
+        .quest .bar { margin-top: 7px; height: 9px; }
+        .quest .qr { display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; font-size: 0.78rem; color: var(--muted); font-weight: 800; }
+        .quest.done { opacity: 0.6; }
+        .quest.done .bar > i { background: var(--good); }
+        .quest .act { display: flex; flex-direction: column; gap: 6px; flex: none; }
+        .sweep { margin-top: 10px; padding: 12px 16px; border-radius: 18px; background: var(--bg-2); color: var(--muted); font-weight: 800; font-size: 0.86rem; display: flex; align-items: center; gap: 10px; }
+        .sweep svg { width: 22px; height: 22px; color: #f5c04e; flex: none; }
+
+        /* profile */
+        .prof { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 20px; border-radius: 26px; background: var(--surface); }
+        .prof .info { flex: 1; min-width: 200px; }
+        .prof .nm { font-family: var(--display); font-weight: 600; font-size: 1.6rem; line-height: 1.1; }
+        .prof .ttl { display: inline-block; margin-top: 4px; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, #7c6cf0 25%, transparent); color: #b6abff; font-size: 0.8rem; font-weight: 800; }
+        :root[data-theme="light"] .prof .ttl, :root[data-theme="sand"] .prof .ttl { color: #5b4bd0; }
+        .prof .bar { margin-top: 12px; height: 12px; }
+        .prof .bar > i { background: #7c6cf0; }
+        .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+        .tiles > div { border-radius: 18px; background: var(--surface); padding: 12px 14px; }
+        .tiles small { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+        .tiles b { font-family: var(--display); font-weight: 600; font-size: 1.4rem; }
+        .road { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+        .stop { flex: none; width: 112px; border-radius: 20px; background: var(--surface); padding: 12px 10px; text-align: center; }
+        .stop .n { width: 34px; height: 34px; margin: 0 auto 8px; border-radius: 50%; background: var(--bg-2); color: var(--muted); display: grid; place-items: center; font-family: var(--display); font-weight: 600; }
+        .stop.got .n { background: #7c6cf0; color: #fff; }
+        .stop .r { font-size: 0.78rem; font-weight: 800; color: var(--muted); line-height: 1.3; }
+        .stop .r b { color: var(--text); display: block; font-size: 1.15rem; }
+        .seg2 { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+        .ach { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 20px; background: var(--surface); }
+        .ach .ai { width: 48px; height: 48px; border-radius: 50%; background: color-mix(in srgb, #f5c04e 30%, var(--bg-2)); display: grid; place-items: center; font-size: 1.5rem; flex: none; }
+        .ach b { display: block; font-family: var(--display); font-weight: 600; font-size: 0.98rem; }
+        .ach small { color: var(--muted); font-size: 0.78rem; display: block; line-height: 1.3; }
+        .ach.locked .ai { background: var(--bg-2); filter: grayscale(1); opacity: 0.55; }
+        .ach.locked b { color: var(--muted); }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+        .item { border-radius: 20px; padding: 10px; background: var(--surface); display: flex; flex-direction: column; gap: 8px; text-align: center; }
+        .item.eq { box-shadow: inset 0 0 0 3px var(--accent); }
+        .item .sw { height: 54px; border-radius: 14px; display: grid; place-items: center; font-size: 2rem; background: var(--bg-2); }
+        .item b { font-family: var(--display); font-weight: 600; font-size: 0.95rem; }
+        .item small { color: var(--muted); font-size: 0.74rem; font-weight: 800; min-height: 1.3em; }
+        .item.lockd .sw { filter: grayscale(0.8); opacity: 0.6; }
+        .field { width: 100%; padding: 12px 14px; border-radius: 14px; border: 0; background: var(--bg-2); color: var(--text); font: inherit; font-weight: 700; }
+        .settings { display: grid; gap: 10px; }
+        .set-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; background: var(--surface); flex-wrap: wrap; }
+        .set-row .grow b { font-family: var(--display); font-weight: 600; display: block; }
+        .set-row .grow small { color: var(--muted); }
+        details.lost { margin-top: 30px; border-radius: 22px; background: var(--surface); padding: 14px 18px; }
+        details.lost summary { cursor: pointer; font-family: var(--display); font-weight: 600; }
+        details.lost .grid { margin-top: 14px; opacity: 0.75; }
+        .foot { text-align: center; color: var(--dim); font-size: 0.8rem; margin-top: 30px; }
         #dlg .modal { text-align: left; }
         #dlg .modal h2 { text-align: center; }
-        .x { position: sticky; top: 0; float: right; margin: -10px -6px 0 0; }
-        .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 14px; }
-        .ach { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
-        .ach .ai { font-size: 1.6rem; flex: none; }
-        .ach b { display: block; font-size: 0.9rem; }
-        .ach small { color: var(--muted); font-size: 0.74rem; display: block; }
-        .ach.locked { opacity: 0.45; }
-        .ach.locked .ai { filter: grayscale(1); }
-        .ach.got { border-color: color-mix(in srgb, var(--gold) 50%, transparent); }
-        .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
-        .stat-tiles div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
-        .stat-tiles small { display: block; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; }
-        .stat-tiles b { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
-        .ptable { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .ptable td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-        .ptable td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
-        .ptable .bar { height: 8px; min-width: 60px; }
-        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
-        .item { border-radius: 14px; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
-        .item.eq { border-color: var(--accent); }
-        .swatch { height: 46px; border-radius: 10px; border: 1px solid var(--line-2); }
-        .avatars { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; margin: 10px 0; }
-        .avatars button { font-size: 1.5rem; height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-2); cursor: pointer; }
-        .avatars button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--bg-2)); }
-        .field { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; }
-        @media (max-width: 640px) { .dot { right: 48px; } }
+        .x { float: right; margin: -12px -8px 0 0; }
+        .install { display: none; }
+        .install.show { display: flex; }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <div class="hero">
-            <div>
-                <h1><span>ARCADE</span> LIBRARY</h1>
-                <p id="tagline">games · one place</p>
-            </div>
-            <div class="search"><input id="q" type="search" placeholder="Search games…" autocomplete="off"></div>
+    <header class="hub-top">
+        <div class="inner">
+            <button class="me-btn" id="meBtn" aria-label="Your profile">
+                <span class="ava" id="hAva">🙂<span class="lv" id="hLv">1</span></span>
+                <span class="who"><b id="hName">Player</b><span class="xpb" style="display:block"><i id="hXp"></i></span></span>
+            </button>
+            <span class="spacer"></span>
+            <button class="pill" id="hCoins" title="Coins, spend them in the shop"><span class="ci" id="coinIc"></span><span id="hCoinN">0</span></button>
+            <button class="ibtn" id="hGift" title="Daily reward"><span id="giftIc"></span><span class="dot" id="giftDot" hidden></span></button>
         </div>
+    </header>
 
-        <div class="profile">
-            <div class="avatar" id="pAvatar" title="Edit profile">🙂</div>
-            <div class="who">
-                <div class="pname" id="pName" title="Edit profile">Player</div>
-                <div class="lvl-row"><span class="lvl-badge" id="pLvl">Lvl 1</span><div class="bar"><i id="pBar"></i></div><span class="tiny muted num" id="pXp">0 / 100 XP</span></div>
-            </div>
-            <div class="coins" id="pCoins" title="Arcade coins — earned in every game">🪙 0</div>
-            <div class="toolbar">
-                <button class="btn sm" id="bLucky" title="Play a random game">🎲 I'm feeling lucky</button>
-                <button class="btn sm" id="bAch">🏆 <span id="achCount">0</span></button>
-                <button class="btn sm" id="bStats">📊 Stats</button>
-                <button class="btn sm" id="bShop">🛍️ Shop</button>
-                <button class="btn sm" id="bSave" title="Export or import your progress">💾 Save</button>
-                <button class="btn icon sm" data-mute title="Mute all games">🔊</button>
-            </div>
-        </div>
-
-        <div class="challenges" id="chals"></div>
-
-        <div class="filters" id="filters"></div>
-
-        <section id="favSec" hidden>
-            <h2 class="sec">★ Favourites</h2>
-            <div id="favs"></div>
-        </section>
-
-        <section id="recentSec" hidden>
-            <h2 class="sec">⏱ Jump back in</h2>
-            <div class="grid" id="recent"></div>
-        </section>
-
-        <section>
+    <main class="wrap">
+        <!-- games -->
+        <section class="view" id="v-games">
+            <div class="searchbox"><span id="sIc"></span><input id="q" type="search" placeholder="Search games" autocomplete="off"></div>
+            <div class="filters" id="filters"></div>
+            <div id="favWrap"><h2 class="sec">Favourites <small id="favN"></small></h2><div class="grid" id="favs"></div></div>
+            <div id="recentWrap"><h2 class="sec">Jump back in</h2><div class="rows" id="recent"></div></div>
             <h2 class="sec" id="allTitle">All games</h2>
             <div class="grid" id="all"></div>
+            <details class="lost">
+                <summary>Lost causes (old prototypes)</summary>
+                <p class="small muted">Early experiments that haven't been rebuilt yet. Expect rough edges.</p>
+                <div class="grid" id="lost"></div>
+            </details>
         </section>
 
-        <details class="lost">
-            <summary>🗃 Lost Causes — unfinished prototypes</summary>
-            <p class="small">Early experiments that haven't been rebuilt yet. Expect rough edges.</p>
-            <div class="grid" id="lost"></div>
-        </details>
+        <!-- play together -->
+        <section class="view" id="v-party" hidden>
+            <div class="banner">
+                <div class="big">🥳</div>
+                <div><h3>Play together</h3><p>Everything here works on one device. Pass the phone around or share the screen, no wifi needed.</p></div>
+            </div>
+            <h2 class="sec">Party games <small>3+ players</small></h2>
+            <div class="rows" id="partyList"></div>
+            <h2 class="sec">Head to head <small>2 players on one device</small></h2>
+            <div class="rows" id="vsList"></div>
+            <h2 class="sec">Bigger groups <small>up to 4 players</small></h2>
+            <div class="rows" id="groupList"></div>
+        </section>
 
-        <p class="foot">Progress and high scores are saved in this browser — use 💾 Save to back them up. Every game earns arcade XP and 🪙 coins.</p>
-    </div>
+        <!-- quests -->
+        <section class="view" id="v-quests" hidden>
+            <h2 class="sec">Daily reward <small id="loginStreak"></small></h2>
+            <div class="daily">
+                <div class="row between">
+                    <div><b style="font-family:var(--display);font-size:1.15rem" id="loginTitle">Come back every day</b><div class="small muted" id="loginSub">Rewards grow for 7 days in a row, then the cycle starts again.</div></div>
+                    <button class="btn primary" id="claimBtn">Claim</button>
+                </div>
+                <div class="days" id="days"></div>
+            </div>
+            <h2 class="sec">Daily quests <small id="dReset"></small></h2>
+            <div class="qlist" id="dq"></div>
+            <div class="sweep" id="sweep"></div>
+            <h2 class="sec">Weekly quests <small id="wReset"></small></h2>
+            <div class="qlist" id="wq"></div>
+        </section>
+
+        <!-- profile -->
+        <section class="view" id="v-me" hidden>
+            <div class="prof" style="margin-top:14px">
+                <span class="ava big" id="pAva">🙂<span class="lv" id="pLv">1</span></span>
+                <div class="info">
+                    <div class="nm" id="pName">Player</div>
+                    <span class="ttl" id="pTitle">Rookie</span>
+                    <div class="bar"><i id="pBar"></i></div>
+                    <div class="small muted" style="margin-top:6px" id="pXp">0 / 100 XP</div>
+                </div>
+                <button class="btn" id="editBtn">Edit profile</button>
+            </div>
+            <h2 class="sec">Level road <small>every level pays coins, some unlock things</small></h2>
+            <div class="road" id="road"></div>
+            <h2 class="sec">Stats</h2>
+            <div class="tiles" id="statTiles"></div>
+            <h2 class="sec">Achievements <small id="achN"></small></h2>
+            <div class="seg2" id="achFilter"></div>
+            <div class="ach-grid" id="achGrid"></div>
+            <h2 class="sec">Customise <small>themes, avatars, frames, titles and skins</small></h2>
+            <div class="seg2" id="shopTabs"></div>
+            <div class="shop-grid" id="shopGrid"></div>
+            <h2 class="sec">Settings</h2>
+            <div class="settings">
+                <div class="set-row"><div class="grow"><b>Sound</b><small>Mutes every game</small></div><button class="btn icon" data-mute></button></div>
+                <div class="set-row install" id="installRow"><div class="grow"><b>Install as an app</b><small>Adds the arcade to your home screen and works offline</small></div><button class="btn primary" id="installBtn">Install</button></div>
+                <div class="set-row"><div class="grow"><b>Backup</b><small>Every game's progress in one file</small></div><button class="btn" id="svExport">Export</button><button class="btn" id="svImport">Import</button></div>
+                <div class="set-row"><div class="grow"><b>Time per game</b><small>See where your hours went</small></div><button class="btn" id="timeBtn">Open</button></div>
+            </div>
+            <p class="foot">Progress is saved in this browser. Export a backup before clearing site data.</p>
+        </section>
+    </main>
+
+    <nav class="nav">
+        <div class="in">
+            <button data-view="games" class="on"><span data-ic="grid"></span>Games</button>
+            <button data-view="party"><span data-ic="users"></span>Together</button>
+            <button data-view="quests"><span data-ic="calendar"></span>Quests<span class="dot" id="qDot" hidden></span></button>
+            <button data-view="me"><span data-ic="user"></span>Me</button>
+        </div>
+    </nav>
 
     <div class="overlay fixed" id="dlg" hidden><div class="modal wide" id="dlgBody"></div></div>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
 
     <script>
     (() => {
-        const L = (k, d) => Arcade.load(k, d);
-        const max = (...keys) => Math.max(0, ...keys.map(k => Number(L(k, 0)) || 0));
-        const or = (v, f) => (v ? f(v) : '');
-        const wins = (k, field) => { const s = L(k, {}) || {}; const n = typeof s === 'number' ? s : (s[field || 'wins'] || 0); return n ? n + (n === 1 ? ' win' : ' wins') : ''; };
-
-        const GAMES = [
-            // Arcade
-            { id: 'snake', title: 'Snake', path: 'Snake/index.html', genre: 'Arcade', icon: '🐍', c: '#34d399', desc: 'Classic modes, a 30-level campaign, daily seed map, power-ups and a level editor.', fresh: 'Updated',
-              best: () => or(max('arcade.snake.best.chill', 'arcade.snake.best.classic', 'arcade.snake.best.insane'), v => 'Best ' + v) },
-            { id: 'pacman', title: 'Pac-Man', path: 'PacMan/index.html', genre: 'Arcade', icon: '🟡', c: '#facc15', desc: 'Classic mazes plus a maze editor, new fruit and power-ups, and Ghost mode — hunt an AI Pac-Man.', fresh: 'Updated',
-              best: () => or(max('arcade.pacman.best', 'arcade.pacman.best.arcade', 'arcade.pacman.best.original', 'arcade.pacman.best.infinite'), v => 'Best ' + v) },
-            { id: 'gravity', title: 'Gravity Runner', path: 'GravityRunner/index.html', genre: 'Arcade', icon: '🔄', c: '#a78bfa', desc: 'Flip gravity to dodge spikes. Biomes, moving obstacles, shields, magnets and double jumps.', fresh: 'Updated',
-              best: () => or(max('arcade.gravity.best', ...['easy', 'normal', 'hard', 'insane', 'unleashed'].map(d => 'arcade.gravity.best.' + d)), v => v + 'm') },
-            { id: 'starshooter', title: 'Star Shooter', path: 'StarShooter/index.html', genre: 'Arcade', icon: '🚀', c: '#22d3ee', desc: 'Pick a ship, upgrade drones, fight multi-phase bosses — or take on the endless Boss Rush.', fresh: 'Updated',
-              best: () => or((L('arcade.starshooter.save', {}) || {}).bestWave, v => 'Wave ' + v) },
-            { id: 'supershot', title: 'SUPERSHOT', path: 'SuperShot/index.html', genre: 'Arcade', icon: '⏱️', c: '#ef4444', desc: 'Time moves only when you move. Level select with stars, new weapons and enemies, endless arena.', fresh: 'Updated',
-              best: () => or(max('chronoHighScore'), v => 'Best ' + v) },
-            { id: 'stacker', title: 'Tower Stacker', path: 'TowerStacker/index.html', genre: 'Arcade', icon: '🏗️', c: '#2dd4bf', desc: 'Themed towers, a perfect-streak power meter and skies that change as you climb to space.', fresh: 'Updated',
-              best: () => or(max('stackerBest'), v => v + ' floors') },
-            { id: 'encrypter', title: 'Encrypter', path: 'Encrypter/index.html', genre: 'Arcade', icon: '🧬', c: '#4ade80', desc: 'Loop your trail around viruses. Levels, difficulties, new virus types, bosses and upgrades.', fresh: 'Updated',
-              best: () => or(max('arcade.encrypter.best'), v => 'Best ' + v) },
-            { id: 'shapematch', title: 'Shape Match', path: 'ShapeMatch/index.html', genre: 'Arcade', icon: '🔺', c: '#facc15', desc: 'Sort falling shapes by shape and colour. Levels, conveyor bonus rounds and power-ups.', fresh: 'Updated',
-              best: () => or(max('arcade.shapematch.best'), v => 'Best ' + v) },
-            { id: 'physics', title: 'Bounce Lab', path: 'BounceLab/index.html', genre: 'Arcade', icon: '🔴', c: '#f43f5e', desc: '23 kinds of satisfying physics shorts plus a brick-sim scroller, with a studio, 2×2 grid and video recording. Also Brick Breaker, Ballz and a level editor.', fresh: 'New',
-              best: () => or(max('arcade.physics.best'), v => 'Best ' + Arcade.fmt(v)) },
-            { id: 'flappy', title: 'Flappy', path: 'Flappy/index.html', genre: 'Arcade', icon: '🐤', c: '#facc15', desc: 'Tap to flap through the gaps. Unlock birds as you go.', fresh: 'New',
-              best: () => or(max('arcade.flappy.best'), v => 'Best ' + v) },
-            { id: 'blocks', title: 'Falling Blocks', path: 'Blocks/index.html', genre: 'Arcade', icon: '🧱', c: '#818cf8', desc: 'Stack falling pieces and clear lines. Marathon, 40-line Sprint, hold piece and ghost.', fresh: 'New',
-              best: () => or(max('arcade.blocks.best'), v => 'Best ' + Arcade.fmt(v)) },
-            { id: 'slicer', title: 'Fruit Slicer', path: 'Slicer/index.html', genre: 'Arcade', icon: '🍉', c: '#22c55e', desc: 'Swipe to slice flying fruit, chain combos, never touch the bombs.', fresh: 'New',
-              best: () => or(max('arcade.slicer.best'), v => 'Best ' + v) },
-            { id: 'survivors', title: 'Night Survivors', path: 'Survivors/index.html', genre: 'Arcade', icon: '🧛', c: '#a855f7', desc: 'Your weapons fire on their own. Survive the horde and pick an upgrade every level.', fresh: 'New',
-              best: () => or(max('arcade.survivors.best'), v => Arcade.time(v)) },
-            { id: 'pong', title: 'Pong', path: 'Pong/index.html', genre: 'Arcade', icon: '🏓', c: '#e2e8f0', desc: 'The original. Play the AI on three levels or a friend on one keyboard.', fresh: 'New',
-              best: () => wins('arcade.pong.stats') },
-            // Puzzle
-            { id: 'minesweeper', title: 'Minesweeper', path: 'Minesweeper/index.html', genre: 'Puzzle', icon: '💣', c: '#60a5fa', desc: 'Classic boards, a no-guess mode where logic always works, and a custom map editor.', fresh: 'Updated',
-              best: () => { const t = ['easy', 'medium', 'hard'].map(d => [d, L('arcade.mines.best.' + d, 0)]).filter(x => x[1]); return t.length ? t.map(x => x[0][0].toUpperCase() + ' ' + x[1] + 's').join(' · ') : ''; } },
-            { id: 'coloursort', title: 'Colour Sort', path: 'ColourSort/index.html', genre: 'Puzzle', icon: '🧪', c: '#f472b6', desc: 'Pour colours into tubes. Locked, one-way and single-colour tubes, plus tall tubes on later levels.', fresh: 'Updated',
-              best: () => { const ks = []; for (const m of ['classic', 'mystery']) for (const d of ['', '.easy', '.hard', '.expert', '.master', '.insane']) ks.push('arcade.coloursort.level.' + m + d); const l = Math.max(...ks.map(k => Number(L(k, 1)) || 1)); return l > 1 ? 'Level ' + l : ''; } },
-            { id: 'tapmatch', title: 'Tap Match', path: 'TapMatch/index.html', genre: 'Puzzle', icon: '🍓', c: '#fb7185', desc: 'Triple-tile matching on tightly stacked, layered boards — think before you tap.', fresh: 'Updated',
-              best: () => { const w = L('tapMatchWins', {}) || {}; const n = (w.easy || 0) + (w.medium || 0) + (w.hard || 0) + (w.extreme || 0); return n ? n + ' wins' : ''; } },
-            { id: 'petdoku', title: 'Petdoku', path: 'Petdoku/index.html', genre: 'Puzzle', icon: '🐾', c: '#f472b6', desc: 'One pet per row, column and colour — no touching. Hints now explain the logic.', fresh: 'Updated',
-              best: () => { const s = L('arcade.petdoku.q.stats', {}) || {}; const n = Object.values(s).reduce((a, x) => a + (x.wins || 0), 0); return n ? n + ' solved' : ''; } },
-            { id: 'petsudoku', title: 'Pet Sudoku', path: 'PetSudoku/index.html', genre: 'Puzzle', icon: '🐶', c: '#fb923c', desc: 'Sudoku with pets. Pencil marks with auto-clean and hints that explain each step.', fresh: 'Updated',
-              best: () => { const s = L('arcade.petdoku.stats', {}) || {}; const n = Object.values(s).reduce((a, x) => a + (x.wins || 0), 0); return n ? n + (n === 1 ? ' win' : ' wins') : ''; } },
-            { id: 'woodblocks', title: 'Wood Blocks', path: 'WoodBlocks/index.html', genre: 'Puzzle', icon: '🪵', c: '#e9a85c', desc: 'Fit pieces on a 9×9 board. Unlock stone and neon themes by playing.', fresh: 'Updated',
-              best: () => or(max('arcade.wood.best'), v => 'Best ' + v) },
-            { id: '2048', title: '2048', path: '2048/index.html', genre: 'Puzzle', icon: '🔢', c: '#f59e0b', desc: 'Slide and merge numbers. Five board sizes from 3×3 to 8×8, with undo.',
-              best: () => or(max(...[3, 4, 5, 6, 8].map(n => 'arcade.2048.best.' + n)), v => 'Best ' + Arcade.fmt(v)) },
-            { id: 'wordle', title: 'Wordle', path: 'Wordle/index.html', genre: 'Puzzle', icon: '🟩', c: '#22c55e', desc: 'Guess the word in six tries — 4–7 letters, the full official 5-letter lists, and Poople: a word ladder to POOP.', fresh: 'Updated',
-              best: () => { const s = L('arcade.wordle.stats.daily', {}) || {}, u = L('arcade.wordle.stats.unlimited', {}) || {}; const n = (s.wins || 0) + (u.wins || 0); return n ? n + (n === 1 ? ' win' : ' wins') + (s.streak ? ' · 🔥' + s.streak : '') : ''; } },
-            { id: 'flow', title: 'Flow', path: 'Flow/index.html', genre: 'Puzzle', icon: '🔗', c: '#06b6d4', desc: 'Connect matching dots with pipes. Fill every square, never cross.', fresh: 'New',
-              best: () => or(max('arcade.flow.solved'), v => v + ' solved') },
-            { id: 'pipes', title: 'Pipe Puzzle', path: 'Pipes/index.html', genre: 'Puzzle', icon: '🚰', c: '#3b82f6', desc: 'Rotate pipe tiles until water flows from the source to every drain.', fresh: 'New',
-              best: () => or(max('arcade.pipes.solved'), v => v + ' solved') },
-            // Board
-            { id: 'ludo', title: 'Ludo', path: 'Ludo/index.html', genre: 'Board', icon: '🎲', c: '#ef4444', desc: 'Race your tokens home against 1–3 bots. Now with detailed stats per colour.', fresh: 'Updated',
-              best: () => { const s = L('arcade.ludo.stats', {}) || {}; return s.wins ? s.wins + (s.wins === 1 ? ' win' : ' wins') : ''; } },
-            { id: 'snakesladders', title: 'Snakes & Ladders', path: 'SnakesLadders/index.html', genre: 'Board', icon: '🪜', c: '#84cc16', desc: 'Climb ladders, dodge snakes. Play up to 3 bots or friends on one device.', fresh: 'New',
-              best: () => wins('arcade.snl.stats') },
-            { id: 'battleship', title: 'Battleship', path: 'Battleship/index.html', genre: 'Board', icon: '🚢', c: '#0ea5e9', desc: 'Place your fleet and hunt the enemy ships before they find yours.', fresh: 'New',
-              best: () => wins('arcade.battleship.stats') },
-            { id: 'dice', title: 'Dice Poker', path: 'Dice/index.html', genre: 'Board', icon: '🎯', c: '#f97316', desc: 'Roll five dice three times and fill the score sheet. Play solo or against bots.', fresh: 'New',
-              best: () => or(max('arcade.dice.best'), v => 'Best ' + v) },
-            { id: 'cards', title: 'Crazy Cards', path: 'Cards/index.html', genre: 'Board', icon: '🃏', c: '#dc2626', desc: 'Match colour or number, play skips and draw-fours, shout ONE! Against 1–3 bots.', fresh: 'New',
-              best: () => wins('arcade.cards.stats') },
-            { id: 'tictactoe', title: 'Tic-Tac-Toe', path: 'TicTacToe/index.html', genre: 'Board', icon: '❌', c: '#8b5cf6', desc: 'Classic 3×3 and Ultimate Tic-Tac-Toe — nine boards in one. Vs AI or a friend.', fresh: 'New',
-              best: () => wins('arcade.ttt.stats') },
-            // Idle & strategy
-            { id: 'thetower', title: 'The Tower', path: 'TheTower/index.html', genre: 'Idle', icon: '🗼', c: '#38bdf8', desc: 'A faithful offline take on the mobile idle defense: workshop, labs, cards, ultimate weapons, modules, tournaments and events.', fresh: 'Updated', idle: 'Your Tower',
-              best: () => { const s = L('arcade.tower2.save', {}) || {}; const w = Math.max(0, ...Object.values(s.tierBest || {})); return w ? 'Wave ' + w + (s.maxTier > 1 ? ' · T' + s.maxTier : '') : ''; } },
-            { id: 'chicken', title: 'Chicken Farming', path: 'ChickenFarming/index.html', genre: 'Idle', icon: '🐔', c: '#fbbf24', desc: 'Grow a coop, raise evil hens, hire legendary farmers, breed hens, and play the manual Egg Hunt side game.', fresh: 'Updated', idle: 'Your hens',
-              best: () => or((L('ChickenGame', {}) || {}).Level, v => 'Farm lvl ' + v) },
-            { id: 'essence', title: 'Essence Farming', path: 'EssenceFarming/index.html', genre: 'Idle', icon: '🌿', c: '#4ade80', desc: 'Crop mutations, Frontier events, essence graphs and a second prestige: Transcendence.', fresh: 'Updated', idle: 'Your farm',
-              best: () => or((L('df_v5_save', {}) || {}).essence, v => Arcade.fmt(v) + ' essence') },
-            { id: 'idleminer', title: 'Idle Miner', path: 'IdleMiner/index.html', genre: 'Idle', icon: '⛏️', c: '#a16207', desc: 'Dig shafts deeper, hire managers, sell ore and prestige. Completely redrawn mine with a bottleneck view.', fresh: 'Updated', idle: 'Your mine',
-              best: () => { const s = L('arcade.idleminer.save', null); return s && s.shafts ? s.shafts.length + ' shafts' : ''; } },
-            { id: 'fishing', title: 'Fishing', path: 'Fishing/index.html', genre: 'Idle', icon: '🎣', c: '#0891b2', desc: 'Cast, reel, sell. Upgrade rods and boats to reach deeper waters and legendary fish.', fresh: 'New',
-              best: () => { const s = L('arcade.fishing.save', null); return s && s.caught ? s.caught + ' caught' : ''; } },
-            { id: 'towerdefense', title: 'Tower Defense', path: 'TowerDefense/index.html', genre: 'Idle', icon: '🏰', c: '#65a30d', desc: 'Classic path defense: place and upgrade arrow, cannon, frost and laser towers.', fresh: 'New',
-              best: () => or(max('arcade.td.best'), v => 'Wave ' + v) },
-            // Automation
-            { id: 'automato', title: 'Automato', path: 'Automato/index.html', genre: 'Automation', icon: '🏭', c: '#f59e0b', desc: 'Mine, smelt and assemble. Research tree, power grid, bigger maps and a guided tutorial.', fresh: 'Updated', idle: 'Your factory',
-              best: () => { const s = L('arcade.automato.save', null); return s && s.buildings && s.buildings.length ? s.buildings.length + ' machines' : ''; } },
-            { id: 'uploadlabs', title: 'Upload Labs', path: 'UploadLabs/index.html', genre: 'Automation', icon: '💾', c: '#22d3ee', desc: 'Build a data empire. Blueprints, hacker attacks and firewalls, and challenge scenarios.', fresh: 'Updated', idle: 'Your servers',
-              best: () => { const s = L('arcade.uploadlabs.save', null); return s && s.stats && s.stats.earned ? '$' + Arcade.fmt(s.stats.earned) + ' earned' : ''; } },
-            { id: 'singularity', title: 'Singularity', path: 'Singularity/index.html', genre: 'Automation', icon: '🧠', c: '#a78bfa', desc: 'From a shack full of e-waste to a mind that spans the universe. Guided start, blueprints, power, heat, bills and markets — a very long climb.', fresh: 'New', idle: 'Your AI',
-              best: () => { const s = L('arcade.singularity.save', null); if (!s || !s.ai) return ''; const names = ['Shack', 'Garage', 'Loft', 'Datacenter', 'Campus', 'Orbit', 'Sol', 'Galaxy', 'Universe']; return 'AI v' + s.ai.ver + ' · ' + (names[s.site] || ''); } },
-            // Creative & skill
-            { id: 'infiniteink', title: 'Infinite Ink', path: 'InfiniteInk/index.html', genre: 'Creative', icon: '🎨', c: '#38bdf8', desc: 'Endless canvas with export to PNG/SVG/PDF, frame-by-frame animation, sticky notes and connectors.', fresh: 'Updated',
-              best: () => { const st = L('arcade.ink.stats', null); const n = st ? st.canvases : Object.keys(Object.assign({}, L('infInkerV5', {}), L('infInkerV6', {}))).length; return n ? n + (n === 1 ? ' canvas' : ' canvases') : ''; } },
-            { id: 'typing', title: 'Typing Speed', path: 'Typing/index.html', genre: 'Skill', icon: '⌨️', c: '#14b8a6', desc: 'A words-per-minute test plus Typing Shooter — type words to blast incoming meteors.', fresh: 'New',
-              best: () => or(max('arcade.typing.best'), v => v + ' WPM') },
-            { id: 'aimtrainer', title: 'Aim Trainer', path: 'AimTrainer/index.html', genre: 'Skill', icon: '🎯', c: '#ef4444', desc: 'Click targets as fast as you can, or test your reaction time.', fresh: 'New',
-              best: () => or(max('arcade.aim.reaction'), v => v + ' ms') },
-        ];
-        const LOST = [
-            { id: 'rpgmage', title: 'Village & Mines', path: 'LostCauses/RPGMAGE.html', icon: '⛏️', c: '#94a3b8', desc: 'Top-down mining RPG prototype.' },
-            { id: 'xprpg', title: 'Soul Siphon', path: 'LostCauses/XPrpg.html', icon: '🔮', c: '#94a3b8', desc: 'Turn-based XP-draining RPG prototype.' },
-        ];
-        const GENRES = ['All', '★ Favourites', 'Arcade', 'Puzzle', 'Board', 'Idle', 'Automation', 'Creative', 'Skill'];
-        const FAV = '★ Favourites';
-        const GENRE_ICONS = { Arcade: '🕹️', Puzzle: '🧩', Board: '🎲', Idle: '⏳', Automation: '⚙️', Creative: '🎨', Skill: '⚡' };
-        const DEFAULT_FAVS = ['tapmatch', 'woodblocks', 'supershot', 'stacker', 'infiniteink', 'minesweeper', 'coloursort', 'snake', 'gravity', 'pacman'];
-        const byId = Object.fromEntries(GAMES.map(g => [g.id, g]));
-
-        let favs = L('arcade.hub.favs', DEFAULT_FAVS);
-        let recent = L('arcade.hub.recent', []);
-        let genre = L('arcade.hub.genre', 'All');
-        if (!GENRES.includes(genre)) genre = 'All';
-        const q = document.getElementById('q');
+        const A = Arcade;
+        const { GAMES, LOST } = window.ArcadeGames;
         const $ = (id) => document.getElementById(id);
-        const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const esc = A.esc;
+        const byId = Object.fromEntries(GAMES.map(g => [g.id, g]));
+        const GENRES = ['All', 'Favourites', 'Puzzle', 'Arcade', 'Board', 'Cards', 'Party', 'Idle', 'Automation', 'Creative', 'Skill'];
+        const DEFAULT_FAVS = ['petdoku', 'tapmatch', 'woodblocks', 'snake', 'solitaire', 'imposter'];
+        const FRAME_RING = { none: 'transparent', mint: '#6cd4a4', sky: '#6cb8f0', berry: '#e56b9a', gold: '#f5c04e', fire: '#f7904a', violet: '#a98bf0', rainbow: '#ef4444' };
 
-        function hoursAgo(ts) { return ts ? (Date.now() - ts) / 3600000 : 0; }
+        let favs = A.load('arcade.hub.favs', DEFAULT_FAVS);
+        let recent = A.load('arcade.hub.recent', []);
+        let genre = A.load('arcade.hub.genre', 'All');
+        if (!GENRES.includes(genre)) genre = 'All';
+        let view = A.load('arcade.hub.view', 'games');
+        const q = $('q');
+
+        document.querySelectorAll('[data-ic]').forEach(e => e.innerHTML = A.icon(e.dataset.ic));
+        $('coinIc').innerHTML = A.icon('coin');
+        $('giftIc').innerHTML = A.icon('gift');
+        $('sIc').innerHTML = A.icon('search');
+
+        const hoursAgo = (ts) => ts ? (Date.now() - ts) / 3600000 : 0;
         function ago(ts) {
             const h = hoursAgo(ts);
             if (h < 1) return Math.max(1, Math.round(h * 60)) + 'm';
@@ -310,263 +310,346 @@
             return Math.round(h / 24) + 'd';
         }
         function markOpened(id) {
-            recent = [id, ...recent.filter(x => x !== id)].slice(0, 4);
-            Arcade.save('arcade.hub.recent', recent);
+            recent = [id, ...recent.filter(x => x !== id)].slice(0, 6);
+            A.save('arcade.hub.recent', recent);
+        }
+        function setVars(elm, g) {
+            const [bg, ink] = g.pal;
+            elm.style.setProperty('--gbg', bg);
+            elm.style.setProperty('--gink', ink);
+            elm.style.setProperty('--t1', `color-mix(in srgb, ${ink} 26%, ${bg})`);
+            elm.style.setProperty('--t2', `color-mix(in srgb, #fff 22%, ${bg})`);
+            elm.style.setProperty('--t3', `color-mix(in srgb, #000 16%, ${bg})`);
         }
 
+        /* ---------- cards ---------- */
+        // which tiles carry an emoji, and the shade pattern of the 3x3 art grid
+        const SPOTS = [4, 1, 3];
+        const SHADES = ['c', 'a', 'b', 'a', 'b', 'c', 'b', 'a', 'c'];
         function card(g, lost) {
             const a = document.createElement('a');
-            a.className = 'game';
+            a.className = 'gcard';
             a.href = g.path;
-            a.style.setProperty('--c', g.c);
+            setVars(a, g);
             let best = '';
             try { best = g.best ? g.best() : ''; } catch (e) { best = ''; }
-            const meta = Arcade.meta();
+            const meta = A.meta();
             const idleFor = g.idle && meta.lastSeen[g.id] ? hoursAgo(meta.lastSeen[g.id]) : 0;
-            a.innerHTML = `
-                <div class="art"><span>${g.icon}</span></div>
-                ${g.fresh && !lost ? `<span class="tag new" style="background:var(--good);color:#04130b">${g.fresh === true ? 'Recovered' : g.fresh}</span>` : ''}
-                ${idleFor >= 1 ? '<span class="dot" title="Ready to collect"></span>' : ''}
-                <div class="info">
-                    <div class="name"></div>
-                    <div class="desc"></div>
-                    ${idleFor >= 1 ? `<div class="ping">⏰ ${esc(g.idle)} ${g.idle.endsWith('s') ? 'have' : 'has'} been running for ${ago(meta.lastSeen[g.id])}</div>` : ''}
-                    <div class="meta"><span class="tag">${lost ? 'Prototype' : g.genre}</span><span class="best"></span></div>
-                </div>`;
-            a.querySelector('.name').textContent = g.title;
-            a.querySelector('.desc').textContent = g.desc;
-            a.querySelector('.best').textContent = best;
+            const tiles = SHADES.map((s, i) => {
+                const k = SPOTS.indexOf(i);
+                const emo = k >= 0 && g.art[k % g.art.length] ? `<span>${g.art[k % g.art.length]}</span>` : '';
+                return `<div class="tile ${s}">${emo}</div>`;
+            }).join('');
+            const ppl = g.players && g.players !== '1' ? `<span class="ppl">${A.icon('users')}${esc(g.players)}</span>` : '';
+            a.innerHTML = `<div class="in">
+                <div class="nm"></div>
+                <div class="art">${tiles}</div>
+                ${idleFor >= 1 ? `<span class="ready">Ready · ${ago(meta.lastSeen[g.id])}</span>` : g.fresh && !lost ? `<span class="tag ${g.fresh === 'New' ? '' : 'upd'}">${g.fresh === 'New' ? 'New!' : 'Updated'}</span>` : ''}
+                ${best ? '<span class="best"></span>' : ''}${ppl}
+            </div>`;
+            a.querySelector('.nm').textContent = g.title;
+            if (best) a.querySelector('.best').textContent = best;
+            a.title = g.desc;
             if (!lost) {
                 const s = document.createElement('button');
-                s.className = 'star' + (favs.includes(g.id) ? ' on' : '');
-                s.textContent = favs.includes(g.id) ? '★' : '☆';
-                s.title = favs.includes(g.id) ? 'Remove from favourites' : 'Add to favourites';
+                const on = favs.includes(g.id);
+                s.className = 'star' + (on ? ' on' : '');
+                s.innerHTML = A.icon('star');
+                s.title = on ? 'Remove from favourites' : 'Add to favourites';
                 s.onclick = (e) => {
                     e.preventDefault(); e.stopPropagation();
                     favs = favs.includes(g.id) ? favs.filter(x => x !== g.id) : [...favs, g.id];
-                    Arcade.save('arcade.hub.favs', favs);
-                    Arcade.sfx('select');
-                    render();
+                    A.save('arcade.hub.favs', favs);
+                    A.sfx('select');
+                    renderGames();
                 };
                 a.appendChild(s);
                 a.addEventListener('click', () => markOpened(g.id));
             }
             return a;
         }
-
-        function fill(host, list, emptyText) {
+        function row(g, note) {
+            const a = document.createElement('a');
+            a.className = 'grow-row';
+            a.href = g.path;
+            setVars(a, g);
+            a.innerHTML = `<span class="sq">${g.art[0]}</span><span class="grow"><b></b><small></small></span>${g.players !== '1' ? `<span class="pp">${esc(g.players)} players</span>` : ''}`;
+            a.querySelector('b').textContent = g.title;
+            a.querySelector('small').textContent = note || g.desc;
+            a.addEventListener('click', () => markOpened(g.id));
+            return a;
+        }
+        function fill(host, list, emptyText, maker) {
             host.innerHTML = '';
             if (!list.length) { host.innerHTML = `<p class="empty">${emptyText}</p>`; return; }
-            for (const g of list) host.appendChild(card(g));
+            for (const g of list) host.appendChild((maker || card)(g));
         }
 
-        /* ---------- Profile strip + challenges ---------- */
-        function renderProfile() {
-            const m = Arcade.meta();
-            const li = Arcade.levelInfo(m.xp);
-            $('pAvatar').textContent = m.profile.avatar || '🙂';
-            $('pName').textContent = (m.profile.name || '').trim() || 'Player (tap to set a name)';
-            $('pLvl').textContent = 'Lvl ' + li.level;
-            $('pBar').style.width = (li.pct * 100).toFixed(1) + '%';
-            $('pXp').textContent = `${li.into} / ${li.need} XP`;
-            $('pCoins').textContent = '🪙 ' + Arcade.fmt(m.coins);
-            $('achCount').textContent = `${Object.keys(m.ach).length}/${Arcade.ACHIEVEMENTS.length}`;
-        }
-        function renderChallenges() {
-            const { daily, weekly } = Arcade.challenges();
-            const m = Arcade.meta();
-            const host = $('chals');
-            host.innerHTML = '';
-            for (const [slot, c] of [['daily', daily], ['weekly', weekly]]) {
-                const g = byId[c.g];
-                const pct = Math.min(1, c.prog / c.n);
-                const el = document.createElement('div');
-                el.className = 'chal ' + slot + (c.done ? ' done' : '');
-                el.innerHTML = `
-                    <div class="ic">${c.done ? '✅' : g ? g.icon : '🎯'}</div>
-                    <div class="body">
-                        <div class="kind">${slot === 'daily' ? '📅 Daily challenge' + (m.streak > 1 ? ' · 🔥 ' + m.streak + '-day streak' : '') : '🏅 Weekly challenge'}</div>
-                        <div class="txt">${esc(c.text)}</div>
-                        <div class="bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></div>
-                        <div class="rew">${c.done ? 'Done! Reward collected.' : `${c.kind === 'count' ? Arcade.fmt(c.prog) + ' / ' + Arcade.fmt(c.n) + ' · ' : ''}Reward: +${c.xp} XP · +${c.coins} 🪙`}</div>
-                    </div>
-                    ${!c.done && g ? `<a class="btn sm primary" href="${g.path}">Play</a>` : ''}`;
-                const play = el.querySelector('a');
-                if (play) play.addEventListener('click', () => markOpened(g.id));
-                host.appendChild(el);
+        /* ---------- header ---------- */
+        function renderTop() {
+            const m = A.meta();
+            const li = A.levelInfo(m.xp);
+            const ring = FRAME_RING[A.cosmetic('frame')] || 'transparent';
+            for (const [ava, lv] of [['hAva', 'hLv'], ['pAva', 'pLv']]) {
+                $(ava).firstChild.textContent = A.cosmetic('avatar');
+                $(ava).style.setProperty('--ring', ring);
+                if (A.cosmetic('frame') === 'rainbow') $(ava).style.boxShadow = '0 0 0 4px #f5c04e, 0 0 0 7px #ef6a8a';
+                else $(ava).style.boxShadow = '';
+                $(lv).textContent = li.level;
             }
+            $('hName').textContent = (m.profile.name || '').trim() || 'Player';
+            $('hXp').style.width = (li.pct * 100).toFixed(1) + '%';
+            $('hCoinN').textContent = A.fmt(m.coins);
+            const ls = A.loginStatus();
+            $('giftDot').hidden = ls.claimed;
+            const qs = A.quests();
+            $('qDot').hidden = ls.claimed;
+            document.documentElement.dataset.theme = A.cosmetic('theme');
+            return { m, li, qs };
         }
 
-        function render() {
-            renderProfile();
-            renderChallenges();
+        /* ---------- games view ---------- */
+        function renderGames() {
             const term = q.value.trim().toLowerCase();
-            const inGenre = (g) => genre === 'All' || genre === FAV ? true : g.genre === genre;
-            const match = (g) => inGenre(g) && (!term || (g.title + ' ' + g.desc + ' ' + g.genre).toLowerCase().includes(term));
-
+            const match = (g) => (genre === 'All' || genre === 'Favourites' || g.genre === genre) && (!term || (g.title + ' ' + g.desc + ' ' + g.genre).toLowerCase().includes(term));
             const fh = $('filters');
             fh.innerHTML = '';
             for (const gname of GENRES) {
-                const n = gname === 'All' ? GAMES.length : gname === FAV ? GAMES.filter(g => favs.includes(g.id)).length : GAMES.filter(g => g.genre === gname).length;
+                const n = gname === 'All' ? GAMES.length : gname === 'Favourites' ? GAMES.filter(g => favs.includes(g.id)).length : GAMES.filter(g => g.genre === gname).length;
+                if (!n && gname !== 'Favourites') continue;
                 const b = document.createElement('button');
-                b.className = 'btn sm' + (gname === genre ? ' active' : '') + (gname === FAV ? ' fav-filter' : '');
-                b.innerHTML = `${GENRE_ICONS[gname] ? GENRE_ICONS[gname] + ' ' : ''}${gname} <b>${n}</b>`;
-                b.onclick = () => { genre = gname; Arcade.save('arcade.hub.genre', genre); render(); };
+                b.className = 'fchip' + (gname === genre ? ' on' : '');
+                b.innerHTML = `${gname} <b>${n}</b>`;
+                b.onclick = () => { genre = gname; A.save('arcade.hub.genre', genre); renderGames(); };
                 fh.appendChild(b);
             }
-
-            // Favourites always sit at the very top, grouped by genre
             const fav = GAMES.filter(g => favs.includes(g.id) && match(g));
-            const favHost = $('favs');
-            $('favSec').hidden = !fav.length && genre !== FAV;
-            favHost.innerHTML = '';
-            if (!fav.length && genre === FAV) favHost.innerHTML = '<p class="empty">No favourites yet — tap the ☆ on any game to pin it here.</p>';
-            const groups = GENRES.filter(x => x !== 'All' && x !== FAV).map(gn => [gn, fav.filter(g => g.genre === gn)]).filter(([, list]) => list.length);
-            for (const [gn, list] of groups) {
-                const wrap = document.createElement('div');
-                wrap.className = 'fav-group';
-                const h = document.createElement('h3');
-                h.innerHTML = `${GENRE_ICONS[gn] || ''} ${gn} <b>${list.length}</b>`;
-                const grid = document.createElement('div');
-                grid.className = 'grid';
-                for (const g of list) grid.appendChild(card(g));
-                wrap.append(h, grid);
-                favHost.appendChild(wrap);
-            }
+            $('favWrap').hidden = !fav.length && genre !== 'Favourites';
+            $('favN').textContent = fav.length ? fav.length : '';
+            fill($('favs'), fav, 'No favourites yet. Tap the star on any game to pin it here.');
 
             const browsing = genre === 'All' && !term;
-            const rec = recent.map(id => byId[id]).filter(g => g && !favs.includes(g.id)).slice(0, 4);
-            $('recentSec').hidden = !browsing || !rec.length;
-            if (browsing && rec.length) fill($('recent'), rec, '');
+            const meta = A.meta();
+            const rec = recent.map(id => byId[id]).filter(Boolean).slice(0, 4);
+            $('recentWrap').hidden = !browsing || !rec.length;
+            if (browsing && rec.length) fill($('recent'), rec, '', g => row(g, meta.lastSeen[g.id] ? 'Played ' + ago(meta.lastSeen[g.id]) + ' ago' : g.desc));
 
-            const rest = genre === FAV ? [] : GAMES.filter(g => match(g) && !favs.includes(g.id));
-            $('allTitle').parentElement.hidden = genre === FAV;
-            $('allTitle').textContent = term ? `Results for “${q.value.trim()}”` : genre === 'All' ? (fav.length ? 'Everything else' : 'All games') : genre + (fav.length ? ' · more' : '');
+            const rest = genre === 'Favourites' ? [] : GAMES.filter(g => match(g) && !favs.includes(g.id));
+            $('allTitle').hidden = genre === 'Favourites';
+            $('all').hidden = genre === 'Favourites';
+            $('allTitle').textContent = term ? `Results for "${q.value.trim()}"` : genre === 'All' ? (fav.length ? 'Everything else' : 'All games') : genre;
             fill($('all'), rest, term && !fav.length ? 'No games match that search.' : 'Every game here is in your favourites!');
-            $('tagline').textContent = `${GAMES.length} games · ${favs.length} favourites`;
         }
 
-        /* ---------- Dialogs ---------- */
+        /* ---------- together view ---------- */
+        function renderParty() {
+            const party = GAMES.filter(g => g.genre === 'Party');
+            fill($('partyList'), party.filter(g => g.id !== 'duel'), '', g => row(g));
+            const vs = ['duel', 'battleship', 'connect4', 'checkers', 'tictactoe', 'pong', 'memory'].map(id => byId[id]).filter(Boolean);
+            fill($('vsList'), vs, '', g => row(g));
+            const group = ['ludo', 'dots', 'snakesladders', 'cards', 'dice'].map(id => byId[id]).filter(Boolean);
+            fill($('groupList'), group, '', g => row(g));
+        }
+
+        /* ---------- quests view ---------- */
+        function untilMidnight() {
+            const n = new Date(), t = new Date(n); t.setHours(24, 0, 0, 0);
+            const h = Math.floor((t - n) / 3600000), mm = Math.floor(((t - n) % 3600000) / 60000);
+            return h + 'h ' + mm + 'm';
+        }
+        function untilMonday() {
+            const n = new Date(), t = new Date(n); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() + ((8 - t.getDay()) % 7 || 7));
+            return Math.ceil((t - n) / 86400000) + 'd';
+        }
+        function questRow(qq, i, daily, rerolls) {
+            const g = qq.g && byId[qq.g];
+            const ic = qq.done ? '✅' : g ? g.art[0] : { games: '🧭', xp: '⭐', mins: '⏱️', wins: '🏆', runs: '🔁', bests: '📈', party: '🥳', quests: '📅' }[qq.type] || '🎯';
+            const pct = Math.min(1, qq.prog / qq.n);
+            const d = document.createElement('div');
+            d.className = 'quest' + (qq.done ? ' done' : '');
+            d.innerHTML = `<div class="qi">${ic}</div>
+                <div class="qb"><div class="qt">${esc(qq.text)}</div>
+                <div class="bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></div>
+                <div class="qr"><span>${A.fmt(Math.min(qq.prog, qq.n))} / ${A.fmt(qq.n)}</span><span>+${qq.xp} XP · +${qq.coins} coins</span></div></div>
+                <div class="act"></div>`;
+            const act = d.querySelector('.act');
+            if (!qq.done && g) {
+                const p = document.createElement('a');
+                p.className = 'btn sm primary'; p.href = g.path; p.textContent = 'Play';
+                p.onclick = () => markOpened(g.id);
+                act.appendChild(p);
+            }
+            if (!qq.done && daily) {
+                const cost = A.rerollCost(rerolls);
+                const r = document.createElement('button');
+                r.className = 'btn sm ghost';
+                r.innerHTML = A.icon('refresh') + (cost ? cost : 'Free');
+                r.title = 'Swap this quest for a different one';
+                r.onclick = () => {
+                    if (A.rerollQuest(i)) { A.sfx('select'); renderAll(); }
+                    else { A.sfx('bad'); A.toast('Not enough coins to swap', 'bad'); }
+                };
+                act.appendChild(r);
+            }
+            return d;
+        }
+        function renderQuests() {
+            const qs = A.quests();
+            const ls = A.loginStatus();
+            const days = $('days');
+            days.innerHTML = '';
+            A.LOGIN_REWARDS.forEach((r, i) => {
+                const d = document.createElement('div');
+                const got = ls.claimed ? i <= ls.idx : i < ls.idx;
+                const next = !ls.claimed && i === ls.idx;
+                d.className = 'day' + (got ? ' got' : '') + (next ? ' next' : '') + (i === 6 ? ' big' : '');
+                d.innerHTML = `Day ${i + 1}<span class="c">${got ? '✓' : r.coins}</span>`;
+                d.title = r.coins + ' coins' + (r.xp ? ' + ' + r.xp + ' XP' : '');
+                days.appendChild(d);
+            });
+            $('claimBtn').disabled = ls.claimed;
+            $('claimBtn').textContent = ls.claimed ? 'Claimed' : 'Claim';
+            $('loginStreak').textContent = ls.streak ? ls.streak + ' day streak' : '';
+            $('loginTitle').textContent = ls.claimed ? 'See you tomorrow' : 'Your reward is ready';
+            $('dReset').textContent = 'new ones in ' + untilMidnight();
+            $('wReset').textContent = 'resets in ' + untilMonday();
+            const dq = $('dq'); dq.innerHTML = '';
+            qs.daily.list.forEach((qq, i) => dq.appendChild(questRow(qq, i, true, qs.rerolls)));
+            const wq = $('wq'); wq.innerHTML = '';
+            qs.weekly.list.forEach((qq, i) => wq.appendChild(questRow(qq, i, false)));
+            const doneN = qs.daily.list.filter(x => x.done).length;
+            const m = A.meta();
+            $('sweep').innerHTML = A.icon('star') + (qs.daily.swept ? 'All done today. Bonus collected!' : `Finish all 3 for a bonus +100 XP and 60 coins (${doneN}/3)`) + (m.streak > 1 ? ` · ${m.streak} day quest streak` : '');
+        }
+        $('claimBtn').onclick = () => {
+            const r = A.claimLogin();
+            if (!r) return;
+            A.sfx('coin');
+            A.toast(`+${r.coins} coins${r.xp ? ' and ' + r.xp + ' XP' : ''}`, 'gold');
+            renderAll();
+        };
+
+        /* ---------- profile view ---------- */
+        let achFilter = 'all';
+        let shopTab = 'theme';
+        const SHOP_TABS = [['theme', 'Themes'], ['avatar', 'Avatars'], ['frame', 'Frames'], ['title', 'Titles'], ['snake.skin', 'Snake skins'], ['pacman.color', 'Pac-Man colours']];
+        function swatchCss(it) {
+            if (it.id === 'rainbow') return 'linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7)';
+            if (it.id === 'candy') return `repeating-linear-gradient(45deg,${it.swatch[0]} 0 10px,${it.swatch[1]} 10px 20px)`;
+            return `linear-gradient(135deg,${it.swatch[0]} 50%,${it.swatch[1]} 50%)`;
+        }
+        function renderMe(m, li) {
+            $('pName').textContent = (m.profile.name || '').trim() || 'Player';
+            const tItem = A.COSMETICS.title.find(t => t.id === A.cosmetic('title'));
+            $('pTitle').textContent = tItem ? tItem.name : 'Rookie';
+            $('pBar').style.width = (li.pct * 100).toFixed(1) + '%';
+            $('pXp').textContent = `${li.into} / ${li.need} XP to level ${li.level + 1} · ${A.fmt(m.xp)} XP total`;
+
+            // level road: last 2 levels and the next 10
+            const road = $('road'); road.innerHTML = '';
+            for (let l = Math.max(2, li.level - 1); l <= li.level + 10; l++) {
+                const un = A.unlocksAt(l);
+                const s = document.createElement('div');
+                s.className = 'stop' + (l <= li.level ? ' got' : '');
+                s.innerHTML = `<div class="n">${l}</div><div class="r"><b>${A.levelCoins(l)}</b>coins${un.map(u => '<br>+ ' + esc(u.slot === 'avatar' ? u.item.name + ' avatar' : u.item.name + ' ' + (u.slot === 'snake.skin' ? 'snake' : u.slot === 'pacman.color' ? 'pac-man' : u.slot))).join('')}</div>`;
+                road.appendChild(s);
+            }
+            if (li.level > 1) road.scrollLeft = 0;
+
+            const total = Object.values(m.playtime).reduce((a, b) => a + b, 0);
+            const tried = Object.keys(m.sessions).filter(k => byId[k]).length;
+            const tiles = [
+                ['Play time', A.time(total)], ['Games tried', tried + '/' + GAMES.length], ['Wins', A.fmt(m.totals.wins)], ['Rounds', A.fmt(m.totals.runs)],
+                ['Personal bests', A.fmt(m.totals.bests)], ['Quests done', A.fmt(m.questsDone)], ['Best streak', (m.bestStreak || 0) + ' days'], ['Coins earned', A.fmt(m.totals.coins)],
+            ];
+            $('statTiles').innerHTML = tiles.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('');
+
+            const got = Object.keys(m.ach).length;
+            $('achN').textContent = `${got} of ${A.ACHIEVEMENTS.length}`;
+            const af = $('achFilter'); af.innerHTML = '';
+            for (const [k, n] of [['all', 'All'], ['got', 'Unlocked'], ['todo', 'Locked'], ['arcade', 'General']]) {
+                const b = document.createElement('button');
+                b.className = 'fchip' + (achFilter === k ? ' on' : '');
+                b.textContent = n;
+                b.onclick = () => { achFilter = k; renderAll(); };
+                af.appendChild(b);
+            }
+            let list = A.ACHIEVEMENTS.slice();
+            if (achFilter === 'got') list = list.filter(a => m.ach[a.id]);
+            if (achFilter === 'todo') list = list.filter(a => !m.ach[a.id]);
+            if (achFilter === 'arcade') list = list.filter(a => !a.g);
+            list.sort((a, b) => (!!m.ach[b.id]) - (!!m.ach[a.id]));
+            $('achGrid').innerHTML = list.map(a => {
+                const on = m.ach[a.id];
+                const g = a.g && byId[a.g];
+                return `<div class="ach ${on ? 'got' : 'locked'}"><div class="ai">${a.icon}</div><div>
+                    <b>${esc(a.title)}</b><small>${esc(a.desc)}</small>
+                    <small>${on ? 'Unlocked ' + new Date(on).toLocaleDateString() : (g ? g.title + ' · ' : '') + '+' + (a.xp || 0) + ' XP'}</small></div></div>`;
+            }).join('');
+
+            const st = $('shopTabs'); st.innerHTML = '';
+            for (const [k, n] of SHOP_TABS) {
+                const b = document.createElement('button');
+                b.className = 'fchip' + (shopTab === k ? ' on' : '');
+                b.textContent = n;
+                b.onclick = () => { shopTab = k; renderAll(); };
+                st.appendChild(b);
+            }
+            const cur = A.cosmetic(shopTab);
+            $('shopGrid').innerHTML = A.COSMETICS[shopTab].map(it => {
+                const un = A.isUnlocked(shopTab, it.id), eq = cur === it.id;
+                const sw = shopTab === 'avatar' ? `<div class="sw">${it.id}</div>`
+                    : shopTab === 'title' ? `<div class="sw" style="font-size:1rem;font-family:var(--display)">${esc(it.name)}</div>`
+                    : `<div class="sw" style="background:${swatchCss(it)}"></div>`;
+                const btn = eq ? `<button class="btn sm" disabled>Using</button>`
+                    : un ? `<button class="btn sm" data-item="${esc(it.id)}">Use</button>`
+                    : it.price ? `<button class="btn sm primary" data-item="${esc(it.id)}" ${m.coins < it.price ? 'disabled' : ''}>${it.price} coins</button>`
+                    : `<button class="btn sm" disabled>${A.icon('lock')}Locked</button>`;
+                return `<div class="item ${eq ? 'eq' : ''} ${un ? '' : 'lockd'}">${sw}${shopTab === 'title' ? '' : `<b>${esc(it.name)}</b>`}<small>${un ? '' : esc(A.unlockHint(it))}</small>${btn}</div>`;
+            }).join('');
+            $('shopGrid').querySelectorAll('[data-item]').forEach(b => b.onclick = () => {
+                const id = b.dataset.item;
+                if (A.isUnlocked(shopTab, id)) { A.equip(shopTab, id); A.sfx('select'); }
+                else if (A.buy(shopTab, id)) { A.sfx('coin'); A.toast('Bought and equipped', 'good'); }
+                else { A.sfx('bad'); return; }
+                renderAll();
+            });
+        }
+
+        /* ---------- dialogs ---------- */
         function openDlg(html) {
-            $('dlgBody').innerHTML = `<button class="btn icon sm x" data-close>✕</button>` + html;
+            $('dlgBody').innerHTML = `<button class="btn icon sm ghost x" data-close>${A.icon('close')}</button>` + html;
             $('dlg').hidden = false;
             $('dlgBody').querySelectorAll('[data-close]').forEach(b => b.onclick = closeDlg);
             $('dlgBody').scrollTop = 0;
         }
-        function closeDlg() { $('dlg').hidden = true; render(); }
+        function closeDlg() { $('dlg').hidden = true; renderAll(); }
         $('dlg').addEventListener('click', (e) => { if (e.target === $('dlg')) closeDlg(); });
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('dlg').hidden) closeDlg(); });
 
-        function showAchievements() {
-            const m = Arcade.meta();
-            const list = Arcade.ACHIEVEMENTS.slice().sort((a, b) => (!!m.ach[b.id]) - (!!m.ach[a.id]));
-            const got = Object.keys(m.ach).length;
-            openDlg(`<h2>🏆 Achievements</h2>
-                <p class="center">${got} of ${Arcade.ACHIEVEMENTS.length} unlocked · each one pays XP and coins</p>
-                <div class="bar" style="margin:10px auto;max-width:360px"><i style="width:${(got / Arcade.ACHIEVEMENTS.length * 100).toFixed(1)}%"></i></div>
-                <div class="ach-grid">${list.map(a => {
-                    const g = a.g && byId[a.g];
-                    const on = m.ach[a.id];
-                    return `<div class="ach ${on ? 'got' : 'locked'}"><div class="ai">${a.icon}</div><div>
-                        <b>${esc(a.title)}</b><small>${esc(a.desc)}</small>
-                        <small>${on ? '✓ ' + new Date(on).toLocaleDateString() : g ? g.title : 'Arcade'}</small></div></div>`;
-                }).join('')}</div>`);
+        function showProfileEdit() {
+            const m = A.meta();
+            openDlg(`<h2>Edit profile</h2>
+                <label class="small muted">Name</label>
+                <input class="field" id="pfName" maxlength="20" placeholder="Your name" value="${esc(m.profile.name || '')}">
+                <p class="small muted" style="margin-top:14px">Pick avatars, frames and titles in the Customise section on this page. More unlock as you level up.</p>
+                <div class="actions"><button class="btn primary" id="pfSave">Save</button><button class="btn ghost" data-close>Cancel</button></div>`);
+            $('pfSave').onclick = () => { A.setProfile({ name: $('pfName').value.trim().slice(0, 20) }); A.sfx('select'); closeDlg(); };
+            setTimeout(() => $('pfName').focus(), 50);
         }
-
-        function showStats() {
-            const m = Arcade.meta();
-            const total = Object.values(m.playtime).reduce((a, b) => a + b, 0);
-            const sessions = Object.values(m.sessions).reduce((a, b) => a + b, 0);
-            const rows = GAMES.map(g => ({ g, t: m.playtime[g.id] || 0, s: m.sessions[g.id] || 0, last: m.lastSeen[g.id] }))
-                .filter(r => r.s).sort((a, b) => b.t - a.t);
+        function showTime() {
+            const m = A.meta();
+            const rows = GAMES.map(g => ({ g, t: m.playtime[g.id] || 0, s: m.sessions[g.id] || 0, last: m.lastSeen[g.id] })).filter(r => r.s).sort((a, b) => b.t - a.t);
             const top = Math.max(1, ...rows.map(r => r.t));
-            const li = Arcade.levelInfo(m.xp);
-            openDlg(`<h2>📊 Your stats</h2>
-                <div class="stat-tiles">
-                    <div><small>Play time</small><b>${Arcade.time(total)}</b></div>
-                    <div><small>Sessions</small><b>${sessions}</b></div>
-                    <div><small>Games tried</small><b>${rows.length}/${GAMES.length}</b></div>
-                    <div><small>Level</small><b>${li.level}</b></div>
-                    <div><small>Total XP</small><b>${Arcade.fmt(m.xp)}</b></div>
-                    <div><small>Coins</small><b>${Arcade.fmt(m.coins)}</b></div>
-                    <div><small>Achievements</small><b>${Object.keys(m.ach).length}</b></div>
-                    <div><small>Dailies done</small><b>${m.dailyDone}</b></div>
-                    <div><small>Weeklies done</small><b>${m.weeklyDone}</b></div>
-                    <div><small>Best streak</small><b>${m.streak}</b></div>
-                </div>
-                <h3 class="small muted" style="text-transform:uppercase;letter-spacing:.1em">Time per game</h3>
-                ${rows.length ? `<table class="ptable">${rows.map(r => `<tr>
-                    <td style="width:34px;font-size:1.2rem">${r.g.icon}</td>
-                    <td>${esc(r.g.title)}<div class="bar"><i style="width:${(r.t / top * 100).toFixed(1)}%"></i></div></td>
-                    <td class="n">${Arcade.time(r.t)}<br><span class="tiny">${r.s} session${r.s === 1 ? '' : 's'}${r.last ? ' · ' + ago(r.last) + ' ago' : ''}</span></td></tr>`).join('')}</table>`
+            openDlg(`<h2>Time per game</h2>${rows.length ? rows.map(r => `<div class="row" style="margin:10px 0;flex-wrap:nowrap">
+                <span style="font-size:1.5rem;width:34px;text-align:center">${r.g.art[0]}</span>
+                <div class="grow"><b style="font-family:var(--display)">${esc(r.g.title)}</b><div class="bar" style="height:8px;margin-top:4px"><i style="width:${(r.t / top * 100).toFixed(1)}%"></i></div></div>
+                <div class="small muted" style="text-align:right;white-space:nowrap">${A.time(r.t)}<br>${r.s} session${r.s === 1 ? '' : 's'}</div></div>`).join('')
                 : '<p class="empty">Play some games and your time shows up here.</p>'}`);
         }
 
-        const SHOP_TABS = [['theme', '🎨 Hub themes'], ['snake.skin', '🐍 Snake skins'], ['pacman.color', '🟡 Pac-Man colours']];
-        let shopTab = 'theme';
-        function swatchCss(it) {
-            if (it.id === 'rainbow') return 'linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#3b82f6,#a855f7)';
-            if (it.id === 'candy') return `repeating-linear-gradient(45deg,${it.swatch[0]} 0 10px,${it.swatch[1]} 10px 20px)`;
-            return `linear-gradient(135deg,${it.swatch[0]},${it.swatch[1]})`;
-        }
-        function showShop() {
-            const m = Arcade.meta();
-            const items = Arcade.COSMETICS[shopTab];
-            openDlg(`<h2>🛍️ Arcade shop</h2>
-                <p class="center">You have <b class="gold">🪙 ${Arcade.fmt(m.coins)}</b> — earn more by playing, finishing challenges and unlocking achievements.</p>
-                <div class="row center" style="margin-top:10px">${SHOP_TABS.map(([k, n]) => `<button class="btn sm ${k === shopTab ? 'active' : ''}" data-tab="${k}">${n}</button>`).join('')}</div>
-                <div class="shop-grid">${items.map(it => {
-                    const own = (m.owned[shopTab] || []).includes(it.id), eq = m.equip[shopTab] === it.id;
-                    return `<div class="item ${eq ? 'eq' : ''}"><div class="swatch" style="background:${swatchCss(it)}"></div>
-                        <b>${esc(it.name)}</b>
-                        <button class="btn sm ${own ? '' : 'primary'}" data-item="${it.id}" ${eq || (!own && m.coins < it.price) ? 'disabled' : ''}>
-                        ${eq ? 'Equipped' : own ? 'Equip' : '🪙 ' + it.price}</button></div>`;
-                }).join('')}</div>`);
-            $('dlgBody').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { shopTab = b.dataset.tab; showShop(); });
-            $('dlgBody').querySelectorAll('[data-item]').forEach(b => b.onclick = () => {
-                const id = b.dataset.item;
-                if (Arcade.owns(shopTab, id)) Arcade.equip(shopTab, id);
-                else if (Arcade.buy(shopTab, id)) { Arcade.sfx('coin'); Arcade.toast('Bought! It is now equipped.', 'good'); }
-                else { Arcade.sfx('bad'); return; }
-                if (shopTab === 'theme') document.documentElement.dataset.theme = Arcade.cosmetic('theme');
-                showShop(); renderProfile();
-            });
-        }
-
-        const AVATARS = ['🙂', '😎', '🤖', '👾', '🐱', '🐶', '🦊', '🐼', '🐸', '🐙', '🦄', '🐲', '🦖', '🐧', '🦉', '🐝', '🍕', '🌮', '🍩', '⚡', '🔥', '🌙', '⭐', '🌈', '🎮', '🕹️', '🎯', '🏀', '⚽', '🎸', '🚀', '👑', '💎', '🧙', '🥷', '🧛', '🧜', '👻', '💀', '🎃'];
-        function showProfile() {
-            const m = Arcade.meta();
-            let pick = m.profile.avatar || '🙂';
-            openDlg(`<h2>🪪 Profile</h2>
-                <label class="small muted">Name</label>
-                <input class="field" id="pfName" maxlength="20" placeholder="Your name" value="${esc(m.profile.name || '')}">
-                <p class="small muted" style="margin-top:14px">Avatar</p>
-                <div class="avatars">${AVATARS.map(a => `<button data-av="${a}" class="${a === pick ? 'on' : ''}">${a}</button>`).join('')}</div>
-                <div class="actions" style="display:flex;justify-content:center;gap:10px;margin-top:14px"><button class="btn primary" id="pfSave">Save</button><button class="btn ghost" data-close>Cancel</button></div>`);
-            $('dlgBody').querySelectorAll('[data-av]').forEach(b => b.onclick = () => {
-                pick = b.dataset.av;
-                $('dlgBody').querySelectorAll('[data-av]').forEach(x => x.classList.toggle('on', x === b));
-            });
-            $('pfSave').onclick = () => { Arcade.setProfile({ name: $('pfName').value.trim().slice(0, 20), avatar: pick }); Arcade.sfx('select'); closeDlg(); };
-            setTimeout(() => $('pfName').focus(), 50);
-        }
-
-        function showSave() {
-            let keys = 0;
-            try { keys = localStorage.length; } catch (e) { }
-            openDlg(`<h2>💾 Save file</h2>
-                <p class="center">Download one file holding every game's progress (${keys} saved entries), then load it on another browser or computer.</p>
-                <div class="row center" style="margin-top:16px">
-                    <button class="btn primary" id="svExport">⬇ Export save</button>
-                    <button class="btn" id="svImport">⬆ Import save…</button>
-                </div>
-                <p class="small dim center" style="margin-top:14px">Importing overwrites matching progress in this browser, then reloads the page.</p>`);
-            $('svExport').onclick = () => {
-                Arcade.download('arcade-save-' + Arcade.dayKey() + '.json', JSON.stringify(Arcade.exportSave()));
-                Arcade.toast('Save exported', 'good');
-            };
-            $('svImport').onclick = () => $('importFile').click();
-        }
+        $('svExport').onclick = () => { A.download('arcade-save-' + A.dayKey() + '.json', JSON.stringify(A.exportSave())); A.toast('Save exported', 'good'); };
+        $('svImport').onclick = () => $('importFile').click();
         $('importFile').addEventListener('change', async (e) => {
             const f = e.target.files[0];
             e.target.value = '';
@@ -574,35 +657,56 @@
             try {
                 const obj = JSON.parse(await f.text());
                 if (!confirm('Import this save? Progress in this browser will be replaced by the file.')) return;
-                const n = Arcade.importSave(obj);
-                Arcade.toast(`Imported ${n} entries — reloading…`, 'good');
+                const n = A.importSave(obj);
+                A.toast(`Imported ${n} entries, reloading`, 'good');
                 setTimeout(() => location.reload(), 800);
-            } catch (err) {
-                Arcade.toast('That file is not an arcade save.', 'bad');
-            }
+            } catch (err) { A.toast('That file is not an arcade save.', 'bad'); }
         });
+        $('editBtn').onclick = showProfileEdit;
+        $('timeBtn').onclick = showTime;
 
-        $('bAch').onclick = showAchievements;
-        $('bStats').onclick = showStats;
-        $('bShop').onclick = showShop;
-        $('bSave').onclick = showSave;
-        $('pAvatar').onclick = showProfile;
-        $('pName').onclick = showProfile;
-        $('bLucky').onclick = () => {
-            const pool = GAMES.filter(g => g.id !== recent[0]);
-            const g = Arcade.pick(pool);
-            Arcade.sfx('power');
-            Arcade.toast(`🎲 ${g.icon} ${g.title}!`, 'gold', 900);
-            markOpened(g.id);
-            setTimeout(() => { location.href = g.path; }, 650);
-        };
+        /* ---------- views ---------- */
+        function setView(v) {
+            view = v;
+            A.save('arcade.hub.view', v);
+            for (const id of ['games', 'party', 'quests', 'me']) $('v-' + id).hidden = id !== v;
+            document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+            renderAll();
+            window.scrollTo({ top: 0 });
+        }
+        document.querySelectorAll('.nav button').forEach(b => b.onclick = () => { A.sfx('click'); setView(b.dataset.view); });
+        $('meBtn').onclick = () => setView('me');
+        $('hCoins').onclick = () => { shopTab = 'theme'; setView('me'); setTimeout(() => $('shopTabs').scrollIntoView({ behavior: 'smooth', block: 'center' }), 60); };
+        $('hGift').onclick = () => setView('quests');
+
+        function renderAll() {
+            const { m, li } = renderTop();
+            if (view === 'games') renderGames();
+            if (view === 'party') renderParty();
+            if (view === 'quests') renderQuests();
+            if (view === 'me') renderMe(m, li);
+        }
 
         const lostHost = $('lost');
         for (const g of LOST) lostHost.appendChild(card(g, true));
-        q.addEventListener('input', render);
-        window.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement !== q && $('dlg').hidden) { e.preventDefault(); q.focus(); } });
-        window.addEventListener('pageshow', render); // refresh best scores when coming back from a game
-        render();
+        q.addEventListener('input', renderGames);
+        window.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement !== q && $('dlg').hidden) { e.preventDefault(); setView('games'); q.focus(); } });
+        window.addEventListener('pageshow', () => renderAll());
+        setView(['games', 'party', 'quests', 'me'].includes(view) ? view : 'games');
+
+        /* ---------- install as an app (pwa) ---------- */
+        let deferred = null;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; $('installRow').classList.add('show'); });
+        $('installBtn').onclick = async () => {
+            if (!deferred) return;
+            deferred.prompt();
+            await deferred.userChoice.catch(() => null);
+            deferred = null;
+            $('installRow').classList.remove('show');
+        };
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode is optional */ });
+        }
     })();
     </script>
 </body>

@@ -18,16 +18,16 @@
         spiralmult: 'Balls roll down a spiral into the centre. Touching a ×2/×3/×5 pad sends that many new balls in from the start.',
         spiralglass: 'Glass walls block the spiral. A new ball arrives every few seconds, each faster than the last, cracking the glass bit by bit. Reach the centre before the timer ends!',
         grow: 'Each bounce makes the ball bigger until it fills the circle.', escape: 'Nested rotating rings, each with a gap. A ring shatters when a ball slips through.',
-        accumulate: 'Every bounce spawns another ball — one becomes hundreds.', fill: 'Like Accumulate, but the balls really collide and pile up until the arena is full.',
+        accumulate: 'Every bounce spawns another ball, one becomes hundreds.', fill: 'Like Accumulate, but the balls really collide and pile up until the arena is full.',
         race: 'Coloured balls race out through rotating rings. First one out wins.', speed: 'A spinning polygon. Every bounce makes the ball faster.',
         gap: 'A spinning polygon with one opening. How long until the ball finds it?', drawer: 'The balls are pens: they leave paint that never fades.',
         shrink: 'The circle gets smaller with each bounce until the ball is trapped.', rhythm: 'Every bounce plays the next note of a song, so the physics performs the melody.',
         ghost: 'Every bounce leaves a spike on the wall. Escape through the gap before touching one.', breaker: 'A rotating spiral of glass cells, cracked and cleared one impact at a time.',
         targets: 'Light up every target in the arena.', glass: 'A ball falls through a tower of glass plates; each bounce breaks twice as many as the last.',
-        strings: 'Teams are tied to the wall by strings. Touch an enemy string to cut it — the last team with strings wins.', plinko: 'Hundreds of balls fall through a peg board into bins, and a bell curve appears.',
+        strings: 'Teams are tied to the wall by strings. Touch an enemy string to cut it, the last team with strings wins.', plinko: 'Hundreds of balls fall through a peg board into bins, and a bell curve appears.',
         track: 'Named marbles race down a long obstacle course with a live leaderboard.', lava: 'Marbles race down while lava pours in from above. Reach the bottom or melt.',
         colormatch: 'The ball keeps changing colour and can only break bricks of its current colour.', gates: 'One ball falls through ×2 and ×3 gates, multiplying into hundreds that smash a glass pane.',
-        bloom: 'Rods spin at slightly different speeds — a line, a wave, a spiral, a bloom — then line up again.', well: 'Planets orbit a hungry star and fall in one by one, leaving glowing trails.',
+        bloom: 'Rods spin at slightly different speeds, a line, a wave, a spiral, a bloom, then line up again.', well: 'Planets orbit a hungry star and fall in one by one, leaving glowing trails.',
         battle: 'Fighters with spinning weapons. Every hit makes the weapon stronger. Last one standing wins.',
         bauto: 'An AI paddle plays breakout, with multi-ball and wide-paddle drops.', bhp: 'Bricks have hit points; every brick destroyed releases a new ball.',
         bballz: 'A bot plays Ballz: it aims volleys while rows of numbered bricks creep down.', bpixel: 'An emoji is turned into pixel bricks, then smashed by bouncing balls.',
@@ -61,7 +61,7 @@
     const cur = () => F().sim;
     function go(i, dir) {
         const Fd = F();
-        if (i < 0) { Arcade.toast('This is the first one — swipe up for more', null, 1200); return; }
+        if (i < 0) { Arcade.toast('This is the first one, swipe up for more', null, 1200); return; }
         if (rec) stopRec();
         if (Fd.sim && !grid) { snap.width = cv.width; snap.height = cv.height; snap.getContext('2d').drawImage(cv, 0, 0); slide = { t: 0, dir: dir || 1 }; }
         Fd.idx = i;
@@ -241,7 +241,7 @@
         mk('↺ Defaults', () => { sp.o = sp.o.song != null ? { song: sp.o.song } : {}; applyStudio(true); setTimeout(buildStudio, 0); });
         mk('❤ Save', () => { if (!likes.some(l => BL.codeOf(l) === BL.codeOf(cur().spec))) toggleLike(); else Arcade.toast('Already in ❤ Liked', null, 1200); }, 'primary');
         host.appendChild(btns);
-        host.appendChild(h('<h4>Feed — which types appear when you scroll</h4>'));
+        host.appendChild(h('<h4>Feed, which types appear when you scroll</h4>'));
         const ft = h('<div class="togs"></div>');
         for (const t of Fd.types) {
             const b = document.createElement('button'); b.className = Fd.filter.has(t) ? 'on' : ''; b.textContent = BL.MODES[t].icon + ' ' + BL.MODES[t].label;
@@ -297,7 +297,7 @@
     const POWERS = {
         multi: { c: '#22d3ee', l: '×3', t: 'Multi-ball', w: 14 }, wide: { c: '#22c55e', l: '⟷', t: 'Wide paddle', w: 12 }, slow: { c: '#60a5fa', l: '🐢', t: 'Slow ball', w: 10 },
         fire: { c: '#f97316', l: '🔥', t: 'Fireball', w: 8 }, laser: { c: '#ef4444', l: '⚡', t: 'Lasers', w: 9 }, life: { c: '#f472b6', l: '❤', t: 'Extra life', w: 4 },
-        catch: { c: '#a3e635', l: '🧲', t: 'Catch — click to launch', w: 9 }, mega: { c: '#facc15', l: '⬤', t: 'Mega ball', w: 7 }, extra: { c: '#e879f9', l: '+1', t: 'Extra ball', w: 10 },
+        catch: { c: '#a3e635', l: '🧲', t: 'Catch, click to launch', w: 9 }, mega: { c: '#facc15', l: '⬤', t: 'Mega ball', w: 7 }, extra: { c: '#e879f9', l: '+1', t: 'Extra ball', w: 10 },
         shrink: { c: '#64748b', l: '⟶⟵', t: 'Shrunk paddle!', w: 8, bad: true },
     };
     const PKEYS = Object.keys(POWERS);
@@ -429,7 +429,7 @@
     }
     function gameOver(won) {
         G.over = true;
-        if (G.test) { Arcade.toast('Out of lives — back to the editor', null, 1500); setTab('editor'); return; }
+        if (G.test) { Arcade.toast('Out of lives, back to the editor', null, 1500); setTab('editor'); return; }
         const r = Arcade.best('arcade.physics.best', G.score);
         Arcade.report('score', G.score);
         Arcade.addXP(Math.min(60, Math.floor(G.score / 200)), true);
@@ -497,7 +497,7 @@
     $('pauseBtn').onclick = () => { bbPaused = !bbPaused; $('pauseBtn').textContent = bbPaused ? '▶ Resume' : '⏸ Pause'; };
     function buildMy() {
         const host = $('myList'); host.innerHTML = '';
-        if (!custom.length) host.innerHTML = '<p class="small muted center">Nothing yet — build one in the ✏️ Level Editor.</p>';
+        if (!custom.length) host.innerHTML = '<p class="small muted center">Nothing yet, build one in the ✏️ Level Editor.</p>';
         custom.forEach((lv, i) => {
             const row = document.createElement('div'); row.className = 'lv-row';
             row.innerHTML = '<b></b><button class="btn sm primary">▶ Play</button><button class="btn sm">✏️</button><button class="btn sm ghost">✕</button>';
@@ -683,7 +683,7 @@
         const i = custom.findIndex(l => l.name === name), lv = { name, rows: trimRows(ed.rows) };
         if (i >= 0) custom[i] = lv; else custom.unshift(lv);
         Arcade.save('arcade.physics.custom', custom);
-        Arcade.toast('Saved "' + name + '" — play it from ⭐ My levels', 'good', 2200);
+        Arcade.toast('Saved "' + name + '", play it from ⭐ My levels', 'good', 2200);
     };
     $('codeBtn').onclick = () => { const code = encodeLevel(ed.rows); navigator.clipboard && navigator.clipboard.writeText(code).catch(() => { }); Arcade.toast('Level code copied: ' + (code.length > 40 ? code.slice(0, 40) + '…' : code), 'good', 2600); };
     function edPaint(pt, brush) {
@@ -716,9 +716,9 @@
         'Physics Shorts': () => `<p>An endless feed of physics simulations, like satisfying ball videos. Every one is generated from a <b>seed</b>, so the same code always replays the same simulation.</p>
             <h3>Controls</h3><table>
             <tr><td>Scroll · ↓ / ↑ · swipe</td><td>Next / previous simulation</td></tr><tr><td>Space · tap</td><td>Pause</td></tr><tr><td>R</td><td>Replay</td></tr><tr><td>L</td><td>Like (saved in ❤ Liked)</td></tr>
-            <tr><td>G</td><td>2×2 grid — four simulations at once; click one to open it</td></tr><tr><td>S</td><td>Open the Studio</td></tr><tr><td>⏺</td><td>Record the simulation from the start as a video (with sound)</td></tr><tr><td>🔗</td><td>Copy a code anyone can paste into 🔗 Open code</td></tr></table>
+            <tr><td>G</td><td>2×2 grid, four simulations at once; click one to open it</td></tr><tr><td>S</td><td>Open the Studio</td></tr><tr><td>⏺</td><td>Record the simulation from the start as a video (with sound)</td></tr><tr><td>🔗</td><td>Copy a code anyone can paste into 🔗 Open code</td></tr></table>
             <h3>Simulation types</h3><table>${BL.SHORTS.map(t => `<tr><td>${BL.MODES[t].icon} ${BL.MODES[t].label}</td><td>${DESC[t]}</td></tr>`).join('')}</table>
-            <h3>Sound</h3><p>Every bounce plays the next note of a song — Ode to Joy, Für Elise, Korobeiniki and more. Pick the song and the instrument in the Studio.</p>`,
+            <h3>Sound</h3><p>Every bounce plays the next note of a song, Ode to Joy, Für Elise, Korobeiniki and more. Pick the song and the instrument in the Studio.</p>`,
         'Studio': () => `<p>The Studio changes the rules of the current simulation live. Changed settings are highlighted; the code you share includes them.</p>
             <h3>Physics settings</h3><table>${BL.PARAMS.map(([k, l]) => `<tr><td>${l}</td><td>${PDESC[k]}</td></tr>`).join('')}<tr><td>Balls collide</td><td>Balls bounce off each other instead of passing through.</td></tr></table>
             <h3>Look &amp; sound</h3><p>Colour palettes (including a rainbow cycle), backgrounds, instruments, volume, and toggles for titles, visualizer bars, trails, glow and screen shake. These apply to every simulation.</p>
@@ -729,10 +729,10 @@
             <h3>Controls</h3><table><tr><td>Mouse / drag</td><td>Move the paddle</td></tr><tr><td>← →  or A D</td><td>Move with the keyboard</td></tr><tr><td>Click · Space</td><td>Launch the ball · fire lasers · release caught balls</td></tr><tr><td>P / Esc</td><td>Pause</td></tr></table>
             <h3>Bricks</h3><table>
             ${[1, 2, 3, 4, 5].map(n => `<tr><td><span class="chipk" style="background:${HP_C[n]}">${n}</span></td><td>Takes ${n} hit${n > 1 ? 's' : ''}</td></tr>`).join('')}
-            <tr><td><span class="chipk" style="background:${BRICK.X.c}">Steel</span></td><td>Unbreakable — even fireballs bounce off.</td></tr>
+            <tr><td><span class="chipk" style="background:${BRICK.X.c}">Steel</span></td><td>Unbreakable, even fireballs bounce off.</td></tr>
             <tr><td><span class="chipk" style="background:${BRICK.B.c}">💣</span></td><td>Bomb: destroys every brick around it (chains!).</td></tr>
             <tr><td><span class="chipk" style="background:${BRICK.P.c}">★</span></td><td>Power brick: always drops a good power-up.</td></tr></table>
-            <h3>Power-ups</h3><table>${PKEYS.map(k => `<tr><td><span class="chipk" style="background:${POWERS[k].c}">${POWERS[k].l}</span></td><td>${POWERS[k].t}${POWERS[k].bad ? ' (bad — dodge it)' : ''}</td></tr>`).join('')}</table>
+            <h3>Power-ups</h3><table>${PKEYS.map(k => `<tr><td><span class="chipk" style="background:${POWERS[k].c}">${POWERS[k].l}</span></td><td>${POWERS[k].t}${POWERS[k].bad ? ' (bad, dodge it)' : ''}</td></tr>`).join('')}</table>
             <h3>Scoring</h3><p>10 per hit, 50 per brick, multiplied by your combo (bricks broken without touching the paddle). Clearing a level adds 500 + 250 per life left.</p>`,
         'Ballz': () => `<p>Turn-based brick breaking. Drag to aim and release to fire every ball you own. Each brick shows how many hits it needs. Collect green rings for +1 ball.</p>
             <p>After every turn the bricks move down a row and a new, tougher row appears. If a brick reaches the red line, the game is over. The first ball to land decides where you shoot from next.</p>

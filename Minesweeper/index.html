@@ -10,48 +10,48 @@
         .board-wrap { position: relative; flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto; }
         .board {
             display: grid;
-            gap: 2px;
+            gap: 0;
             padding: 10px;
-            border-radius: 16px;
-            background: var(--surface);
-            border: 1px solid var(--line-2);
-            box-shadow: var(--shadow), 0 0 60px -30px var(--accent);
+            border-radius: 24px;
+            background: #2f5a45;
+            box-shadow: 0 8px 0 #1f3d2f;
             touch-action: manipulation;
             margin: auto;
         }
         .cell {
             width: var(--cell);
             height: var(--cell);
-            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 850;
-            font-size: calc(var(--cell) * 0.56);
+            font-family: var(--display);
+            font-weight: 600;
+            font-size: calc(var(--cell) * 0.62);
             cursor: pointer;
-            background: linear-gradient(160deg, #2a3866, #1e2a4d);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -2px 0 rgba(0,0,0,0.25);
+            background: #8fd3a8;
             transition: background 0.12s, transform 0.08s;
             user-select: none;
         }
-        .cell:hover { background: linear-gradient(160deg, #34457a, #26345c); }
-        .cell.open { background: #0f1629; box-shadow: none; cursor: default; animation: reveal 0.18s ease-out; }
-        .cell.flag::after { content: "🚩"; font-size: calc(var(--cell) * 0.5); }
-        .cell.mine { background: #3b1220; }
-        .cell.mine::after { content: "💣"; font-size: calc(var(--cell) * 0.52); }
-        .cell.boom { background: #ef4444; }
-        .cell.wrong { background: #3b2412; }
-        .cell.wrong::after { content: "✖"; color: #fb923c; font-size: calc(var(--cell) * 0.6); }
-        .cell.hint { outline: 2px solid var(--good); outline-offset: -2px; }
-        .cell.press { transform: scale(0.92); }
+        .cell.alt { background: #7ec897; }
+        .cell:hover { background: #a6dfba; }
+        .cell.open { background: #f4ecdd; cursor: default; animation: reveal 0.18s ease-out; }
+        .cell.open.alt { background: #eadfc9; }
+        .cell.flag::after { content: "🚩"; font-size: calc(var(--cell) * 0.55); }
+        .cell.mine, .cell.mine.alt { background: #f3b3a9; }
+        .cell.mine::after { content: "💣"; font-size: calc(var(--cell) * 0.55); }
+        .cell.boom, .cell.boom.alt { background: #e8655a; }
+        .cell.wrong, .cell.wrong.alt { background: #f1d3a8; }
+        .cell.wrong::after { content: "✖"; color: #c4563c; font-size: calc(var(--cell) * 0.6); }
+        .cell.hint { box-shadow: inset 0 0 0 3px #f6c445; }
+        .cell.press { transform: scale(0.9); }
         .cell.void { visibility: hidden; pointer-events: none; }
-        .n1 { color: #60a5fa; } .n2 { color: #34d399; } .n3 { color: #f87171; } .n4 { color: #a78bfa; }
-        .n5 { color: #fb923c; } .n6 { color: #22d3ee; } .n7 { color: #f472b6; } .n8 { color: #e2e8f0; }
+        .n1 { color: #2f7fc4; } .n2 { color: #2a9d58; } .n3 { color: #d6476b; } .n4 { color: #7c4dd6; }
+        .n5 { color: #c8652e; } .n6 { color: #1f8a8a; } .n7 { color: #3a2c1a; } .n8 { color: #8a7a66; }
         @keyframes reveal { from { transform: scale(0.7); opacity: 0.4; } to { transform: none; opacity: 1; } }
         .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         #face { font-size: 1.3rem; padding: 6px 12px; }
 
-        /* ---------- Custom map editor ---------- */
+        /* ---------- custom map editor ---------- */
         .editor { width: min(880px, 100%); text-align: left; }
         .editor h2, .editor > p { text-align: center; }
         .ed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
@@ -62,9 +62,9 @@
         .ed-check input { accent-color: var(--accent); width: 16px; height: 16px; }
         .ed-board-wrap { overflow: auto; max-height: 44vh; display: flex; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; touch-action: none; }
         .ed-board { display: grid; gap: 1px; user-select: none; margin: auto; }
-        .ed-board div { width: var(--ec); height: var(--ec); border-radius: 3px; background: #2a3866; cursor: crosshair; display: flex; align-items: center; justify-content: center; font-size: calc(var(--ec) * .68); line-height: 1; }
+        .ed-board div { width: var(--ec); height: var(--ec); border-radius: 3px; background: #8fd3a8; cursor: crosshair; display: flex; align-items: center; justify-content: center; font-size: calc(var(--ec) * .68); line-height: 1; }
         .ed-board div.off { background: transparent; outline: 1px dashed rgba(148,163,184,.18); outline-offset: -1px; }
-        .ed-board div.mine { background: #5b1a2b; }
+        .ed-board div.mine { background: #f3b3a9; }
         .ed-board div.mine::after { content: "💣"; }
         .ed-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
         .ed-row .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; min-width: 60px; }
@@ -81,7 +81,7 @@
         <div class="stats">
             <span class="chip bad">Mines <b id="mines">10</b></span>
             <span class="chip accent">Time <b id="time">0</b></span>
-            <span class="chip gold">Best <b id="best">—</b></span>
+            <span class="chip gold">Best <b id="best">-</b></span>
         </div>
         <div class="actions">
             <button class="btn sm icon" data-mute>🔊</button>
@@ -94,13 +94,13 @@
                 <button class="btn sm" data-diff="easy">Easy</button>
                 <button class="btn sm" data-diff="medium">Medium</button>
                 <button class="btn sm" data-diff="hard">Hard</button>
-                <button class="btn sm" data-diff="custom">✏️ Custom</button>
+                <button class="btn sm" data-diff="custom">Custom</button>
             </div>
-            <button class="btn sm" id="editBtn" title="Edit the custom map" hidden>🛠 Edit map</button>
+            <button class="btn sm" id="editBtn" title="Edit the custom map" hidden>Edit map</button>
             <button class="btn" id="face" title="New game">🙂</button>
-            <button class="btn sm" id="flagMode" aria-pressed="false" title="Tap to flag instead of reveal">🚩 Flag mode</button>
-            <button class="btn sm" id="hintBtn" title="Reveal a safe cell (+15s)">💡 Hint</button>
-            <button class="btn sm" id="noGuessBtn" aria-pressed="false" title="Every board can be solved with logic alone — no 50/50 guesses">🧠 No-guess</button>
+            <button class="btn sm" id="flagMode" aria-pressed="false" title="Tap to flag instead of reveal">Flag mode</button>
+            <button class="btn sm" id="hintBtn" title="Reveal a safe cell (+15s)">Hint</button>
+            <button class="btn sm" id="noGuessBtn" aria-pressed="false" title="Every board can be solved with logic alone, no 50/50 guesses">No-guess</button>
         </div>
         <div class="board-wrap" id="wrap">
             <div class="board" id="board"></div>
@@ -112,7 +112,7 @@
                     <div class="stat-grid">
                         <div><small>Difficulty</small><b id="endDiff">Easy</b></div>
                         <div><small>Hints used</small><b id="endHints">0</b></div>
-                        <div><small>Best</small><b id="endBest">—</b></div>
+                        <div><small>Best</small><b id="endBest">-</b></div>
                     </div>
                     <div class="actions">
                         <button class="btn primary lg" id="againBtn">New game</button>
@@ -137,15 +137,15 @@
             </div>
             <div class="ed-row">
                 <span class="lbl">Shape</span>
-                <button class="btn sm" data-shape="rect">▭ Rectangle</button>
-                <button class="btn sm" data-shape="diamond">◇ Diamond</button>
-                <button class="btn sm" data-shape="circle">◯ Circle</button>
-                <button class="btn sm" data-shape="donut">🍩 Donut</button>
-                <button class="btn sm" data-shape="heart">♥ Heart</button>
-                <button class="btn sm" data-shape="cross">✚ Cross</button>
+                <button class="btn sm" data-shape="rect">Rectangle</button>
+                <button class="btn sm" data-shape="diamond">Diamond</button>
+                <button class="btn sm" data-shape="circle">Circle</button>
+                <button class="btn sm" data-shape="donut">Donut</button>
+                <button class="btn sm" data-shape="heart">Heart</button>
+                <button class="btn sm" data-shape="cross">Cross</button>
                 <button class="btn sm" data-shape="hourglass">⧗ Hourglass</button>
-                <button class="btn sm" data-shape="rooms">🏠 Rooms</button>
-                <button class="btn sm" data-shape="swiss">🧀 Swiss</button>
+                <button class="btn sm" data-shape="rooms">Rooms</button>
+                <button class="btn sm" data-shape="swiss">Swiss</button>
             </div>
             <div class="ed-row">
                 <span class="lbl">Brush</span>
@@ -153,9 +153,9 @@
                     <button class="btn sm active" data-brush="toggle">Toggle</button>
                     <button class="btn sm" data-brush="add">＋ Cells</button>
                     <button class="btn sm" data-brush="erase">－ Cells</button>
-                    <button class="btn sm" data-brush="mine">💣 Mine</button>
+                    <button class="btn sm" data-brush="mine">Mine</button>
                 </div>
-                <button class="btn sm ghost" id="edMirror" aria-pressed="false" title="Mirror every stroke left ↔ right">⇋ Mirror</button>
+                <button class="btn sm ghost" id="edMirror" aria-pressed="false" title="Mirror every stroke left ↔ right">Mirror</button>
                 <button class="btn sm ghost" id="edInvert">Invert</button>
                 <button class="btn sm ghost" id="edClearMines">Clear 💣</button>
             </div>
@@ -169,11 +169,11 @@
             <div class="ed-row"><span class="lbl">Saved</span><div class="ed-saved" id="edSaved"></div></div>
             <div class="ed-row">
                 <input class="ed-name" id="edName" placeholder="Map name" maxlength="24" style="flex:1;min-width:140px">
-                <button class="btn sm" id="edSave">💾 Save map</button>
+                <button class="btn sm" id="edSave">Save map</button>
             </div>
             <div class="actions">
                 <button class="btn ghost" id="edCancel">Cancel</button>
-                <button class="btn primary lg" id="edPlay">▶ Play this map</button>
+                <button class="btn primary lg" id="edPlay">Play this map</button>
             </div>
         </div>
     </div>
@@ -195,7 +195,7 @@
         let playable = 0, wrapEdges = false, safeStart = true, freeHints = false;
         let noGuess = !!Arcade.load('arcade.mines.noguess', false);
 
-        /* Custom map: mask is one char per cell — '0' hole, '1' cell, '2' hand-placed mine */
+        /* custom map: mask is one char per cell, '0' hole, '1' cell, '2' hand-placed mine */
         const blankCustom = () => ({ r: 12, c: 12, m: 20, mask: '1'.repeat(144), safe: true, wrap: false, free: false });
         let custom = Object.assign(blankCustom(), Arcade.load('arcade.mines.custom', {}));
         if (typeof custom.mask !== 'string' || custom.mask.length !== custom.r * custom.c) custom = blankCustom();
@@ -235,7 +235,7 @@
             for (let i = 0; i < R * C; i++) {
                 const v = mask ? mask[i] : '1';
                 const el = document.createElement('div');
-                el.className = 'cell' + (v === '0' ? ' void' : '');
+                el.className = 'cell' + (v === '0' ? ' void' : '') + (((Math.floor(i / C) + i % C) % 2) ? ' alt' : '');
                 el.dataset.i = i;
                 boardEl.appendChild(el);
                 const cell = { i, r: Math.floor(i / C), c: i % C, mine: false, fixed: v === '2', void: v === '0', open: false, flag: false, n: 0, el };
@@ -257,7 +257,7 @@
             Arcade.text('mines', M - flags);
             Arcade.text('time', seconds);
             const b = Arcade.load(bestKey(), 0);
-            Arcade.text('best', b ? b + 's' : '—');
+            Arcade.text('best', b ? b + 's' : '-');
         }
         const setFace = (f) => { $('face').textContent = f; };
 
@@ -359,7 +359,7 @@
                 const t0 = performance.now();
                 let tries = 1, ok = solvable(safe.i, nb);
                 while (!ok && performance.now() - t0 < 2500) { layMines(); ok = solvable(safe.i, nb); tries++; }
-                if (!ok) Arcade.toast('Could not find a guess-free layout this time — this board may need one guess', 'bad', 3000);
+                if (!ok) Arcade.toast('Could not find a guess-free layout this time, this board may need one guess', 'bad', 3000);
             }
             started = true;
             timer = setInterval(() => { seconds++; hud(); }, 1000);
@@ -448,7 +448,7 @@
             let isNew = false;
             if (won) isNew = Arcade.best(bestKey(), seconds, true).isNew;
             const b = Arcade.load(bestKey(), 0);
-            Arcade.text('endBest', b ? b + 's' : '—');
+            Arcade.text('endBest', b ? b + 's' : '-');
             $('newBest').hidden = !isNew;
             Arcade.show('endOv');
             hud();
@@ -476,7 +476,7 @@
             hud();
         }
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         const cellFrom = (e) => {
             const el = e.target.closest('.cell');
             const c = el ? cells[+el.dataset.i] : null;
@@ -520,7 +520,7 @@
             else if (e.code === 'KeyR') newGame();
         });
 
-        /* ---------- Custom map editor ---------- */
+        /* ---------- custom map editor ---------- */
         const ed = { r: 0, c: 0, mask: [], brush: 'toggle', mirror: false, host: $('edBoard') };
 
         function openEditor() {
@@ -666,7 +666,7 @@
         function renderSaved() {
             const host = $('edSaved');
             host.innerHTML = '';
-            if (!savedMaps.length) { host.innerHTML = '<span class="tiny dim">No saved maps yet — name one below and save it.</span>'; return; }
+            if (!savedMaps.length) { host.innerHTML = '<span class="tiny dim">No saved maps yet, name one below and save it.</span>'; return; }
             savedMaps.forEach((m, idx) => {
                 const b = document.createElement('button');
                 b.className = 'btn sm';

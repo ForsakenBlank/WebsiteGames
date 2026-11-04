@@ -28,8 +28,8 @@
             <div class="seg" id="sizes"></div>
             <button class="btn sm" id="prevBtn">◀</button>
             <button class="btn sm" id="nextBtn">▶</button>
-            <button class="btn sm" id="wrapBtn" title="Pipes can leave one edge and come back on the other">⟳ Wrap: off</button>
-            <button class="btn sm" id="resetBtn">⟲ Restart</button>
+            <button class="btn sm" id="wrapBtn" title="Pipes can leave one edge and come back on the other">Wrap: off</button>
+            <button class="btn sm" id="resetBtn">Restart</button>
         </div>
         <div class="canvas-box" id="box">
             <canvas class="screen" id="cv"></canvas>
@@ -50,7 +50,7 @@
         'use strict';
         const $ = (id) => document.getElementById(id);
         const S = 600, SIZES = [5, 6, 7, 8, 9, 10];
-        const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];   // N E S W, bit i = 1 << i
+        const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];   // n E S W, bit i = 1 << i
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, S, S, { max: 1.5 });
         const c = view.ctx;

@@ -6,16 +6,13 @@
     <title>Petdoku · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        /* Petdoku: dark arcade look with chunky casual-game controls */
+        /* petdoku: soft casual look, chunky round controls */
         :root {
             --accent: #f472b6; --accent-2: #fb923c; --accent-ink: #2a0717;
             --ink: var(--text); --bw: 280px; --gap: 5px;
         }
         html, body { overflow-x: hidden; }
-        body {
-            background: radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--bg);
-            font-family: "Nunito", "Segoe UI Rounded", "Arial Rounded MT Bold", "Segoe UI", system-ui, sans-serif;
-        }
+        body { background: var(--bg); }
         button { font-family: inherit; }
         .pbtn {
             appearance: none; border: none; cursor: pointer; font-weight: 900; color: #fff; letter-spacing: 0.02em;
@@ -43,7 +40,7 @@
         .pill .hearts { letter-spacing: 1px; color: #f87171; }
         .pill .hearts .lost { color: var(--surface-3); }
 
-        /* board: separate solid tiles with slightly rounded corners and gaps between them — no outlines */
+        /* board: separate solid tiles with slightly rounded corners and gaps between them, no outlines */
         .play { position: relative; flex: 1; min-height: 0; width: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 4px 12px; }
         .board-card { padding: 0; background: none; }
         .board {
@@ -77,8 +74,13 @@
         .hint-box button { margin-left: auto; flex: none; }
         .cell.won { animation: winWave 0.8s ease-out both; }
         @keyframes winWave { 0% { filter: brightness(1.6); transform: scale(0.85); } 100% { filter: none; transform: none; } }
-        .rules { font-size: 0.82rem; color: var(--muted); text-align: center; max-width: var(--bw); margin: 0; font-weight: 700; }
-        .rules b { color: var(--text); }
+        .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(var(--bw), 100%); }
+        .rule { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 14px; background: var(--surface); font-size: 0.74rem; font-weight: 800; color: var(--muted); line-height: 1.15; }
+        .mini { display: grid; grid-template-columns: repeat(3, 9px); gap: 2px; flex: none; }
+        .mini i { width: 9px; height: 9px; border-radius: 2px; background: var(--surface-3); }
+        .mini i.p { background: #f6c445; border-radius: 50%; }
+        .mini i.x { background: transparent; box-shadow: inset 0 0 0 2px #e8655a; }
+        @media (max-width: 380px) { .rule { flex-direction: column; text-align: center; } }
 
         /* bottom toolbar */
         .toolbar { display: flex; justify-content: center; align-items: flex-end; gap: clamp(8px, 3vw, 18px); padding: 6px 10px max(14px, env(safe-area-inset-bottom)); }
@@ -93,7 +95,7 @@
         .badge.ok { background: #22c55e; }
 
         /* screens */
-        .screen { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(900px 500px at 50% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg); }
+        .screen { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg); }
         .screen[hidden] { display: none !important; }
         .home-head { text-align: center; padding: max(16px, env(safe-area-inset-top)) 16px 6px; position: relative; }
         .logo { font-size: 2.6rem; font-weight: 900; color: var(--text); letter-spacing: 0.01em; line-height: 1; }
@@ -165,6 +167,35 @@
         .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 85; overflow: hidden; }
         .confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 3px; animation: fall linear forwards; }
         @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+        /* new soft look */
+        .pbtn { font-family: var(--display); font-weight: 600; letter-spacing: 0; box-shadow: 0 5px 0 var(--c3, #9d174d); }
+        .pbtn.white { --c1: var(--surface); --c3: var(--lip); }
+        .rbtn { border-radius: 50%; }
+        .rbtn svg { width: 22px; height: 22px; }
+        .ptitle { display: flex; flex-direction: column-reverse; align-items: center; gap: 4px; }
+        .ptitle b { font-family: var(--display); font-weight: 600; font-size: 1.7rem; }
+        .ptitle small { padding: 3px 12px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--display); font-weight: 600; font-size: 0.78rem; letter-spacing: 0.04em; }
+        .pill { background: var(--pill); color: var(--pill-ink); border: 0; font-family: var(--display); font-weight: 600; font-size: 1.15rem; padding: 6px 16px; box-shadow: 0 3px 0 var(--lip); }
+        .pill .hearts { color: #e2463a; font-size: 1.25rem; letter-spacing: 3px; }
+        .pill .hearts .lost { color: color-mix(in srgb, var(--pill-ink) 18%, var(--pill)); }
+        .tool { color: var(--text); font-family: var(--display); font-weight: 600; font-size: 0.82rem; }
+        .tool .ic { border-radius: 50%; border: 0; background: var(--surface); box-shadow: 0 5px 0 var(--lip); }
+        .tool:active .ic { box-shadow: 0 1px 0 var(--lip); }
+        .tool.on .ic { background: #f6c445; color: #4a3200; box-shadow: 0 5px 0 #b98a13; }
+        #undoBtn .ic, #hintBtn .ic { background: #f6c445; color: #4a3200; box-shadow: 0 5px 0 #b98a13; }
+        .tool.mode .ic { border-radius: 50%; }
+        .badge { border: 0; }
+        .logo { font-family: var(--display); font-weight: 600; }
+        .dtab { border: 0; font-family: var(--display); font-weight: 600; }
+        .dinfo, .theme, .opt, .howto div, .card .sgrid div { border: 0; }
+        .lv { font-family: var(--display); font-weight: 600; border-radius: 50%; }
+        .lv.locked { box-shadow: 0 5px 0 var(--lip); }
+        .card { border: 0; border-radius: 28px; }
+        .card h2 { font-family: var(--display); font-weight: 600; }
+        .ribbon { font-family: var(--display); font-weight: 600; border-radius: 16px; transform: rotate(-3deg); }
+        .pop { background: color-mix(in srgb, var(--bg-2) 78%, transparent); backdrop-filter: blur(4px); }
+        .hint-box { border: 0; box-shadow: 0 8px 24px -12px rgba(0,0,0,.6); }
+        .gen span { border: 0; font-family: var(--display); font-weight: 600; }
     </style>
 </head>
 <body class="no-scroll no-select">
@@ -183,7 +214,11 @@
     <main class="play" id="play">
         <div class="board-card"><div class="board" id="board"></div></div>
         <div class="hint-box" id="hintBox" hidden><span class="hb-ic">💡</span><span id="hintText"></span><button class="pbtn white sm" id="hintClose">Got it</button></div>
-        <p class="rules">One pet in every <b>row</b>, <b>column</b> and <b>colour</b>. Pets can't <b>touch</b>, not even corners.</p>
+        <div class="rules">
+            <div class="rule"><span class="mini"><i class="x"></i><i class="x"></i><i></i><i class="x"></i><i class="p"></i><i></i><i></i><i></i><i></i></span>One pet per colour</div>
+            <div class="rule"><span class="mini"><i></i><i class="x"></i><i></i><i class="x"></i><i class="p"></i><i class="x"></i><i></i><i class="x"></i><i></i></span>One per row and column</div>
+            <div class="rule"><span class="mini"><i class="x"></i><i class="x"></i><i class="x"></i><i class="x"></i><i class="p"></i><i class="x"></i><i class="x"></i><i class="x"></i><i class="x"></i></span>Pets can't touch</div>
+        </div>
     </main>
     <div class="toolbar">
         <button class="tool" id="undoBtn"><span class="ic">↶</span>Undo</button>
@@ -207,7 +242,7 @@
         <div class="tabs" id="tabs"></div>
         <div class="dinfo" id="dinfo"></div>
         <div class="chapters" id="chapters"></div>
-        <div class="home-foot"><button class="pbtn lg" id="playBtn">▶ Play level 1</button></div>
+        <div class="home-foot"><button class="pbtn lg" id="playBtn">Play level 1</button></div>
     </div>
 
     <!-- ================= POPUPS ================= -->
@@ -225,8 +260,8 @@
             <div class="acts">
                 <button class="pbtn green lg" id="nextBtn">Next level ▶</button>
                 <div class="row2">
-                    <button class="pbtn white" id="winMapBtn">☰ Levels</button>
-                    <button class="pbtn white" id="replayBtn">⟲ Replay</button>
+                    <button class="pbtn white" id="winMapBtn">Levels</button>
+                    <button class="pbtn white" id="replayBtn">Replay</button>
                 </div>
             </div>
         </div>
@@ -239,7 +274,7 @@
             <p class="small">You'll get a brand-new map for this level.</p>
             <div class="acts">
                 <button class="pbtn lg" id="retryBtn">Try again</button>
-                <button class="pbtn white" id="loseMapBtn">☰ Levels</button>
+                <button class="pbtn white" id="loseMapBtn">Levels</button>
             </div>
         </div>
     </div>
@@ -274,9 +309,9 @@
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        /* ---------- Content ---------- */
-        // solid, clearly different colours — a region is simply the tiles of one colour
-        const REGION_COLORS = ['#e53935', '#1e88e5', '#fdd835', '#2e7d32', '#8e24aa', '#fb8c00', '#00e5ff', '#ff80ab', '#6d4c41', '#b2ff59', '#455a64', '#d500f9', '#cfd8dc', '#00897b']; // spread across hue AND lightness so no two look alike
+        /* ---------- content ---------- */
+        // solid, clearly different colours, a region is simply the tiles of one colour
+        const REGION_COLORS = ['#ea6b5f', '#5b9be6', '#f6c445', '#5fb37a', '#9b7ae0', '#f29a4a', '#6fd0d6', '#f39ac0', '#9a7058', '#b6dc6e', '#5d6b7a', '#d070d8', '#d9d2c5', '#3f9a8c']; // soft colours, still spread across hue and lightness so no two look alike
         const THEMES = {
             pets: { name: 'Pets', icon: '🐶', set: ['🐶', '🐱', '🐰', '🐹', '🦊', '🐼', '🐨', '🐸', '🐵', '🐷', '🐮', '🐯', '🐻', '🐭'] },
             farm: { name: 'Farm', icon: '🐮', set: ['🐮', '🐷', '🐔', '🐴', '🐑', '🦆', '🐐', '🦃', '🐝', '🐶', '🐱', '🐭', '🐇', '🐓'] },
@@ -289,10 +324,10 @@
          *   3 "this cell would wipe out a whole row/column/colour" · 4 groups of 2–3 colours sharing lines
          *   5 deeper what-if chains · 6 beyond all of that
          * lives: wrong pets allowed (null = unlimited). blind: rule breaks aren't highlighted.
-         * size: board size at level 1 — it grows as you climb the levels.
+         * size: board size at level 1, it grows as you climb the levels.
          */
         const DIFFS = [
-            { id: 'kitten', icon: '🐱', name: 'Kitten', grade: [1, 2], hints: 99, lives: null, size: 5, desc: 'Gentle — only simple steps' },
+            { id: 'kitten', icon: '🐱', name: 'Kitten', grade: [1, 2], hints: 99, lives: null, size: 5, desc: 'Gentle, only simple steps' },
             { id: 'puppy', icon: '🐶', name: 'Puppy', grade: [2, 2], hints: 5, lives: null, size: 5, desc: 'Spot colours stuck in a line' },
             { id: 'bunny', icon: '🐰', name: 'Bunny', grade: [2, 3], hints: 4, lives: null, size: 6, desc: 'A little look-ahead' },
             { id: 'hamster', icon: '🐹', name: 'Hamster', grade: [3, 3], hints: 3, lives: null, size: 6, desc: 'Look-ahead needed' },
@@ -306,7 +341,7 @@
         const CHAPTER = 20;
         const CHAPTER_NAMES = ['Sunny Garden', 'Puppy Park', 'Bunny Hills', 'Fishbowl Bay', 'Kitty Castle', 'Pony Prairie', 'Hamster Heights', 'Parrot Jungle', 'Frosty Den', 'Starlight Zoo'];
 
-        /* ---------- Puzzle engine ---------- */
+        /* ---------- puzzle engine ---------- */
         // cells are indexed r*n+c; reg[i] = colour region of cell i
         function units(n, reg) {
             const rows = [], cols = [], regs = Array.from({ length: n }, () => []);
@@ -332,7 +367,7 @@
             return [...out];
         }
 
-        // Exact solver: finds up to `limit` solutions (arrays of pet cells). Branches on the tightest unit.
+        // exact solver: finds up to `limit` solutions (arrays of pet cells). Branches on the tightest unit.
         function solveAll(n, reg, limit) {
             const U = units(n, reg), sols = [];
             const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
@@ -403,7 +438,7 @@
             if (r > 0) out.push(i - n); if (r < n - 1) out.push(i + n); if (c > 0) out.push(i - 1); if (c < n - 1) out.push(i + 1);
             return out;
         };
-        // Moves cell q into a neighbouring colour if that keeps its old colour in one piece.
+        // moves cell q into a neighbouring colour if that keeps its old colour in one piece.
         function tryMove(n, reg, q, seeds) {
             if (seeds.has(q)) return false;
             const nb = Arcade.shuffle(orth(n, q).map(j => reg[j]).filter(g => g !== reg[q]));
@@ -460,7 +495,7 @@
             return null;
         }
 
-        /* Logical grader: solves like a person would and reports the hardest step it needed (6 = stuck). */
+        /* logical grader: solves like a person would and reports the hardest step it needed (6 = stuck). */
         function grade(n, reg) {
             const U = units(n, reg);
             const block = Array.from({ length: n * n }, (_, i) => blocked(n, reg, i));
@@ -567,7 +602,7 @@
             return best;
         }
 
-        /* ---------- Progress ---------- */
+        /* ---------- progress ---------- */
         // keys kept from the previous version so levels already reached carry over
         const CUR_KEY = 'arcade.petdoku.q.current', STATS_KEY = 'arcade.petdoku.q.stats';
         const levelKey = (d) => 'arcade.petdoku.q.level.' + d.id;
@@ -584,7 +619,7 @@
         const levelOf = (d) => Arcade.load(levelKey(d), 1);      // the next unbeaten level
         const starsOf = (d) => Arcade.load(starsKey(d), {});
 
-        // Map size climbs with the level; every 10th level is a bonus big map.
+        // map size climbs with the level; every 10th level is a bonus big map.
         function sizeFor(lv, d) {
             let n = d.size + Math.floor((lv - 1) / 12);
             let label = '';
@@ -617,7 +652,7 @@
 
         /**
          * Builds a fresh map. `keep` carries the timer/mistakes/hints over (restart mid-level), so a
-         * new layout never resets the lives you've lost — and restarting can't be used to peek.
+         * new layout never resets the lives you've lost, and restarting can't be used to peek.
          */
         function newLevel(d, lv, keep) {
             diff = d;
@@ -630,12 +665,12 @@
                 const p = generateFor(n, d);
                 Arcade.hide('gen');
                 start(d, { ...p, level: lv, ...(keep || {}) });
-                if (label && !keep) Arcade.toast(`${label} — ${n}×${n}!`, 'gold', 1400);
+                if (label && !keep) Arcade.toast(`${label}, ${n}×${n}!`, 'gold', 1400);
                 Arcade.sfx('level');
             }, 40);
         }
 
-        /* ---------- Layout & rendering ---------- */
+        /* ---------- layout & rendering ---------- */
         function layout() {
             const play = $('play').getBoundingClientRect();
             const n = game ? game.n : 8;
@@ -711,7 +746,7 @@
             $('timer').parentElement.hidden = !opts.timer;
         }
 
-        /* ---------- Moves ---------- */
+        /* ---------- moves ---------- */
         function snapshot() { game.undo.push(game.cells.slice()); if (game.undo.length > 400) game.undo.shift(); }
 
         function setCell(i, v) {
@@ -823,7 +858,7 @@
             render(); persist();
         }
 
-        /* ---------- Hints that explain the reasoning ---------- */
+        /* ---------- hints that explain the reasoning ---------- */
         const COLOUR_NAMES = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink', 'brown', 'lime', 'peach', 'grey', 'violet', 'teal'];
         /** "row 3", "column 2" or "the <b>red</b> colour" (capitalised when it starts a sentence). */
         function unitName(u, cap) {
@@ -833,7 +868,7 @@
         }
         const cellName = (i) => `row ${((i / game.n) | 0) + 1}, column ${i % game.n + 1}`;
         /**
-         * Finds the simplest logical step from the current board (the player's pets and ✕s are trusted —
+         * Finds the simplest logical step from the current board (the player's pets and ✕s are trusted,
          * wrong ones are fixed first). Returns { place | cross, zone, text } or null.
          */
         function findStep() {
@@ -852,7 +887,7 @@
                 const f = free(u);
                 if (f.length === 1) return {
                     place: f[0], zone: U[u],
-                    text: `${unitName(u, true)} has only <b>one square left</b> that can hold a pet — every other square is crossed out, touches a pet, or shares a row, column or colour with one. So its pet goes here.`,
+                    text: `${unitName(u, true)} has only <b>one square left</b> that can hold a pet, every other square is crossed out, touches a pet, or shares a row, column or colour with one. So its pet goes here.`,
                 };
             }
             // 2. a unit whose free squares all sit inside one other unit
@@ -867,7 +902,7 @@
                     if (!out.length) continue;
                     return {
                         cross: out, zone: f,
-                        text: `All the free squares of ${unitName(u)} are in ${unitName(k)}. Its pet has to be in ${unitName(k)}, so <b>no other square there can have a pet</b> — they get crossed out.`,
+                        text: `All the free squares of ${unitName(u)} are in ${unitName(k)}. Its pet has to be in ${unitName(k)}, so <b>no other square there can have a pet</b>, they get crossed out.`,
                     };
                 }
             }
@@ -936,10 +971,10 @@
             const wrongX = cells.findIndex((v, i) => v === 1 && solSet.has(i));
             if (wrongPet >= 0) {
                 cells[wrongPet] = 0;
-                showHint(`The pet on ${cellName(wrongPet)} is in the wrong place — it would block the only spot left for another row, column or colour. I took it off.`, wrongPet);
+                showHint(`The pet on ${cellName(wrongPet)} is in the wrong place, it would block the only spot left for another row, column or colour. I took it off.`, wrongPet);
             } else if (wrongX >= 0) {
                 cells[wrongX] = 0;
-                showHint(`The ✕ on ${cellName(wrongX)} was a mistake — a pet actually belongs there. I removed the ✕.`, wrongX);
+                showHint(`The ✕ on ${cellName(wrongX)} was a mistake, a pet actually belongs there. I removed the ✕.`, wrongX);
             } else {
                 const step = findStep();
                 if (step && step.place !== undefined) { setCell(step.place, 2); showHint(step.text, step.place, step.zone); }
@@ -958,7 +993,7 @@
             checkWin();
         }
 
-        /* ---------- Pointer: tap = mark (or pet), double-tap / hold = pet, drag = ✕ many ---------- */
+        /* ---------- pointer: tap = mark (or pet), double-tap / hold = pet, drag = ✕ many ---------- */
         let press = null, lastTap = { i: -1, t: 0 };
         const HOLD_MS = 380, DOUBLE_MS = 320;
         const cellAt = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest && el.closest('.cell') ? +el.closest('.cell').dataset.i : -1; };
@@ -1031,7 +1066,7 @@
         boardEl.addEventListener('pointercancel', () => { if (press) clearTimeout(press.timer); press = null; });
         boardEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        /* ---------- Level map ---------- */
+        /* ---------- level map ---------- */
         function buildHome() {
             const tabs = $('tabs');
             tabs.innerHTML = '';
@@ -1089,7 +1124,7 @@
             playLevel(saved && saved.diff === diff.id ? saved.level : levelOf(diff));
         };
 
-        /* ---------- Settings ---------- */
+        /* ---------- settings ---------- */
         function buildSettings() {
             const th = $('themes');
             th.innerHTML = '';
@@ -1110,7 +1145,7 @@
         $('homeSetBtn').onclick = openSettings;
         $('setClose').onclick = () => Arcade.hide('setPop');
 
-        /* ---------- Wiring ---------- */
+        /* ---------- wiring ---------- */
         $('undoBtn').onclick = undo;
         $('clearBtn').onclick = clearBoard;
         $('hintBtn').onclick = hint;

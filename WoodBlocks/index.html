@@ -43,7 +43,7 @@
                 <div class="modal">
                     <h2 class="bad">No moves left</h2>
                     <div class="big-num" id="finalScore">0</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid">
                         <div><small>Lines cleared</small><b id="finalLines">0</b></div>
                         <div><small>Best combo</small><b id="finalCombo">0</b></div>
@@ -76,7 +76,7 @@
         const COMBO_COLS = ['#fde68a', '#fde68a', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#c084fc', '#60a5fa', '#34d399'];
         const comboCol = (k) => COMBO_COLS[Math.min(COMBO_COLS.length - 1, k)];
         const WOODS = ['#d9a066', '#c78a52', '#e8c27a', '#b9784a', '#deb27c', '#a86b3c'];
-        // Block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
+        // block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
         const THEMES = {
             wood: { name: 'Wood', icon: '🪵', colors: WOODS, bg: '#151021', frame: '#2b1d14', cellA: '#3a281b', cellB: '#33231a', style: 'wood',
                     need: () => true, req: 'Unlocked' },
@@ -271,7 +271,7 @@
             hud();
         }
 
-        /* ---------- Drawing ---------- */
+        /* ---------- drawing ---------- */
         function cell(x, y, s, color, alpha, c2, style) {
             c2 = c2 || ctx;
             c2.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -397,7 +397,7 @@
                 ctx.globalAlpha = 1;
                 ctx.font = 'bold 11px "Segoe UI", sans-serif';
                 ctx.textAlign = 'left';
-                const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED — CLEAR AGAIN!';
+                const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED, CLEAR AGAIN!';
                 ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,16,33,0.9)'; ctx.lineJoin = 'round';
                 ctx.strokeText(label, mx + 10, METER_Y + 12);
                 ctx.fillStyle = '#fff7e6';
@@ -469,7 +469,7 @@
             render();
         });
 
-        /* ---------- Input ---------- */
+        /* ---------- input ---------- */
         canvas.addEventListener('pointerdown', (e) => {
             if (over) return;
             const p = Arcade.pointer(canvas, e, W, H);

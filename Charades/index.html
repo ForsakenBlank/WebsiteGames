@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Charades · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #f6c445; --accent-ink: #4a3200; }
+        .stage { justify-content: flex-start; padding-top: 6px; }
+        .box { width: min(560px, 100%); display: flex; flex-direction: column; gap: 14px; }
+        .screen[hidden] { display: none; }
+        .screen { display: flex; flex-direction: column; gap: 14px; }
+        h2.big { font-family: var(--display); font-weight: 600; font-size: 1.9rem; margin: 6px 0 0; text-align: center; line-height: 1.1; }
+        .sub { color: var(--muted); text-align: center; margin: 0; }
+        .group { background: var(--surface); border-radius: 22px; padding: 16px; }
+        .group > b { display: block; font-family: var(--display); font-weight: 600; margin-bottom: 10px; }
+        .decks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .deck { border: 0; border-radius: 20px; padding: 14px; text-align: left; cursor: pointer; color: #1d1d1f; font: inherit; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+        .deck b { font-family: var(--display); font-weight: 600; font-size: 1.1rem; display: block; }
+        .deck small { opacity: 0.7; font-weight: 800; }
+        .deck .em { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+        .deck.on { outline: 4px solid var(--text); outline-offset: 2px; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--bg-2); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+        .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .team { border-radius: 18px; padding: 14px; background: var(--bg-2); text-align: center; }
+        .team b { display: block; font-family: var(--display); font-size: 2rem; }
+        .team.turn { box-shadow: inset 0 0 0 3px var(--accent); }
+        /* the play screen takes over everything */
+        .play { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2c4760; color: #fff; text-align: center; padding: 20px; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: background 0.2s; }
+        .play.ok { background: #3e9b6a; }
+        .play.skip { background: #c4564c; }
+        .play .word { font-family: var(--display); font-weight: 600; font-size: clamp(2.6rem, 12vw, 6rem); line-height: 1.02; max-width: 95%; }
+        .play .clock { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 2rem; }
+        .play .cnt { position: absolute; top: max(18px, env(safe-area-inset-top)); right: 20px; font-family: var(--display); font-size: 1.3rem; opacity: 0.85; }
+        .play .zones { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
+        .play .zones button { border: 0; background: transparent; color: rgba(255,255,255,.55); font-family: var(--display); font-weight: 600; font-size: 1.1rem; display: flex; align-items: flex-end; justify-content: center; padding-bottom: max(24px, env(safe-area-inset-bottom)); cursor: pointer; }
+        .play .x { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 2; }
+        .list { display: grid; gap: 6px; max-height: 40vh; overflow: auto; }
+        .li { display: flex; justify-content: space-between; padding: 9px 14px; border-radius: 12px; background: var(--bg-2); font-weight: 800; }
+        .li.ok span:last-child { color: var(--good); } .li.no span:last-child { color: var(--bad); }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Charades</h1>
+        <div class="stats"><span class="chip accent">Best <b id="bestN">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="helpBtn" title="How to play"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="box">
+            <section class="screen" id="sSetup">
+                <h2 class="big">Act it out</h2>
+                <p class="sub">Hold the phone to your forehead. Your team acts, sings or describes the word. You guess.</p>
+                <div class="group"><b>Pick a deck</b><div class="decks" id="decks"></div></div>
+                <div class="group"><b>Round length</b><div class="chips" id="timeChips"></div></div>
+                <div class="group"><b>Mode</b><div class="chips" id="modeChips"></div>
+                    <div class="teams" id="teamBox" style="margin-top:12px"></div></div>
+                <button class="btn primary lg block" id="startBtn">Start round</button>
+            </section>
+            <section class="screen" id="sResult" hidden>
+                <h2 class="big" id="resTitle">8 correct!</h2>
+                <p class="sub" id="resSub"></p>
+                <div class="group"><div class="list" id="resList"></div></div>
+                <div class="teams" id="teamRes"></div>
+                <div class="row"><button class="btn primary lg grow" id="againBtn">Next round</button><button class="btn lg" id="backBtn">Decks</button></div>
+            </section>
+        </div>
+        <div class="play" id="play" hidden>
+            <button class="btn icon sm x" id="quitBtn" title="Stop round"></button>
+            <div class="clock" id="clock">60</div>
+            <div class="cnt" id="cnt">0</div>
+            <div class="word" id="word">Ready?</div>
+            <div class="zones" id="zones"><button id="zSkip">Pass</button><button id="zOk">Correct</button></div>
+        </div>
+        <div class="overlay fixed" id="helpOv" hidden>
+            <div class="modal">
+                <h2>How to play</h2>
+                <ol class="help">
+                    <li>Pick a deck and hold the phone up to your forehead, screen facing your friends.</li>
+                    <li>They act it out, sing it or describe it without saying the word.</li>
+                    <li>Got it? Tilt the phone down or tap the right side. Want to pass? Tilt up or tap the left side.</li>
+                    <li>Play in two teams and take turns to see who gets the most.</li>
+                </ol>
+                <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const DECKS = {
+            animals: { name: 'Animals', em: '🐒', c: '#86d4b4', words: ['Monkey', 'Elephant', 'Penguin', 'Kangaroo', 'Snake', 'Chicken', 'Frog', 'Giraffe', 'Crab', 'Octopus', 'Gorilla', 'Cat', 'Dog', 'Bunny', 'Shark', 'Butterfly', 'Horse', 'Owl', 'Cow', 'Lion', 'Bear', 'Dolphin', 'Spider', 'Duck', 'Pig', 'Bat', 'Squirrel', 'Turtle', 'Flamingo', 'Seal', 'Crocodile', 'Bee', 'Worm', 'Peacock', 'Sloth', 'T-Rex', 'Mosquito', 'Camel', 'Koala', 'Walrus'] },
+            actions: { name: 'Actions', em: '🏃', c: '#f6c445', words: ['Brushing teeth', 'Swimming', 'Juggling', 'Skipping rope', 'Bowling', 'Fishing', 'Painting a wall', 'Riding a horse', 'Taking a selfie', 'Changing a nappy', 'Walking a dog', 'Climbing a ladder', 'Surfing', 'Ice skating', 'Sneezing', 'Shaving', 'Milking a cow', 'Driving', 'Playing guitar', 'Doing yoga', 'Making pizza', 'Flying a kite', 'Blowing bubbles', 'Rowing a boat', 'Typing', 'Boxing', 'Tightrope walking', 'Eating spaghetti', 'Building a snowman', 'Washing a car', 'Hula hooping', 'Doing push-ups', 'Sleepwalking', 'Lifting weights', 'Ironing', 'Golfing', 'Bungee jumping', 'Rock climbing', 'Brushing hair', 'Opening a present'] },
+            jobs: { name: 'Jobs', em: '👩‍🚒', c: '#e8655a', words: ['Firefighter', 'Chef', 'Astronaut', 'Doctor', 'Pilot', 'Teacher', 'Police officer', 'Magician', 'Farmer', 'Dentist', 'Lifeguard', 'Hairdresser', 'Waiter', 'Builder', 'Mail carrier', 'Scientist', 'Clown', 'Referee', 'Photographer', 'Judge', 'DJ', 'Gardener', 'Baker', 'Mechanic', 'Librarian', 'Zookeeper', 'Spy', 'Painter', 'Plumber', 'Taxi driver', 'Ballet dancer', 'Cowboy', 'Pirate', 'Robot', 'Superhero', 'Knight', 'Fortune teller', 'Mime', 'Surgeon', 'Cashier'] },
+            food: { name: 'Food', em: '🍕', c: '#f7a77a', words: ['Pizza', 'Spaghetti', 'Ice cream', 'Banana', 'Popcorn', 'Hot dog', 'Taco', 'Soup', 'Lemon', 'Corn on the cob', 'Burger', 'Pancakes', 'Watermelon', 'Chewing gum', 'Jelly', 'Sushi', 'Cereal', 'Birthday cake', 'Lollipop', 'Coconut', 'Pineapple', 'Toast', 'Chips', 'Candy floss', 'Boiled egg', 'Doughnut', 'Hot chocolate', 'Pretzel', 'Chilli pepper', 'Onion', 'Carrot', 'Milkshake', 'Noodles', 'Grapes', 'Steak', 'Cupcake', 'Fries', 'Cheese', 'Toffee apple', 'Smoothie'] },
+            things: { name: 'Things', em: '☂️', c: '#82c3ec', words: ['Umbrella', 'Toothbrush', 'Ladder', 'Candle', 'Backpack', 'Mirror', 'Scissors', 'Balloon', 'Microwave', 'Skateboard', 'Trampoline', 'Alarm clock', 'Kite', 'Hammer', 'Headphones', 'Fridge', 'Bicycle', 'Tent', 'Camera', 'Snowman', 'Rubber duck', 'Vacuum cleaner', 'Washing machine', 'Lawn mower', 'Doorbell', 'Escalator', 'Roller coaster', 'Paper plane', 'Treasure map', 'Hairdryer', 'Telescope', 'Sandcastle', 'Fireworks', 'Rocket', 'Swing', 'Volcano', 'Tornado', 'Rainbow', 'Lighthouse', 'Piano'] },
+            fun: { name: 'Silly', em: '🤪', c: '#f08aa7', words: ['Zombie', 'Grumpy baby', 'Robot dance', 'Haunted house', 'Alien landing', 'Penguin waddle', 'Stuck in a lift', 'Tiny giant', 'Dinosaur in a shop', 'Vampire at the dentist', 'Cat chasing a laser', 'Slow motion race', 'Lost in the dark', 'Stepping on Lego', 'Brain freeze', 'Sneaky ninja', 'Chicken dance', 'Mummy waking up', 'Bad haircut', 'Ghost party', 'Hiccups', 'Stuck in mud', 'Hot sand', 'Superhero landing', 'Sleepy sloth', 'Wind in your face', 'Opera singer', 'Statue that blinks', 'Monkey business', 'Popcorn popping', 'Burnt toast', 'Mime in a box', 'Pirate with a parrot', 'Melting snowman', 'Clumsy waiter', 'Royal wave', 'Yeti on holiday', 'Shy dragon', 'Wizard duel', 'Floating in space'] },
+        };
+        const cfg = Object.assign({ deck: 'animals', time: 60, mode: 'solo' }, Arcade.load('arcade.charades.cfg', {}));
+        let best = Arcade.load('arcade.charades.best', 0);
+        let teams = [0, 0], teamTurn = 0;
+        let queue = [], cur = '', results = [], left = 0, tick = 0, state = 'idle', lock = false, tiltReady = false;
+
+        function show(id) { for (const s of ['sSetup', 'sResult']) $(s).hidden = s !== id; }
+        function chips(host, list, val, set) {
+            host.innerHTML = '';
+            for (const [v, l] of list) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (v === val ? ' on' : '');
+                b.textContent = l;
+                b.onclick = () => { set(v); Arcade.sfx('select'); renderSetup(); };
+                host.appendChild(b);
+            }
+        }
+        function teamHtml(withTurn) {
+            return [0, 1].map(i => `<div class="team ${withTurn && i === teamTurn ? 'turn' : ''}"><small class="muted">Team ${i ? 'B' : 'A'}</small><b>${teams[i]}</b></div>`).join('');
+        }
+        function renderSetup() {
+            const d = $('decks'); d.innerHTML = '';
+            for (const [k, v] of Object.entries(DECKS)) {
+                const b = document.createElement('button');
+                b.className = 'deck' + (k === cfg.deck ? ' on' : '');
+                b.style.background = v.c;
+                b.innerHTML = `<span class="em">${v.em}</span><b>${v.name}</b><small>${v.words.length} cards</small>`;
+                b.onclick = () => { cfg.deck = k; Arcade.sfx('select'); renderSetup(); };
+                d.appendChild(b);
+            }
+            chips($('timeChips'), [[45, '45s'], [60, '60s'], [90, '90s'], [120, '2 min']], cfg.time, v => cfg.time = v);
+            chips($('modeChips'), [['solo', 'Just play'], ['teams', 'Two teams']], cfg.mode, v => cfg.mode = v);
+            $('teamBox').hidden = cfg.mode !== 'teams';
+            $('teamBox').innerHTML = teamHtml(true);
+            $('startBtn').textContent = cfg.mode === 'teams' ? `Start, team ${teamTurn ? 'B' : 'A'}` : 'Start round';
+            $('bestN').textContent = best;
+        }
+
+        /* ---------- playing ---------- */
+        function nextWord() {
+            if (!queue.length) queue = Arcade.shuffle(DECKS[cfg.deck].words.slice());
+            cur = queue.pop();
+            $('word').textContent = cur;
+        }
+        function startRound() {
+            Arcade.save('arcade.charades.cfg', cfg);
+            results = [];
+            queue = Arcade.shuffle(DECKS[cfg.deck].words.slice());
+            $('play').hidden = false;
+            $('play').className = 'play';
+            $('cnt').textContent = '0';
+            $('clock').textContent = cfg.time;
+            askMotion();
+            state = 'count';
+            let n = 3;
+            $('word').textContent = 'Phone on forehead';
+            const cd = setInterval(() => {
+                if (state !== 'count') { clearInterval(cd); return; }
+                $('word').textContent = n > 0 ? n : 'Go!';
+                Arcade.tone(n > 0 ? 520 : 880, 0.12, 'sine', 0.1);
+                if (n-- < 0) {
+                    clearInterval(cd);
+                    state = 'play';
+                    left = cfg.time;
+                    nextWord();
+                    tick = setInterval(() => {
+                        left--;
+                        $('clock').textContent = left;
+                        if (left <= 5 && left > 0) Arcade.sfx('tick');
+                        if (left <= 0) endRound();
+                    }, 1000);
+                }
+            }, 800);
+        }
+        function mark(ok) {
+            if (state !== 'play' || lock) return;
+            lock = true;
+            results.push([cur, ok]);
+            $('cnt').textContent = results.filter(r => r[1]).length;
+            $('play').className = 'play ' + (ok ? 'ok' : 'skip');
+            $('word').textContent = ok ? 'Correct!' : 'Pass';
+            Arcade.sfx(ok ? 'coin' : 'bad');
+            Arcade.buzz(ok ? 30 : 60);
+            setTimeout(() => {
+                lock = false;
+                if (state !== 'play') return;
+                $('play').className = 'play';
+                nextWord();
+            }, 650);
+        }
+        function endRound(quit) {
+            clearInterval(tick);
+            state = 'idle';
+            $('play').hidden = true;
+            if (quit) { renderSetup(); show('sSetup'); return; }
+            if (cur && !results.some(r => r[0] === cur)) results.push([cur, false]);
+            const ok = results.filter(r => r[1]).length;
+            Arcade.sfx('win');
+            if (ok > best) { best = ok; Arcade.save('arcade.charades.best', best); }
+            Arcade.count('round');
+            $('resTitle').textContent = ok + ' correct!';
+            $('resSub').textContent = cfg.mode === 'teams' ? `Team ${teamTurn ? 'B' : 'A'} scores ${ok}.` : ok >= best && ok ? 'New best!' : 'Best so far: ' + best;
+            $('resList').innerHTML = results.map(([w, k]) => `<div class="li ${k ? 'ok' : 'no'}"><span>${Arcade.esc(w)}</span><span>${k ? 'Got it' : 'Passed'}</span></div>`).join('') || '<p class="muted">No cards played.</p>';
+            if (cfg.mode === 'teams') { teams[teamTurn] += ok; teamTurn = 1 - teamTurn; }
+            $('teamRes').hidden = cfg.mode !== 'teams';
+            $('teamRes').innerHTML = teamHtml(true);
+            $('againBtn').textContent = cfg.mode === 'teams' ? `Team ${teamTurn ? 'B' : 'A'}, go!` : 'Next round';
+            show('sResult');
+            $('bestN').textContent = best;
+        }
+        $('zOk').onclick = () => mark(true);
+        $('zSkip').onclick = () => mark(false);
+        $('quitBtn').innerHTML = Arcade.icon('close');
+        $('quitBtn').onclick = () => endRound(true);
+        $('startBtn').onclick = startRound;
+        $('againBtn').onclick = startRound;
+        $('backBtn').onclick = () => { renderSetup(); show('sSetup'); };
+        window.addEventListener('keydown', (e) => {
+            if (state !== 'play') return;
+            if (e.key === 'ArrowRight' || e.key === ' ') mark(true);
+            if (e.key === 'ArrowLeft') mark(false);
+        });
+
+        /* ---------- tilt controls ---------- */
+        // phone held landscape against the forehead: tilting the screen down to the floor = correct, up to the sky = pass
+        function askMotion() {
+            const D = window.DeviceOrientationEvent;
+            if (D && typeof D.requestPermission === 'function') D.requestPermission().catch(() => null);
+        }
+        window.addEventListener('deviceorientation', (e) => {
+            if (state !== 'play' || e.beta === null || e.gamma === null) return;
+            const r = Math.PI / 180;
+            // how much the screen faces the sky: 1 = flat face up, -1 = face down, 0 = upright on your forehead
+            const up = Math.cos(e.beta * r) * Math.cos(e.gamma * r);
+            if (Math.abs(up) < 0.35) tiltReady = true;
+            if (!tiltReady || lock) return;
+            if (up < -0.7) { tiltReady = false; mark(true); }
+            else if (up > 0.7) { tiltReady = false; mark(false); }
+        });
+
+        $('helpBtn').innerHTML = Arcade.icon('help');
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => Arcade.hide('helpOv'));
+        renderSetup();
+    })();
+    </script>
+</body>
+</html>

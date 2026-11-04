@@ -19,7 +19,7 @@
         }
         .studio.zen .rail, .studio.zen .ctxbar, .studio.zen .dock, .studio.zen .minimap, .studio.zen .zoom-chip, .studio.zen .timeline { display: none; }
 
-        /* ---------- Animation timeline (bottom) ---------- */
+        /* ---------- animation timeline (bottom) ---------- */
         .timeline { position: absolute; left: 74px; right: 300px; bottom: 12px; z-index: 11; display: flex; align-items: center; gap: 8px; padding: 6px 10px; overflow-x: auto; scrollbar-width: none; }
         .timeline::-webkit-scrollbar { display: none; }
         .tl-frames { display: flex; gap: 4px; overflow-x: auto; flex: 0 1 auto; min-width: 64px; padding: 2px; scrollbar-width: thin; }
@@ -30,7 +30,7 @@
         .timeline .cc { width: 92px; }
         #animBtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
-        /* ---------- Tool rail (left) ---------- */
+        /* ---------- tool rail (left) ---------- */
         .rail {
             position: absolute; left: 10px; top: 10px; z-index: 12; width: 52px;
             display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0;
@@ -58,7 +58,7 @@
         .size-bubble { position: absolute; z-index: 40; pointer-events: none; display: grid; place-items: center; border-radius: 14px; padding: 10px; }
         .size-bubble i { display: block; border-radius: 50%; }
 
-        /* ---------- Context bar (tool options, top) ---------- */
+        /* ---------- context bar (tool options, top) ---------- */
         .ctxbar {
             position: absolute; top: 10px; left: 74px; z-index: 11;
             display: flex; align-items: center; gap: 10px; padding: 6px 10px; min-height: 50px;
@@ -92,7 +92,7 @@
         .ctxbar input.glyph { width: 48px; padding: 4px 6px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 1rem; text-align: center; }
         .ctxbar select { padding: 4px 6px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.9rem; }
 
-        /* ---------- Popovers ---------- */
+        /* ---------- popovers ---------- */
         .pop { position: absolute; z-index: 30; padding: 12px; max-height: calc(100% - 20px); max-width: calc(100% - 20px); overflow-y: auto; }
         .pop h4 { margin: 0 0 7px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
         .pop h4:not(:first-child) { margin-top: 12px; }
@@ -130,7 +130,7 @@
         .menu button:disabled { opacity: 0.4; cursor: not-allowed; }
         .menu button small { color: var(--muted); font-weight: 400; font-size: 0.72rem; }
 
-        /* ---------- Layers dock (right) ---------- */
+        /* ---------- layers dock (right) ---------- */
         .dock { position: absolute; right: 10px; top: 70px; z-index: 12; width: 244px; padding: 10px; max-height: calc(100% - 290px); min-height: 160px; display: flex; flex-direction: column; gap: 8px; }
         .dock-head { display: flex; align-items: center; justify-content: space-between; }
         .dock-head h3 { margin: 0; font-size: 0.86rem; }
@@ -192,7 +192,7 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Infinite Ink</h1>
         <div class="stats">
-            <span class="chip accent">Canvas <b id="worldName">—</b></span>
+            <span class="chip accent">Canvas <b id="worldName">-</b></span>
             <span class="chip">Strokes <b id="strokeCount">0</b></span>
             <span class="chip hide-sm" title="Position of the view centre">Pos <b id="posVal">0, 0</b></span>
         </div>
@@ -265,7 +265,7 @@
             <button class="ctog" id="tlDup" title="Copy this frame into a new one">Duplicate</button>
             <button class="ctog danger" id="tlDel" title="Delete this frame">Delete</button>
             <div class="ctx-sep"></div>
-            <button class="ctog" id="tlPlay">▶ Play</button>
+            <button class="ctog" id="tlPlay">Play</button>
             <label class="cc"><div class="cl"><span>Speed</span><b id="tlFpsV">8 fps</b></div><input type="range" id="tlFps" min="1" max="30" value="8"></label>
             <button class="ctog" id="tlOnion" title="See the previous (red) and next (green) frames faintly">Onion skin</button>
             <button class="ctog" id="tlAll" title="New strokes appear on every frame (a background)">Draw on all frames</button>
@@ -426,7 +426,7 @@
         const sizeOf = (t) => (toolState[t] && toolState[t].size) || (TOOLS[t] && TOOLS[t].size) || 8;
         const opacityOf = (t) => (toolState[t] && toolState[t].opacity != null ? toolState[t].opacity : 1);
 
-        /* ---------- Canvases & state ---------- */
+        /* ---------- canvases & state ---------- */
         const studio = $('studio'), paper = $('paper'), live = $('live'), uiCv = $('ui');
         const pctx = paper.getContext('2d', { alpha: false });
         const lctx = live.getContext('2d');
@@ -506,10 +506,10 @@
             }
         }
 
-        /* ---------- Layers ---------- */
+        /* ---------- layers ---------- */
         function rebuildLayerMaps() { LORD = {}; LBY = {}; M.layers.forEach((l, i) => { LORD[l.id] = i; LBY[l.id] = l; }); }
         const layerAlpha = (s) => { const l = LBY[s.layer]; return l ? l.opacity : 1; };
-        // Animation: a stroke with a `frame` shows only on that frame; strokes without one show on every frame.
+        // animation: a stroke with a `frame` shows only on that frame; strokes without one show on every frame.
         let curFrame = 0;
         const inFrame = (s) => s.frame == null || s.frame === curFrame;
         const layerVisible = (s) => { const l = LBY[s.layer]; return !!l && l.visible && inFrame(s); };
@@ -584,7 +584,7 @@
             const x1 = Math.min(cw, Math.ceil((b.x1 - v.x) * v.s + v.w / 2) + pad), y1 = Math.min(ch, Math.ceil((b.y1 - v.y) * v.s + v.h / 2) + pad);
             return x1 > x0 && y1 > y0 ? { x0, y0, w: x1 - x0, h: y1 - y0 } : null;
         }
-        // Points in view space. Points closer than ~0.8 px to the last kept one are dropped: the level of detail.
+        // points in view space. Points closer than ~0.8 px to the last kept one are dropped: the level of detail.
         function screenPts(s, v, decimate) {
             const p = s.pts, pr = s.pr, n = p.length >> 1, out = [];
             const k = v.s, bx = (s.ox - v.x) * k + v.w / 2, by = (s.oy - v.y) * k + v.h / 2;
@@ -625,8 +625,8 @@
             c.restore();
         }
 
-        // Variable-width ink: one filled path made of a disc at every point plus the band joining neighbours.
-        // All pieces wind the same way, so the nonzero fill unions them with no overlap seams.
+        // variable-width ink: one filled path made of a disc at every point plus the band joining neighbours.
+        // all pieces wind the same way, so the nonzero fill unions them with no overlap seams.
         function fillCapsules(c, q, rad) {
             c.beginPath();
             for (let i = 0; i < q.length; i++) {
@@ -930,7 +930,7 @@
                 c.restore();
             },
         };
-        /* Sticky notes are text objects with a paper colour (the stroke colour), a fixed width and wrapped lines. */
+        /* sticky notes are text objects with a paper colour (the stroke colour), a fixed width and wrapped lines. */
         const NOTE_FONT = { font: 'sans' };
         const notePad = (s) => s.size * 0.7;
         const noteInk = (hex) => (luminance(hex) > 0.5 ? '#1f2937' : '#f8fafc');
@@ -1016,7 +1016,7 @@
             c.restore();
         }
 
-        // Erased strokes: the stroke is drawn on its own layer, the eraser paths are cut out of it, then the
+        // erased strokes: the stroke is drawn on its own layer, the eraser paths are cut out of it, then the
         // result is composited. Works on any paper colour and moves with the stroke.
         const maskCv = document.createElement('canvas'), mctx = maskCv.getContext('2d');
         function carve(c, s, m, v) {
@@ -1183,7 +1183,7 @@
             if (t.job.cv !== t.cv && tilePool.length < 24) tilePool.push(t.job.cv);
             t.job = null;
         }
-        // Marks every cached tile touching a changed world rectangle. Tiles of the current zoom level keep
+        // marks every cached tile touching a changed world rectangle. Tiles of the current zoom level keep
         // showing their old picture until repainted, so nothing flashes; other levels are just dropped.
         function invalidate(b) {
             if (!b) return;
@@ -1204,7 +1204,7 @@
             for (const [key, t] of tiles) { if (t.L !== curL) dropTile(key, t); else { cancelJob(t); if (t.ready) t.dirty = true; } }
             req();
         }
-        // A new stroke on the top layer goes on top of everything, so it can be painted straight onto the
+        // a new stroke on the top layer goes on top of everything, so it can be painted straight onto the
         // cached tiles: no repaint at all.
         function paintIntoTiles(s) {
             if (!isTopLayer(s.layer) || !layerVisible(s)) { invalidate(s._bb); return; }
@@ -1219,7 +1219,7 @@
             req();
         }
 
-        /* ---------- Paper: background, grid and tiles ---------- */
+        /* ---------- paper: background, grid and tiles ---------- */
         function luminance(hex) {
             const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex || '');
             if (!m) return 0;
@@ -1332,7 +1332,7 @@
             return pending > 0;
         }
 
-        /* ---------- Frame loop: input only changes state, all drawing happens here once per frame ---------- */
+        /* ---------- frame loop: input only changes state, all drawing happens here once per frame ---------- */
         const frameStats = { paper: 0, live: 0 };
         let raf = 0, needPaper = true, needLive = true, needUI = true, mmNeed = true, mmLastDraw = 0;
         function req(p = true, l = false, u = false) {
@@ -1359,7 +1359,7 @@
             if (needPaper || needLive || needUI || mmNeed || motionWanted()) raf = requestAnimationFrame(frame);
         }
 
-        /* ---------- Geometry helpers ---------- */
+        /* ---------- geometry helpers ---------- */
         const toWorld = (sx, sy) => ({ x: cam.x + (sx - W / 2) / cam.s, y: cam.y + (sy - H / 2) / cam.s });
         const toScreen = (p) => ({ x: (p.x - cam.x) * cam.s + W / 2, y: (p.y - cam.y) * cam.s + H / 2 });
         const viewDev = () => ({ x: cam.x, y: cam.y, s: cam.s * DPR, w: Wd, h: Hd });
@@ -1375,7 +1375,7 @@
             req(true, true, true); mmNeed = true;
         }
 
-        /* ---------- Symmetry ---------- */
+        /* ---------- symmetry ---------- */
         function symTransforms() {
             const cx = G.symX, cy = G.symY;
             const fx = (p) => ({ x: 2 * cx - p.x, y: p.y }), fy = (p) => ({ x: p.x, y: 2 * cy - p.y });
@@ -1482,7 +1482,7 @@
         const frameTag = () => (M && M.anim && M.anim.on && !M.anim.all ? curFrame : undefined);
         const snapProps = (s) => ({ ox: s.ox, oy: s.oy, pts: s.pts, size: s.size, er: s.er, o: s.o, color: s.color, z: s.z, layer: s.layer });
 
-        /* ---------- History: undo / redo of any edit ---------- */
+        /* ---------- history: undo / redo of any edit ---------- */
         let layersTimer = 0;
         function commit(a) {
             history.push(a);
@@ -1569,13 +1569,13 @@
                 return IDB.done(tx);
             },
         };
-        // Fallback when IndexedDB is blocked (some private windows): keeps working, saved to localStorage.
+        // fallback when IndexedDB is blocked (some private windows): keeps working, saved to localStorage.
         const MEM = {
             data: null,
             open() { MEM.data = Arcade.load('arcade.ink.memstore', null) || { canvases: {}, strokes: {} }; return Promise.resolve(); },
             persist() {
                 try { localStorage.setItem('arcade.ink.memstore', JSON.stringify(MEM.data, (k, v) => (v instanceof Float32Array ? Array.from(v) : v))); }
-                catch (e) { Arcade.toast('Browser storage is full — export a backup', 'bad', 4000); }
+                catch (e) { Arcade.toast('Browser storage is full, export a backup', 'bad', 4000); }
             },
             listCanvases() { return Promise.resolve(Object.values(MEM.data.canvases)); },
             loadStrokes(cid) { return Promise.resolve(Object.values(MEM.data.strokes[cid] || {})); },
@@ -1637,14 +1637,14 @@
                 for (const id of ids) if (!deadIds.has(id)) dirtyIds.add(id);
                 for (const id of dels) if (!dirtyIds.has(id)) deadIds.add(id);
                 console.warn('Infinite Ink: save failed', e);
-                Arcade.toast('Could not save — storage may be full. Export a backup from the Export menu.', 'bad', 4500);
+                Arcade.toast('Could not save, storage may be full. Export a backup from the Export menu.', 'bad', 4500);
             });
             await saving;
             saving = null;
             Arcade.save('arcade.ink.stats', { canvases: metas.length, strokes: byId.size });
         }
 
-        /* ---------- Old saves (localStorage, one big JSON) are moved into the new store once ---------- */
+        /* ---------- old saves (localStorage, one big JSON) are moved into the new store once ---------- */
         const newCanvasId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         function defaultLayers() { return [{ id: 'L1', name: 'Layer 1', visible: true, locked: false, opacity: 1 }]; }
         function blankMeta(name, bgColor) { return { id: newCanvasId(), name, bg: bgColor || '#111111', cam: { x: 0, y: 0, s: 1 }, layers: defaultLayers(), activeLayer: 'L1', created: Date.now(), updated: Date.now(), count: 0, thumb: null }; }
@@ -1700,7 +1700,7 @@
             } catch (e) { console.warn('Infinite Ink: migration failed', e); }
         }
 
-        /* ---------- Opening canvases ---------- */
+        /* ---------- opening canvases ---------- */
         async function openCanvas(id) {
             if (M) { await saveThumb(); await flush(); }
             const meta = metas.find(m => m.id === id) || metas[0];
@@ -1836,7 +1836,7 @@
         $('mmToggle').onclick = toggleMinimap;
         if (Arcade.load('arcade.ink.minimap', true) === false) toggleMinimap();
 
-        /* ---------- Camera motion: keys, inertia, edge-scroll and animated zooms ---------- */
+        /* ---------- camera motion: keys, inertia, edge-scroll and animated zooms ---------- */
         const vel = { x: 0, y: 0 };
         const keysHeld = new Set();
         let lastTick = 0, panSamples = [], tween = null;
@@ -2196,7 +2196,7 @@
         }
         function canDraw() {
             const l = activeLayer();
-            if (!l.visible) { Arcade.toast('"' + l.name + '" is hidden — show it or pick another layer', 'bad', 2200); return false; }
+            if (!l.visible) { Arcade.toast('"' + l.name + '" is hidden, show it or pick another layer', 'bad', 2200); return false; }
             if (l.locked) { Arcade.toast('"' + l.name + '" is locked', 'bad', 1800); return false; }
             return true;
         }
@@ -2310,7 +2310,7 @@
             }
             commitActive();
         }
-        // Ramer–Douglas–Peucker simplification: drops points that change the line by less than ~0.3 px.
+        // ramer–Douglas–Peucker simplification: drops points that change the line by less than ~0.3 px.
         function simplify(a) {
             const p = a.pts, pr = a.pr, n = p.length >> 1;
             if (n < 4) return;
@@ -2645,7 +2645,7 @@
         function paste() {
             let clip = clipboard;
             if (!clip) try { clip = JSON.parse(localStorage.getItem('arcade.ink.clip') || 'null'); } catch (e) { clip = null; }
-            if (!clip || !clip.length) { Arcade.toast('Nothing to paste — copy something first (Ctrl+C)', null, 1500); return; }
+            if (!clip || !clip.length) { Arcade.toast('Nothing to paste, copy something first (Ctrl+C)', null, 1500); return; }
             if (!canDraw()) return;
             const list = clip.map(r => fromRec(r));
             const b = unionBB(list), dx = cam.x - (b.x0 + b.x1) / 2, dy = cam.y - (b.y0 + b.y1) / 2;
@@ -2659,12 +2659,12 @@
             renderCtx(); req(true, true, true);
         }
         function selAction(name) {
-            if (!sel.length && !['all', 'none'].includes(name)) { Arcade.toast('Select something first — tap a stroke or drag a box', null, 1500); return; }
+            if (!sel.length && !['all', 'none'].includes(name)) { Arcade.toast('Select something first, tap a stroke or drag a box', null, 1500); return; }
             SEL_ACTIONS[name]();
             renderCtx(); req(true, true, true);
         }
 
-        /* ---------- Text ---------- */
+        /* ---------- text ---------- */
         let textEntry = null;
         const fontCss = (o, px) => `${o.italic ? 'italic ' : ''}${o.bold ? 'bold ' : ''}${px}px ${FONTS[o.font] || FONTS.sans}`;
         function measureText(text, o, size) {
@@ -2912,7 +2912,7 @@
             }
             if (lastPt && (active || er || xform || marquee || lassoSel)) move(lastPt, null);
         }, { passive: false });
-        // Safari trackpad pinch
+        // safari trackpad pinch
         let gestureS = 1;
         paper.addEventListener('gesturestart', (e) => { e.preventDefault(); gestureS = 1; });
         paper.addEventListener('gesturechange', (e) => { e.preventDefault(); const q = local(e); zoomAt(q.x, q.y, e.scale / gestureS); gestureS = e.scale; });
@@ -2938,7 +2938,7 @@
             cursorEl.style.borderStyle = t === 'erase' ? 'dashed' : 'solid';
         }
 
-        /* ---------- Live layer (stroke in progress, lifted selection) and UI layer (guides, selection box) ---------- */
+        /* ---------- live layer (stroke in progress, lifted selection) and UI layer (guides, selection box) ---------- */
         function drawLive() {
             lctx.setTransform(1, 0, 0, 1, 0, 0);
             lctx.clearRect(0, 0, Wd, Hd);
@@ -3038,13 +3038,13 @@
             { id: 'select', icon: 'select', title: 'Select & transform (V)' },
             { id: 'hand', icon: 'hand', title: 'Pan (H · or hold Space)' },
             { sep: true },
-            { id: 'brush', icon: 'brush', title: 'Brushes (B) — click again for the brush library', more: true },
+            { id: 'brush', icon: 'brush', title: 'Brushes (B), click again for the brush library', more: true },
             { id: 'erase', icon: 'eraser', title: 'Eraser (E)' },
-            { id: 'shape', icon: 'shapes', title: 'Shapes (U, O, L, Y) — click again for all shapes', more: true },
+            { id: 'shape', icon: 'shapes', title: 'Shapes (U, O, L, Y), click again for all shapes', more: true },
             { id: 'lasso', icon: 'lasso', title: 'Lasso fill (R)' },
             { id: 'text', icon: 'text', title: 'Text (T)' },
             { id: 'note', icon: 'note', title: 'Sticky note (P)' },
-            { id: 'conn', icon: 'conn', title: 'Connector (Z) — drag from one note or shape to another' },
+            { id: 'conn', icon: 'conn', title: 'Connector (Z), drag from one note or shape to another' },
             { id: 'picker', icon: 'picker', title: 'Eyedropper (I · or Alt+click)' },
         ];
         function buildRail() {
@@ -3079,7 +3079,7 @@
             if (sb) sb.innerHTML = svg(TOOLS[G.lastShape].icon) + '<span class="more"></span>';
         }
 
-        /* ---------- Popovers ---------- */
+        /* ---------- popovers ---------- */
         const POPS = ['brushPop', 'shapePop', 'colorPop', 'settingsPop', 'exportPop'];
         function hidePops(except) { for (const p of POPS) if (p !== except) $(p).hidden = true; }
         function placePop(pop, anchor) {
@@ -3158,7 +3158,7 @@
             }
         }
 
-        /* ---------- Context bar ---------- */
+        /* ---------- context bar ---------- */
         function compact(def, value, onChange) {
             if (def.kind === 'range') {
                 const w = document.createElement('label');
@@ -3276,7 +3276,7 @@
             if (tool === 'text') host.insertAdjacentHTML('beforeend', '<span class="hint">Tap to type · tap existing text to edit · Enter places it</span>');
             if (tool === 'erase') host.insertAdjacentHTML('beforeend', '<span class="hint">Opacity slider = soft erase</span>');
             if (tool === 'note') host.insertAdjacentHTML('beforeend', '<span class="hint">Tap to add a note · tap a note to edit · Shift+Enter = new line · Size = text size</span>');
-            if (tool === 'conn') host.insertAdjacentHTML('beforeend', '<span class="hint">Drag between notes or shapes — the arrow follows them when they move</span>');
+            if (tool === 'conn') host.insertAdjacentHTML('beforeend', '<span class="hint">Drag between notes or shapes, the arrow follows them when they move</span>');
             if (G.sym !== 'off' && (g === 'brush' || g === 'shape' || tool === 'erase')) {
                 host.appendChild(sep());
                 const b = document.createElement('button');
@@ -3289,7 +3289,7 @@
             }
         }
 
-        /* ---------- Vertical sliders (size, opacity) ---------- */
+        /* ---------- vertical sliders (size, opacity) ---------- */
         const bubble = document.createElement('div');
         bubble.className = 'size-bubble glass';
         bubble.hidden = true;
@@ -3304,7 +3304,7 @@
                 const p = cfg.toPos(cfg.get());
                 fill.style.height = p * 100 + '%';
                 thumb.style.bottom = p * 100 + '%';
-                val.textContent = on ? cfg.fmt(cfg.get()) : '—';
+                val.textContent = on ? cfg.fmt(cfg.get()) : '-';
             };
             const at = (e) => { const r = track.getBoundingClientRect(); return clamp(1 - (e.clientY - r.top) / r.height, 0, 1); };
             let drag = false;
@@ -3355,7 +3355,7 @@
             fmt: (v) => Math.round(v * 100) + '%',
         });
 
-        /* ---------- Colour ---------- */
+        /* ---------- colour ---------- */
         function hsvToHex(h, s, v) {
             const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
             return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
@@ -3453,7 +3453,7 @@
             rememberTimer = setTimeout(() => { if (!$('colorPop').hidden) buildSwatches(); }, 50);
         }
 
-        /* ---------- Canvas settings ---------- */
+        /* ---------- canvas settings ---------- */
         function settingRow(label, el, sub) {
             const r = document.createElement('div');
             r.className = 'set-row';
@@ -3521,7 +3521,7 @@
                 commit({ t: 'del', items });
                 sel = [];
                 hidePops(); renderCtx(); req(true, true, true);
-                Arcade.toast('Cleared — undo brings it back', null, 2000);
+                Arcade.toast('Cleared, undo brings it back', null, 2000);
             }, { danger: true });
             pop.appendChild(clear);
         }
@@ -3532,7 +3532,7 @@
         }
         $('settingsBtn').onclick = () => togglePop('settingsPop', $('settingsBtn'), buildSettings);
 
-        /* ---------- Layers panel ---------- */
+        /* ---------- layers panel ---------- */
         const layerSnap = () => ({ layers: M.layers.map(l => ({ ...l })), active: M.activeLayer });
         function applyLayers(snap) {
             M.layers = snap.layers.map(l => ({ ...l }));
@@ -3610,7 +3610,7 @@
             const items = [...byId.values()].filter(s => s.layer === l.id);
             if (items.length && $('lDel').dataset.armed !== '1') {
                 $('lDel').dataset.armed = '1'; $('lDel').title = 'Tap again to delete "' + l.name + '" and its ' + items.length + ' strokes';
-                Arcade.toast('Tap delete again to remove "' + l.name + '" (' + items.length + ' strokes) — undo can bring it back', null, 2500);
+                Arcade.toast('Tap delete again to remove "' + l.name + '" (' + items.length + ' strokes), undo can bring it back', null, 2500);
                 setTimeout(() => { $('lDel').dataset.armed = ''; $('lDel').title = 'Delete layer'; }, 2500);
                 return;
             }
@@ -3955,7 +3955,7 @@
             // stay within what every browser can encode (≤ 8192 px a side, ≤ 16 megapixels)
             scale = Math.min(scale, 8192 / Math.max(bw, 1e-300), 8192 / Math.max(bh, 1e-300), Math.sqrt(16e6 / Math.max(bw * bh, 1e-300)));
             const cv = renderRegion(b, scale, transparent);
-            cv.toBlob((blob) => { if (!blob) { Arcade.toast('Export failed — try a smaller area', 'bad'); return; } download(blob, safeName() + '.png'); Arcade.toast(`Exported ${cv.width}×${cv.height} PNG`, 'good'); }, 'image/png');
+            cv.toBlob((blob) => { if (!blob) { Arcade.toast('Export failed, try a smaller area', 'bad'); return; } download(blob, safeName() + '.png'); Arcade.toast(`Exported ${cv.width}×${cv.height} PNG`, 'good'); }, 'image/png');
         }
         function exportBackup() {
             const data = { format: 'infinite-ink', version: 7, name: M.name, bg, cam, layers: M.layers, activeLayer: M.activeLayer, anim: M.anim || null, strokes: [...byId.values()].sort((a, b) => a.z - b.z).map(plain) };
@@ -4183,7 +4183,7 @@
             Arcade.toast('Exported PDF', 'good');
         }
 
-        /* ---------- Animation exports ---------- */
+        /* ---------- animation exports ---------- */
         function animFrames(maxSide) {
             const b0 = animBounds();
             if (!b0) return null;
@@ -4214,7 +4214,7 @@
             Arcade.toast(`Exported ${fr.length} pages`, 'good');
         }
         async function exportVideo() {
-            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { Arcade.toast('Video recording is not supported in this browser — try the sprite sheet', 'bad', 3000); return; }
+            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { Arcade.toast('Video recording is not supported in this browser, try the sprite sheet', 'bad', 3000); return; }
             const fr = animFrames(1280);
             if (!fr) { Arcade.toast('Nothing to export yet', 'bad'); return; }
             const cv = document.createElement('canvas');
@@ -4265,7 +4265,7 @@
             item('expImg', 'Selection', sel.length ? `${sel.length} selected strokes` : 'Select something first', () => run('sel'), !sel.length);
             if (anim) {
                 item('expAnim', 'Video (.webm)', `Plays at ${M.anim.fps} fps, loops for about 3 seconds`, exportVideo);
-                item('expAnim', 'Sprite sheet (.png)', 'Every frame in a grid — for games and GIF makers', exportSheet);
+                item('expAnim', 'Sprite sheet (.png)', 'Every frame in a grid, for games and GIF makers', exportSheet);
                 item('expAnim', 'PDF flipbook', 'One page per frame', exportFramesPDF);
             }
             item('expBak', 'Download backup (.ink.json)', 'Full, editable copy of this canvas', exportBackup);
@@ -4296,7 +4296,7 @@
             } catch (e) { Arcade.toast('That file is not an Infinite Ink backup', 'bad', 3000); }
         };
 
-        /* ---------- Gallery ---------- */
+        /* ---------- gallery ---------- */
         async function saveThumb() {
             if (!M) return;
             const b = contentBounds();
@@ -4395,7 +4395,7 @@
         };
         $('newName').onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') $('createBtn').click(); };
 
-        /* ---------- Lifecycle ---------- */
+        /* ---------- lifecycle ---------- */
         window.addEventListener('resize', resize);
         if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(studio);
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && M) { closeTextEntry(true); metaChanged = true; flush(); } });
@@ -4405,7 +4405,7 @@
             resize();
             buildRail();
             try { await IDB.open(); Store = IDB; }
-            catch (e) { await MEM.open(); Store = MEM; Arcade.toast('Using basic storage in this browser mode — export backups to keep big drawings safe', null, 4000); }
+            catch (e) { await MEM.open(); Store = MEM; Arcade.toast('Using basic storage in this browser mode, export backups to keep big drawings safe', null, 4000); }
             await migrateLegacy();
             metas = await Store.listCanvases();
             if (!metas.length) { const m = blankMeta('My Canvas'); await Store.write(m, [], []); metas = [m]; }

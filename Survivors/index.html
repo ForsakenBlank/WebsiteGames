@@ -44,7 +44,7 @@
             <div class="overlay" id="startOv">
                 <div class="modal wide">
                     <h2>🧛 Night Survivors</h2>
-                    <p>Your weapons fire by themselves — just move. Survive until dawn (15:00). Best: <b id="bestT">—</b></p>
+                    <p>Your weapons fire by themselves, just move. Survive until dawn (15:00). Best: <b id="bestT">-</b></p>
                     <div class="chars" id="chars"></div>
                     <h4 style="margin:14px 0 2px">Power-ups (kept between runs) · <span class="gold">🪙 <b id="shopGold">0</b></span></h4>
                     <div class="shop" id="shop"></div>
@@ -68,7 +68,7 @@
                 <div class="modal">
                     <h2 id="endTitle">You fell</h2>
                     <div class="big-num" id="endTime">0:00</div>
-                    <div class="new-best" id="newBest" hidden>★ New best ★</div>
+                    <div class="new-best" id="newBest" hidden>New best!</div>
                     <div class="stat-grid" id="endStats"></div>
                     <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
                 </div>
@@ -81,7 +81,9 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const W = 960, H = 600, TAU = Math.PI * 2, WIN = 15 * 60;
+        // tall phones get a portrait view so it fills the screen
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 560 : 960, H = TALL ? 860 : 600, TAU = Math.PI * 2, WIN = 15 * 60;
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
         const c = view.ctx;
@@ -471,7 +473,7 @@
             Arcade.report('kills', kills);
             Arcade.addXP(Math.min(80, Math.floor(secs / 15)), true);
             Arcade.sfx(won ? 'win' : 'die');
-            $('endTitle').textContent = won ? '🌅 You survived the night!' : 'You fell';
+            $('endTitle').textContent = won ? 'You survived the night!' : 'You fell';
             $('endTitle').className = won ? 'good' : 'bad';
             $('endTime').textContent = Arcade.time(secs);
             $('newBest').hidden = !r.isNew;
@@ -561,7 +563,7 @@
 
         /* ---------- menus ---------- */
         function buildStart() {
-            $('bestT').textContent = save.best ? Arcade.time(save.best) : '—';
+            $('bestT').textContent = save.best ? Arcade.time(save.best) : '-';
             const ch = $('chars'); ch.innerHTML = '';
             for (const k of CHARS) {
                 const b = document.createElement('button');
