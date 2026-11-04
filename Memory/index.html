@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Memory · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #8fcf5a; --accent-ink: #1d3308; }
+        .stage { justify-content: flex-start; }
+        .bar2 { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .grid { display: grid; gap: 8px; width: min(94vw, calc(var(--cols) * 92px)); grid-template-columns: repeat(var(--cols), 1fr); }
+        .mc { position: relative; aspect-ratio: 3 / 4; border: 0; padding: 0; background: none; cursor: pointer; perspective: 600px; }
+        .mc .in { position: absolute; inset: 0; transition: transform 0.35s cubic-bezier(.3, 1.3, .5, 1); transform-style: preserve-3d; }
+        .mc.up .in, .mc.done .in { transform: rotateY(180deg); }
+        .mc .f, .mc .b { position: absolute; inset: 0; border-radius: 16px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; place-items: center; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+        .mc .f { background: #b9dc6e; background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,.25) 0 18%, transparent 19%); }
+        .mc .b { background: var(--pill); transform: rotateY(180deg); font-size: min(9vw, 2.6rem); }
+        .mc.done .b { background: color-mix(in srgb, var(--pc, var(--good)) 35%, var(--pill)); }
+        .mc.shake .in { animation: shake 0.35s; }
+        .players { display: flex; gap: 8px; }
+        .pl { padding: 8px 14px; border-radius: 999px; background: var(--surface); font-family: var(--display); font-weight: 600; }
+        .pl.turn { box-shadow: inset 0 0 0 3px var(--pc); }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Memory</h1>
+        <div class="stats"><span class="chip accent">Moves <b id="moves">0</b></span><span class="chip">Time <b id="time">0:00</b></span><span class="chip gold hide-sm">Best <b id="best">-</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="newBtn" title="New board"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="chips" id="sizeChips"></div>
+        <div class="chips" id="modeChips"></div>
+        <div class="players" id="players" hidden></div>
+        <div class="grid" id="grid"></div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">Cleared!</h2>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Play again</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const SETS = ['🐸', '🦊', '🐼', '🐨', '🐙', '🦄', '🐝', '🐢', '🦋', '🐳', '🦁', '🐧', '🍄', '🌵', '🍓', '🍩', '🌈', '⚡', '🎈', '🚀', '🎸', '⚽', '🍉', '🐞'];
+        const SIZES = { s: [4, 3], m: [4, 4], l: [5, 4], xl: [6, 5], xxl: [6, 6] };
+        const PCOL = ['#6cd4a4', '#f08aa7'];
+        const cfg = Object.assign({ size: 'm', mode: 'solo' }, Arcade.load('arcade.memory.cfg', {}));
+        const bests = Arcade.load('arcade.memory.best', {});
+        let cards, open, moves, matched, t0, timer, lock, turn, scores;
+
+        function chips(host, list, val, set) {
+            host.innerHTML = '';
+            for (const [k, l] of list) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (k === val ? ' on' : '');
+                b.textContent = l;
+                b.onclick = () => { set(k); Arcade.save('arcade.memory.cfg', cfg); Arcade.sfx('select'); newGame(); };
+                host.appendChild(b);
+            }
+        }
+        function newGame() {
+            chips($('sizeChips'), [['s', '6 pairs'], ['m', '8'], ['l', '10'], ['xl', '15'], ['xxl', '18']], cfg.size, v => cfg.size = v);
+            chips($('modeChips'), [['solo', 'Solo'], ['duo', '2 players']], cfg.mode, v => cfg.mode = v);
+            const [cols, rows] = SIZES[cfg.size];
+            const pairs = cols * rows / 2;
+            const pick = Arcade.shuffle(SETS.slice()).slice(0, pairs);
+            cards = Arcade.shuffle([...pick, ...pick]).map(e => ({ e, up: false, done: false, by: -1 }));
+            open = []; moves = 0; matched = 0; lock = false; turn = 0; scores = [0, 0];
+            clearInterval(timer); t0 = 0;
+            $('grid').style.setProperty('--cols', cols);
+            $('grid').innerHTML = '';
+            cards.forEach((c, i) => {
+                const b = document.createElement('button');
+                b.className = 'mc';
+                b.innerHTML = `<div class="in"><div class="f"></div><div class="b">${c.e}</div></div>`;
+                b.onclick = () => flip(i);
+                c.el = b;
+                $('grid').appendChild(b);
+            });
+            $('players').hidden = cfg.mode !== 'duo';
+            Arcade.text('time', '0:00');
+            renderHud();
+        }
+        function renderHud() {
+            Arcade.text('moves', moves);
+            const b = bests[cfg.size];
+            Arcade.text('best', b ? b.moves + ' moves' : '-');
+            $('players').innerHTML = [0, 1].map(i => `<span class="pl ${i === turn ? 'turn' : ''}" style="--pc:${PCOL[i]}">Player ${i + 1}: ${scores[i]}</span>`).join('');
+        }
+        function flip(i) {
+            const c = cards[i];
+            if (lock || c.up || c.done) return;
+            if (!t0) { t0 = Date.now(); timer = setInterval(() => Arcade.text('time', Arcade.time((Date.now() - t0) / 1000)), 500); }
+            c.up = true; c.el.classList.add('up');
+            Arcade.tone(500 + open.length * 120, 0.06, 'sine', 0.08);
+            open.push(i);
+            if (open.length < 2) return;
+            moves++;
+            const [a, b] = open.map(k => cards[k]);
+            if (a.e === b.e) {
+                a.done = b.done = true; a.by = b.by = turn;
+                for (const x of [a, b]) { x.el.classList.add('done'); if (cfg.mode === 'duo') x.el.style.setProperty('--pc', PCOL[turn]); }
+                matched++;
+                scores[turn]++;
+                open = [];
+                Arcade.sfx('coin'); Arcade.buzz(15);
+                if (matched === cards.length / 2) finish();
+            } else {
+                lock = true;
+                setTimeout(() => {
+                    for (const x of [a, b]) { x.up = false; x.el.classList.remove('up'); }
+                    open = []; lock = false;
+                    if (cfg.mode === 'duo') { turn = 1 - turn; renderHud(); }
+                }, 800);
+            }
+            renderHud();
+        }
+        function finish() {
+            clearInterval(timer);
+            const secs = Math.round((Date.now() - t0) / 1000);
+            Arcade.sfx('win');
+            if (cfg.mode === 'solo') {
+                const b = bests[cfg.size];
+                const isNew = !b || moves < b.moves || (moves === b.moves && secs < b.secs);
+                if (isNew) { bests[cfg.size] = { moves, secs }; Arcade.save('arcade.memory.best', bests); }
+                $('endTitle').textContent = isNew && b ? 'New best!' : 'Cleared!';
+                $('endText').textContent = `${moves} moves in ${Arcade.time(secs)}. A perfect game is ${cards.length / 2} moves.`;
+                Arcade.count('win');
+            } else {
+                $('endTitle').textContent = scores[0] === scores[1] ? "It's a tie!" : `Player ${scores[0] > scores[1] ? 1 : 2} wins!`;
+                $('endText').textContent = `${scores[0]} pairs to ${scores[1]}.`;
+                Arcade.count('round');
+            }
+            renderHud();
+            setTimeout(() => Arcade.show('endOv'), 600);
+        }
+        $('newBtn').innerHTML = Arcade.icon('restart');
+        $('newBtn').onclick = newGame;
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); newGame(); };
+        newGame();
+    })();
+    </script>
+</body>
+</html>

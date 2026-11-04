@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Checkers · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #e8655a; --accent-ink: #2b0d0a; --sq: min(11vw, 60px); }
+        .stage { justify-content: flex-start; }
+        .turn { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 1.2rem; min-height: 1.6em; }
+        .turn .d { width: 20px; height: 20px; border-radius: 50%; }
+        .board { display: grid; grid-template-columns: repeat(8, var(--sq)); grid-template-rows: repeat(8, var(--sq)); border-radius: 22px; overflow: hidden; box-shadow: 0 0 0 10px #5a3540, 0 14px 0 4px #3e2430; margin: 12px 0 20px; touch-action: manipulation; }
+        .sq { position: relative; border: 0; padding: 0; background: #f0dcc0; display: grid; place-items: center; }
+        .sq.dk { background: #8a5a66; cursor: pointer; }
+        .sq.sel { background: #b07a62; }
+        .sq.can::after { content: ""; width: 30%; height: 30%; border-radius: 50%; background: rgba(255,255,255,.55); }
+        .sq.last { box-shadow: inset 0 0 0 3px rgba(245,192,78,.8); }
+        .pc { width: 78%; height: 78%; border-radius: 50%; display: grid; place-items: center; font-size: calc(var(--sq) * 0.38); transition: transform 0.12s; }
+        .pc.p1 { background: #e8655a; box-shadow: inset 0 -5px 0 rgba(0,0,0,.2), inset 0 0 0 5px rgba(255,255,255,.15); }
+        .pc.p2 { background: #2d2442; box-shadow: inset 0 -5px 0 rgba(0,0,0,.35), inset 0 0 0 5px rgba(255,255,255,.08); }
+        .pc.mov { transform: scale(1.08); box-shadow: 0 0 0 3px #f5c04e, inset 0 -5px 0 rgba(0,0,0,.2); }
+        .pc.hint { animation: pulse 0.7s infinite alternate; }
+        .pc .k { filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+        .caps { display: flex; gap: 14px; font-weight: 800; color: var(--muted); }
+        .setup { text-align: left; }
+        .setup h2 { text-align: center; }
+        .lab { display: block; margin: 16px 0 8px; font-family: var(--display); font-weight: 600; }
+        .opts { display: grid; gap: 8px; }
+        .opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); border: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+        .opt .em { font-size: 1.5rem; width: 34px; text-align: center; }
+        .opt b { font-family: var(--display); font-weight: 600; display: block; }
+        .opt small { color: var(--muted); }
+        .opt.on { box-shadow: inset 0 0 0 3px var(--accent); }
+        .toggle { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 18px; background: var(--bg-2); cursor: pointer; }
+        .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Checkers</h1>
+        <div class="stats"><span class="chip accent">Wins <b id="wins">0</b></span><span class="chip">Losses <b id="losses">0</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="undoBtn" title="Undo"></button><button class="btn icon sm" id="menuBtn" title="New game"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="turn"><span class="d" id="turnDot"></span><span id="turnTxt"></span></div>
+        <div class="board" id="board"></div>
+        <div class="caps"><span id="cap1"></span><span id="cap2"></span></div>
+
+        <div class="overlay fixed" id="setupOv" hidden>
+            <div class="modal setup">
+                <h2>Checkers</h2>
+                <label class="lab">Opponent</label>
+                <div class="opts" id="modeOpts">
+                    <button class="opt" data-mode="ai"><span class="em">🤖</span><span><b>Computer</b><small>You play red and move first</small></span></button>
+                    <button class="opt" data-mode="pvp"><span class="em">🤝</span><span><b>2 players</b><small>Take turns on one device</small></span></button>
+                </div>
+                <div id="aiBox">
+                    <label class="lab">Difficulty</label>
+                    <div class="opts" id="diffOpts">
+                        <button class="opt" data-diff="easy"><span class="em">🐣</span><span><b>Easy</b><small>Grabs what it can, no plan</small></span></button>
+                        <button class="opt" data-diff="normal"><span class="em">🙂</span><span><b>Normal</b><small>Looks a few moves ahead</small></span></button>
+                        <button class="opt" data-diff="hard"><span class="em">😈</span><span><b>Hard</b><small>Sets traps and protects its pieces</small></span></button>
+                    </div>
+                </div>
+                <label class="lab">Rules</label>
+                <label class="toggle"><input type="checkbox" id="forceChk"><span><b style="font-family:var(--display);font-weight:600">Captures are compulsory</b><br><small class="muted">If you can jump, you must</small></span></label>
+                <div class="actions"><button class="btn primary lg" id="startBtn">Play</button></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">You win!</h2>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Rematch</button><button class="btn lg" id="changeBtn">Change</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const cfg = Object.assign({ mode: 'ai', diff: 'normal', force: true }, Arcade.load('arcade.checkers.cfg', {}));
+        const stats = Object.assign({ wins: 0, losses: 0 }, Arcade.load('arcade.checkers.stats', {}));
+        // board: 64 cells. 0 empty, 1 red man, 2 dark man, 3 red king, 4 dark king. red (1) moves up the screen
+        let B, turn, over, sel, partial, history, quiet, lastMove = null, busy = false;
+        const side = (p) => p === 0 ? 0 : (p === 1 || p === 3 ? 1 : 2);
+        const isKing = (p) => p >= 3;
+        const rc = (i) => [i >> 3, i & 7];
+        const idx = (r, c) => r * 8 + c;
+        const on = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+
+        function startBoard() {
+            const b = new Array(64).fill(0);
+            for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if ((r + c) % 2 === 1) {
+                if (r < 3) b[idx(r, c)] = 2;
+                if (r > 4) b[idx(r, c)] = 1;
+            }
+            return b;
+        }
+        const dirsFor = (p) => isKing(p) ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : side(p) === 1 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
+        // all capture sequences from square i (each: {from, path:[...], caps:[...]})
+        function jumpsFrom(b, i, p, path, caps, out) {
+            const [r, c] = rc(i);
+            let any = false;
+            for (const [dr, dc] of dirsFor(p)) {
+                const mr = r + dr, mc = c + dc, tr = r + 2 * dr, tc = c + 2 * dc;
+                if (!on(tr, tc)) continue;
+                const m = idx(mr, mc), t = idx(tr, tc);
+                if (side(b[m]) && side(b[m]) !== side(p) && !caps.includes(m) && b[t] === 0) {
+                    any = true;
+                    const crowned = !isKing(p) && (tr === 0 || tr === 7);
+                    const nb = b.slice(); nb[i] = 0; nb[t] = p;
+                    if (crowned) out.push({ path: [...path, t], caps: [...caps, m] });
+                    else jumpsFrom(nb, t, p, [...path, t], [...caps, m], out);
+                }
+            }
+            if (!any && caps.length) out.push({ path, caps });
+        }
+        function movesFor(b, s, forced) {
+            const caps = [], steps = [];
+            for (let i = 0; i < 64; i++) {
+                const p = b[i];
+                if (side(p) !== s) continue;
+                const js = [];
+                jumpsFrom(b, i, p, [], [], js);
+                js.forEach(j => caps.push({ from: i, path: j.path, caps: j.caps }));
+                const [r, c] = rc(i);
+                for (const [dr, dc] of dirsFor(p)) { const tr = r + dr, tc = c + dc; if (on(tr, tc) && b[idx(tr, tc)] === 0) steps.push({ from: i, path: [idx(tr, tc)], caps: [] }); }
+            }
+            return caps.length && forced ? caps : [...caps, ...steps];
+        }
+        function applyMove(b, m) {
+            const nb = b.slice();
+            let p = nb[m.from];
+            nb[m.from] = 0;
+            for (const c of m.caps) nb[c] = 0;
+            const to = m.path[m.path.length - 1];
+            const [tr] = rc(to);
+            if (p === 1 && tr === 0) p = 3;
+            if (p === 2 && tr === 7) p = 4;
+            nb[to] = p;
+            return nb;
+        }
+
+        /* ---------- ai ---------- */
+        function evalBoard(b, s) {
+            let v = 0;
+            for (let i = 0; i < 64; i++) {
+                const p = b[i]; if (!p) continue;
+                const [r, c] = rc(i);
+                let w = isKing(p) ? 175 : 100;
+                if (!isKing(p)) w += (side(p) === 1 ? 7 - r : r) * 4;           // pushing forward
+                if (c >= 2 && c <= 5 && r >= 2 && r <= 5) w += 6;                 // middle of the board
+                if (!isKing(p) && ((side(p) === 1 && r === 7) || (side(p) === 2 && r === 0))) w += 10; // back row guards
+                v += side(p) === s ? w : -w;
+            }
+            return v;
+        }
+        function negamax(b, s, depth, a, bt) {
+            const ms = movesFor(b, s, cfg.force);
+            if (!ms.length) return -100000 - depth;
+            if (depth === 0) return evalBoard(b, s);
+            // captures first helps pruning
+            ms.sort((x, y) => y.caps.length - x.caps.length);
+            let best = -Infinity;
+            for (const m of ms) {
+                const v = -negamax(applyMove(b, m), 3 - s, depth - 1, -bt, -a);
+                if (v > best) best = v;
+                if (v > a) a = v;
+                if (a >= bt) break;
+            }
+            return best;
+        }
+        function aiPick() {
+            const ms = movesFor(B, turn, cfg.force);
+            if (cfg.diff === 'easy') {
+                const caps = ms.filter(m => m.caps.length);
+                return caps.length && Math.random() < 0.8 ? Arcade.pick(caps) : Arcade.pick(ms);
+            }
+            const depth = cfg.diff === 'normal' ? 4 : 7;
+            const scored = ms.map(m => [m, -negamax(applyMove(B, m), 3 - turn, depth - 1, -Infinity, Infinity)]);
+            scored.sort((x, y) => y[1] - x[1]);
+            const top = scored.filter(x => x[1] >= scored[0][1] - (cfg.diff === 'normal' ? 6 : 0));
+            return Arcade.pick(top)[0];
+        }
+
+        /* ---------- play ---------- */
+        function newGame() {
+            B = startBoard(); turn = 1; over = false; sel = -1; partial = null; history = []; quiet = 0; lastMove = null; busy = false;
+            draw();
+        }
+        const humanTurn = () => cfg.mode === 'pvp' || turn === 1;
+        function legal() { return movesFor(B, turn, cfg.force); }
+        function commit(m) {
+            history.push({ B: B.slice(), turn, quiet });
+            const wasKing = isKing(B[m.from]);
+            B = applyMove(B, m);
+            lastMove = m;
+            quiet = m.caps.length ? 0 : quiet + 1;
+            if (m.caps.length) { Arcade.sfx('hit'); Arcade.buzz(25); } else Arcade.tone(360, 0.06, 'sine', 0.08);
+            if (!wasKing && isKing(B[m.path[m.path.length - 1]])) setTimeout(() => Arcade.sfx('power'), 120);
+            turn = 3 - turn; sel = -1; partial = null;
+            if (!legal().length) return finish(3 - turn, 'No moves left for ' + (turn === 1 ? 'red' : 'dark') + '.');
+            if (quiet >= 60) return finish(0, '30 moves each without a capture.');
+            draw();
+            if (!humanTurn()) {
+                busy = true; draw();
+                setTimeout(() => { busy = false; if (!over) commit(aiPick()); }, 420);
+            }
+        }
+        function clickSq(i) {
+            if (over || busy || !humanTurn()) return;
+            const ms = legal();
+            // continuing a multi-jump: only the moving piece's remaining options
+            const pool = partial ? ms.filter(m => m.from === partial.from && partial.path.every((s, k) => m.path[k] === s)) : ms;
+            const step = partial ? partial.path.length : 0;
+            if (partial || sel >= 0) {
+                const from = partial ? partial.from : sel;
+                const opts = pool.filter(m => m.from === from && m.path[step] === i);
+                if (opts.length) {
+                    const done = opts.find(m => m.path.length === step + 1);
+                    if (done) return commit(done);
+                    partial = { from, path: [...(partial ? partial.path : []), i] };
+                    Arcade.sfx('hit');
+                    draw();
+                    return;
+                }
+                if (partial) return; // must finish the jump
+            }
+            if (side(B[i]) === turn && pool.some(m => m.from === i)) { sel = i; Arcade.sfx('click'); draw(); return; }
+            if (side(B[i]) === turn && cfg.force && ms.some(m => m.caps.length)) { Arcade.toast('You have a capture, you must take it', 'bad', 1400); Arcade.sfx('bad'); }
+            sel = -1; draw();
+        }
+        function finish(winner, why) {
+            over = true;
+            draw();
+            let title;
+            if (cfg.mode === 'ai') {
+                if (winner === 1) { title = 'You win!'; stats.wins++; Arcade.count('win'); Arcade.addXP(cfg.diff === 'hard' ? 50 : cfg.diff === 'normal' ? 20 : 8); Arcade.sfx('win'); }
+                else if (winner === 2) { title = 'Computer wins'; stats.losses++; Arcade.sfx('die'); }
+                else title = 'Draw';
+                Arcade.save('arcade.checkers.stats', stats);
+            } else { title = winner ? (winner === 1 ? 'Red' : 'Dark') + ' wins!' : 'Draw'; Arcade.count('round'); Arcade.sfx('win'); }
+            $('endTitle').textContent = title;
+            $('endText').textContent = why;
+            setTimeout(() => Arcade.show('endOv'), 700);
+        }
+        function draw() {
+            const host = $('board');
+            if (host.children.length !== 64) {
+                host.innerHTML = '';
+                for (let i = 0; i < 64; i++) { const b = document.createElement('button'); const [r, c] = rc(i); b.className = 'sq' + ((r + c) % 2 ? ' dk' : ''); b.onclick = () => clickSq(i); host.appendChild(b); }
+            }
+            const ms = over ? [] : legal();
+            const from = partial ? partial.from : sel;
+            const step = partial ? partial.path.length : 0;
+            const curPos = partial ? partial.path[partial.path.length - 1] : sel;
+            const pool = partial ? ms.filter(m => m.from === partial.from && partial.path.every((s, k) => m.path[k] === s)) : ms;
+            const targets = from >= 0 && humanTurn() ? new Set(pool.filter(m => m.from === from).map(m => m.path[step])) : new Set();
+            const movable = !over && humanTurn() && !busy && from < 0 ? new Set(ms.map(m => m.from)) : new Set();
+            const lastSet = lastMove ? new Set([lastMove.from, ...lastMove.path]) : new Set();
+            // while mid-jump, draw the piece where it has got to
+            let view = B;
+            if (partial) { view = B.slice(); const p = view[partial.from]; view[partial.from] = 0; view[curPos] = p; }
+            for (let i = 0; i < 64; i++) {
+                const el = host.children[i];
+                const [r, c] = rc(i);
+                el.className = 'sq' + ((r + c) % 2 ? ' dk' : '') + (i === curPos ? ' sel' : '') + (targets.has(i) ? ' can' : '') + (lastSet.has(i) ? ' last' : '');
+                const p = view[i];
+                const want = p ? `<div class="pc p${side(p)}${i === curPos ? ' mov' : ''}${movable.has(i) && cfg.force && ms[0] && ms[0].caps.length ? ' hint' : ''}">${isKing(p) ? '<span class="k">👑</span>' : ''}</div>` : '';
+                if (el.innerHTML !== want) el.innerHTML = want;
+            }
+            const cnt = (s) => B.filter(p => side(p) === s).length;
+            $('cap1').textContent = 'Red: ' + cnt(1) + ' pieces';
+            $('cap2').textContent = 'Dark: ' + cnt(2) + ' pieces';
+            $('turnDot').style.background = turn === 1 ? '#e8655a' : '#2d2442';
+            $('turnDot').style.boxShadow = turn === 2 ? '0 0 0 2px #fff6' : 'none';
+            $('turnTxt').textContent = over ? 'Game over' : cfg.mode === 'ai' ? (turn === 1 ? (partial ? 'Keep jumping!' : 'Your move') : 'Computer is thinking...') : (turn === 1 ? 'Red' : 'Dark') + ' to move';
+            Arcade.text('wins', stats.wins); Arcade.text('losses', stats.losses);
+            $('undoBtn').disabled = over || busy || !history.length;
+        }
+        $('undoBtn').innerHTML = Arcade.icon('undo');
+        $('undoBtn').onclick = () => {
+            if (over || busy || !history.length) return;
+            let h = history.pop();
+            // vs the computer, step back to your own turn
+            if (cfg.mode === 'ai' && h.turn !== 1 && history.length) h = history.pop();
+            B = h.B; turn = h.turn; quiet = h.quiet; sel = -1; partial = null; lastMove = null;
+            draw();
+        };
+
+        /* ---------- setup ---------- */
+        function syncSetup() {
+            document.querySelectorAll('#modeOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.mode === cfg.mode));
+            document.querySelectorAll('#diffOpts .opt').forEach(b => b.classList.toggle('on', b.dataset.diff === cfg.diff));
+            $('aiBox').hidden = cfg.mode !== 'ai';
+            $('forceChk').checked = cfg.force;
+        }
+        document.querySelectorAll('#modeOpts .opt').forEach(b => b.onclick = () => { cfg.mode = b.dataset.mode; Arcade.sfx('select'); syncSetup(); });
+        document.querySelectorAll('#diffOpts .opt').forEach(b => b.onclick = () => { cfg.diff = b.dataset.diff; Arcade.sfx('select'); syncSetup(); });
+        $('startBtn').onclick = () => { cfg.force = $('forceChk').checked; Arcade.save('arcade.checkers.cfg', cfg); Arcade.hide('setupOv'); newGame(); };
+        $('menuBtn').innerHTML = Arcade.icon('restart');
+        $('menuBtn').onclick = () => { Arcade.hide('endOv'); syncSetup(); Arcade.show('setupOv'); };
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); newGame(); };
+        $('changeBtn').onclick = () => { Arcade.hide('endOv'); syncSetup(); Arcade.show('setupOv'); };
+        B = startBoard(); turn = 1; over = true; sel = -1; partial = null; history = [];
+        draw();
+        syncSetup();
+        Arcade.show('setupOv');
+        window.__ck = { legal, commit, get turn() { return turn; }, get over() { return over; }, aiPick, get B() { return B; } };
+    })();
+    </script>
+</body>
+</html>

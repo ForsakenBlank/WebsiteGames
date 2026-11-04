@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Nonogram · Arcade</title>
+    <link rel="stylesheet" href="../_shared/arcade.css">
+    <style>
+        :root { --accent: #c8812e; --accent-ink: #fff; --ink: #3a2c1a; --paper: #f4ecdd; }
+        .stage { justify-content: flex-start; }
+        .top2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .hearts { display: flex; gap: 4px; padding: 6px 12px; border-radius: 999px; background: var(--pill); font-size: 1.15rem; }
+        .hearts span { color: #e2463a; } .hearts span.gone { color: #d8cfc0; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .ch { border: 0; padding: 9px 14px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--display); font-weight: 600; cursor: pointer; }
+        .ch.on { background: var(--accent); color: var(--accent-ink); }
+        .puz { display: grid; padding: 12px; border-radius: 24px; background: var(--paper); color: var(--ink); box-shadow: 0 8px 0 rgba(0,0,0,.25); touch-action: none; user-select: none; -webkit-user-select: none; }
+        .colc { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 1px; padding-bottom: 4px; font-family: var(--display); font-weight: 600; font-size: max(11px, calc(var(--c) * 0.52)); line-height: 1.05; }
+        .rowc { display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--c) * 0.2); padding-right: 6px; font-family: var(--display); font-weight: 600; font-size: max(11px, calc(var(--c) * 0.52)); }
+        .colc.ok, .rowc.ok { opacity: 0.3; }
+        .grid { display: grid; gap: 2px; background: #d8cdb8; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+        .cl { width: var(--c); height: var(--c); background: #fffaf1; display: grid; place-items: center; cursor: pointer; }
+        .cl.f { background: var(--ink); }
+        .cl.x::after { content: "×"; color: #b9a98d; font-size: calc(var(--c) * 0.75); line-height: 1; font-weight: 700; }
+        .cl.bad { background: #f3b3a9; }
+        .cl.br { margin-right: 2px; } .cl.bb { margin-bottom: 2px; }
+        .cl.hl { box-shadow: inset 0 0 0 100px rgba(200, 129, 46, 0.12); }
+        .cl.f.hl { box-shadow: none; }
+        .modes { display: flex; gap: 8px; }
+        .modebtn { width: 64px; height: 56px; border-radius: 18px !important; font-size: 1.4rem !important; }
+        .modebtn .sq { width: 22px; height: 22px; border-radius: 5px; background: currentColor; }
+        .win-pic { display: grid; gap: 1px; margin: 12px auto; width: fit-content; }
+        .win-pic i { width: 10px; height: 10px; background: #3a2c1a; border-radius: 2px; }
+        .win-pic i.e { background: transparent; }
+    </style>
+</head>
+<body class="no-select">
+    <header class="topbar">
+        <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
+        <h1 class="title">Nonogram</h1>
+        <div class="stats"><span class="chip accent">Solved <b id="solved">0</b></span><span class="chip">Time <b id="time">0:00</b></span></div>
+        <div class="actions"><button class="btn icon sm" id="helpBtn" title="How to play"></button><button class="btn icon sm" data-mute></button></div>
+    </header>
+    <main class="stage">
+        <div class="chips" id="sizeChips"></div>
+        <div class="top2"><div class="hearts" id="hearts"></div><button class="btn sm" id="hintBtn">Hint</button><button class="btn sm" id="newBtn">New puzzle</button></div>
+        <div class="puz" id="puz"></div>
+        <div class="modes">
+            <button class="btn modebtn" id="mFill" title="Fill"><span class="sq"></span></button>
+            <button class="btn modebtn" id="mX" title="Mark empty">×</button>
+        </div>
+        <div class="overlay fixed" id="endOv" hidden>
+            <div class="modal">
+                <h2 id="endTitle">Solved!</h2>
+                <div class="win-pic" id="winPic"></div>
+                <p id="endText"></p>
+                <div class="actions"><button class="btn primary lg" id="againBtn">Next puzzle</button></div>
+            </div>
+        </div>
+        <div class="overlay fixed" id="helpOv" hidden>
+            <div class="modal">
+                <h2>How to play</h2>
+                <ul class="help">
+                    <li>The numbers say how many filled squares are in each run, in order, along that row or column.</li>
+                    <li>Runs are separated by at least one empty square.</li>
+                    <li>Fill squares you're sure about. Mark ones you know are empty with ×.</li>
+                    <li>Every puzzle can be solved with logic, no guessing needed.</li>
+                    <li>Drag to paint lots of squares at once. Wrong fills cost a heart.</li>
+                </ul>
+                <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+            </div>
+        </div>
+    </main>
+    <script src="../_shared/arcade.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (id) => document.getElementById(id);
+        const SIZES = { 5: 'Tiny 5x5', 8: 'Small 8x8', 10: 'Medium 10x10', 12: 'Big 12x12', 15: 'Huge 15x15' };
+        const cfg = Object.assign({ n: 5, mode: 'fill' }, Arcade.load('arcade.nonogram.cfg', {}));
+        let N, sol, st, rowClues, colClues, lives, t0, timer, done, solvedN = Arcade.load('arcade.nonogram.solved', 0);
+
+        /* ---------- clues + line solver ---------- */
+        const cluesOf = (arr) => { const out = []; let run = 0; for (const v of arr) { if (v) run++; else if (run) { out.push(run); run = 0; } } if (run) out.push(run); return out.length ? out : [0]; };
+        // returns a refined line (-1 unknown, 0 empty, 1 filled) or null if impossible
+        function solveLine(line, clues) {
+            const n = line.length, cl = clues[0] === 0 ? [] : clues, m = cl.length;
+            const canF = new Array(n).fill(false), canE = new Array(n).fill(false);
+            const memo = new Map();
+            function f(i, j) {
+                const key = i * 64 + j;
+                if (memo.has(key)) return memo.get(key);
+                let res = false;
+                if (i >= n) res = j === m;
+                else {
+                    if (line[i] !== 1 && f(i + 1, j)) { canE[i] = true; res = true; }
+                    if (j < m) {
+                        const end = i + cl[j];
+                        let ok = end <= n;
+                        for (let k = i; ok && k < end; k++) if (line[k] === 0) ok = false;
+                        if (ok && end < n && line[end] === 1) ok = false;
+                        if (ok && f(end < n ? end + 1 : n, j + 1)) {
+                            for (let k = i; k < end; k++) canF[k] = true;
+                            if (end < n) canE[end] = true;
+                            res = true;
+                        }
+                    }
+                }
+                memo.set(key, res);
+                return res;
+            }
+            if (!f(0, 0)) return null;
+            return line.map((v, k) => canF[k] && !canE[k] ? 1 : canE[k] && !canF[k] ? 0 : v);
+        }
+        function logicSolvable(rc, cc, n) {
+            const g = Array.from({ length: n }, () => new Array(n).fill(-1));
+            for (let pass = 0; pass < n * 4; pass++) {
+                let changed = false;
+                for (let r = 0; r < n; r++) {
+                    const nl = solveLine(g[r], rc[r]); if (!nl) return false;
+                    for (let c = 0; c < n; c++) if (nl[c] !== g[r][c]) { g[r][c] = nl[c]; changed = true; }
+                }
+                for (let c = 0; c < n; c++) {
+                    const nl = solveLine(g.map(row => row[c]), cc[c]); if (!nl) return false;
+                    for (let r = 0; r < n; r++) if (nl[r] !== g[r][c]) { g[r][c] = nl[r]; changed = true; }
+                }
+                if (!changed) break;
+            }
+            return g.every(row => row.every(v => v !== -1));
+        }
+        function generate(n) {
+            for (let attempt = 0; attempt < 400; attempt++) {
+                const dens = Arcade.rand(0.52, 0.66);
+                const mirror = Math.random() < 0.55;
+                const g = Array.from({ length: n }, () => new Array(n).fill(0));
+                for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+                    if (mirror && c >= Math.ceil(n / 2)) g[r][c] = g[r][n - 1 - c];
+                    else g[r][c] = Math.random() < dens ? 1 : 0;
+                }
+                // no blank rows or columns, they're boring
+                if (g.some(row => !row.some(Boolean))) continue;
+                if ([...Array(n).keys()].some(c => !g.some(row => row[c]))) continue;
+                const rc = g.map(cluesOf), cc = [...Array(n).keys()].map(c => cluesOf(g.map(row => row[c])));
+                if (logicSolvable(rc, cc, n)) return { g, rc, cc };
+            }
+            // fallback: a dense grid is almost always solvable
+            const g = Array.from({ length: n }, () => Array.from({ length: n }, () => Math.random() < 0.75 ? 1 : 0));
+            return { g, rc: g.map(cluesOf), cc: [...Array(n).keys()].map(c => cluesOf(g.map(row => row[c]))) };
+        }
+
+        /* ---------- game ---------- */
+        function newPuzzle() {
+            N = cfg.n;
+            const p = generate(N);
+            sol = p.g; rowClues = p.rc; colClues = p.cc;
+            st = Array.from({ length: N }, () => new Array(N).fill(0)); // 0 blank, 1 filled, 2 crossed
+            lives = 3; done = false; t0 = 0;
+            clearInterval(timer);
+            Arcade.text('time', '0:00');
+            build();
+            renderSizes();
+        }
+        function renderSizes() {
+            const host = $('sizeChips'); host.innerHTML = '';
+            for (const [k, l] of Object.entries(SIZES)) {
+                const b = document.createElement('button');
+                b.className = 'ch' + (+k === cfg.n ? ' on' : '');
+                b.textContent = l;
+                b.onclick = () => { cfg.n = +k; Arcade.save('arcade.nonogram.cfg', cfg); Arcade.sfx('select'); newPuzzle(); };
+                host.appendChild(b);
+            }
+            $('mFill').classList.toggle('active', cfg.mode === 'fill');
+            $('mX').classList.toggle('active', cfg.mode === 'x');
+            $('hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < lives ? '' : 'gone'}">♥</span>`).join('');
+            Arcade.text('solved', solvedN);
+        }
+        let cells = [];
+        function build() {
+            const maxR = Math.max(...rowClues.map(c => c.length)), maxC = Math.max(...colClues.map(c => c.length));
+            const vw = Math.min(window.innerWidth, 900) - 50;
+            const c = Math.max(16, Math.min(40, Math.floor(vw / (N + maxR * 0.78 + 0.6))));
+            const puz = $('puz');
+            puz.style.setProperty('--c', c + 'px');
+            puz.style.gridTemplateColumns = `auto auto`;
+            puz.innerHTML = '';
+            const corner = document.createElement('div');
+            const colHead = document.createElement('div');
+            colHead.style.display = 'grid';
+            colHead.style.gridTemplateColumns = `repeat(${N}, ${c}px)`;
+            colHead.style.gap = '2px';
+            colHead.style.padding = '0 2px';
+            colHead.style.minHeight = (maxC * Math.max(12, c * 0.55) + 6) + 'px';
+            colClues.forEach((cl, i) => { const d = document.createElement('div'); d.className = 'colc'; d.innerHTML = cl.map(x => `<span>${x}</span>`).join(''); if (i % 5 === 4 && i < N - 1) d.style.marginRight = '2px'; colHead.appendChild(d); });
+            const rowHead = document.createElement('div');
+            rowHead.style.display = 'grid';
+            rowHead.style.gridTemplateRows = `repeat(${N}, ${c}px)`;
+            rowHead.style.gap = '2px';
+            rowHead.style.padding = '2px 0';
+            rowClues.forEach((cl, i) => { const d = document.createElement('div'); d.className = 'rowc'; d.innerHTML = cl.map(x => `<span>${x}</span>`).join(''); if (i % 5 === 4 && i < N - 1) d.style.marginBottom = '2px'; rowHead.appendChild(d); });
+            const grid = document.createElement('div');
+            grid.className = 'grid';
+            grid.style.gridTemplateColumns = `repeat(${N}, auto)`;
+            cells = [];
+            for (let r = 0; r < N; r++) for (let cc = 0; cc < N; cc++) {
+                const e = document.createElement('div');
+                e.className = 'cl' + (cc % 5 === 4 && cc < N - 1 ? ' br' : '') + (r % 5 === 4 && r < N - 1 ? ' bb' : '');
+                e.dataset.r = r; e.dataset.c = cc;
+                cells.push(e);
+                grid.appendChild(e);
+            }
+            puz.append(corner, colHead, rowHead, grid);
+            $('puz').colHead = colHead; $('puz').rowHead = rowHead;
+            render();
+        }
+        function render() {
+            for (const e of cells) {
+                const r = +e.dataset.r, c = +e.dataset.c, v = st[r][c];
+                e.classList.toggle('f', v === 1);
+                e.classList.toggle('x', v === 2);
+                e.classList.toggle('hl', hover && (hover[0] === r || hover[1] === c));
+            }
+            // dim clues for finished lines
+            const rows = $('puz').rowHead.children, cols = $('puz').colHead.children;
+            for (let r = 0; r < N; r++) rows[r].classList.toggle('ok', cluesOf(st[r].map(v => v === 1 ? 1 : 0)).join() === rowClues[r].join());
+            for (let c = 0; c < N; c++) cols[c].classList.toggle('ok', cluesOf(st.map(row => row[c] === 1 ? 1 : 0)).join() === colClues[c].join());
+            renderSizes();
+        }
+        function setCell(r, c, val) {
+            if (done || st[r][c] === val) return;
+            if (!t0) { t0 = Date.now(); timer = setInterval(() => Arcade.text('time', Arcade.time((Date.now() - t0) / 1000)), 500); }
+            if (val === 1 && !sol[r][c]) {
+                // wrong fill: cross it for them and lose a heart
+                st[r][c] = 2;
+                lives--;
+                const e = cells[r * N + c];
+                e.classList.add('bad'); setTimeout(() => e.classList.remove('bad'), 500);
+                Arcade.sfx('bad'); Arcade.buzz(80);
+                paint = null;
+                if (lives <= 0) { render(); lose(); return; }
+            } else {
+                st[r][c] = val;
+                if (val === 1) Arcade.tone(500 + ((r + c) % 6) * 40, 0.04, 'sine', 0.06);
+            }
+            render();
+            checkWin();
+        }
+        function checkWin() {
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (sol[r][c] && st[r][c] !== 1) return;
+            done = true;
+            clearInterval(timer);
+            // cross out the rest for a clean picture
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!sol[r][c]) st[r][c] = 0;
+            render();
+            solvedN++;
+            Arcade.save('arcade.nonogram.solved', solvedN);
+            Arcade.count('win');
+            Arcade.addXP(N >= 12 ? 30 : N >= 10 ? 15 : 4);
+            Arcade.sfx('win');
+            const secs = Math.round((Date.now() - t0) / 1000);
+            $('endTitle').textContent = 'Solved!';
+            $('winPic').style.gridTemplateColumns = `repeat(${N}, 10px)`;
+            $('winPic').innerHTML = sol.flat().map(v => `<i class="${v ? '' : 'e'}"></i>`).join('');
+            $('endText').textContent = `${N}x${N} in ${Arcade.time(secs)} with ${3 - lives} mistake${3 - lives === 1 ? '' : 's'}.`;
+            setTimeout(() => Arcade.show('endOv'), 500);
+        }
+        function lose() {
+            done = true;
+            clearInterval(timer);
+            Arcade.sfx('die');
+            $('endTitle').textContent = 'Out of hearts';
+            $('winPic').style.gridTemplateColumns = `repeat(${N}, 10px)`;
+            $('winPic').innerHTML = sol.flat().map(v => `<i class="${v ? '' : 'e'}"></i>`).join('');
+            $('endText').textContent = 'This was the picture. Try a fresh one?';
+            setTimeout(() => Arcade.show('endOv'), 500);
+        }
+
+        /* ---------- input: tap or drag to paint ---------- */
+        let paint = null, hover = null;
+        const cellAt = (e) => { const t = document.elementFromPoint(e.clientX, e.clientY); return t && t.classList.contains('cl') ? t : null; };
+        $('puz').addEventListener('pointerdown', (e) => {
+            const t = cellAt(e); if (!t || done) return;
+            e.preventDefault();
+            const r = +t.dataset.r, c = +t.dataset.c;
+            const xMode = cfg.mode === 'x' || e.button === 2;
+            const cur = st[r][c];
+            // the first cell decides: fill blanks, or clear what's there
+            const target = xMode ? (cur === 2 ? 0 : 2) : (cur === 1 ? 0 : cur === 2 ? 0 : 1);
+            if (cur === 1 && target !== 0) return;
+            paint = { target, axis: null, r, c };
+            setCell(r, c, target);
+        });
+        window.addEventListener('pointermove', (e) => {
+            const t = cellAt(e);
+            const h = t ? [+t.dataset.r, +t.dataset.c] : null;
+            if ((h && hover && (h[0] !== hover[0] || h[1] !== hover[1])) || (!h) !== (!hover)) { hover = h; if (!paint) render(); }
+            if (!paint || !t) return;
+            let r = +t.dataset.r, c = +t.dataset.c;
+            // lock drags to a straight line
+            if (!paint.axis && (r !== paint.r || c !== paint.c)) paint.axis = r === paint.r ? 'row' : 'col';
+            if (paint.axis === 'row') r = paint.r; else if (paint.axis === 'col') c = paint.c;
+            const cur = st[r][c];
+            if (paint.target === 0 ? cur !== 0 : cur === 0) setCell(r, c, paint.target);
+        });
+        window.addEventListener('pointerup', () => { paint = null; });
+        $('puz').addEventListener('contextmenu', (e) => e.preventDefault());
+        $('mFill').onclick = () => { cfg.mode = 'fill'; Arcade.save('arcade.nonogram.cfg', cfg); renderSizes(); };
+        $('mX').onclick = () => { cfg.mode = 'x'; Arcade.save('arcade.nonogram.cfg', cfg); renderSizes(); };
+        window.addEventListener('keydown', (e) => { if (e.key === 'x' || e.key === 'X') { cfg.mode = cfg.mode === 'x' ? 'fill' : 'x'; renderSizes(); } });
+        $('hintBtn').onclick = () => {
+            if (done) return;
+            const open = [];
+            for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (sol[r][c] && st[r][c] !== 1) open.push([r, c]);
+            if (!open.length) return;
+            const [r, c] = Arcade.pick(open);
+            st[r][c] = 1;
+            cells[r * N + c].classList.add('bad'); setTimeout(() => cells[r * N + c].classList.remove('bad'), 600);
+            Arcade.sfx('power');
+            render(); checkWin();
+        };
+        $('newBtn').onclick = newPuzzle;
+        $('againBtn').onclick = () => { Arcade.hide('endOv'); newPuzzle(); };
+        $('helpBtn').innerHTML = Arcade.icon('help');
+        $('helpBtn').onclick = () => Arcade.show('helpOv');
+        document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => Arcade.hide('helpOv'));
+        window.addEventListener('resize', () => { if (sol) build(); });
+        newPuzzle();
+        window.__nono = { get sol() { return sol; }, setCell, get done() { return done; } };
+    })();
+    </script>
+</body>
+</html>
