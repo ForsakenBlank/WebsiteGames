@@ -528,7 +528,6 @@
             if (shake > 0) ctx.translate(Arcade.rand(-8, 8) * shake, Arcade.rand(-8, 8) * shake);
             const T = theme();
             ctx.fillStyle = T.bg;
-            
             ctx.fillRect(0, 0, W, H);
             if (slow > 0) { ctx.fillStyle = 'rgba(56,189,248,0.06)'; ctx.fillRect(0, 0, W, H); }
 

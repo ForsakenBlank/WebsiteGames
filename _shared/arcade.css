@@ -638,7 +638,7 @@ input, select, textarea { font-family: inherit; }
 
 /* on phones a game's menu can't be trapped inside a small canvas: it fills the screen under the top bar */
 @media (max-width: 640px) {
-    .canvas-box > .overlay { position: fixed; z-index: 45; padding: calc(var(--topbar-h) + 52px) 12px max(14px, env(safe-area-inset-bottom)); align-items: flex-start; }
+    .canvas-box > .overlay { position: fixed; z-index: 45; padding: calc(var(--topbar-real, 110px) + 8px) 12px max(14px, env(safe-area-inset-bottom)); align-items: flex-start; }
     .canvas-box > .overlay > .modal { max-height: 100%; }
 }
 /* phones held sideways: every pixel of height goes to the game */

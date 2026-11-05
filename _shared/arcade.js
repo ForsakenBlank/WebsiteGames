@@ -1240,6 +1240,13 @@
 
     /* ---------- auto wiring on load ---------- */
     document.addEventListener('DOMContentLoaded', () => {
+        // the top bar wraps on narrow phones, menus need its real height to sit below it
+        const bar = document.querySelector('.topbar');
+        if (bar) {
+            const measure = () => document.documentElement.style.setProperty('--topbar-real', bar.offsetHeight + 'px');
+            measure();
+            window.addEventListener('resize', measure);
+        }
         wireIcons();
         Arcade.setMuted(Arcade.muted);
         Arcade.$$('[data-mute]').forEach(b => b.addEventListener('click', () => {

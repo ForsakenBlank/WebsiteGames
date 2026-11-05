@@ -236,7 +236,6 @@
             c.save();
             if (shake > 0) c.translate((Math.random() - 0.5) * 16 * shake, (Math.random() - 0.5) * 16 * shake);
             c.fillStyle = '#5a4030';
-            
             c.fillRect(-20, -20, W + 40, H + 40);
             c.strokeStyle = 'rgba(0,0,0,0.14)'; c.lineWidth = 3;
             for (let y = 70; y < H; y += 90) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }

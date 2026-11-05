@@ -296,8 +296,6 @@
             const k = zb === za ? 0 : Arcade.clamp((floors - za[0]) / (zb[0] - za[0]), 0, 1);
             const top = lerp3(za[1], zb[1], k), bot = lerp3(za[2], zb[2], k);
             const g = `hsl(${bot[0]}, ${Math.min(bot[1], 55)}%, ${bot[2]}%)`;
-            
-            
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
             const space = Arcade.clamp((floors - 55) / 35, 0, 1);
             for (const s of stars) {

@@ -34,3 +34,21 @@ npm run android
 where you can run it on a phone or build an APK / AAB for the Play Store. For iOS swap `android` for `ios`.
 
 App id and name live in `capacitor.config.json`. The icons in `icons/` can be used as the store icon.
+
+### Building a signed APK from the terminal
+
+You need JDK 17 and the Android SDK, with `JAVA_HOME` and `ANDROID_HOME` pointing at them.
+Put this in `android/keystore.properties` (git ignores it):
+
+```
+storeFile=/path/to/your-release.jks
+passwordFile=/path/to/a-file-holding-the-keystore-password
+keyAlias=your-key-alias
+```
+
+```bash
+npm run apk
+```
+
+The APK lands in `android/app/build/outputs/apk/release/`. Keep using the same keystore: an APK signed with a
+different key can't install over an old one without wiping the player's saves.
