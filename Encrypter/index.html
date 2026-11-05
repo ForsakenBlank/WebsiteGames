@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
         :root { --accent: #ffe08a; --accent-2: #ffe08a; --accent-ink: #26180a; }
-        canvas.screen { cursor: none; }
-        .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; text-align: left; margin-top: 12px; font-size: 0.82rem; color: var(--muted); }
-        .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+        .how { display: grid; gap: 8px; margin-top: 12px; text-align: left; font-size: 0.86rem; color: var(--muted); }
+        .how > div { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--bg-2); }
+        .how b { color: var(--text); }
+        .how span { flex: none; width: 28px; text-align: center; font-size: 1.2rem; }
         .ups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
         @media (max-width: 560px) { .ups { grid-template-columns: 1fr; } }
         .ups .btn { flex-direction: column; gap: 6px; padding: 14px 10px; white-space: normal; height: auto; }
@@ -25,7 +26,7 @@
         <div class="stats">
             <span class="chip accent">Score <b id="score">0</b></span>
             <span class="chip">Level <b id="wave">1</b></span>
-            <span class="chip bad">Lives <b id="lives">3</b></span>
+            <span class="chip bad">Core <b id="lives">3</b></span>
             <span class="chip gold">Best <b id="best">0</b></span>
         </div>
         <div class="actions"><button class="btn sm icon" id="pauseBtn">⏸</button><button class="btn sm icon" data-mute>🔊</button></div>
@@ -37,21 +38,13 @@
             <div class="overlay" id="menuOv">
                 <div class="modal">
                     <h2>Encrypter</h2>
-                    <p>Your cursor drags a data trail. <b>Close a loop</b> around viruses to encrypt them, the more in one loop, the bigger the bonus.</p>
-                    <div class="legend">
-                        <span><i style="background:#f27a73"></i>Bug, bounces</span>
-                        <span><i style="background:#f59a55"></i>Seeker, hunts you</span>
-                        <span><i style="background:#b58ce8"></i>Cutter, slices trails</span>
-                        <span><i style="background:#5bb8ea"></i>Shielded, loop twice</span>
-                        <span><i style="background:#f6c445"></i>Swarm, tiny & fast</span>
-                        <span><i style="background:#d98ae0"></i>Splitter, splits in two</span>
-                        <span><i style="background:#ee5a72"></i>Darter, sudden dashes</span>
-                        <span><i style="background:#94a3b8"></i>Armoured, loop 3 times</span>
-                        <span><i style="background:#54c9b4"></i>Tracer, rides your trail</span>
-                        <span><i style="background:#d9483f;border-radius:50%"></i>Boss, every 5th level</span>
-                        <span><i style="background:#fff;border-radius:50%"></i>Power-ups, loop them too</span>
+                    <p>Viruses are crawling in along the cipher rings. Keep them out of the core.</p>
+                    <div class="how">
+                        <div><span>🔄</span><div><b>Spin the rings.</b> Drag one, or tap it to turn it a step. Anything on it turns too.</div></div>
+                        <div><span>🔑</span><div><b>Line up one symbol</b> across every ring to fire a beam down that spoke.</div></div>
+                        <div><span>🦠</span><div><b>Steer viruses into the line.</b> More in one beam and chain reactions score big.</div></div>
+                        <div><span>💥</span><div><b>Kills charge the core.</b> When it's full, tap it to purge the closest wave.</div></div>
                     </div>
-                    <p class="small" style="margin-top:12px">Don't let a virus touch your cursor head. Clear a level, then pick an upgrade.</p>
                     <div class="opts">
                         <div class="seg" id="diffSeg"></div>
                         <div class="row center"><span class="small muted">Start at</span><div class="seg" id="startSeg"></div></div>
@@ -77,479 +70,563 @@
                     <div class="stat-grid">
                         <div><small>Encrypted</small><b id="finalKills">0</b></div>
                         <div><small>Level</small><b id="finalWave">1</b></div>
-                        <div><small>Biggest loop</small><b id="finalLoop">0</b></div>
+                        <div><small>Best chain</small><b id="finalLoop">0</b></div>
                     </div>
                     <div class="actions"><button class="btn primary lg" id="againBtn">Re-encrypt</button></div>
                 </div>
             </div>
         </div>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only">Drag or scroll a ring · <kbd>↑</kbd><kbd>↓</kbd> pick a ring · <kbd>←</kbd><kbd>→</kbd> turn it · <kbd>Space</kbd> purge · <kbd>P</kbd> pause</span><span class="touch-only">Drag a ring to spin it, tap the core when it's charged</span></p>
     </main>
 
     <script src="../_shared/arcade.js"></script>
     <script>
     (() => {
-        // tall phones get a portrait arena so it fills the screen
-        const TALL = window.innerHeight > window.innerWidth * 1.15;
-        const W = TALL ? 600 : 900, H = TALL ? 860 : 600, HEAD_SPEED = 950;
+        'use strict';
+        const S = 720, CX = S / 2, CY = S / 2, CORE_R = 72, OUTER_R = 344, TAU = Math.PI * 2;
         const canvas = document.getElementById('c');
-        const view = Arcade.fitCanvas(canvas, W, H, { max: 1.5 });
+        const view = Arcade.fitCanvas(canvas, S, S, { max: 1.6 });
         const ctx = view.ctx;
-        const fx = new Arcade.Particles(800);
+        const fx = new Arcade.Particles(500);
+        const $ = (id) => document.getElementById(id);
 
-        let best = Arcade.load('arcade.encrypter.best', 0);
-        const DIFFS = {
-            easy: { name: 'Easy', lives: 5, speed: 0.75, trail: 1.25, count: 0.8 },
-            normal: { name: 'Normal', lives: 3, speed: 1, trail: 1, count: 1 },
-            hard: { name: 'Hard', lives: 2, speed: 1.25, trail: 0.85, count: 1.3 },
+        /* ---------- content ---------- */
+        // colour and shape both differ, so symbols still read without relying on colour
+        const SYMS = [
+            { c: '#ef5b56', shape: 'circle' }, { c: '#4f8ef0', shape: 'square' }, { c: '#f6c445', shape: 'tri' },
+            { c: '#4fc07f', shape: 'diamond' }, { c: '#b58ce8', shape: 'star' }, { c: '#f08aa7', shape: 'plus' },
+        ];
+        const WILD = 100, DEAD = -1;
+        const VIRUS = {
+            bug: { c: '#6fd29a', hp: 1, speed: 1, name: 'Bug' },
+            runner: { c: '#f6c445', hp: 1, speed: 1.8, name: 'Runner' },
+            shield: { c: '#6ba6ee', hp: 2, speed: 0.9, name: 'Shielded' },
+            lock: { c: '#b58ce8', hp: 1, speed: 0.8, name: 'Locker' },
+            split: { c: '#f08aa7', hp: 1, speed: 1, name: 'Splitter' },
+            corrupt: { c: '#f59a55', hp: 1, speed: 0.9, name: 'Corrupter' },
+            boss: { c: '#ef5b56', hp: 4, speed: 0.45, name: 'Boss', big: true },
         };
+        // [first level it shows up, type, weight]
+        const VIRUS_TABLE = [[1, 'bug', 6], [3, 'runner', 3], [5, 'shield', 3], [7, 'lock', 2], [9, 'split', 3], [11, 'corrupt', 2]];
+        const NEW_VIRUS_NOTE = { 3: 'Runners are fast', 5: 'Shielded viruses take two beams', 7: 'Lockers jam the ring they stand on', 9: 'Splitters burst into two', 11: 'Corrupters spoil the symbol under them' };
+        const DIFFS = {
+            easy: { name: 'Easy', lives: 5, speed: 0.75, count: 0.8 },
+            normal: { name: 'Normal', lives: 3, speed: 1, count: 1 },
+            hard: { name: 'Hard', lives: 2, speed: 1.25, count: 1.25 },
+        };
+        const UPGRADES = [
+            { id: 'wide', icon: '📡', name: 'Wide beam', desc: 'Beams also hit the spokes beside them' },
+            { id: 'slow', icon: '🐌', name: 'Tar pit', desc: 'Viruses crawl 12% slower' },
+            { id: 'life', icon: '♥', name: 'Patch the core', desc: '+1 core right now' },
+            { id: 'mult', icon: '✖️', name: 'Encryption bonus', desc: '+25% score' },
+            { id: 'charge', icon: '🔋', name: 'Fast charge', desc: 'Purge charges 35% faster' },
+            { id: 'wild', icon: '✨', name: 'Master keys', desc: 'Wild symbols show up more' },
+            { id: 'guard', icon: '🛡', name: 'Firewall', desc: 'Block the first breach each level' },
+            { id: 'flow', icon: '🌊', name: 'Long chains', desc: 'Chains last a second longer' },
+        ];
+
+        /* ---------- state ---------- */
+        let best = Arcade.load('arcade.encrypter.best', 0);
         let diffId = Arcade.load('arcade.encrypter.diff', 'normal');
         if (!DIFFS[diffId]) diffId = 'normal';
         let progress = Arcade.load('arcade.encrypter.progress', {}) || {};
         let startLevel = 1;
-        const UPGRADES = [
-            { id: 'trail', icon: '➰', name: 'Longer trail', desc: '+18% trail length' },
-            { id: 'speed', icon: '💨', name: 'Faster cursor', desc: '+12% cursor speed' },
-            { id: 'life', icon: '♥', name: 'Extra life', desc: '+1 life right now' },
-            { id: 'mult', icon: '✖️', name: 'Encryption bonus', desc: '+25% score from loops' },
-            { id: 'freeze', icon: '❄', name: 'Deep freeze', desc: 'Freeze power-ups last +3s' },
-            { id: 'items', icon: '🎁', name: 'Lucky drops', desc: 'Power-ups appear 50% more often' },
-            { id: 'armor', icon: '🛡', name: 'Recovery', desc: '+1s invulnerability after a hit' },
-            { id: 'pulse', icon: '📡', name: 'Wide loops', desc: 'Loops also catch viruses touching their edge' },
-        ];
-        let up = {};
         const D = () => DIFFS[diffId];
-        let state = 'menu', time = 0;
-        let head, aim, trail = [], maxLen = 900, enemies = [], items = [], flashes = [];
-        let score = 0, wave = 1, lives = 3, kills = 0, bigLoop = 0, inv = 0, freezeT = 0, longT = 0, waveBreak = 0;
+        let state = 'menu', time = 0, up = {};
+        let rings = [], sectors = 8, symCount = 4, viruses = [], beams = [], floats = [];
+        let score = 0, level = 0, lives = 3, kills = 0, chain = 0, bestChain = 0, chainT = 0, charge = 0, shake = 0, flash = 0, guard = 0;
+        let quota = 0, spawned = 0, spawnT = 0, lastSector = 0, checkT = 0, selected = 0, banner = null, drag = null;
 
-        function start() {
-            head = { x: W / 2, y: H / 2 };
-            aim = { x: W / 2, y: H / 2 };
-            trail = [];
-            enemies = []; items = []; flashes = [];
-            score = 0; wave = startLevel - 1; lives = D().lives; kills = 0; bigLoop = 0; inv = 1.5; freezeT = 0; longT = 0; waveBreak = 0;
-            up = { trail: 0, speed: 0, mult: 0, freeze: 0, items: 0, armor: 0, pulse: 0 };
-            fx.clear();
-            nextWave();
-            state = 'play';
-            Arcade.hide('menuOv'); Arcade.hide('overOv'); Arcade.hide('upOv');
-            hud();
+        const step = () => TAU / sectors;
+        const ringW = () => (OUTER_R - CORE_R) / rings.length;
+        const ringOuter = (r) => CORE_R + (r + 1) * ringW();
+        const wrap = (i) => ((i % sectors) + sectors) % sectors;
+        const spokeAngle = (i) => -Math.PI / 2 + i * step();
+
+        /* ---------- board ---------- */
+        function randSym() {
+            if (Math.random() < 0.04 * (1 + (up.wild || 0))) return WILD;
+            return Math.floor(Math.random() * symCount);
         }
-
-        function hud() {
-            Arcade.text('score', score);
-            Arcade.text('wave', Math.max(1, wave));
-            Arcade.text('lives', '♥'.repeat(Math.max(0, lives)));
-            Arcade.text('best', Math.max(best, score));
-        }
-
-        function nextWave() {
-            wave++;
-            const boss = wave % 5 === 0;
-            const n = Math.round((boss ? 2 + wave / 5 : 2 + wave) * D().count);
-            const pool = [['bug', 1]];
-            if (wave >= 2) pool.push(['seeker', 0.8]);
-            if (wave >= 3) pool.push(['cutter', 0.6]);
-            if (wave >= 4) pool.push(['shield', 0.6], ['splitter', 0.5]);
-            if (wave >= 6) pool.push(['swarm', 0.5], ['darter', 0.6]);
-            if (wave >= 8) pool.push(['armor', 0.5]);
-            if (wave >= 9) pool.push(['tracer', 0.45]);
-            const total = pool.reduce((a, p) => a + p[1], 0);
-            for (let i = 0; i < n; i++) {
-                let r = Math.random() * total, kind = 'bug';
-                for (const [k, w] of pool) { if ((r -= w) <= 0) { kind = k; break; } }
-                if (kind === 'swarm') for (let k = 0; k < 3; k++) spawn('swarm'); else spawn(kind);
+        function buildBoard() {
+            const n = 3 + (level >= 4) + (level >= 9);
+            sectors = 8 + (level >= 6 ? 2 : 0) + (level >= 12 ? 2 : 0);
+            symCount = 4 + (level >= 4) + (level >= 9);
+            rings = [];
+            for (let r = 0; r < n; r++) {
+                const sym = [];
+                for (let i = 0; i < sectors; i++) sym.push(randSym());
+                rings.push({ sym, off: 0, drag: 0, shake: 0 });
             }
-            if (boss) { spawn('boss'); Arcade.toast('⚠ Boss virus, loop it ' + (3 + Math.floor(wave / 5)) + ' times!', 'bad', 1800); Arcade.sfx('bad'); }
-            else if (wave > startLevel) { Arcade.toast('Level ' + wave, 'good', 1000); Arcade.sfx('level'); }
-            hud();
+            selected = n - 1;
+            // no free beams on the first frame
+            for (let guardLoop = 0; guardLoop < 30 && matches().length; guardLoop++) for (const i of matches()) rings[0].sym[i] = (rings[0].sym[i] === WILD ? 0 : rings[0].sym[i] + 1) % symCount;
+            ensureSolvable();
+        }
+        // a symbol has to exist on every ring or no beam is possible at all
+        function ensureSolvable() {
+            for (let s = 0; s < symCount; s++) if (rings.every(r => r.sym.some(v => v === s || v === WILD))) return;
+            const s = Math.floor(Math.random() * symCount);
+            for (const r of rings) if (!r.sym.includes(s)) r.sym[Math.floor(Math.random() * sectors)] = s;
+        }
+        function spokeMatches(sym, i) {
+            let want = null;
+            for (let r = 0; r < rings.length; r++) {
+                const v = sym(r, i);
+                if (v === DEAD) return false;
+                if (v === WILD) continue;
+                if (want === null) want = v; else if (want !== v) return false;
+            }
+            return true;
+        }
+        function matches() {
+            const out = [];
+            for (let i = 0; i < sectors; i++) if (spokeMatches((r, k) => rings[r].sym[k], i)) out.push(i);
+            return out;
+        }
+        // how many rings already agree on this spoke, used to hint at near misses
+        function agreement(i) {
+            const count = {};
+            let wild = 0, top = 0;
+            for (const r of rings) { const v = r.sym[i]; if (v === WILD) wild++; else if (v !== DEAD) { count[v] = (count[v] || 0) + 1; top = Math.max(top, count[v]); } }
+            return top + wild;
+        }
+        const ringLocked = (r) => viruses.some(v => v.ring === r && v.type === 'lock');
+
+        function rotate(r, k) {
+            if (!k) return;
+            const ring = rings[r], copy = ring.sym.slice();
+            for (let i = 0; i < sectors; i++) ring.sym[wrap(i + k)] = copy[i];
+            for (const v of viruses) if (v.ring === r) v.s = wrap(v.s + k);
+            ring.off -= k * step();
+            checkT = 0.14;
+            Arcade.tone(420, 0.04, 'triangle', 0.02, 520);
+        }
+        function tryRotate(r, k) {
+            if (ringLocked(r)) { rings[r].shake = 0.3; Arcade.sfx('bad'); return; }
+            rotate(r, k);
         }
 
-        function spawn(kind) {
-            let x, y;
-            do { x = Arcade.rand(40, W - 40); y = Arcade.rand(40, H - 40); } while (Math.hypot(x - head.x, y - head.y) < 200);
-            const sp = (60 + Math.min(wave, 30) * 7) * D().speed * ({ swarm: 1.8, seeker: 0.7, armor: 0.6, boss: 0.45, tracer: 0.9 }[kind] || 1);
-            const a = Math.random() * Math.PI * 2;
-            const e = { kind, x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, sp, r: kind === 'swarm' ? 6 : 10, shield: kind === 'shield', t: Math.random() * 6, spawn: 0.8 };
-            if (kind === 'armor') { e.armor = 2; e.r = 12; }
-            if (kind === 'splitter') e.r = 12;
-            if (kind === 'darter') e.dashT = Arcade.rand(1, 2.5);
-            if (kind === 'boss') { e.r = 34; e.hp = e.max = 3 + Math.floor(wave / 5); e.spawnT = 4; e.spawn = 1.2; }
-            enemies.push(e);
-            return e;
+        /* ---------- firing ---------- */
+        function fire(list) {
+            chain++;
+            bestChain = Math.max(bestChain, chain);
+            chainT = 1.6 + (up.flow || 0);
+            let hitCount = 0;
+            for (const i of list) {
+                const symbol = rings.map(r => r.sym[i]).find(v => v !== WILD);
+                const col = symbol === undefined ? '#fff' : SYMS[symbol].c;
+                beams.push({ i, t: 0.4, c: col });
+                const hitSpokes = up.wide ? [i, wrap(i - 1), wrap(i + 1)] : [i];
+                for (const v of [...viruses]) if (hitSpokes.includes(v.s) && damage(v)) hitCount++;
+                for (const r of rings) r.sym[i] = randSym();
+                const a = spokeAngle(i);
+                for (let d = CORE_R; d < OUTER_R; d += 40) fx.emit(CX + Math.cos(a) * d, CY + Math.sin(a) * d, { n: 2, speed: 90, color: [col, '#fff'], life: 0.35, size: 3 });
+            }
+            ensureSolvable();
+            const pts = Math.round((5 * list.length + 10 * hitCount * hitCount) * chain * (1 + (up.mult || 0) * 0.25));
+            addScore(pts);
+            charge = Math.min(1, charge + 0.02 * list.length);
+            floats.push({ x: CX, y: CY - CORE_R - 26, t: 0.9, s: '+' + pts + (chain > 1 ? '  chain ×' + chain : ''), c: chain > 1 ? '#f6c445' : '#fff' });
+            Arcade.tone(300 + chain * 90, 0.14, 'sawtooth', 0.03, 900 + chain * 120);
+            if (hitCount >= 2) Arcade.sfx('power');
+            shake = Math.max(shake, 0.1 + hitCount * 0.03);
+            checkT = 0.32;
         }
+        function damage(v) {
+            v.hp--;
+            v.hit = 0.15;
+            if (v.hp > 0) return false;
+            kill(v);
+            return true;
+        }
+        function kill(v) {
+            const i = viruses.indexOf(v);
+            if (i < 0) return;
+            viruses.splice(i, 1);
+            kills++;
+            charge = Math.min(1, charge + (v.type === 'boss' ? 0.3 : 0.11) * (1 + (up.charge || 0) * 0.35));
+            const p = virusPos(v);
+            fx.emit(p.x, p.y, { n: v.type === 'boss' ? 26 : 9, speed: 150, color: [VIRUS[v.type].c, '#fff'], life: 0.4, size: 3 });
+            if (v.cell) restoreCell(v);
+            if (v.type === 'split') for (const ds of [-1, 1]) viruses.push(makeVirus('bug', wrap(v.s + ds), v.ring, v.p));
+        }
+        function restoreCell(v) {
+            const ring = rings[v.cell.r];
+            for (let i = 0; i < sectors; i++) if (ring.sym[i] === DEAD) { ring.sym[i] = randSym(); break; }
+            v.cell = null;
+        }
+        function purge() {
+            if (state !== 'play' || charge < 1) return;
+            charge = 0;
+            flash = 0.35; shake = 0.35;
+            Arcade.sfx('boom');
+            // wipes every virus on the innermost ring that has any, the ones closest to the core
+            let r = -1;
+            for (let k = 0; k < rings.length && r < 0; k++) if (viruses.some(v => v.ring === k)) r = k;
+            if (r < 0) return;
+            for (const v of viruses.filter(v => v.ring === r)) damage(v);
+            addScore(25);
+        }
+        function addScore(n) { score += n; hud(); }
 
-        function maybeItem(dt) {
-            if (items.length < 2 && Math.random() < dt * 0.06 * (1 + up.items * 0.5)) {
-                const kind = Arcade.pick(['freeze', 'long', 'long', 'life']);
-                if (kind === 'life' && lives >= 5) return;
-                items.push({ kind, x: Arcade.rand(60, W - 60), y: Arcade.rand(60, H - 60), t: 12 });
-            }
+        /* ---------- viruses ---------- */
+        function makeVirus(type, s, ring, p) {
+            const d = VIRUS[type];
+            return { type, s, ring, p: p || 0, hp: d.big ? d.hp + Math.floor(level / 5) : d.hp, wob: Math.random() * TAU, hit: 0, cell: null };
         }
-
-        /* ---------- geometry ---------- */
-        function segHit(p1, p2, p3, p4) {
-            const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
-            if (d === 0) return null;
-            const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / d;
-            const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / d;
-            if (ua <= 0 || ua >= 1 || ub <= 0 || ub >= 1) return null;
-            return { x: p1.x + ua * (p2.x - p1.x), y: p1.y + ua * (p2.y - p1.y) };
+        const pathTime = () => Math.max(8, 20 - level * 0.85) / D().speed / (1 - Math.min(0.6, (up.slow || 0) * 0.12));
+        function spawn() {
+            const pool = [];
+            for (const [from, t, w] of VIRUS_TABLE) if (level >= from) for (let k = 0; k < w; k++) pool.push(t);
+            const type = Arcade.pick(pool);
+            // they often come in a line, so a good spin catches several
+            const s = Math.random() < 0.4 ? lastSector : Math.floor(Math.random() * sectors);
+            lastSector = s;
+            viruses.push(makeVirus(type, s, rings.length - 1, 0));
+            spawned++;
         }
-        function inside(pt, poly) {
-            let c = false;
-            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-                const a = poly[i], b = poly[j];
-                if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < (b.x - a.x) * (pt.y - a.y) / (b.y - a.y) + a.x) c = !c;
-            }
-            return c;
-        }
-        function distToSeg(p, a, b) {
-            const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
-            let t = l ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l : 0;
-            t = Arcade.clamp(t, 0, 1);
-            return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-        }
-        function trailLength() {
-            let L = 0;
-            for (let i = 1; i < trail.length; i++) L += Math.hypot(trail[i].x - trail[i - 1].x, trail[i].y - trail[i - 1].y);
-            return L;
-        }
-
-        /* ---------- capture ---------- */
-        function capture(poly) {
-            let n = 0;
-            const caught = (e) => {
-                if (inside(e, poly)) return true;
-                if (!up.pulse) return false;
-                for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) if (distToSeg(e, poly[i], poly[j]) < e.r + 8) return true;
-                return false;
-            };
-            const born = [];
-            for (const e of enemies) {
-                if (e.dead || !caught(e)) continue;
-                if (e.kind === 'boss') {
-                    e.hp--; e.spawn = 0.6;
-                    fx.emit(e.x, e.y, { n: 30, color: ['#d9483f', '#6fd29a', '#fff'], speed: 220, life: 0.7 });
-                    Arcade.sfx('boom');
-                    if (e.hp > 0) { Arcade.toast('Boss integrity ' + e.hp + '/' + e.max, 'gold', 900); continue; }
-                    e.dead = true; n += 5; kills++;
-                    score += 1500 * Math.ceil(wave / 5);
-                    Arcade.toast('☠ Boss encrypted! +' + 1500 * Math.ceil(wave / 5), 'gold', 1600);
-                    continue;
-                }
-                if (e.armor > 0) {
-                    e.armor--;
-                    fx.emit(e.x, e.y, { n: 10, color: Arcade.ui.muted, speed: 150, life: 0.4 });
-                    Arcade.sfx('hit');
-                    continue;
-                }
-                if (e.kind === 'splitter') for (const s of [-1, 1]) born.push({ x: e.x + s * 8, y: e.y });
-                if (e.shield) {
-                    e.shield = false;
-                    fx.emit(e.x, e.y, { n: 12, color: '#5bb8ea', speed: 160, life: 0.4 });
-                    continue;
-                }
-                e.dead = true; n++; kills++;
-                fx.emit(e.x, e.y, { n: 16, color: ['#6fd29a', '#bbf7d0', '#fff'], speed: 180, life: 0.6 });
-            }
-            for (const it of items) {
-                if (it.dead || !inside(it, poly)) continue;
-                it.dead = true;
-                if (it.kind === 'freeze') { freezeT = 5 + up.freeze * 3; Arcade.toast('❄ Viruses frozen', 'good', 1000); }
-                if (it.kind === 'long') { longT = 10; Arcade.toast('➰ Long trail', 'good', 1000); }
-                if (it.kind === 'life') { lives++; Arcade.toast('♥ Extra life', 'good', 1000); }
-                Arcade.sfx('power');
-            }
-            for (const b of born) {
-                const a = Math.random() * Math.PI * 2, sp = (80 + wave * 6) * D().speed;
-                enemies.push({ kind: 'bug', x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, sp, r: 7, t: 0, spawn: 0.6, mini: true });
-            }
-            flashes.push({ poly, t: 0.5, n });
-            if (n) {
-                const gain = Math.round(100 * n * n * (1 + up.mult * 0.25));
-                score += gain;
-                bigLoop = Math.max(bigLoop, n);
-                let cx = 0, cy = 0; for (const p of poly) { cx += p.x; cy += p.y; }
-                flashes[flashes.length - 1].label = { x: cx / poly.length, y: cy / poly.length, text: '+' + gain + (n > 1 ? ' ×' + n : '') };
-                Arcade.sfx(n > 2 ? 'win' : 'score');
-            }
-            enemies = enemies.filter(e => !e.dead);
-            items = items.filter(i => !i.dead);
-            hud();
-        }
-
-        function hurt() {
-            if (inv > 0) return;
-            lives--;
-            inv = 2 + up.armor;
-            trail = [];
-            Arcade.sfx('hit');
-            fx.emit(head.x, head.y, { n: 30, color: ['#f27a73', '#fff'], speed: 240, life: 0.6 });
+        function breach(v) {
+            viruses.splice(viruses.indexOf(v), 1);
+            if (guard > 0) { guard--; floats.push({ x: CX, y: CY, t: 1.2, s: 'Firewall held', c: '#6ba6ee' }); Arcade.sfx('power'); return; }
+            lives -= v.type === 'boss' ? 2 : 1;
+            shake = 0.5; flash = 0.25;
+            Arcade.sfx('bad');
             hud();
             if (lives <= 0) gameOver();
         }
 
+        /* ---------- flow ---------- */
+        function start() {
+            score = 0; level = startLevel - 1; lives = D().lives; kills = 0; bestChain = 0; chain = 0; chainT = 0; charge = 0; flash = 0; shake = 0;
+            up = {}; viruses = []; beams = []; floats = []; fx.clear();
+            nextLevel();
+            state = 'play';
+            Arcade.hide('menuOv'); Arcade.hide('overOv'); Arcade.hide('upOv');
+            hud();
+        }
+        function nextLevel() {
+            level++;
+            buildBoard();
+            viruses = [];
+            guard = up.guard || 0;
+            const boss = level % 5 === 0;
+            quota = Math.round((5 + level * 2) * D().count) + (boss ? 1 : 0);
+            spawned = 0;
+            spawnT = 1.2;
+            if (boss) { viruses.push(makeVirus('boss', Math.floor(Math.random() * sectors), rings.length - 1, 0)); spawned++; }
+            const note = NEW_VIRUS_NOTE[level];
+            banner = { t: 2.4, s: boss ? 'Boss virus' : 'Level ' + level, sub: note || (level === 1 ? 'Line up one symbol across every ring' : '') };
+            hud();
+        }
+        function levelClear() {
+            state = 'upgrade';
+            const p = progress[diffId] || 1;
+            if (level + 1 > p) { progress[diffId] = level + 1; Arcade.save('arcade.encrypter.progress', progress); }
+            Arcade.report('level', level + 1);
+            addScore(50 * level);
+            Arcade.sfx('level');
+            const list = $('upList');
+            list.innerHTML = '';
+            for (const u of Arcade.shuffle(UPGRADES.filter(u => !(u.id === 'wide' && up.wide) && !(u.id === 'guard' && up.guard >= 2))).slice(0, 3)) {
+                const b = document.createElement('button');
+                b.className = 'btn';
+                b.innerHTML = `<span>${u.icon}</span><b>${u.name}</b><small>${u.desc}</small>`;
+                b.onclick = () => {
+                    if (u.id === 'life') lives++; else up[u.id] = (up[u.id] || 0) + 1;
+                    Arcade.hide('upOv');
+                    Arcade.sfx('select');
+                    nextLevel();
+                    state = 'play';
+                };
+                list.appendChild(b);
+            }
+            $('upTitle').textContent = 'Level ' + level + ' clear';
+            Arcade.show('upOv');
+        }
         function gameOver() {
             state = 'over';
-            Arcade.sfx('die');
             Arcade.report('score', score);
             const isNew = score > best;
             if (isNew) { best = score; Arcade.save('arcade.encrypter.best', best); }
             const gb = Number(Arcade.load('gridBest', 0)) || 0;
             if (kills > gb) Arcade.save('gridBest', kills);
+            Arcade.sfx('die');
             Arcade.text('finalScore', score);
             Arcade.text('finalKills', kills);
-            Arcade.text('finalWave', wave);
-            Arcade.text('finalLoop', bigLoop);
-            document.getElementById('newBest').hidden = !isNew;
-            setTimeout(() => Arcade.show('overOv'), 600);
+            Arcade.text('finalWave', level);
+            Arcade.text('finalLoop', '×' + bestChain);
+            $('newBest').hidden = !isNew;
+            Arcade.show('overOv');
             hud();
+        }
+        function hud() {
+            Arcade.text('score', score);
+            Arcade.text('wave', Math.max(1, level));
+            Arcade.text('lives', '♥'.repeat(Math.max(0, lives)));
+            Arcade.text('best', Math.max(best, score));
         }
 
         /* ---------- update ---------- */
         function update(dt) {
-            inv = Math.max(0, inv - dt);
-            freezeT = Math.max(0, freezeT - dt);
-            longT = Math.max(0, longT - dt);
-            maxLen = (1100 + wave * 30) * (longT > 0 ? 1.6 : 1) * D().trail * (1 + up.trail * 0.18);
+            time += dt;
+            for (const r of rings) { r.off *= Math.pow(0.0005, dt); if (Math.abs(r.off) < 0.001) r.off = 0; r.shake = Math.max(0, r.shake - dt); }
+            for (const b of beams) b.t -= dt;
+            beams = beams.filter(b => b.t > 0);
+            for (const f of floats) { f.t -= dt; f.y -= 24 * dt; }
+            floats = floats.filter(f => f.t > 0);
+            fx.update(dt);
+            shake = Math.max(0, shake - dt);
+            flash = Math.max(0, flash - dt);
+            if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+            if (state !== 'play') return;
 
-            // head follows the pointer, capped speed
-            const dx = aim.x - head.x, dy = aim.y - head.y, d = Math.hypot(dx, dy);
-            const step = Math.min(d, HEAD_SPEED * (1 + up.speed * 0.12) * dt);
-            const prev = { x: head.x, y: head.y };
-            if (d > 0.1) { head.x += dx / d * step; head.y += dy / d * step; }
-
-            const last = trail.length ? trail[trail.length - 1] : prev;
-            if (Math.hypot(head.x - last.x, head.y - last.y) >= 4) {
-                // closing a loop?
-                for (let i = 0; i < trail.length - 6; i++) {
-                    const hit = segHit(last, head, trail[i], trail[i + 1]);
-                    if (hit) {
-                        const poly = [hit, ...trail.slice(i + 1)];
-                        if (poly.length > 4) capture(poly);
-                        trail = [];
-                        break;
-                    }
-                }
-                trail.push({ x: head.x, y: head.y });
-                while (trail.length > 2 && trailLength() > maxLen) trail.shift();
+            if (chainT > 0) { chainT -= dt; if (chainT <= 0) chain = 0; }
+            if (checkT > 0) {
+                checkT -= dt;
+                if (checkT <= 0 && !drag) { const m = matches(); if (m.length) fire(m); }
             }
+            if (spawned < quota) {
+                spawnT -= dt;
+                if (spawnT <= 0) { spawn(); spawnT = Math.max(0.75, 2.7 - level * 0.14) / D().count; }
+            } else if (!viruses.length) { levelClear(); return; }
 
-            // enemies
-            const slow = freezeT > 0 ? 0.15 : 1;
-            for (const e of enemies) {
-                e.t += dt;
-                e.spawn = Math.max(0, e.spawn - dt);
-                if (e.kind === 'seeker' || e.kind === 'boss') {
-                    const a = Math.atan2(head.y - e.y, head.x - e.x);
-                    e.vx += Math.cos(a) * 220 * dt; e.vy += Math.sin(a) * 220 * dt;
-                    const s = Math.hypot(e.vx, e.vy); if (s > e.sp) { e.vx *= e.sp / s; e.vy *= e.sp / s; }
+            const perRing = 1 / (pathTime() / rings.length);
+            for (const v of [...viruses]) {
+                v.p += perRing * VIRUS[v.type].speed * dt;
+                v.hit = Math.max(0, v.hit - dt);
+                if (v.p >= 1) {
+                    v.p -= 1;
+                    if (v.cell) restoreCell(v);
+                    v.ring--;
+                    if (v.ring < 0) { breach(v); if (state !== 'play') return; continue; }
+                    if (v.type === 'corrupt' && rings[v.ring].sym[v.s] !== DEAD) { rings[v.ring].sym[v.s] = DEAD; v.cell = { r: v.ring }; checkT = Math.max(checkT, 0.01); }
                 }
-                if (e.kind === 'boss' && e.spawn <= 0) {
-                    e.spawnT -= dt * slow;
-                    if (e.spawnT <= 0) { e.spawnT = Math.max(2.2, 5 - wave * 0.08); const m = spawn(Arcade.pick(['bug', 'seeker', 'darter'])); m.x = e.x; m.y = e.y; m.spawn = 0.9; }
-                }
-                if (e.kind === 'darter') {
-                    e.dashT -= dt * slow;
-                    if (e.dashT <= 0 && !e.dash) { e.dash = 0.4; const a = Math.atan2(head.y - e.y, head.x - e.x); e.vx = Math.cos(a) * e.sp * 3.4; e.vy = Math.sin(a) * e.sp * 3.4; }
-                    if (e.dash) { e.dash -= dt * slow; if (e.dash <= 0) { e.dash = 0; e.dashT = Arcade.rand(1.5, 3); e.vx /= 3.4; e.vy /= 3.4; } }
-                }
-                if (e.kind === 'tracer') {
-                    // rides along your trail towards the head
-                    let tgt = head;
-                    if (trail.length > 6) {
-                        if (e.ti === undefined || e.ti >= trail.length) {
-                            let bi = 0, bd = 1e9;
-                            for (let i = 0; i < trail.length; i += 3) { const dd = Math.hypot(trail[i].x - e.x, trail[i].y - e.y); if (dd < bd) { bd = dd; bi = i; } }
-                            e.ti = bi;
-                        }
-                        tgt = trail[e.ti];
-                        if (Math.hypot(tgt.x - e.x, tgt.y - e.y) < 10) e.ti = Math.min(trail.length - 1, e.ti + 2);
-                    } else e.ti = undefined;
-                    const a = Math.atan2(tgt.y - e.y, tgt.x - e.x);
-                    e.vx = Math.cos(a) * e.sp; e.vy = Math.sin(a) * e.sp;
-                }
-                e.x += e.vx * dt * slow; e.y += e.vy * dt * slow;
-                if (e.x < e.r || e.x > W - e.r) { e.vx *= -1; e.x = Arcade.clamp(e.x, e.r, W - e.r); }
-                if (e.y < e.r || e.y > H - e.r) { e.vy *= -1; e.y = Arcade.clamp(e.y, e.r, H - e.r); }
-                if (e.spawn <= 0 && Math.hypot(e.x - head.x, e.y - head.y) < e.r + 6) hurt();
-                if (e.kind === 'cutter' && trail.length > 3) {
-                    for (let i = 0; i < trail.length - 1; i++) {
-                        if (distToSeg(e, trail[i], trail[i + 1]) < e.r) {
-                            fx.emit(trail[i].x, trail[i].y, { n: 8, color: '#b58ce8', speed: 120, life: 0.3 });
-                            trail = trail.slice(i + 1);
-                            Arcade.sfx('bad');
-                            break;
-                        }
-                    }
-                }
-            }
-            for (const it of items) it.t -= dt;
-            items = items.filter(i => i.t > 0);
-            maybeItem(dt);
-            flashes = flashes.filter(f => (f.t -= dt) > 0);
-
-            if (!enemies.length) {
-                waveBreak += dt;
-                if (waveBreak > 1.0) { waveBreak = 0; score += wave * 50; levelClear(); }
             }
         }
 
-        function levelClear() {
-            const p = progress[diffId] || 1;
-            if (wave + 1 > p) { progress[diffId] = wave + 1; Arcade.save('arcade.encrypter.progress', progress); }
-            Arcade.report('level', wave + 1);
-            state = 'upgrade';
-            trail = [];
-            Arcade.sfx('win');
-            Arcade.text('upTitle', 'Level ' + wave + ' clear');
-            const host = document.getElementById('upList');
-            host.innerHTML = '';
-            const choices = Arcade.shuffle(UPGRADES.filter(u => !(u.id === 'pulse' && up.pulse) && !(u.id === 'life' && lives >= 7))).slice(0, 3);
-            for (const u of choices) {
-                const b = document.createElement('button');
-                b.className = 'btn';
-                b.innerHTML = `<span>${u.icon}</span><b>${u.name}</b><small>${u.desc}${up[u.id] ? ' (have ' + up[u.id] + ')' : ''}</small>`;
-                b.onclick = () => {
-                    if (u.id === 'life') lives++; else up[u.id] = (up[u.id] || 0) + 1;
-                    Arcade.sfx('power');
-                    Arcade.hide('upOv');
-                    state = 'play'; inv = Math.max(inv, 1);
-                    nextWave();
-                };
-                host.appendChild(b);
-            }
-            setTimeout(() => Arcade.show('upOv'), 250);
+        /* ---------- drawing ---------- */
+        function virusPos(v) {
+            const ring = rings[v.ring] || { off: 0, drag: 0 };
+            const r = ringOuter(v.ring) - ringW() * v.p;
+            const a = spokeAngle(v.s) + ring.off + ring.drag;
+            return { x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r };
         }
+        function shape(s, x, y, size, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            if (s === 'circle') ctx.arc(x, y, size, 0, TAU);
+            else if (s === 'square') ctx.roundRect(x - size * 0.9, y - size * 0.9, size * 1.8, size * 1.8, size * 0.35);
+            else if (s === 'diamond') { ctx.moveTo(x, y - size * 1.2); ctx.lineTo(x + size * 1.05, y); ctx.lineTo(x, y + size * 1.2); ctx.lineTo(x - size * 1.05, y); ctx.closePath(); }
+            else if (s === 'tri') { ctx.moveTo(x, y - size * 1.15); ctx.lineTo(x + size * 1.1, y + size * 0.85); ctx.lineTo(x - size * 1.1, y + size * 0.85); ctx.closePath(); }
+            else if (s === 'star') { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? size * 0.5 : size * 1.2; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); }
+            else if (s === 'plus') { const t = size * 0.42, l = size * 1.05; ctx.roundRect(x - l, y - t, l * 2, t * 2, t * 0.6); ctx.roundRect(x - t, y - l, t * 2, l * 2, t * 0.6); }
+            ctx.fill();
+        }
+        function draw() {
+            const ui = Arcade.ui;
+            ctx.save();
+            ctx.fillStyle = ui.bg2;
+            ctx.fillRect(0, 0, S, S);
+            if (shake > 0) ctx.translate(Arcade.rand(-8, 8) * shake, Arcade.rand(-8, 8) * shake);
+            if (!rings.length) { nextIdleBoard(); }
 
-        /* ---------- render ---------- */
-        const COLORS = { bug: '#f27a73', seeker: '#f59a55', cutter: '#b58ce8', shield: '#f27a73', swarm: '#f6c445', splitter: '#d98ae0', darter: '#ee5a72', armor: Arcade.ui.muted, tracer: '#54c9b4', boss: '#d9483f' };
-        function render() {
-            ctx.fillStyle = Arcade.ui.bg2; ctx.fillRect(0, 0, W, H);
-            ctx.strokeStyle = 'rgba(74,222,128,0.06)'; ctx.lineWidth = 1;
-            for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-            for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-            if (freezeT > 0) { ctx.fillStyle = 'rgba(56,189,248,0.05)'; ctx.fillRect(0, 0, W, H); }
+            const st = step(), w = ringW();
+            // what the current drag would line up, so a spin can be read before letting go
+            const preview = dragPreview();
 
-            for (const f of flashes) {
-                ctx.fillStyle = `rgba(74,222,128,${f.t * 0.5})`;
-                ctx.beginPath(); f.poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill();
-                if (f.label) {
-                    ctx.fillStyle = `rgba(220,252,231,${Math.min(1, f.t * 3)})`;
-                    ctx.font = 'bold 22px Fredoka, sans-serif'; ctx.textAlign = 'center';
-                    ctx.fillText(f.label.text, f.label.x, f.label.y - (0.5 - f.t) * 30);
+            for (let r = 0; r < rings.length; r++) {
+                const ring = rings[r], ro = ringOuter(r), ri = ro - w;
+                const jig = ring.shake > 0 ? Math.sin(time * 70) * 0.02 : 0;
+                const off = ring.off + ring.drag + jig;
+                const locked = ringLocked(r);
+                for (let i = 0; i < sectors; i++) {
+                    const a0 = spokeAngle(i) - st / 2 + off + 0.012, a1 = spokeAngle(i) + st / 2 + off - 0.012;
+                    ctx.fillStyle = locked ? ui.surface3 : (i % 2 ? ui.surface : ui.surface2);
+                    ctx.beginPath(); ctx.arc(CX, CY, ro - 2, a0, a1); ctx.arc(CX, CY, ri + 2, a1, a0, true); ctx.closePath(); ctx.fill();
+                }
+                if (r === selected && state === 'play' && !usingTouch) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(CX, CY, ro - 1, 0, TAU); ctx.stroke();
+                }
+                const mid = (ri + ro) / 2;
+                const size = Math.min(w * 0.24, mid * st * 0.26);
+                for (let i = 0; i < sectors; i++) {
+                    const a = spokeAngle(i) + off, x = CX + Math.cos(a) * mid, y = CY + Math.sin(a) * mid, v = ring.sym[i];
+                    if (v === DEAD) {
+                        ctx.strokeStyle = ui.dim; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                        ctx.beginPath(); ctx.moveTo(x - size * 0.7, y - size * 0.7); ctx.lineTo(x + size * 0.7, y + size * 0.7); ctx.moveTo(x + size * 0.7, y - size * 0.7); ctx.lineTo(x - size * 0.7, y + size * 0.7); ctx.stroke();
+                    } else if (v === WILD) {
+                        shape('star', x, y, size * 1.1, '#fff');
+                    } else {
+                        shape(SYMS[v].shape, x, y, size, SYMS[v].c);
+                    }
                 }
             }
-
-            if (trail && trail.length > 1) {
-                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                for (let i = 1; i < trail.length; i++) {
-                    const k = i / trail.length;
-                    ctx.strokeStyle = longT > 0 ? `rgba(34,211,238,${0.15 + k * 0.85})` : `rgba(74,222,128,${0.15 + k * 0.85})`;
-                    ctx.lineWidth = 1.5 + k * 2.5;
-                    ctx.beginPath(); ctx.moveTo(trail[i - 1].x, trail[i - 1].y); ctx.lineTo(trail[i].x, trail[i].y); ctx.stroke();
+            // spokes one ring off get a soft guide, lined-up previews a bright one
+            if (rings.length && state === 'play') {
+                for (let i = 0; i < sectors; i++) {
+                    const hot = preview.includes(i), near = !hot && rings.length > 3 && agreement(i) === rings.length - 1;
+                    if (!hot && !near) continue;
+                    const a = spokeAngle(i);
+                    ctx.strokeStyle = hot ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.14)';
+                    ctx.lineWidth = hot ? 5 : 3; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(CX + Math.cos(a) * (CORE_R + 4), CY + Math.sin(a) * (CORE_R + 4)); ctx.lineTo(CX + Math.cos(a) * (OUTER_R + 6), CY + Math.sin(a) * (OUTER_R + 6)); ctx.stroke();
                 }
             }
-
-            for (const it of items) {
-                const a = it.t < 3 ? (Math.floor(time * 8) % 2 ? 0.4 : 1) : 1;
-                ctx.globalAlpha = a;
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(it.x, it.y, 13 + Math.sin(time * 5) * 1.5, 0, Math.PI * 2); ctx.stroke();
-                ctx.font = '15px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#fff';
-                ctx.fillText({ freeze: '❄', long: '➰', life: '♥' }[it.kind], it.x, it.y + 1);
+            for (const b of beams) {
+                const a = spokeAngle(b.i), k = b.t / 0.4;
+                ctx.strokeStyle = b.c; ctx.globalAlpha = k; ctx.lineWidth = 8 + 22 * k; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(CX + Math.cos(a) * CORE_R, CY + Math.sin(a) * CORE_R); ctx.lineTo(CX + Math.cos(a) * (OUTER_R + 14), CY + Math.sin(a) * (OUTER_R + 14)); ctx.stroke();
                 ctx.globalAlpha = 1;
             }
-
-            for (const e of enemies || []) {
-                ctx.save(); ctx.translate(e.x, e.y);
-                ctx.globalAlpha = e.spawn > 0 ? 0.35 + 0.3 * Math.sin(time * 20) : 1;
-                ctx.fillStyle = COLORS[e.kind]; 
-                if (e.kind === 'cutter') { ctx.rotate(e.t * 6); ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? e.r * 0.45 : e.r * 1.2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }
-                else if (e.kind === 'seeker' || e.kind === 'darter') { ctx.rotate(Math.atan2(e.vy, e.vx)); ctx.beginPath(); ctx.moveTo(e.r * 1.3, 0); ctx.lineTo(-e.r, -e.r * 0.8); ctx.lineTo(-e.r, e.r * 0.8); ctx.closePath(); ctx.fill(); if (e.dash) { ctx.fillStyle = 'rgba(244,63,94,0.35)'; ctx.fillRect(-e.r * 3, -e.r * 0.5, e.r * 2, e.r); } }
-                else if (e.kind === 'boss') {
-                    ctx.rotate(e.t * 0.8);
-                    ctx.beginPath();
-                    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? e.r * 0.72 : e.r * (1.05 + Math.sin(time * 6 + i) * 0.06); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-                    ctx.closePath(); ctx.fill();
-                    ctx.fillStyle = Arcade.ui.bg2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.4, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#f7a8a1'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.18, 0, Math.PI * 2); ctx.fill();
-                }
-                else if (e.kind === 'splitter') { ctx.rotate(e.t); ctx.beginPath(); ctx.arc(-4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.arc(4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.fill(); }
-                else if (e.kind === 'tracer') { ctx.beginPath(); ctx.arc(0, 0, e.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = Arcade.ui.bg2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, Math.PI * 2); ctx.stroke(); }
-                else if (e.kind === 'armor') {
-                    ctx.rotate(e.t * 0.5); ctx.beginPath();
-                    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * e.r, Math.sin(a) * e.r); }
-                    ctx.closePath(); ctx.fill();
-                    ctx.fillStyle = Arcade.ui.bg2; ctx.font = 'bold 11px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.rotate(-e.t * 0.5); ctx.fillText(e.armor + 1, 0, 1);
-                }
-                else { ctx.rotate(e.t); ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2); }
-                if (e.shield) { ctx.strokeStyle = '#5bb8ea'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, e.r + 7, 0, Math.PI * 2); ctx.stroke(); }
-                ctx.restore();
-            }
-            ctx.globalAlpha = 1;
-            const boss = (enemies || []).find(e => e.kind === 'boss');
-            if (boss) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W / 2 - 140, 14, 280, 10);
-                ctx.fillStyle = '#d9483f'; ctx.fillRect(W / 2 - 140, 14, 280 * boss.hp / boss.max, 10);
-                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS, LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
-            }
+            for (const v of viruses) drawVirus(v);
             fx.draw(ctx);
-
-            if (head && state === 'play') {
-                const blink = inv > 0 && Math.floor(time * 12) % 2;
-                if (!blink) {
-                    ctx.fillStyle = '#fff'; 
-                    ctx.beginPath(); ctx.arc(head.x, head.y, 6, 0, Math.PI * 2); ctx.fill();
-                }
-                // trail meter
-                const k = Math.min(1, trailLength() / maxLen);
-                ctx.fillStyle = 'rgba(74,222,128,0.15)'; ctx.fillRect(12, H - 14, 160, 5);
-                ctx.fillStyle = longT > 0 ? '#56c8dc' : '#6fd29a'; ctx.fillRect(12, H - 14, 160 * k, 5);
+            drawCore();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (const f of floats) { ctx.globalAlpha = Math.min(1, f.t * 2.5); ctx.font = '600 24px Fredoka, sans-serif'; ctx.lineWidth = 5; ctx.strokeStyle = ui.bg2; ctx.strokeText(f.s, f.x, f.y); ctx.fillStyle = f.c; ctx.fillText(f.s, f.x, f.y); }
+            ctx.globalAlpha = 1;
+            if (banner) drawBanner();
+            ctx.restore();
+            if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.5})`; ctx.fillRect(0, 0, S, S); }
+        }
+        function drawVirus(v) {
+            const d = VIRUS[v.type], p = virusPos(v), r = (d.big ? 24 : 15) + Math.sin(time * 6 + v.wob) * 1.5;
+            ctx.fillStyle = v.hit > 0 ? '#fff' : d.c;
+            ctx.beginPath();
+            const n = 9;
+            for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n + time * 0.8 + v.wob, rr = i % 2 ? r : r * 0.8; ctx.lineTo(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr); }
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = Arcade.ui.bg2;
+            ctx.beginPath(); ctx.arc(p.x - r * 0.3, p.y - r * 0.1, r * 0.17, 0, TAU); ctx.arc(p.x + r * 0.3, p.y - r * 0.1, r * 0.17, 0, TAU); ctx.fill();
+            if (v.type === 'shield' && v.hp > 1) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x, p.y, r + 4, 0, TAU); ctx.stroke(); }
+            if (v.type === 'lock') { ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText('🔒', p.x, p.y + r * 0.45); }
+            if (d.big) { ctx.font = '600 16px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Arcade.ui.bg2; ctx.fillText(v.hp, p.x, p.y + r * 0.42); }
+        }
+        function drawCore() {
+            const ui = Arcade.ui, ready = charge >= 1;
+            ctx.fillStyle = ui.surface;
+            ctx.beginPath(); ctx.arc(CX, CY, CORE_R - 4, 0, TAU); ctx.fill();
+            ctx.strokeStyle = ui.bg2; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(CX, CY, CORE_R - 12, 0, TAU); ctx.stroke();
+            if (charge > 0) { ctx.strokeStyle = ready ? '#f6c445' : '#6ba6ee'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(CX, CY, CORE_R - 12, -Math.PI / 2, -Math.PI / 2 + TAU * charge); ctx.stroke(); }
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            if (ready && state === 'play') {
+                ctx.fillStyle = '#f6c445'; ctx.font = `600 ${22 + Math.sin(time * 6) * 2}px Fredoka, sans-serif`;
+                ctx.fillText('PURGE', CX, CY);
+            } else {
+                ctx.fillStyle = ui.text; ctx.font = '600 26px Fredoka, sans-serif';
+                ctx.fillText(state === 'menu' ? '🔒' : Math.max(0, quota - spawned + viruses.length), CX, CY - 5);
+                if (state !== 'menu') { ctx.fillStyle = ui.muted; ctx.font = '700 11px Nunito, sans-serif'; ctx.fillText('LEFT', CX, CY + 18); }
             }
+            if (chain > 1) { ctx.fillStyle = '#f6c445'; ctx.font = '600 15px Fredoka, sans-serif'; ctx.fillText('×' + chain, CX, CY - 32); }
+        }
+        function drawBanner() {
+            const k = Math.min(1, banner.t * 2), ui = Arcade.ui;
+            ctx.globalAlpha = k;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = '600 38px Fredoka, sans-serif';
+            const wd = Math.max(ctx.measureText(banner.s).width, 0);
+            ctx.font = '700 17px Nunito, sans-serif';
+            const wd2 = banner.sub ? ctx.measureText(banner.sub).width : 0;
+            const bw = Math.max(wd, wd2) + 60, bh = banner.sub ? 100 : 70;
+            ctx.fillStyle = ui.bg;
+            ctx.beginPath(); ctx.roundRect(CX - bw / 2, 120 - bh / 2, bw, bh, 24); ctx.fill();
+            ctx.fillStyle = ui.text; ctx.font = '600 38px Fredoka, sans-serif';
+            ctx.fillText(banner.s, CX, banner.sub ? 102 : 120);
+            if (banner.sub) { ctx.fillStyle = ui.muted; ctx.font = '700 17px Nunito, sans-serif'; ctx.fillText(banner.sub, CX, 142); }
+            ctx.globalAlpha = 1;
+        }
+        function nextIdleBoard() { level = 1; buildBoard(); level = 0; }
+
+        function dragPreview() {
+            if (!drag || !rings.length) return [];
+            const k = Math.round(rings[drag.r].drag / step());
+            const sym = (r, i) => rings[r].sym[r === drag.r ? wrap(i - k) : i];
+            const out = [];
+            for (let i = 0; i < sectors; i++) if (spokeMatches(sym, i)) out.push(i);
+            return out;
         }
 
-        const loop = Arcade.loop((dt) => {
-            time += dt;
-            if (state === 'play') update(dt);
-            fx.update(dt);
-            render();
-        });
-
-        canvas.addEventListener('pointermove', (e) => {
-            if (e.pointerType !== 'mouse' && !e.buttons) return;
-            const p = Arcade.pointer(canvas, e, W, H);
-            aim = { x: Arcade.clamp(p.x, 0, W), y: Arcade.clamp(p.y, 0, H) };
-        });
+        /* ---------- input ---------- */
+        let usingTouch = false;
+        function ringAt(p) {
+            const d = Math.hypot(p.x - CX, p.y - CY);
+            if (d < CORE_R) return 'core';
+            if (d > OUTER_R + 18 || !rings.length) return null;
+            return Arcade.clamp(Math.floor((d - CORE_R) / ringW()), 0, rings.length - 1);
+        }
+        const pointAngle = (p) => Math.atan2(p.y - CY, p.x - CX);
         canvas.addEventListener('pointerdown', (e) => {
+            if (state !== 'play') return;
+            usingTouch = e.pointerType === 'touch';
+            const p = Arcade.pointer(canvas, e, S, S), r = ringAt(p);
+            if (r === 'core') { purge(); return; }
+            if (r === null) return;
+            selected = r;
+            drag = { r, last: pointAngle(p), total: 0, moved: 0, id: e.pointerId, x: p.x, y: p.y };
             canvas.setPointerCapture(e.pointerId);
-            const p = Arcade.pointer(canvas, e, W, H);
-            aim = { x: p.x, y: p.y };
-            if (e.pointerType !== 'mouse' && head) { head.x = head.x; trail = []; }
         });
-        function setPaused(on) {
-            if (on && state === 'play') { state = 'pause'; Arcade.show('pauseOv'); }
-            else if (!on && state === 'pause') { state = 'play'; Arcade.hide('pauseOv'); }
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            const p = Arcade.pointer(canvas, e, S, S), a = pointAngle(p);
+            let da = a - drag.last;
+            if (da > Math.PI) da -= TAU; else if (da < -Math.PI) da += TAU;
+            drag.last = a;
+            drag.moved = Math.max(drag.moved, Math.hypot(p.x - drag.x, p.y - drag.y));
+            if (ringLocked(drag.r)) { if (drag.moved > 14 && rings[drag.r].shake <= 0) { rings[drag.r].shake = 0.3; Arcade.sfx('bad'); } return; }
+            rings[drag.r].drag += da;
+        });
+        function endDrag(e) {
+            if (!drag || (e && e.pointerId !== drag.id)) return;
+            const ring = rings[drag.r], r = drag.r;
+            const k = Math.round(ring.drag / step());
+            const moved = drag.moved;
+            drag = null;
+            if (state !== 'play') { ring.drag = 0; return; }
+            if (moved < 12) { ring.drag = 0; tryRotate(r, 1); return; }
+            const left = ring.drag - k * step();
+            ring.drag = 0;
+            if (k) rotate(r, k);
+            ring.off += left + k * step();
+            checkT = Math.max(checkT, 0.14);
         }
-        window.addEventListener('keydown', (e) => { if (e.code === 'KeyP' || e.code === 'Escape') setPaused(state === 'play'); });
-        document.getElementById('pauseBtn').onclick = () => setPaused(state === 'play');
-        document.getElementById('resumeBtn').onclick = () => setPaused(false);
+        canvas.addEventListener('pointerup', endDrag);
+        canvas.addEventListener('pointercancel', endDrag);
+        canvas.addEventListener('wheel', (e) => {
+            if (state !== 'play') return;
+            e.preventDefault();
+            const r = ringAt(Arcade.pointer(canvas, e, S, S));
+            if (typeof r === 'number') { selected = r; tryRotate(r, e.deltaY > 0 ? 1 : -1); }
+        }, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
+            if (state !== 'play') return;
+            usingTouch = false;
+            if (e.code === 'ArrowUp') { selected = Math.min(rings.length - 1, selected + 1); e.preventDefault(); }
+            else if (e.code === 'ArrowDown') { selected = Math.max(0, selected - 1); e.preventDefault(); }
+            else if (e.code === 'ArrowLeft') { tryRotate(selected, -1); e.preventDefault(); }
+            else if (e.code === 'ArrowRight') { tryRotate(selected, 1); e.preventDefault(); }
+            else if (e.code === 'Space') { purge(); e.preventDefault(); }
+            else if (/^Digit[1-5]$/.test(e.code)) { const n = +e.code.slice(5) - 1; if (n < rings.length) selected = rings.length - 1 - n; }
+        });
+
+        /* ---------- menus ---------- */
+        function togglePause() {
+            if (state === 'play') { state = 'pause'; if (drag) endDrag(); Arcade.show('pauseOv'); }
+            else if (state === 'pause') { state = 'play'; Arcade.hide('pauseOv'); }
+        }
         function buildMenu() {
-            const ds = document.getElementById('diffSeg');
-            ds.innerHTML = '';
+            const seg = $('diffSeg'); seg.innerHTML = '';
             for (const [id, d] of Object.entries(DIFFS)) {
                 const b = document.createElement('button');
                 b.className = 'btn sm' + (id === diffId ? ' active' : '');
                 b.textContent = d.name + ' · ' + d.lives + '♥';
                 b.onclick = () => { diffId = id; Arcade.save('arcade.encrypter.diff', id); startLevel = 1; Arcade.sfx('select'); buildMenu(); };
-                ds.appendChild(b);
+                seg.appendChild(b);
             }
-            const ss = document.getElementById('startSeg');
-            ss.innerHTML = '';
+            const ss = $('startSeg'); ss.innerHTML = '';
             const reached = progress[diffId] || 1;
-            for (let l = 1; l <= reached; l += 5) {
+            for (let l = 1; l <= reached; l += 4) {
                 const b = document.createElement('button');
                 b.className = 'btn sm' + (l === startLevel ? ' active' : '');
                 b.textContent = 'Lv ' + l;
@@ -557,13 +634,16 @@
                 ss.appendChild(b);
             }
         }
-        buildMenu();
-        document.getElementById('playBtn').onclick = start;
-        document.getElementById('againBtn').onclick = () => { state = 'menu'; Arcade.hide('overOv'); buildMenu(); Arcade.show('menuOv'); };
-        document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+        $('playBtn').onclick = start;
+        $('againBtn').onclick = () => { state = 'menu'; Arcade.hide('overOv'); buildMenu(); Arcade.show('menuOv'); };
+        $('pauseBtn').onclick = togglePause;
+        $('resumeBtn').onclick = togglePause;
+        document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
 
+        buildMenu();
         hud();
-        loop.start();
+        Arcade.loop((dt) => { update(dt); draw(); }).start();
+        window.__enc = { get rings() { return rings; }, get viruses() { return viruses; }, get state() { return state; }, get level() { return level; }, get score() { return score; }, get charge() { return charge; }, set charge(v) { charge = v; }, get lives() { return lives; }, set lives(v) { lives = v; }, rotate, matches, spawn, get quota() { return quota; }, get spawned() { return spawned; }, set spawned(v) { spawned = v; }, get sectors() { return sectors; } };
     })();
     </script>
 </body>

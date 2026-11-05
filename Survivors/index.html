@@ -25,6 +25,9 @@
         .shop button:disabled { opacity: 0.45; cursor: not-allowed; }
         .shop button b { display: block; font-size: 0.85rem; }
         .shop button span { color: var(--gold); }
+        .pick .evo { display: block; color: var(--gold); font-size: 0.72rem; }
+        .dash-btn { position: absolute; right: 14px; bottom: 14px; z-index: 5; width: 74px; height: 74px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); font-family: var(--display); font-weight: 600; font-size: 0.85rem; box-shadow: 0 5px 0 var(--lip); touch-action: none; }
+        .dash-btn.ready { background: var(--accent); color: var(--accent-ink); }
     </style>
 </head>
 <body class="no-scroll no-select">
@@ -32,7 +35,8 @@
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Night Survivors</h1>
         <div class="stats">
-            <span class="chip accent">Time <b id="time">0:00</b></span>
+            <span class="chip">Time <b id="time">0:00</b></span>
+            <span class="chip accent">Beacons <b id="beacons">0/5</b></span>
             <span class="chip">Kills <b id="kills">0</b></span>
             <span class="chip gold">Gold <b id="gold">0</b></span>
         </div>
@@ -41,10 +45,12 @@
     <main class="stage">
         <div class="canvas-box" id="box">
             <canvas class="screen" id="cv"></canvas>
+            <button class="dash-btn touch-only" id="dashBtn" hidden>Dash</button>
             <div class="overlay" id="startOv">
                 <div class="modal wide">
                     <h2>🧛 Night Survivors</h2>
-                    <p>Your weapons fire by themselves, just move. Survive until dawn (15:00). Best: <b id="bestT">-</b></p>
+                    <p>The night is pitch black and your lantern is running out of oil. <b>Light the 5 beacons</b> to call out the Night Lord and end the night, or last until dawn at 15:00.</p>
+                    <p class="small">Your weapons fire on their own, but only at what your light can see. Dash through danger, keep your oil up. Best: <b id="bestT">-</b></p>
                     <div class="chars" id="chars"></div>
                     <h4 style="margin:14px 0 2px">Power-ups (kept between runs) · <span class="gold">🪙 <b id="shopGold">0</b></span></h4>
                     <div class="shop" id="shop"></div>
@@ -74,7 +80,7 @@
                 </div>
             </div>
         </div>
-        <p class="tiny dim center" style="margin:0"><span class="desktop-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows to move · <kbd>P</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> pick upgrades</span><span class="touch-only">Drag anywhere to move</span></p>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows to move · <kbd>Space</kbd> dash · <kbd>P</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> pick upgrades</span><span class="touch-only">Drag anywhere to move, tap Dash to slip through</span></p>
     </main>
     <script src="../_shared/arcade.js"></script>
     <script>
@@ -101,10 +107,10 @@
 
         /* ---------- data ---------- */
         const CHARS = [
-            { id: 'mage', e: '🧙', name: 'Mage', w: 'wand', desc: 'Magic Wand · +10% might' , might: 0.1 },
-            { id: 'knight', e: '🤺', name: 'Knight', w: 'whip', desc: 'Whip · +30 max HP, +1 armour', hp: 30, armor: 1 },
-            { id: 'rogue', e: '🥷', name: 'Rogue', w: 'knife', desc: 'Throwing Knives · +15% speed', speed: 0.15 },
-            { id: 'cleric', e: '😇', name: 'Cleric', w: 'garlic', desc: 'Holy Aura · +0.5 HP/s regen', regen: 0.5 },
+            { id: 'mage', e: '🧙', name: 'Mage', w: 'wand', desc: 'Magic Wand · +10% might, +15% light', might: 0.1, light: 0.15 },
+            { id: 'knight', e: '🤺', name: 'Knight', w: 'whip', desc: 'Whip · +30 max HP, +1 armour, dash shoves', hp: 30, armor: 1, shove: true },
+            { id: 'rogue', e: '🥷', name: 'Rogue', w: 'knife', desc: 'Knives · +15% speed, dash ready 35% sooner', speed: 0.15, dashCd: 0.65 },
+            { id: 'cleric', e: '😇', name: 'Cleric', w: 'garlic', desc: 'Holy Aura · +0.5 HP/s, oil lasts 35% longer', regen: 0.5, oil: 0.65 },
         ];
         const WEAPONS = {
             wand:   { e: '🪄', name: 'Magic Wand', desc: 'Fires at the nearest enemy.', lv: ['Fires at the nearest enemy', '+1 projectile', '+40% damage', '+1 projectile', 'Fires faster', '+1 projectile, pierces'] },
@@ -115,7 +121,18 @@
             bolt:   { e: '⚡', name: 'Lightning', desc: 'Strikes random enemies.', lv: ['Strikes a random enemy', '+1 strike', '+50% damage', '+1 strike', 'Strikes faster', '+2 strikes'] },
             fire:   { e: '🔥', name: 'Fire Flask', desc: 'Leaves burning ground.', lv: ['Drops a burning pool', '+1 flask', 'Burns longer', '+40% damage', '+1 flask', 'Bigger pools'] },
         };
+        // a max level weapon evolves when you also own its partner passive
+        const EVOLVE = {
+            wand: { with: 'haste', name: 'Star Rod', e: '🌟', desc: 'Fires far faster and pierces everything in line' },
+            whip: { with: 'might', name: 'Reaper', e: '🌙', desc: 'Sweeps a full circle' },
+            knife: { with: 'wings', name: 'Knife Storm', e: '🌪️', desc: 'Every throw also bursts in a ring' },
+            garlic: { with: 'heart', name: 'Sanctuary', e: '🕊️', desc: 'Bigger aura that heals you as it burns' },
+            orbit: { with: 'area', name: 'Grimoire', e: '📚', desc: '+3 books, spinning faster' },
+            bolt: { with: 'magnet', name: 'Chain Storm', e: '🌩️', desc: 'Lightning jumps between enemies' },
+            fire: { with: 'regen', name: 'Phoenix', e: '🐦‍🔥', desc: 'Huge, long lasting flames' },
+        };
         const PASSIVES = {
+            lantern: { e: '🏮', name: 'Lantern', desc: '+15% light, oil burns 12% slower' },
             might:  { e: '💪', name: 'Might', desc: '+12% damage' },
             haste:  { e: '⏩', name: 'Haste', desc: '−8% weapon cooldowns' },
             wings:  { e: '🪽', name: 'Wings', desc: '+10% move speed' },
@@ -126,15 +143,18 @@
             area:   { e: '🌀', name: 'Reach', desc: '+12% weapon area' },
         };
         const MAXLV = 6, SLOTS = 6;
+        // ai: bat zigzags, shoot keeps its distance and throws, charge lines up and rushes,
+        // web slows you down, blink teleports close, shy hates the light
         const ENEMIES = {
-            bat:      { e: '🦇', hp: 6, sp: 95, dmg: 4, r: 11, xp: 1 },
+            bat:      { e: '🦇', hp: 6, sp: 95, dmg: 4, r: 11, xp: 1, wave: true },
             zombie:   { e: '🧟', hp: 16, sp: 42, dmg: 7, r: 13, xp: 1 },
-            skeleton: { e: '💀', hp: 24, sp: 58, dmg: 8, r: 12, xp: 2 },
-            ghost:    { e: '👻', hp: 18, sp: 75, dmg: 7, r: 12, xp: 2, wave: true },
-            spider:   { e: '🕷️', hp: 30, sp: 85, dmg: 9, r: 12, xp: 2 },
-            wolf:     { e: '🐺', hp: 55, sp: 100, dmg: 12, r: 14, xp: 3 },
+            skeleton: { e: '💀', hp: 24, sp: 58, dmg: 8, r: 12, xp: 2, ai: 'shoot' },
+            ghost:    { e: '👻', hp: 18, sp: 75, dmg: 7, r: 12, xp: 2, ai: 'shy' },
+            spider:   { e: '🕷️', hp: 30, sp: 85, dmg: 6, r: 12, xp: 2, ai: 'web' },
+            wolf:     { e: '🐺', hp: 55, sp: 100, dmg: 12, r: 14, xp: 3, ai: 'charge' },
             mummy:    { e: '🧌', hp: 140, sp: 40, dmg: 16, r: 18, xp: 5 },
-            vamp:     { e: '🧛', hp: 120, sp: 70, dmg: 14, r: 15, xp: 6 },
+            vamp:     { e: '🧛', hp: 120, sp: 70, dmg: 14, r: 15, xp: 6, ai: 'blink' },
+            lord:     { e: '🧛‍♂️', hp: 900, sp: 62, dmg: 22, r: 18, xp: 80, ai: 'lord' },
         };
         const TIMELINE = [[0, ['bat', 'zombie']], [60, ['bat', 'zombie', 'skeleton']], [150, ['skeleton', 'ghost', 'bat']], [240, ['ghost', 'spider', 'zombie']], [360, ['spider', 'wolf', 'skeleton']], [480, ['wolf', 'mummy', 'ghost']], [600, ['wolf', 'vamp', 'mummy', 'spider']], [720, ['vamp', 'mummy', 'wolf']]];
         const SHOP = {
@@ -145,6 +165,7 @@
             magnet: { name: 'Magnet', desc: '+20% pickup', max: 3, cost: 200 },
             greed:  { name: 'Greed', desc: '+20% gold', max: 5, cost: 150 },
             growth: { name: 'Growth', desc: '+5% XP', max: 5, cost: 250 },
+            lamp:   { name: 'Bright Oil', desc: '+8% light radius', max: 4, cost: 220 },
             revive: { name: 'Revival', desc: 'Come back once per run', max: 1, cost: 1500 },
         };
         const save = Object.assign({ gold: 0, ups: {}, char: 'mage', best: 0 }, Arcade.load('arcade.survivors.save', {}) || {});
@@ -152,13 +173,17 @@
         const up = (k) => save.ups[k] || 0;
 
         /* ---------- state ---------- */
-        let P, enemies, shots, gems, pools, fx, texts, strikes, time, kills, goldRun, running, paused, nextSpawn, bossFlags, cam, pendingLevels;
+        let P, enemies, shots, eshots, webs, gems, pools, fx, texts, strikes, beacons, lord, time, kills, goldRun, running, paused, nextSpawn, bossFlags, cam, pendingLevels;
+        const BEACONS = 5, CHANNEL = 8, BEACON_R = 95, AURA_R = 230, DASH_CD = 2.4, BEACON_GAP = 90;
         function newRun() {
             const ch = CHARS.find(x => x.id === save.char) || CHARS[0];
             const maxHp = Math.round((100 + (ch.hp || 0)) * (1 + up('hp') * 0.1));
             P = { x: 0, y: 0, r: 13, hp: maxHp, maxHp, lv: 1, xp: 0, next: 5, face: 1, fx: 1, fy: 0, ch,
-                  weapons: [{ id: ch.w, lv: 1, cd: 0.3 }], passives: {}, iframe: 0, revive: up('revive') > 0, hurtT: 0 };
-            enemies = []; shots = []; gems = []; pools = []; strikes = []; texts = []; fx = new Arcade.Particles(600);
+                  weapons: [{ id: ch.w, lv: 1, cd: 0.3 }], passives: {}, iframe: 0, revive: up('revive') > 0, hurtT: 0, oil: 100, dashCd: 0, dashT: 0, slow: 0 };
+            enemies = []; shots = []; eshots = []; webs = []; gems = []; pools = []; strikes = []; texts = []; lord = null;
+            beacons = [];
+            const a0 = Math.random() * TAU;
+            for (let i = 0; i < BEACONS; i++) { const a = a0 + i * TAU / BEACONS + R(-0.3, 0.3), d = 720 + i * 260; beacons.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, prog: 0, lit: false, surge: 0 }); } fx = new Arcade.Particles(600);
             time = 0; kills = 0; goldRun = 0; running = true; paused = false; nextSpawn = 0; bossFlags = {}; cam = { x: 0, y: 0 }; pendingLevels = 0;
             hud();
         }
@@ -166,7 +191,20 @@
         const might = () => (1 + pv('might') * 0.12 + up('might') * 0.05 + (P.ch.might || 0));
         const haste = () => Math.max(0.4, 1 - pv('haste') * 0.08);
         const area = () => 1 + pv('area') * 0.12;
-        const speed = () => 150 * (1 + pv('wings') * 0.1 + up('speed') * 0.05 + (P.ch.speed || 0));
+        const speed = () => 150 * (1 + pv('wings') * 0.1 + up('speed') * 0.05 + (P.ch.speed || 0)) * (P.slow > 0 ? 0.6 : 1);
+        const litBeacons = () => beacons.filter(b => b.lit).length;
+        // how far the lantern reaches. it dims with the oil, and the sky brightens towards dawn
+        const lightR = () => {
+            const dawn = Math.max(0, (time - WIN * 0.75) / (WIN * 0.25));
+            return (150 + 90 * (P.oil / 100)) * (1 + pv('lantern') * 0.15 + up('lamp') * 0.08 + (P.ch.light || 0)) * (1 + dawn * 0.6);
+        };
+        function inLight(x, y, pad = 0) {
+            const lr = lightR() + pad;
+            if ((x - P.x) ** 2 + (y - P.y) ** 2 < lr * lr) return true;
+            for (const b of beacons) if (b.lit && (x - b.x) ** 2 + (y - b.y) ** 2 < AURA_R * AURA_R) return true;
+            return false;
+        }
+        const evolved = (w) => w.lv >= MAXLV && EVOLVE[w.id] && pv(EVOLVE[w.id].with) > 0;
         const armor = () => pv('armor') + up('armor') + (P.ch.armor || 0);
         const regen = () => pv('regen') * 0.4 + (P.ch.regen || 0);
         const magnet = () => 70 * (1 + pv('magnet') * 0.35 + up('magnet') * 0.2);
@@ -185,7 +223,7 @@
         }
         function nearest(x, y, maxD = 520) {
             let best = null, bd = maxD * maxD;
-            for (const e of enemies) { if (e.dead) continue; const d = (e.x - x) ** 2 + (e.y - y) ** 2; if (d < bd) { bd = d; best = e; } }
+            for (const e of enemies) { if (e.dead || !inLight(e.x, e.y, 20)) continue; const d = (e.x - x) ** 2 + (e.y - y) ** 2; if (d < bd) { bd = d; best = e; } }
             return best;
         }
 
@@ -200,7 +238,7 @@
         }
         function spawning(dt) {
             nextSpawn -= dt;
-            const rate = 1.2 + time / 25;   // enemies per second
+            const rate = (1.2 + time / 25) * (1 + litBeacons() * 0.12);   // enemies per second, every beacon angers them
             const cap = Math.min(380, 40 + time * 0.55);
             let pool = TIMELINE[0][1];
             for (const [t, list] of TIMELINE) if (time >= t) pool = list;
@@ -213,11 +251,19 @@
             if (time >= 300 && !bossFlags.b5) { bossFlags.b5 = true; spawnEnemy('mummy', { boss: true }); bossWarn(); }
             if (time >= 600 && !bossFlags.b10) { bossFlags.b10 = true; spawnEnemy('vamp', { boss: true }); bossWarn(); }
             if (time >= 840 && !bossFlags.b14) { bossFlags.b14 = true; for (let i = 0; i < 2; i++) spawnEnemy('wolf', { boss: true }); bossWarn(); }
+            if (litBeacons() === BEACONS && !lord) summonLord();
             if (time > 30 && Math.floor(time) % 90 === 0 && !bossFlags['swarm' + Math.floor(time)]) {
                 bossFlags['swarm' + Math.floor(time)] = true;
                 const a = Math.random() * TAU;
                 for (let i = 0; i < 28; i++) { const e = spawnEnemy('bat'); const d = Math.hypot(W, H) / 2 + 30 + i * 6; e.x = P.x + Math.cos(a + (i % 7) * 0.05) * d; e.y = P.y + Math.sin(a + (i % 7) * 0.05) * d; e.sp = 150; }
             }
+        }
+        function summonLord() {
+            lord = spawnEnemy('lord', { boss: true });
+            lord.hp = lord.max = 900 * (1 + time / 400);
+            lord.shotT = 3; lord.blinkT = 7;
+            Arcade.sfx('boom');
+            texts.push({ x: P.x, y: P.y - 80, t: 3.5, s: 'The Night Lord rises', c: '#f27a73', big: true });
         }
         function bossWarn() { Arcade.sfx('boom'); texts.push({ x: P.x, y: P.y - 80, t: 2.5, s: '☠ A BOSS HAS ARRIVED ☠', c: '#f27a73', big: true }); }
 
@@ -238,6 +284,8 @@
             if (Math.random() < (e.elite || e.boss ? 1 : 0.035)) gems.push({ x: e.x + 8, y: e.y, v: Math.round((e.boss ? 60 : e.elite ? 15 : 1 + Math.random() * 3) * (1 + up('greed') * 0.2)), kind: 'gold' });
             if (e.elite || e.boss) gems.push({ x: e.x - 8, y: e.y, v: 1, kind: 'chest' });
             else if (Math.random() < 0.006) gems.push({ x: e.x, y: e.y, v: 30, kind: 'heal' });
+            if (Math.random() < 0.09 && e.d.xp < 80) gems.push({ x: e.x - 6, y: e.y + 6, v: 16, kind: 'oil' });
+            if (e === lord) return endRun(true, true);
             if (e.boss) Arcade.sfx('boom');
             else if (kills % 3 === 0) Arcade.tone(180 + Math.random() * 60, 0.03, 'square', 0.015);
             // too many gems: merge into the nearest one
@@ -264,18 +312,26 @@
                 const L = w.lv;
                 switch (w.id) {
                     case 'wand': {
-                        const n = 1 + (L >= 2) + (L >= 4) + (L >= 6), dmg = 14 * (L >= 3 ? 1.4 : 1);
+                        const evo = evolved(w), n = 1 + (L >= 2) + (L >= 4) + (L >= 6), dmg = 14 * (L >= 3 ? 1.4 : 1);
                         let k = 0;
-                        const targets = enemies.filter(e => !e.dead).sort((a, b) => ((a.x - P.x) ** 2 + (a.y - P.y) ** 2) - ((b.x - P.x) ** 2 + (b.y - P.y) ** 2)).slice(0, n);
-                        for (const t of targets) setTimeout(() => { if (!running) return; const a = Math.atan2(t.y - P.y, t.x - P.x); shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, r: 6, dmg, life: 1.6, pierce: L >= 6 ? 2 : 0, kind: 'wand', hits: new Set() }); }, (k++) * 70);
+                        const targets = enemies.filter(e => !e.dead && inLight(e.x, e.y, 20)).sort((a, b) => ((a.x - P.x) ** 2 + (a.y - P.y) ** 2) - ((b.x - P.x) ** 2 + (b.y - P.y) ** 2)).slice(0, n);
+                        for (const t of targets) setTimeout(() => { if (!running) return; const a = Math.atan2(t.y - P.y, t.x - P.x); shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, r: 6, dmg, life: 1.6, pierce: evo ? 99 : L >= 6 ? 2 : 0, kind: 'wand', hits: new Set() }); }, (k++) * 70);
                         if (targets.length) Arcade.tone(900, 0.04, 'sine', 0.012, 1300);
-                        w.cd = (L >= 5 ? 0.65 : 0.85) * haste();
+                        w.cd = (L >= 5 ? 0.65 : 0.85) * haste() * (evo ? 0.6 : 1);
                         break;
                     }
                     case 'whip': {
                         const dmg = 16 * (L >= 3 ? 1.4 : 1) * (L >= 5 ? 1.4 : 1), sc = area() * (L >= 4 ? 1.25 : 1);
                         const sides = L >= 2 ? [P.face, -P.face] : [P.face];
                         const doSlash = () => { for (const s of sides) { const sl = { x: P.x + s * 60 * sc, y: P.y - 4, w: 120 * sc, h: 34 * sc, t: 0.18, s }; strikes.push({ kind: 'whip', ...sl }); near(sl.x, sl.y, sl.w / 2 + 20, (e) => { if (Math.abs(e.x - sl.x) < sl.w / 2 + e.r && Math.abs(e.y - sl.y) < sl.h / 2 + e.r) hit(e, dmg, 'whip', s * 40, 0); }); } Arcade.tone(300, 0.05, 'sawtooth', 0.02, 120); };
+                        if (evolved(w)) {
+                            const rr = 150 * sc;
+                            strikes.push({ kind: 'ring', x: P.x, y: P.y, r: rr, t: 0.22 });
+                            near(P.x, P.y, rr + 20, (e) => { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < rr + e.r) hit(e, dmg * 1.5, 'whip', (e.x - P.x) / (d || 1) * 40, (e.y - P.y) / (d || 1) * 40); });
+                            Arcade.tone(240, 0.08, 'sawtooth', 0.025, 90);
+                            w.cd = 1.15 * haste();
+                            break;
+                        }
                         doSlash();
                         if (L >= 6) setTimeout(() => running && doSlash(), 180);
                         w.cd = 1.25 * haste();
@@ -285,26 +341,29 @@
                         const n = 1 + (L >= 2) + (L >= 3) + (L >= 5) + (L >= 6 ? 2 : 0), dmg = 9 * (L >= 4 ? 1.5 : 1);
                         const a0 = Math.atan2(P.fy, P.fx);
                         for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.12; shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 5, dmg, life: 0.9, pierce: L >= 5 ? 1 : 0, kind: 'knife', hits: new Set(), ang: a }); }
+                        if (evolved(w) && (w.burst = (w.burst || 0) + 1) % 3 === 0) for (let i = 0; i < 10; i++) { const a = i * TAU / 10; shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 480, vy: Math.sin(a) * 480, r: 5, dmg, life: 0.8, pierce: 1, kind: 'knife', hits: new Set(), ang: a }); }
                         Arcade.tone(1200, 0.02, 'square', 0.01);
                         w.cd = 0.55 * haste();
                         break;
                     }
                     case 'bolt': {
                         const n = 1 + (L >= 2) + (L >= 4) + (L >= 6 ? 2 : 0), dmg = 26 * (L >= 3 ? 1.5 : 1);
-                        const vis = enemies.filter(e => !e.dead && Math.abs(e.x - P.x) < W / 2 && Math.abs(e.y - P.y) < H / 2);
+                        const vis = enemies.filter(e => !e.dead && inLight(e.x, e.y, 20));
                         for (let i = 0; i < n && vis.length; i++) {
                             const e = vis.splice(Math.floor(Math.random() * vis.length), 1)[0];
                             strikes.push({ kind: 'bolt', x: e.x, y: e.y, t: 0.25 });
-                            near(e.x, e.y, 40 * area(), (o) => { if (Math.hypot(o.x - e.x, o.y - e.y) < 40 * area() + o.r) hit(o, dmg, 'bolt'); });
+                            const br = 40 * area() * (evolved(w) ? 2 : 1);
+                            near(e.x, e.y, br, (o) => { if (Math.hypot(o.x - e.x, o.y - e.y) < br + o.r) { if (evolved(w) && o !== e) strikes.push({ kind: 'bolt', x: o.x, y: o.y, t: 0.18 }); hit(o, dmg, 'bolt'); } });
                         }
                         if (n) Arcade.tone(80, 0.12, 'sawtooth', 0.03, 40);
                         w.cd = (L >= 5 ? 1.6 : 2.2) * haste();
                         break;
                     }
                     case 'fire': {
-                        const n = 1 + (L >= 2) + (L >= 5), dmg = 5 * (L >= 4 ? 1.4 : 1), dur = L >= 3 ? 4 : 2.8, rad = 46 * area() * (L >= 6 ? 1.35 : 1);
+                        const ev = evolved(w), n = 1 + (L >= 2) + (L >= 5), dmg = 5 * (L >= 4 ? 1.4 : 1) * (ev ? 1.6 : 1), dur = (L >= 3 ? 4 : 2.8) + (ev ? 2 : 0), rad = 46 * area() * (L >= 6 ? 1.35 : 1) * (ev ? 1.4 : 1);
+                        const lit = enemies.filter(e => !e.dead && inLight(e.x, e.y, 20));
                         for (let i = 0; i < n; i++) {
-                            const t = enemies.length ? enemies[Math.floor(Math.random() * Math.min(enemies.length, 60))] : null;
+                            const t = lit.length ? lit[Math.floor(Math.random() * Math.min(lit.length, 60))] : null;
                             const x = t ? t.x : P.x + R(-150, 150), y = t ? t.y : P.y + R(-150, 150);
                             pools.push({ x, y, r: rad, t: dur, dmg, tick: 0 });
                         }
@@ -315,15 +374,16 @@
             }
         }
         function garlic(w, dt) {
-            const L = w.lv, rad = 52 * area() * (1 + (L >= 2) * 0.2 + (L >= 4) * 0.2 + (L >= 6) * 0.3), dmg = 5 + (L >= 3) * 3 + (L >= 5) * 3;
+            const L = w.lv, ev = evolved(w), rad = 52 * area() * (1 + (L >= 2) * 0.2 + (L >= 4) * 0.2 + (L >= 6) * 0.3) * (ev ? 1.3 : 1), dmg = 5 + (L >= 3) * 3 + (L >= 5) * 3;
             w.rad = rad;
             if (w.cd > 0) return;
             w.cd = 0.4 * haste();
+            if (ev) P.hp = Math.min(P.maxHp, P.hp + 0.5);
             near(P.x, P.y, rad + 20, (e) => { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < rad + e.r) { const k = L >= 6 ? 30 : 10; hit(e, dmg, 'garlic', (e.x - P.x) / (d || 1) * k, (e.y - P.y) / (d || 1) * k); } });
         }
         function orbit(w, dt) {
-            const L = w.lv, n = 1 + (L >= 2) + (L >= 4) + (L >= 6 ? 2 : 0), rad = (75 + (L >= 5 ? 30 : 0)) * area(), dmg = 10 * (L >= 3 ? 1.3 : 1);
-            w.ang = (w.ang || 0) + dt * 3.2;
+            const L = w.lv, ev = evolved(w), n = 1 + (L >= 2) + (L >= 4) + (L >= 6 ? 2 : 0) + (ev ? 3 : 0), rad = (75 + (L >= 5 ? 30 : 0)) * area(), dmg = 10 * (L >= 3 ? 1.3 : 1);
+            w.ang = (w.ang || 0) + dt * (ev ? 4.6 : 3.2);
             w.books = [];
             for (let i = 0; i < n; i++) {
                 const a = w.ang + i * TAU / n, x = P.x + Math.cos(a) * rad, y = P.y + Math.sin(a) * rad;
@@ -355,8 +415,8 @@
             curChoices.forEach((o, i) => {
                 const b = document.createElement('button'); b.className = 'pick';
                 let ic, name, desc, lv = '';
-                if (o.kind === 'w') { const d = WEAPONS[o.id]; ic = d.e; name = d.name; desc = d.lv[o.lv - 1]; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; }
-                else if (o.kind === 'p') { const d = PASSIVES[o.id]; ic = d.e; name = d.name; desc = d.desc; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; }
+                if (o.kind === 'w') { const d = WEAPONS[o.id]; ic = d.e; name = d.name; desc = d.lv[o.lv - 1]; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; const ev = EVOLVE[o.id]; if (ev) desc += `<span class="evo">${o.lv === MAXLV && pv(ev.with) ? 'Evolves into ' + ev.name + '!' : 'Lv ' + MAXLV + ' + ' + PASSIVES[ev.with].name + ' evolves it'}</span>`; }
+                else if (o.kind === 'p') { const d = PASSIVES[o.id]; ic = d.e; name = d.name; desc = d.desc; lv = o.lv === 1 ? 'NEW' : 'Lv ' + o.lv; const evw = P.weapons.find(w => EVOLVE[w.id] && EVOLVE[w.id].with === o.id); if (evw) desc += `<span class="evo">Evolves ${WEAPONS[evw.id].name} at Lv ${MAXLV}</span>`; }
                 else if (o.kind === 'gold') { ic = '🪙'; name = '50 gold'; desc = 'Everything is maxed!'; }
                 else { ic = '🍗'; name = 'Roast chicken'; desc = 'Heal 50 HP'; }
                 b.innerHTML = `<span class="ic">${ic}</span><span><b>${name}</b><small>${desc}</small></span><span class="lv">${i + 1} · ${lv}</span>`;
@@ -366,11 +426,19 @@
             Arcade.show('lvlOv');
             Arcade.sfx('level');
         }
+        function checkEvolutions() {
+            for (const w of P.weapons) if (!w.evoShown && evolved(w)) {
+                w.evoShown = true;
+                texts.push({ x: P.x, y: P.y - 60, t: 3, s: `${EVOLVE[w.id].e} ${EVOLVE[w.id].name}!`, c: '#f6c445', big: true });
+                Arcade.sfx('power');
+            }
+        }
         function choose(o) {
             if (o.kind === 'w') { const w = P.weapons.find(x => x.id === o.id); if (w) w.lv++; else P.weapons.push({ id: o.id, lv: 1, cd: 0.2 }); }
             else if (o.kind === 'p') { P.passives[o.id] = (P.passives[o.id] || 0) + 1; if (o.id === 'heart') { P.maxHp += 25; P.hp = Math.min(P.maxHp, P.hp + 25); } }
             else if (o.kind === 'gold') goldRun += 50;
             else P.hp = Math.min(P.maxHp, P.hp + 50);
+            checkEvolutions();
             Arcade.hide('lvlOv');
             pendingLevels--;
             if (pendingLevels > 0) { P.lv++; showLevelUp(); } else paused = false;
@@ -400,12 +468,24 @@
         function step(dt) {
             if (!running || paused) return;
             time += dt;
-            if (time >= WIN) return endRun(true);
+            if (time >= WIN) return endRun(true, false);
             // movement
             let mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
             if (stick && stick.active) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 6) { mx = dx / Math.max(d, 40); my = dy / Math.max(d, 40); } }
             const ml = Math.hypot(mx, my);
             if (ml > 0) { if (ml > 1) { mx /= ml; my /= ml; } P.x += mx * speed() * dt; P.y += my * speed() * dt; P.fx = mx; P.fy = my; if (Math.abs(mx) > 0.1) P.face = Math.sign(mx); }
+            P.dashCd = Math.max(0, P.dashCd - dt); P.slow = Math.max(0, P.slow - dt);
+            if (P.dashT > 0) {
+                P.dashT -= dt;
+                P.x += P.dfx * 640 * dt; P.y += P.dfy * 640 * dt;
+                if (Math.random() < 0.8) fx.emit(P.x, P.y, { n: 1, speed: 30, color: [Arcade.ui.text, Arcade.ui.muted], life: 0.3, size: 4 });
+            }
+            // lantern oil
+            let nearLit = false;
+            for (const b of beacons) if (b.lit && Math.hypot(P.x - b.x, P.y - b.y) < AURA_R) nearLit = true;
+            if (nearLit) P.oil = Math.min(100, P.oil + 22 * dt);
+            else P.oil = Math.max(0, P.oil - 1.5 * (P.ch.oil || 1) * (1 - pv('lantern') * 0.12) * dt);
+            beaconStep(dt);
             P.iframe = Math.max(0, P.iframe - dt); P.hurtT = Math.max(0, P.hurtT - dt);
             P.hp = Math.min(P.maxHp, P.hp + regen() * dt);
             cam.x += (P.x - cam.x) * Math.min(1, dt * 8); cam.y += (P.y - cam.y) * Math.min(1, dt * 8);
@@ -418,10 +498,17 @@
                 let dx = P.x - e.x, dy = P.y - e.y; const d = Math.hypot(dx, dy) || 1;
                 let vx = dx / d * e.sp, vy = dy / d * e.sp;
                 if (e.d.wave) { const w = Math.sin(time * 3 + e.ph) * 50; vx += -dy / d * w; vy += dx / d * w; }
+                const m = enemyBrain(e, d, dx / d, dy / d, dt);
+                if (m === 'hold') { vx = 0; vy = 0; } else if (m) { vx = m.x; vy = m.y; }
+                // lit beacons burn and slow anything that wanders into them
+                for (const b of beacons) if (b.lit && (e.x - b.x) ** 2 + (e.y - b.y) ** 2 < AURA_R * AURA_R) { vx *= 0.55; vy *= 0.55; e.burn = (e.burn || 0) - dt; if (e.burn <= 0) { e.burn = 0.5; hit(e, 6 + time / 60, 'beacon'); } }
                 e.x += (vx + e.kb.x * 8) * dt; e.y += (vy + e.kb.y * 8) * dt;
                 e.kb.x *= Math.pow(0.02, dt); e.kb.y *= Math.pow(0.02, dt);
                 e.flash = Math.max(0, e.flash - dt);
-                if (d < e.r + P.r) hurtPlayer(e.dmg);
+                if (d < e.r + P.r) {
+                    if (P.dashT > 0) { const k = P.ch.shove ? 40 : 14; if (!e.dashHit || time - e.dashHit > 0.3) { e.dashHit = time; hit(e, 10, 'dash', dx / d * -k, dy / d * -k); } }
+                    else hurtPlayer(e.dmg);
+                }
                 // keep them from piling up into one point
                 near(e.x, e.y, e.r * 2, (o) => { if (o === e) return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy) || 0.01, min = (e.r + o.r) * 0.8; if (od < min) { const push = (min - od) / od * 0.5; e.x += ox * push; e.y += oy * push; } });
                 if (d > 1400 && !e.boss) { const a = Math.random() * TAU; e.x = P.x + Math.cos(a) * 600; e.y = P.y + Math.sin(a) * 600; }
@@ -433,6 +520,17 @@
                 if (s.life <= 0) s.dead = true;
             }
             shots = shots.filter(s => !s.dead);
+            for (const s of eshots) {
+                s.x += s.vx * dt; s.y += s.vy * dt; s.t -= dt;
+                if (Math.hypot(s.x - P.x, s.y - P.y) < s.r + P.r && P.dashT <= 0) {
+                    s.t = 0;
+                    if (s.web) { P.slow = 1.8; webs.push({ x: P.x, y: P.y, t: 1.8 }); Arcade.tone(200, 0.08, 'triangle', 0.03); }
+                    else hurtPlayer(s.dmg);
+                }
+            }
+            eshots = eshots.filter(s => s.t > 0);
+            for (const w of webs) w.t -= dt;
+            webs = webs.filter(w => w.t > 0);
             for (const p of pools) {
                 p.t -= dt; p.tick -= dt;
                 if (p.tick <= 0) { p.tick = 0.3; near(p.x, p.y, p.r + 20, (e) => { if (Math.hypot(e.x - p.x, e.y - p.y) < p.r + e.r * 0.5) hit(e, p.dmg, 'fire'); }); }
@@ -450,6 +548,7 @@
                     if (g.kind === 'xp') { gainXp(g.v); if (Math.random() < 0.3) Arcade.tone(1400 + Math.random() * 400, 0.03, 'triangle', 0.015); }
                     else if (g.kind === 'gold') { goldRun += g.v; Arcade.sfx('coin'); }
                     else if (g.kind === 'heal') { P.hp = Math.min(P.maxHp, P.hp + g.v); Arcade.sfx('power'); }
+                    else if (g.kind === 'oil') { P.oil = Math.min(100, P.oil + g.v); Arcade.tone(520, 0.08, 'sine', 0.03, 780); }
                     else openChest();
                 }
             }
@@ -461,29 +560,129 @@
             fx.update(dt);
             hud();
         }
-        function endRun(won) {
+        // what each enemy does beyond walking at you. returns a velocity, 'hold' to stand still, or nothing
+        function enemyBrain(e, d, ux, uy, dt) {
+            const ai = e.d.ai;
+            if (!ai) return null;
+            e.ai = (e.ai || 0) - dt;
+            if (ai === 'shy') return inLight(e.x, e.y) ? { x: ux * e.sp * 0.45, y: uy * e.sp * 0.45 } : null;
+            if (ai === 'shoot' || ai === 'web') {
+                if (d > 520) return null;
+                if (e.ai <= 0) {
+                    e.ai = ai === 'web' ? 3.4 : 2.4;
+                    const sp = ai === 'web' ? 190 : 230;
+                    eshots.push({ x: e.x, y: e.y, vx: ux * sp, vy: uy * sp, r: ai === 'web' ? 9 : 6, dmg: e.dmg, t: 2.6, web: ai === 'web' });
+                }
+                return d < 230 ? 'hold' : null;
+            }
+            if (ai === 'charge') {
+                if (e.chargeT > 0) { e.chargeT -= dt; return { x: e.cx * e.sp * 3.2, y: e.cy * e.sp * 3.2 }; }
+                if (e.windup > 0) { e.windup -= dt; if (e.windup <= 0) { e.chargeT = 0.55; e.cx = ux; e.cy = uy; Arcade.tone(160, 0.12, 'sawtooth', 0.02, 320); } return 'hold'; }
+                if (e.ai <= 0 && d < 340) { e.ai = 3.2; e.windup = 0.45; }
+                return null;
+            }
+            if (ai === 'blink') {
+                if (e.ai <= 0 && d < 620) {
+                    e.ai = 5.5;
+                    fx.emit(e.x, e.y, { n: 12, speed: 90, color: ['#9a6de0', '#fff'], life: 0.35, size: 3 });
+                    const a = Math.random() * TAU;
+                    e.x = P.x + Math.cos(a) * 130; e.y = P.y + Math.sin(a) * 130;
+                    fx.emit(e.x, e.y, { n: 12, speed: 90, color: ['#9a6de0', '#fff'], life: 0.35, size: 3 });
+                }
+                return null;
+            }
+            if (ai === 'lord') {
+                e.shotT -= dt; e.blinkT -= dt;
+                if (e.shotT <= 0) {
+                    e.shotT = e.hp < e.max / 2 ? 2.4 : 3.4;
+                    const n = e.hp < e.max / 2 ? 18 : 12, a0 = Math.random() * TAU;
+                    for (let i = 0; i < n; i++) { const a = a0 + i * TAU / n; eshots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190, r: 8, dmg: e.dmg * 0.6, t: 4 }); }
+                    Arcade.tone(120, 0.2, 'sawtooth', 0.04, 60);
+                }
+                if (e.blinkT <= 0) {
+                    e.blinkT = 7;
+                    const a = Math.random() * TAU;
+                    e.x = P.x + Math.cos(a) * 210; e.y = P.y + Math.sin(a) * 210;
+                    for (let i = 0; i < 6; i++) { const b = spawnEnemy('bat'); b.x = e.x + R(-40, 40); b.y = e.y + R(-40, 40); }
+                }
+            }
+            return null;
+        }
+        function beaconStep(dt) {
+            for (const b of beacons) {
+                if (b.lit) continue;
+                const here = Math.hypot(P.x - b.x, P.y - b.y) < BEACON_R;
+                // a new beacon only takes the flame every so often, so a run has time to build up
+                if (here && beaconWait() <= 0) {
+                    b.prog += dt / CHANNEL;
+                    if (Math.random() < 0.4) fx.emit(b.x, b.y - 16, { n: 1, speed: 40, angle: -Math.PI / 2, spread: 0.7, color: ['#f6c445', '#f2893d'], life: 0.5, size: 4 });
+                    // the dark pushes back while you work
+                    const stage = Math.floor(b.prog * 3);
+                    if (stage > b.surge) {
+                        b.surge = stage;
+                        let pool = TIMELINE[0][1];
+                        for (const [t, list] of TIMELINE) if (time >= t) pool = list;
+                        for (let i = 0; i < 10 + litBeacons() * 4; i++) spawnEnemy(pick(pool));
+                        texts.push({ x: P.x, y: P.y - 60, t: 1.6, s: 'They feel the flame', c: '#f27a73', big: true });
+                        Arcade.tone(110, 0.25, 'sawtooth', 0.04, 70);
+                    }
+                    if (b.prog >= 1) lightBeacon(b);
+                } else b.prog = Math.max(0, b.prog - dt / (CHANNEL * 3));
+            }
+        }
+        const beaconWait = () => litBeacons() * BEACON_GAP - time;
+        function lightBeacon(b) {
+            b.lit = true;
+            P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.25);
+            P.oil = 100;
+            for (const e of enemies) if (!e.boss && Math.hypot(e.x - b.x, e.y - b.y) < AURA_R + 60) hit(e, 90 + time / 3, 'beacon');
+            strikes.push({ kind: 'ring', x: b.x, y: b.y, r: AURA_R + 60, t: 0.4 });
+            gems.push({ x: b.x + 22, y: b.y + 22, v: 1, kind: 'chest' });
+            goldRun += 25;
+            Arcade.sfx('power');
+            const n = litBeacons();
+            texts.push({ x: b.x, y: b.y - 60, t: 3, s: n === BEACONS ? 'All beacons burn!' : `Beacon ${n} of ${BEACONS} lit`, c: '#f6c445', big: true });
+            hud();
+        }
+        function dash() {
+            if (!running || paused || P.dashCd > 0) return;
+            let dx = P.fx, dy = P.fy;
+            const l = Math.hypot(dx, dy) || 1;
+            P.dfx = dx / l; P.dfy = dy / l;
+            P.dashT = 0.17;
+            P.iframe = Math.max(P.iframe, 0.26);
+            P.dashCd = DASH_CD * (P.ch.dashCd || 1);
+            Arcade.tone(700, 0.1, 'triangle', 0.03, 240);
+        }
+        function endRun(won, slayer) {
             running = false;
             const secs = Math.floor(time);
             const r = Arcade.best('arcade.survivors.best', secs);
-            const bonus = won ? 500 : 0;
+            const bonus = slayer ? 900 : won ? 500 : 0;
+            const lit = litBeacons();
             save.gold += goldRun + bonus;
             save.best = Math.max(save.best || 0, secs);
             persist();
-            Arcade.report('minutes', Math.floor(secs / 60));
+            // beating the night early counts as lasting the whole night
+            Arcade.report('minutes', won ? WIN / 60 : Math.floor(secs / 60));
             Arcade.report('kills', kills);
             Arcade.addXP(Math.min(80, Math.floor(secs / 15)), true);
             Arcade.sfx(won ? 'win' : 'die');
-            $('endTitle').textContent = won ? 'You survived the night!' : 'You fell';
+            $('endTitle').textContent = slayer ? 'The Night Lord falls!' : won ? 'Dawn at last' : 'You fell';
             $('endTitle').className = won ? 'good' : 'bad';
             $('endTime').textContent = Arcade.time(secs);
             $('newBest').hidden = !r.isNew;
-            $('endStats').innerHTML = [['Kills', kills], ['Level', P.lv], ['Gold', '+' + (goldRun + bonus)]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
+            $('endStats').innerHTML = [['Beacons', lit + '/' + BEACONS], ['Kills', kills], ['Level', P.lv], ['Gold', '+' + (goldRun + bonus)]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('');
             Arcade.show('endOv');
+            $('dashBtn').hidden = true;
             hud();
         }
         function hud() {
             Arcade.text('time', Arcade.time(time || 0));
             Arcade.text('kills', kills || 0);
+            Arcade.text('beacons', (beacons ? litBeacons() : 0) + '/' + BEACONS);
+            const db = $('dashBtn');
+            if (db) { db.classList.toggle('ready', !!P && P.dashCd <= 0); db.textContent = P && P.dashCd > 0 ? P.dashCd.toFixed(1) : 'Dash'; }
             Arcade.text('gold', save.gold + (running ? goldRun : 0));
         }
 
@@ -491,29 +690,41 @@
         const tileHash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
         function draw() {
             const ox = W / 2 - cam.x, oy = H / 2 - cam.y;
-            c.fillStyle = '#14251a'; c.fillRect(0, 0, W, H);
+            c.fillStyle = '#26302a'; c.fillRect(0, 0, W, H);
             const T = 64, tx0 = Math.floor((cam.x - W / 2) / T), ty0 = Math.floor((cam.y - H / 2) / T);
             for (let tx = tx0; tx <= tx0 + W / T + 1; tx++) for (let ty = ty0; ty <= ty0 + H / T + 1; ty++) {
                 const h = tileHash(tx, ty), x = tx * T + ox, y = ty * T + oy;
-                if ((tx + ty) % 2 === 0) { c.fillStyle = 'rgba(255,255,255,0.015)'; c.fillRect(x, y, T, T); }
-                if (h < 0.35) { c.fillStyle = '#1f3a26'; c.fillRect(x + h * 140 % 50, y + h * 300 % 50, 3, 7); c.fillRect(x + h * 140 % 50 + 4, y + h * 300 % 50 + 2, 3, 5); }
+                if (h < 0.3) { c.fillStyle = '#2f3b33'; c.beginPath(); c.arc(x + h * 180 % 50 + 6, y + h * 300 % 50 + 6, 3 + h * 12, 0, TAU); c.fill(); }
                 else if (h > 0.985) c.drawImage(spr('🪦', 16), x + 16, y + 16, 32, 32);
                 else if (h > 0.97) c.drawImage(spr('🌲', 20), x + 8, y + 4, 44, 44);
                 else if (h > 0.96) c.drawImage(spr('🍄', 10), x + 24, y + 24, 18, 18);
             }
-            for (const p of pools) { const g = c.createRadialGradient(p.x + ox, p.y + oy, 4, p.x + ox, p.y + oy, p.r); g.addColorStop(0, 'rgba(250,204,21,0.45)'); g.addColorStop(1, 'rgba(239,68,68,0.08)'); c.fillStyle = g; c.beginPath(); c.ellipse(p.x + ox, p.y + oy, p.r, p.r * 0.7, 0, 0, TAU); c.fill(); }
+            for (const b of beacons) {
+                const x = b.x + ox, y = b.y + oy;
+                if (x < -280 || y < -280 || x > W + 280 || y > H + 280) continue;
+                if (b.lit) { c.fillStyle = 'rgba(246,196,69,0.1)'; c.beginPath(); c.arc(x, y, AURA_R, 0, TAU); c.fill(); }
+                else { c.strokeStyle = 'rgba(246,196,69,0.35)'; c.lineWidth = 3; c.setLineDash([10, 10]); c.beginPath(); c.arc(x, y, BEACON_R, 0, TAU); c.stroke(); c.setLineDash([]); }
+                c.fillStyle = Arcade.ui.surface2; c.beginPath(); c.roundRect(x - 16, y - 8, 32, 26, 8); c.fill();
+                c.drawImage(spr(b.lit ? '🔥' : '🪵', 18), x - 18, y - 34, 36, 36);
+                if (!b.lit && beaconWait() > 0) { c.fillStyle = '#f6c445'; c.font = '600 15px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Damp for ' + Arcade.time(Math.ceil(beaconWait())), x, y + 34); }
+                if (!b.lit && b.prog > 0) { c.strokeStyle = '#f6c445'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.arc(x, y, BEACON_R, -Math.PI / 2, -Math.PI / 2 + TAU * b.prog); c.stroke(); }
+            }
+            for (const w of webs) { c.fillStyle = 'rgba(255,255,255,0.12)'; c.beginPath(); c.arc(w.x + ox, w.y + oy, 26, 0, TAU); c.fill(); }
+            for (const p of pools) { c.fillStyle = 'rgba(242,137,61,0.4)'; c.beginPath(); c.ellipse(p.x + ox, p.y + oy, p.r, p.r * 0.7, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(246,196,69,0.45)'; c.beginPath(); c.ellipse(p.x + ox, p.y + oy, p.r * 0.55, p.r * 0.38, 0, 0, TAU); c.fill(); }
             const gw = P.weapons.find(w => w.id === 'garlic');
             if (gw && gw.rad) { c.fillStyle = 'rgba(253,224,71,0.08)'; c.strokeStyle = 'rgba(253,224,71,0.3)'; c.beginPath(); c.arc(P.x + ox, P.y + oy, gw.rad, 0, TAU); c.fill(); c.stroke(); }
             for (const g of gems) {
                 const x = g.x + ox, y = g.y + oy;
                 if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
                 if (g.kind === 'xp') { c.fillStyle = g.v >= 20 ? '#ef5b56' : g.v >= 5 ? '#4fc07f' : '#6ba6ee'; c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x + 4, y); c.lineTo(x, y + 6); c.lineTo(x - 4, y); c.fill(); }
-                else c.drawImage(spr(g.kind === 'gold' ? '🪙' : g.kind === 'heal' ? '🍗' : '📦', 12), x - 12, y - 12, 24, 24);
+                else c.drawImage(spr(g.kind === 'gold' ? '🪙' : g.kind === 'heal' ? '🍗' : g.kind === 'oil' ? '🛢️' : '📦', 12), x - 12, y - 12, 24, 24);
             }
+            const px0 = P.x + ox, py0 = P.y + oy;
             for (const e of enemies) {
                 const x = e.x + ox, y = e.y + oy;
                 if (x < -60 || y < -60 || x > W + 60 || y > H + 60) continue;
                 const s = e.r * 2.2;
+                if (e.windup > 0) { c.strokeStyle = 'rgba(239,91,86,0.7)'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, y); c.lineTo(px0, py0); c.stroke(); }
                 if (e.elite || e.boss) { c.fillStyle = e.boss ? 'rgba(239,68,68,0.25)' : 'rgba(250,204,21,0.22)'; c.beginPath(); c.arc(x, y, e.r * 1.2, 0, TAU); c.fill(); }
                 c.save();
                 if (e.x > P.x) { c.translate(x, y); c.scale(-1, 1); c.translate(-x, -y); }
@@ -527,7 +738,9 @@
                 if (s.kind === 'wand') { c.fillStyle = '#c0b2f0'; c.beginPath(); c.arc(x, y, s.r, 0, TAU); c.fill(); }
                 else { c.save(); c.translate(x, y); c.rotate(s.ang); c.fillStyle = Arcade.ui.text; c.beginPath(); c.moveTo(10, 0); c.lineTo(-6, -3); c.lineTo(-6, 3); c.fill(); c.restore(); }
             }
+            for (const s of eshots) { const x = s.x + ox, y = s.y + oy; c.fillStyle = s.web ? '#e7e3dc' : '#ef5b56'; c.beginPath(); c.arc(x, y, s.r, 0, TAU); c.fill(); }
             for (const s of strikes) {
+                if (s.kind === 'ring') { c.globalAlpha = Math.min(1, s.t / 0.3) * 0.7; c.strokeStyle = '#f6c445'; c.lineWidth = 10; c.beginPath(); c.arc(s.x + ox, s.y + oy, s.r * (1.1 - s.t), 0, TAU); c.stroke(); c.globalAlpha = 1; continue; }
                 if (s.kind === 'whip') { c.globalAlpha = s.t / 0.18; c.fillStyle = '#fef3c7'; c.beginPath(); c.ellipse(s.x + ox, s.y + oy, s.w / 2, s.h / 2, 0, 0, TAU); c.fill(); c.globalAlpha = 1; }
                 else { c.globalAlpha = s.t / 0.25; c.strokeStyle = '#f8d25c'; c.lineWidth = 3; c.beginPath(); let x = s.x + ox, y = -10; c.moveTo(x, y); while (y < s.y + oy) { y += 30; x = s.x + ox + R(-14, 14); c.lineTo(x, Math.min(y, s.y + oy)); } c.stroke(); c.globalAlpha = 1; }
             }
@@ -541,15 +754,38 @@
             if (P.iframe > 0 && Math.floor(P.iframe * 20) % 2) c.globalAlpha = 0.5;
             c.drawImage(spr(P.ch.e, 24), px - 18, py - 20, 36, 36);
             c.restore(); c.globalAlpha = 1;
-            c.fillStyle = '#000a'; c.fillRect(px - 18, py + 20, 36, 4); c.fillStyle = P.hurtT > 0 ? '#fff' : '#ef5b56'; c.fillRect(px - 18, py + 20, 36 * Math.max(0, P.hp / P.maxHp), 4);
-            // night vignette
-            const v = c.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
-            v.addColorStop(0, 'rgba(5,0,20,0)'); v.addColorStop(1, `rgba(5,0,20,${0.55 - Math.min(0.4, time / WIN * 0.5)})`);
-            c.fillStyle = v; c.fillRect(0, 0, W, H);
+            c.fillStyle = '#000a'; c.beginPath(); c.roundRect(px - 20, py + 20, 40, 11, 5); c.fill();
+            c.fillStyle = P.hurtT > 0 ? '#fff' : '#ef5b56'; c.fillRect(px - 18, py + 21, 36 * Math.max(0, P.hp / P.maxHp), 4);
+            c.fillStyle = P.oil < 25 ? '#f2893d' : '#f6c445'; c.fillRect(px - 18, py + 26, 36 * (P.oil / 100), 3);
+            if (P.dashCd > 0) { c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 3; c.beginPath(); c.arc(px, py, 25, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - P.dashCd / (DASH_CD * (P.ch.dashCd || 1)))); c.stroke(); }
+            drawDark(ox, oy);
+            // eyes in the dark, so you can tell something's coming without seeing it
+            c.fillStyle = '#f27a73';
+            for (const e of enemies) {
+                const x = e.x + ox, y = e.y + oy;
+                if (x < 0 || y < 0 || x > W || y > H || inLight(e.x, e.y)) continue;
+                c.beginPath(); c.arc(x - 4, y - 2, 1.8, 0, TAU); c.arc(x + 4, y - 2, 1.8, 0, TAU); c.fill();
+            }
+            // pointer to the closest beacon still dark
+            let tgt = null, td = Infinity;
+            for (const b of beacons) if (!b.lit) { const d = Math.hypot(b.x - P.x, b.y - P.y); if (d < td) { td = d; tgt = b; } }
+            if (!tgt && lord && !lord.dead) { tgt = lord; td = Math.hypot(lord.x - P.x, lord.y - P.y); }
+            if (tgt && td > 120) {
+                const a = Math.atan2(tgt.y - P.y, tgt.x - P.x), ax = W / 2 + Math.cos(a) * 68, ay = H / 2 + Math.sin(a) * 68;
+                c.save(); c.translate(ax, ay); c.rotate(a);
+                c.fillStyle = tgt === lord ? '#ef5b56' : '#f6c445';
+                c.beginPath(); c.moveTo(13, 0); c.lineTo(-7, -9); c.lineTo(-7, 9); c.closePath(); c.fill();
+                c.restore();
+            }
             c.textAlign = 'center'; c.textBaseline = 'middle';
             for (const t of texts) { c.globalAlpha = Math.min(1, t.t * 3); c.font = t.big ? '900 20px Fredoka, sans-serif' : '700 11px Fredoka, sans-serif'; c.fillStyle = t.c; if (t.big) { c.strokeStyle = '#000'; c.lineWidth = 4; c.strokeText(t.s, t.x + ox, t.y + oy); } c.fillText(t.s, t.x + ox, t.y + oy); }
             c.globalAlpha = 1;
             // XP bar & HUD
+            if (lord && !lord.dead) {
+                c.fillStyle = 'rgba(0,0,0,0.5)'; c.beginPath(); c.roundRect(W * 0.2, 56, W * 0.6, 14, 7); c.fill();
+                c.fillStyle = '#ef5b56'; c.beginPath(); c.roundRect(W * 0.2, 56, W * 0.6 * Math.max(0.01, lord.hp / lord.max), 14, 7); c.fill();
+                c.fillStyle = '#fff'; c.font = '600 10px Fredoka, sans-serif'; c.textAlign = 'center'; c.fillText('The Night Lord', W / 2, 63);
+            }
             c.fillStyle = Arcade.ui.bg; c.fillRect(0, 0, W, 14);
             c.fillStyle = '#4f8ef0'; c.fillRect(0, 0, W * (P.xp / P.next), 14);
             c.fillStyle = '#fff'; c.font = '800 10px Fredoka, sans-serif'; c.fillText('LV ' + P.lv, W / 2, 7);
@@ -559,6 +795,35 @@
             x = 12;
             for (const [k, l] of Object.entries(P.passives)) { c.drawImage(spr(PASSIVES[k].e, 12), x, 48, 18, 18); c.font = '700 9px Fredoka, sans-serif'; c.fillText(l, x + 18, 64); x += 24; }
             if (stick && stick.active) { c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 2; c.beginPath(); c.arc(stick.ox, stick.oy, 40, 0, TAU); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.35)'; const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.min(40, Math.hypot(dx, dy)), a = Math.atan2(dy, dx); c.beginPath(); c.arc(stick.ox + Math.cos(a) * d, stick.oy + Math.sin(a) * d, 16, 0, TAU); c.fill(); }
+        }
+
+        // darkness: a low res layer with holes cut for each light, stretched over the world
+        const dark = document.createElement('canvas');
+        dark.width = Math.ceil(W / 3); dark.height = Math.ceil(H / 3);
+        const dg = dark.getContext('2d');
+        function hole(x, y, r) {
+            x /= 3; y /= 3; r /= 3;
+            const g = dg.createRadialGradient(x, y, r * 0.55, x, y, r);
+            g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+            dg.fillStyle = g;
+            dg.beginPath(); dg.arc(x, y, r, 0, TAU); dg.fill();
+        }
+        function drawDark(ox, oy) {
+            dg.globalCompositeOperation = 'source-over';
+            dg.clearRect(0, 0, dark.width, dark.height);
+            dg.fillStyle = 'rgb(14,14,18)';
+            dg.fillRect(0, 0, dark.width, dark.height);
+            dg.globalCompositeOperation = 'destination-out';
+            hole(P.x + ox, P.y + oy, lightR() * 1.12);
+            for (const b of beacons) {
+                const x = b.x + ox, y = b.y + oy;
+                if (b.lit) hole(x, y, AURA_R * 1.12);
+                else hole(x, y, 46);
+            }
+            const dawn = Math.max(0, (time - WIN * 0.75) / (WIN * 0.25));
+            c.globalAlpha = 0.94 - dawn * 0.5;
+            c.drawImage(dark, 0, 0, W, H);
+            c.globalAlpha = 1;
         }
 
         /* ---------- menus ---------- */
@@ -583,8 +848,10 @@
                 sh.appendChild(b);
             }
         }
-        $('goBtn').onclick = () => { Arcade.hide('startOv'); newRun(); };
+        $('goBtn').onclick = () => { Arcade.hide('startOv'); newRun(); $('dashBtn').hidden = false; };
         $('againBtn').onclick = () => { Arcade.hide('endOv'); buildStart(); Arcade.show('startOv'); };
+        const pressDash = (e) => { e.preventDefault(); e.stopPropagation(); dash(); };
+        $('dashBtn').addEventListener('pointerdown', pressDash);
         function setPause(on) {
             if (!running || !$('lvlOv').hidden) return;
             paused = on;
@@ -604,6 +871,7 @@
             if (KM[e.code]) { keys[KM[e.code]] = true; e.preventDefault(); }
             if (!$('lvlOv').hidden && /^Digit[123]$/.test(e.code)) { const o = curChoices[+e.code.slice(5) - 1]; if (o) choose(o); }
             if (e.code === 'KeyP' || e.code === 'Escape') setPause(!paused);
+            if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') { dash(); e.preventDefault(); }
         });
         window.addEventListener('keyup', (e) => { if (KM[e.code]) keys[KM[e.code]] = false; });
         window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -617,7 +885,7 @@
         buildStart();
         const loop = Arcade.loop((dt) => { step(dt); draw(); });
         loop.start();
-        window.__surv = { get P() { return P; }, get enemies() { return enemies; }, get time() { return time; }, set time(v) { time = v; }, choose, get choices() { return curChoices; }, keys };
+        window.__surv = { get beacons() { return beacons; }, get lord() { return lord; }, inLight, lightBeacon, dash, get P() { return P; }, get enemies() { return enemies; }, get time() { return time; }, set time(v) { time = v; }, choose, get choices() { return curChoices; }, keys };
     })();
     </script>
 </body>
