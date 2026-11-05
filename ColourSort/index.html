@@ -6,7 +6,7 @@
     <title>Colour Sort · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #f472b6; --accent-2: #a78bfa; --accent-ink: #2a0718; --bh: 36px; --tw: 54px; --cap: 4; --gx: 18px; --gy: 30px; }
+        :root { --accent: #f08aa7; --accent-2: #f08aa7; --accent-ink: #26180a; --bh: 36px; --tw: 54px; --cap: 4; --gx: 18px; --gy: 30px; }
         .canvas-box { overflow-y: auto; overflow-x: hidden; align-items: safe center; }
         .tubes {
             display: flex;
@@ -62,7 +62,7 @@
         .tube:hover { border-color: rgba(203, 213, 225, 0.55); }
         .tube.sel { transform: translateY(-18px); border-color: var(--accent); box-shadow: 0 14px 30px -12px var(--accent); }
         .tube.sel::before { background: var(--accent); }
-        .tube.done { border-color: color-mix(in srgb, var(--good) 70%, transparent); box-shadow: 0 0 26px -8px var(--good); }
+        .tube.done { border-color: color-mix(in srgb, var(--good) 70%, transparent); }
         .tube.done::before { background: var(--good); }
         .tube.bump { animation: bump 0.3s; }
         .tube.nope { animation: shake 0.3s; }
@@ -71,7 +71,7 @@
         .tube.locked::after { content: "🔒"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: calc(var(--tw) * 0.45); }
         .tube.out { border-color: rgba(251, 191, 36, 0.55); }
         .tube.out::before { background: rgba(251, 191, 36, 0.7); }
-        .tube.mono::before { background: var(--mc); height: 8px; top: -8px; box-shadow: 0 0 12px var(--mc); }
+        .tube.mono::before { background: var(--mc); height: 8px; top: -8px; }
         .tube.mono { border-color: color-mix(in srgb, var(--mc) 60%, transparent); }
         .tube.tall { border-color: rgba(56, 189, 248, 0.55); background: linear-gradient(90deg, rgba(56,189,248,0.05), rgba(56,189,248,0.12) 30%, rgba(56,189,248,0.03)); }
         .block {
@@ -88,7 +88,7 @@
         }
         .block.dark { color: rgba(255, 255, 255, 0.6); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), inset 0 3px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(255,255,255,0.18); }
         .tube .block:first-child { border-radius: 8px 8px calc(var(--tw) / 2 - 4px) calc(var(--tw) / 2 - 4px); }
-        .block.hidden { background: repeating-linear-gradient(45deg, #2a3358, #2a3358 6px, #222a4a 6px, #222a4a 12px) !important; color: var(--muted); }
+        .block.hidden { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 6px, var(--surface-2) 6px, var(--surface-2) 12px) !important; color: var(--muted); }
         .block.hidden::after { content: "?"; font-weight: 800; }
         body:not(.symbols) .block:not(.hidden) span { display: none; }
         @keyframes drop { from { transform: translateY(-14px); opacity: 0.3; } to { transform: none; opacity: 1; } }
@@ -180,31 +180,31 @@
     <script>
     (() => {
         const COLORS = [
-            ['#ef4444', '●'], ['#3b82f6', '■'], ['#22c55e', '▲'], ['#facc15', '◆'],
-            ['#a855f7', '★'], ['#22d3ee', '✚'], ['#f97316', '⬟'], ['#f472b6', '♥'],
-            ['#a3e635', '✦'], ['#f1f5f9', '◐'], ['#a16207', '▼'], ['#64748b', '✕'],
-            ['#1e3a8a', '☾', 1], ['#9f1239', '♠', 1], ['#0f766e', '♣', 1], ['#c4b5fd', '✿'],
+            ['#ef5b56', '●'], ['#4f8ef0', '■'], ['#4fc07f', '▲'], ['#f6c445', '◆'],
+            ['#9a6de0', '★'], ['#56c8dc', '✚'], ['#f2893d', '⬟'], ['#f08aa7', '♥'],
+            ['#b9dc6e', '✦'], [Arcade.ui.text, '◐'], ['#a16207', '▼'], [Arcade.ui.dim, '✕'],
+            ['#1e3a8a', '☾', 1], ['#9f1239', '♠', 1], ['#0f766e', '♣', 1], ['#c0b2f0', '✿'],
             ['#fdba74', '☀'], ['#18181b', '⬢', 1], ['#6ee7b7', '♪'], ['#d946ef', '⚑'],
         ];
         // start/step/max: colour count at level 1, levels per extra colour, cap on colours.
         const DIFFS = [
-            { id: 'easy', name: 'Easy', start: 3, step: 3, max: 7, undos: 99, extra: true, varied: 0.35, col: '#34d399' },
-            { id: 'normal', name: 'Normal', start: 3, step: 2, max: 12, undos: 5, extra: true, varied: 0.45, col: '#f472b6' },
-            { id: 'hard', name: 'Hard', start: 5, step: 2, max: 14, undos: 3, extra: true, varied: 0.5, col: '#fbbf24' },
-            { id: 'expert', name: 'Expert', start: 7, step: 2, max: 16, undos: 2, extra: true, varied: 0.55, col: '#fb923c' },
-            { id: 'master', name: 'Master', start: 9, step: 2, max: 18, undos: 1, extra: true, varied: 0.6, col: '#f87171' },
-            { id: 'insane', name: 'Insane', start: 12, step: 3, max: 20, undos: 0, extra: false, varied: 0.65, col: '#c084fc' },
-            { id: 'custom', name: '⚙ Custom', custom: true, col: '#38bdf8' },
+            { id: 'easy', name: 'Easy', start: 3, step: 3, max: 7, undos: 99, extra: true, varied: 0.35, col: '#5fcda0' },
+            { id: 'normal', name: 'Normal', start: 3, step: 2, max: 12, undos: 5, extra: true, varied: 0.45, col: '#f08aa7' },
+            { id: 'hard', name: 'Hard', start: 5, step: 2, max: 14, undos: 3, extra: true, varied: 0.5, col: '#f5b942' },
+            { id: 'expert', name: 'Expert', start: 7, step: 2, max: 16, undos: 2, extra: true, varied: 0.55, col: '#f59a55' },
+            { id: 'master', name: 'Master', start: 9, step: 2, max: 18, undos: 1, extra: true, varied: 0.6, col: '#f27a73' },
+            { id: 'insane', name: 'Insane', start: 12, step: 3, max: 20, undos: 0, extra: false, varied: 0.65, col: '#b58ce8' },
+            { id: 'custom', name: '⚙ Custom', custom: true, col: '#5bb8ea' },
         ];
         let custom = Object.assign({ colours: 8, cap: 4, empty: 2, extra: true }, Arcade.load('arcade.coloursort.custom', {}));
         // level shapes. Which one a level gets is decided by the level number, so level 12 is always
         // the same kind of level (the colours are still shuffled fresh each time).
         const KINDS = {
             normal: { label: '', icon: '' },
-            long: { label: 'Long tubes', icon: '📏', col: '#38bdf8' },
-            party: { label: 'Tube party', icon: '🎉', col: '#fbbf24' },
-            short: { label: 'Short tubes', icon: '🧃', col: '#4ade80' },
-            mega: { label: 'MEGA level', icon: '💥', col: '#f87171' },
+            long: { label: 'Long tubes', icon: '📏', col: '#5bb8ea' },
+            party: { label: 'Tube party', icon: '🎉', col: '#f5b942' },
+            short: { label: 'Short tubes', icon: '🧃', col: '#6fd29a' },
+            mega: { label: 'MEGA level', icon: '💥', col: '#f27a73' },
         };
         // special tubes some levels add (decided by level number, like KINDS).
         const SPECIALS = {
@@ -351,7 +351,7 @@
             if (S && kind === 'normal') tag.dataset.kind = 'special';
             tag.textContent = [K.label ? `${K.icon} ${K.label} · ${colours} colours × ${CAP}` : '', S ? `${S.icon} ${S.label}` : ''].filter(Boolean).join(' · ');
             tag.title = S ? S.tip : '';
-            tag.style.setProperty('--tc', K.col || (S ? '#38bdf8' : ''));
+            tag.style.setProperty('--tc', K.col || (S ? '#5bb8ea' : ''));
             if (K.label) Arcade.toast(`${K.icon} ${K.label}!`, 'gold', 1400);
             if (S) setTimeout(() => Arcade.toast(`${S.icon} ${S.tip}`, 'gold', 3000), K.label ? 900 : 0);
             render();

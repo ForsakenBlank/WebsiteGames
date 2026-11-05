@@ -6,7 +6,7 @@
     <title>Flow · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #06b6d4; --accent-2: #a855f7; --accent-ink: #021417; }
+        :root { --accent: #ff74a6; --accent-2: #ff74a6; --accent-ink: #26180a; }
         .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         #cv { touch-action: none; cursor: pointer; }
     </style>
@@ -49,7 +49,7 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#facc15', '#f97316', '#22d3ee', '#ec4899', '#a16207', '#a855f7', '#f8fafc', '#84cc16', '#64748b', '#be123c', '#0d9488'];
+        const COLORS = ['#ef5b56', '#4fc07f', '#4f8ef0', '#f6c445', '#f2893d', '#56c8dc', '#e5659a', '#a16207', '#9a6de0', Arcade.ui.text, '#9cc552', Arcade.ui.dim, '#be123c', '#0d9488'];
         const SIZES = [5, 6, 7, 8, 9, 10];
         const S = 600;
         const cv = $('cv');
@@ -194,7 +194,7 @@
         }
         function draw() {
             const cs = S / N, pad = 0;
-            c.fillStyle = '#05070f'; c.fillRect(0, 0, S, S);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(0, 0, S, S);
             for (let i = 0; i < N * N; i++) {
                 const x = (i % N) * cs, y = ((i / N) | 0) * cs, o = owner[i];
                 if (o >= 0) { c.fillStyle = COLORS[P.flows[o].color]; c.globalAlpha = complete(o) ? 0.22 : 0.12; c.fillRect(x, y, cs, cs); c.globalAlpha = 1; }

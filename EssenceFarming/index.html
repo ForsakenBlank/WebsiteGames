@@ -88,7 +88,7 @@
             <div class="card"><h4>Milestone Tuning <span class="lvl">Lv <b id="mileLvl">0</b></span></h4><p>×1.1 milestone power.</p><button class="btn primary" id="mileBtn"></button></div>
         </div>
         <section class="panel">
-            <div class="row between"><h3 style="margin:0">Gem Forge</h3><span class="small"><span style="color:#22d3ee">💎 <b id="dia">0</b></span> · <span style="color:#f43f5e">🔴 <b id="rub">0</b></span></span></div>
+            <div class="row between"><h3 style="margin:0">Gem Forge</h3><span class="small"><span style="color:#56c8dc">💎 <b id="dia">0</b></span> · <span style="color:#ee5a72">🔴 <b id="rub">0</b></span></span></div>
             <p class="tiny dim">Farmers with EXP occasionally find gems while they work.</p>
             <div class="grid">
                 <div class="card gem-diamond" data-gem="d_up1" data-cur="diamonds"><h4>Refracted Light <span class="lvl">Lv <b data-l></b></span></h4><p>+5% void crystal power</p><button class="btn"></button></div>
@@ -852,7 +852,7 @@
             const muted = css.getPropertyValue('--muted') || '#8b96b2', line = css.getPropertyValue('--line') || 'rgba(148,163,184,.14)';
             const pts = state.history.filter(p => p[1] > 0);
             g.clearRect(0, 0, W, H);
-            g.font = '11px "Segoe UI", sans-serif'; g.fillStyle = muted;
+            g.font = '11px Fredoka, sans-serif'; g.fillStyle = muted;
             if (pts.length < 2) { g.textAlign = 'center'; g.fillText('Collecting data… a point is added every 30 seconds while the game is open.', W / 2, H / 2); return; }
             const lo = Math.floor(Math.log10(Math.min(...pts.map(p => p[1])))), hi = Math.ceil(Math.log10(Math.max(...pts.map(p => p[1])))) || lo + 1;
             const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
@@ -868,7 +868,7 @@
             g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])));
             g.lineTo(X(t1), H - B); g.lineTo(X(t0), H - B); g.closePath(); g.fillStyle = grad; g.fill();
             g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])));
-            g.strokeStyle = '#4ade80'; g.lineWidth = 2; g.stroke();
+            g.strokeStyle = '#6fd29a'; g.lineWidth = 2; g.stroke();
             const growth = pts[pts.length - 1][1] / pts[0][1];
             $('chartNote').textContent = `${pts.length} samples · ×${fmt(growth)} over ${Arcade.time((t1 - t0) / 1000)} · log scale`;
         }

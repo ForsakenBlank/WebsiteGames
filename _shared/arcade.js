@@ -5,6 +5,22 @@
 
     const Arcade = {};
 
+    /* ---------- colours for canvas games ---------- */
+    // the current theme's colours as plain strings. canvases draw light text and bright pieces,
+    // so on the light themes they stay charcoal, which reads as a game screen on a cream page
+    const UI_VARS = { bg: '--bg', bg2: '--bg-2', surface: '--surface', surface2: '--surface-2', surface3: '--surface-3', line: '--line-2', text: '--text', muted: '--muted', dim: '--dim', accent: '--accent' };
+    const UI_CHARCOAL = { bg: '#1c1c1f', bg2: '#151517', surface: '#28282c', surface2: '#323237', surface3: '#3e3e44', line: 'rgba(255,255,255,0.13)', text: '#f7f4ee', muted: '#a9a59e', dim: '#6e6b67' };
+    let uiCache = null;
+    Object.defineProperty(Arcade, 'ui', {
+        get() {
+            if (uiCache) return uiCache;
+            const root = document.documentElement, css = getComputedStyle(root), out = {};
+            const light = root.dataset.theme === 'light' || root.dataset.theme === 'sand';
+            for (const k in UI_VARS) out[k] = (light && UI_CHARCOAL[k]) || css.getPropertyValue(UI_VARS[k]).trim() || UI_CHARCOAL[k];
+            return (uiCache = out);
+        },
+    });
+
     /* ---------- storage (never throws) ---------- */
     Arcade.load = function (key, fallback) {
         try {
@@ -551,16 +567,20 @@
             { id: 'mono', name: 'Mono', ach: 30, swatch: ['#111111', '#fafafa'] },
         ],
         avatar: [
-            ...['🙂', '😎', '🐱', '🐶', '🦊', '🐼', '🐸', '🐙', '🐧', '🦉', '🐝', '🍩'].map(e => ({ id: e, name: e, price: 0 })),
-            { id: '🤖', name: '🤖', lvl: 4 }, { id: '🔥', name: '🔥', lvl: 7 }, { id: '👾', name: '👾', lvl: 6 },
-            { id: '🦄', name: '🦄', lvl: 9 }, { id: '🌈', name: '🌈', lvl: 11 }, { id: '🐲', name: '🐲', lvl: 12 },
-            { id: '⚡', name: '⚡', lvl: 13 }, { id: '🦖', name: '🦖', lvl: 14 }, { id: '🚀', name: '🚀', lvl: 16 },
-            { id: '🧙', name: '🧙', lvl: 18 }, { id: '🥷', name: '🥷', lvl: 22 }, { id: '👑', name: '👑', lvl: 25 },
-            { id: '💎', name: '💎', lvl: 35 }, { id: '🐉', name: '🐉', lvl: 50 },
-            { id: '🍕', name: '🍕', price: 60 }, { id: '🌮', name: '🌮', price: 60 }, { id: '🎸', name: '🎸', price: 90 },
-            { id: '🏀', name: '🏀', price: 90 }, { id: '⚽', name: '⚽', price: 90 }, { id: '🎃', name: '🎃', price: 120 },
-            { id: '👻', name: '👻', price: 120 }, { id: '💀', name: '💀', price: 150 }, { id: '🧛', name: '🧛', price: 150 },
-            { id: '🧜', name: '🧜', price: 150 }, { id: '🐳', name: '🐳', price: 200 },
+            // only the smiley is free, everything else is earned with levels or bought with coins
+            { id: '🙂', name: '🙂', price: 0 },
+            { id: '😎', name: '😎', lvl: 2 }, { id: '🐱', name: '🐱', lvl: 3 }, { id: '🐶', name: '🐶', lvl: 4 },
+            { id: '🦊', name: '🦊', lvl: 5 }, { id: '🤖', name: '🤖', lvl: 6 }, { id: '👾', name: '👾', lvl: 7 },
+            { id: '🔥', name: '🔥', lvl: 8 }, { id: '🦄', name: '🦄', lvl: 9 }, { id: '🌈', name: '🌈', lvl: 11 },
+            { id: '🐲', name: '🐲', lvl: 12 }, { id: '⚡', name: '⚡', lvl: 13 }, { id: '🦖', name: '🦖', lvl: 14 },
+            { id: '🚀', name: '🚀', lvl: 16 }, { id: '🧙', name: '🧙', lvl: 18 }, { id: '🥷', name: '🥷', lvl: 22 },
+            { id: '👑', name: '👑', lvl: 25 }, { id: '💎', name: '💎', lvl: 35 }, { id: '🐉', name: '🐉', lvl: 50 },
+            { id: '🍩', name: '🍩', price: 40 }, { id: '🐸', name: '🐸', price: 50 }, { id: '🐝', name: '🐝', price: 50 },
+            { id: '🐼', name: '🐼', price: 60 }, { id: '🐧', name: '🐧', price: 60 }, { id: '🍕', name: '🍕', price: 60 },
+            { id: '🌮', name: '🌮', price: 60 }, { id: '🐙', name: '🐙', price: 80 }, { id: '🦉', name: '🦉', price: 80 },
+            { id: '🎸', name: '🎸', price: 90 }, { id: '🏀', name: '🏀', price: 90 }, { id: '⚽', name: '⚽', price: 90 },
+            { id: '🎃', name: '🎃', price: 120 }, { id: '👻', name: '👻', price: 120 }, { id: '💀', name: '💀', price: 150 },
+            { id: '🧛', name: '🧛', price: 150 }, { id: '🧜', name: '🧜', price: 150 }, { id: '🐳', name: '🐳', price: 200 },
             { id: '🏆', name: '🏆', ach: 20 }, { id: '🌍', name: '🌍', ach: 'explorer30' }, { id: '🦥', name: '🦥', ach: 'time10' },
         ],
         frame: [

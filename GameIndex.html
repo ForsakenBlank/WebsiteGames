@@ -704,7 +704,8 @@
             deferred = null;
             $('installRow').classList.remove('show');
         };
-        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        // the native app serves from https://localhost and already has every file, same for local dev
+        if ('serviceWorker' in navigator && location.protocol !== 'file:' && location.hostname !== 'localhost') {
             navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode is optional */ });
         }
     })();

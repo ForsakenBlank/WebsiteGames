@@ -54,7 +54,7 @@
     function noisyText(cv, text, era) {
         const c = cv.getContext('2d'), w = cv.width, h = cv.height;
         const g = c.createLinearGradient(0, 0, w, h);
-        g.addColorStop(0, '#e5e7eb'); g.addColorStop(1, '#cbd5e1');
+        g.addColorStop(0, Arcade.ui.text); g.addColorStop(1, Arcade.ui.muted);
         c.fillStyle = g; c.fillRect(0, 0, w, h);
         for (let i = 0; i < 6; i++) { c.strokeStyle = `hsla(${ri(0, 360)},50%,45%,0.5)`; c.lineWidth = 1 + R() * 2; c.beginPath(); c.moveTo(0, R() * h); c.bezierCurveTo(w / 3, R() * h, 2 * w / 3, R() * h, w, R() * h); c.stroke(); }
         for (let i = 0; i < 180; i++) { c.fillStyle = `rgba(0,0,0,${R() * 0.25})`; c.fillRect(R() * w, R() * h, 2, 2); }
@@ -134,7 +134,7 @@
             const draw = (px) => {
                 c.drawImage(bg, 0, 0);
                 c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(gx, gy, P, P);
-                c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 8;
+                c.save(); 
                 c.drawImage(bg, gx, gy, P, P, px, gy, P, P);
                 c.restore();
                 c.strokeStyle = '#fff'; c.lineWidth = 2; c.strokeRect(px, gy, P, P);
@@ -233,7 +233,7 @@
     /* ---------- workshop minigames ---------- */
     function repair(opts) {
         const n = opts.wires || 4;
-        const cols = shuffle(['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#e879f9', '#f97316', '#e2e8f0']).slice(0, n);
+        const cols = shuffle(['#ef5b56', '#4f8ef0', '#f6c445', '#4fc07f', '#d98ae0', '#f2893d', Arcade.ui.text]).slice(0, n);
         const right = shuffle(cols.slice());
         const wrap = document.createElement('div'); wrap.className = 'wires';
         wrap.innerHTML = `<svg class="wire-svg"></svg><div class="wcol l">${cols.map((c, i) => `<div class="wend" data-i="${i}" style="--c:${c}"></div>`).join('')}</div>

@@ -6,14 +6,14 @@
     <title>Infinite Ink · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #38bdf8; --accent-2: #c084fc; --accent-ink: #03141f; }
+        :root { --accent: #d6476b; --accent-2: #d6476b; --accent-ink: #ffffff; }
         .studio { position: relative; flex: 1; min-height: 0; overflow: hidden; }
         #paper, #live, #ui { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
         #live, #ui { pointer-events: none; }
         .glass {
             background: color-mix(in srgb, var(--surface) 94%, transparent);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--line-2);
+            border: 1px solid transparent;
             border-radius: 14px;
             box-shadow: var(--shadow);
         }
@@ -23,7 +23,7 @@
         .timeline { position: absolute; left: 74px; right: 300px; bottom: 12px; z-index: 11; display: flex; align-items: center; gap: 8px; padding: 6px 10px; overflow-x: auto; scrollbar-width: none; }
         .timeline::-webkit-scrollbar { display: none; }
         .tl-frames { display: flex; gap: 4px; overflow-x: auto; flex: 0 1 auto; min-width: 64px; padding: 2px; scrollbar-width: thin; }
-        .tl-cell { position: relative; flex: none; width: 56px; height: 38px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-2); padding: 0; cursor: pointer; overflow: hidden; }
+        .tl-cell { position: relative; flex: none; width: 56px; height: 38px; border-radius: 7px; border: 1px solid transparent; background: var(--bg-2); padding: 0; cursor: pointer; overflow: hidden; }
         .tl-cell canvas { width: 100%; height: 100%; display: block; }
         .tl-cell b { position: absolute; left: 4px; bottom: 1px; font-size: 0.6rem; color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; }
         .tl-cell.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -50,7 +50,7 @@
         .well:hover { border-color: var(--accent); }
         .well i { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
         .vslider { width: 44px; display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; touch-action: none; cursor: ns-resize; padding: 2px 0; }
-        .vs-track { position: relative; width: 8px; height: 104px; border-radius: 6px; background: var(--bg-2); border: 1px solid var(--line-2); }
+        .vs-track { position: relative; width: 8px; height: 104px; border-radius: 6px; background: var(--bg-2); border: 1px solid transparent; }
         .vs-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; background: var(--accent); opacity: 0.6; }
         .vs-thumb { position: absolute; left: 50%; width: 22px; height: 12px; margin-left: -11px; margin-bottom: -6px; border-radius: 5px; background: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55); }
         .vs-val { font-size: 0.66rem; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -67,7 +67,7 @@
         .ctxbar::-webkit-scrollbar { display: none; }
         .ctx-tool {
             display: flex; align-items: center; gap: 7px; padding: 6px 10px 6px 8px; border-radius: 9px;
-            border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit;
+            border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit;
             font-weight: 650; font-size: 0.86rem; cursor: pointer; white-space: nowrap; flex: none;
         }
         .ctx-tool:hover { border-color: var(--accent); }
@@ -78,33 +78,33 @@
         .cc .cl b { color: var(--text); letter-spacing: 0; text-transform: none; font-weight: 650; font-size: 0.7rem; }
         .cc input[type=range] { width: 100%; margin: 0; accent-color: var(--accent); height: 18px; }
         .cgrp { display: flex; flex-direction: column; gap: 2px; flex: none; }
-        .cseg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line-2); }
+        .cseg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--bg-2); border: 1px solid transparent; }
         .cseg button { border: 0; background: transparent; color: var(--muted); padding: 3px 8px; border-radius: 6px; font: inherit; font-size: 0.76rem; cursor: pointer; white-space: nowrap; }
         .cseg button:hover { color: var(--text); }
         .cseg button.on { background: var(--surface-3); color: var(--text); box-shadow: 0 0 0 1px var(--line-2); }
-        .ctog { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--muted); font: inherit; font-size: 0.78rem; cursor: pointer; white-space: nowrap; }
+        .ctog { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; background: var(--bg-2); color: var(--muted); font: inherit; font-size: 0.78rem; cursor: pointer; white-space: nowrap; }
         .ctog:hover { color: var(--text); }
         .ctog[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--bg-2)); }
         .ctog:disabled { opacity: 0.4; cursor: not-allowed; }
         .ctog.danger { color: var(--bad); }
         .ctog.icon { padding: 6px 7px; }
         .ctxbar .hint { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-        .ctxbar input.glyph { width: 48px; padding: 4px 6px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 1rem; text-align: center; }
-        .ctxbar select { padding: 4px 6px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.9rem; }
+        .ctxbar input.glyph { width: 48px; padding: 4px 6px; border-radius: 7px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; font-size: 1rem; text-align: center; }
+        .ctxbar select { padding: 4px 6px; border-radius: 7px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.9rem; }
 
         /* ---------- popovers ---------- */
         .pop { position: absolute; z-index: 30; padding: 12px; max-height: calc(100% - 20px); max-width: calc(100% - 20px); overflow-y: auto; }
         .pop h4 { margin: 0 0 7px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
         .pop h4:not(:first-child) { margin-top: 12px; }
         .brush-grid { display: grid; grid-template-columns: repeat(2, 156px); gap: 6px; }
-        .bcard { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); padding: 4px; cursor: pointer; text-align: left; color: var(--text); font: inherit; }
+        .bcard { border: 1px solid transparent; border-radius: 10px; background: var(--bg-2); padding: 4px; cursor: pointer; text-align: left; color: var(--text); font: inherit; }
         .bcard:hover { border-color: var(--line-2); background: var(--surface-2); }
         .bcard canvas { width: 100%; height: 40px; display: block; border-radius: 7px; }
         .bcard span { display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; font-weight: 600; padding: 4px 4px 1px; }
         .bcard span kbd { font-size: 0.62rem; padding: 0 4px; }
         .bcard.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
         .shape-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; min-width: 230px; }
-        .shape-list button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.82rem; cursor: pointer; }
+        .shape-list button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.82rem; cursor: pointer; }
         .shape-list button.on { border-color: var(--accent); }
         .sv { position: relative; width: 236px; height: 150px; border-radius: 10px; touch-action: none; cursor: crosshair; }
         .sv canvas, .hue canvas { width: 100%; height: 100%; display: block; border-radius: inherit; }
@@ -112,7 +112,7 @@
         .hue { position: relative; width: 236px; height: 14px; border-radius: 8px; margin-top: 10px; touch-action: none; cursor: ew-resize; }
         .hue .knob { top: 50%; }
         .cp-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-        .cp-row input[type=text] { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font-family: var(--mono); font-size: 0.85rem; }
+        .cp-row input[type=text] { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font-family: var(--mono); font-size: 0.85rem; }
         .cp-prev { width: 44px; height: 30px; border-radius: 8px; display: flex; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-2); flex: none; }
         .cp-prev i { flex: 1; }
         .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; width: 236px; }
@@ -123,9 +123,9 @@
         .paper-presets { display: flex; gap: 5px; flex-wrap: wrap; }
         .paper-presets button { width: 26px; height: 26px; border-radius: 7px; border: 2px solid var(--line-2); cursor: pointer; }
         .paper-presets button.on { border-color: var(--accent); }
-        input[type=color] { width: 36px; height: 28px; padding: 0; border: 1px solid var(--line-2); border-radius: 8px; background: none; cursor: pointer; }
+        input[type=color] { width: 36px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; }
         .menu { display: flex; flex-direction: column; gap: 4px; min-width: 240px; }
-        .menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; text-align: left; }
+        .menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; text-align: left; }
         .menu button:hover:not(:disabled) { border-color: var(--accent); }
         .menu button:disabled { opacity: 0.4; cursor: not-allowed; }
         .menu button small { color: var(--muted); font-weight: 400; font-size: 0.72rem; }
@@ -158,7 +158,7 @@
         .loading { position: absolute; inset: 0; display: grid; place-items: center; z-index: 60; color: var(--muted); font-size: 0.9rem; background: var(--bg); }
 
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; text-align: left; }
-        .world { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
+        .world { background: var(--bg-2); border: 1px solid transparent; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
         .world:hover { border-color: var(--accent); }
         .world.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
         .world .thumb { width: 100%; aspect-ratio: 16 / 10; display: block; object-fit: cover; background: #111; }
@@ -167,7 +167,7 @@
         .world .meta small { color: var(--muted); font-size: 0.7rem; white-space: nowrap; }
         .world .ops { display: flex; gap: 4px; padding: 0 10px 10px; flex-wrap: wrap; }
         .new-row { display: flex; gap: 8px; margin-top: 12px; }
-        .new-row input { flex: 1; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; }
+        .new-row input { flex: 1; padding: 9px 12px; border-radius: 9px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; }
         .keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 18px; text-align: left; margin-top: 12px; font-size: 0.84rem; }
         .keys div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--line); }
         .keys div span:first-child { color: var(--muted); }

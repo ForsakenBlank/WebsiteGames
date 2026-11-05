@@ -6,9 +6,9 @@
     <title>Wood Blocks · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #e9a85c; --accent-2: #c0814a; --accent-ink: #1f1206; }
+        :root { --accent: #f7c065; --accent-2: #f7c065; --accent-ink: #26180a; }
         .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
-        .th { display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 12px 8px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; color: var(--text); font: inherit; }
+        .th { display: flex; flex-direction: column; gap: 6px; align-items: center; padding: 12px 8px; border-radius: 14px; background: var(--bg-2); border: 1px solid transparent; cursor: pointer; color: var(--text); font: inherit; }
         .th.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
         .th.locked { opacity: 0.55; cursor: default; }
         .th canvas { width: 72px; height: 72px; }
@@ -73,16 +73,16 @@
         const N = 9, CS = 44, BX = 12, BY = 12, W = BX * 2 + N * CS, METER_Y = BY + N * CS + 14, TRAY_Y = METER_Y + 30, H = TRAY_Y + 150;
         const COMBO_WINDOW = 3; // placements you get to clear again before a combo breaks
         const CLEAR_NAMES = ['', '', 'Double!', 'Triple!', 'Quad!', 'Amazing!', 'Incredible!', 'Unbelievable!'];
-        const COMBO_COLS = ['#fde68a', '#fde68a', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#c084fc', '#60a5fa', '#34d399'];
+        const COMBO_COLS = ['#fde68a', '#fde68a', '#f5b942', '#f59a55', '#f27a73', '#f08aa7', '#b58ce8', '#6ba6ee', '#5fcda0'];
         const comboCol = (k) => COMBO_COLS[Math.min(COMBO_COLS.length - 1, k)];
         const WOODS = ['#d9a066', '#c78a52', '#e8c27a', '#b9784a', '#deb27c', '#a86b3c'];
         // block sets. `need(stats)` decides when a set unlocks; stats = { lines (all-time), best }.
         const THEMES = {
             wood: { name: 'Wood', icon: '🪵', colors: WOODS, bg: '#151021', frame: '#2b1d14', cellA: '#3a281b', cellB: '#33231a', style: 'wood',
                     need: () => true, req: 'Unlocked' },
-            stone: { name: 'Stone', icon: '🪨', colors: ['#a8a29e', '#9ca3af', '#8b95a5', '#78716c', '#b4b0aa', '#94a3b8'], bg: '#0f1115', frame: '#23272d', cellA: '#2f343b', cellB: '#2a2e35', style: 'stone',
+            stone: { name: 'Stone', icon: '🪨', colors: ['#a8a29e', Arcade.ui.muted, '#8b95a5', '#78716c', '#b4b0aa', Arcade.ui.muted], bg: '#0f1115', frame: '#23272d', cellA: '#2f343b', cellB: '#2a2e35', style: 'stone',
                     need: (s) => s.lines >= 150, req: 'Clear 150 lines', prog: (s) => s.lines / 150 },
-            neon: { name: 'Neon', icon: '💡', colors: ['#22d3ee', '#f472b6', '#a3e635', '#facc15', '#c084fc', '#fb7185'], bg: '#05030c', frame: '#0d0820', cellA: '#160d2e', cellB: '#120a27', style: 'neon',
+            neon: { name: 'Neon', icon: '💡', colors: ['#56c8dc', '#f08aa7', '#b9dc6e', '#f6c445', '#b58ce8', '#f27d8e'], bg: '#05030c', frame: '#0d0820', cellA: '#160d2e', cellB: '#120a27', style: 'neon',
                     need: (s) => s.lines >= 500 || s.best >= 6000, req: 'Clear 500 lines or score 6,000', prog: (s) => Math.max(s.lines / 500, s.best / 6000) },
         };
         let themeId = Arcade.load('arcade.wood.theme', 'wood');
@@ -215,7 +215,7 @@
                     perfects++;
                     const pb = Math.round(300 * mult);
                     gain += pb;
-                    for (let k = 0; k < 6; k++) fx.emit(BX + Math.random() * N * CS, BY + Math.random() * N * CS, { n: 18, color: ['#fde68a', '#fb923c', '#f472b6', '#60a5fa', '#34d399'], speed: 260, life: 1, gravity: 260 });
+                    for (let k = 0; k < 6; k++) fx.emit(BX + Math.random() * N * CS, BY + Math.random() * N * CS, { n: 18, color: ['#fde68a', '#f59a55', '#f08aa7', '#6ba6ee', '#5fcda0'], speed: 260, life: 1, gravity: 260 });
                 }
                 score += gain;
                 shake = Math.min(14, 3 + res.count * 2 + streak * 1.5);
@@ -237,7 +237,7 @@
                 if (streak > 0) {
                     comboLife--;
                     if (comboLife <= 0) {
-                        if (streak > 1) popups.push({ x: W / 2, y: METER_Y - 6, text: 'combo lost', t: 1, col: '#94a3b8', small: true });
+                        if (streak > 1) popups.push({ x: W / 2, y: METER_Y - 6, text: 'combo lost', t: 1, col: Arcade.ui.muted, small: true });
                         streak = 0;
                     }
                 }
@@ -281,10 +281,8 @@
             if (style === 'neon') {
                 c2.fillStyle = 'rgba(10,6,24,0.9)';
                 c2.beginPath(); c2.roundRect(x + 2, y + 2, s - 4, s - 4, r); c2.fill();
-                c2.shadowColor = color; c2.shadowBlur = s * 0.35;
                 c2.strokeStyle = color; c2.lineWidth = Math.max(1.5, s * 0.08);
                 c2.stroke();
-                c2.shadowBlur = 0;
                 c2.fillStyle = color; c2.globalAlpha *= 0.25;
                 c2.beginPath(); c2.roundRect(x + s * 0.3, y + s * 0.3, s * 0.4, s * 0.4, r * 0.5); c2.fill();
             } else {
@@ -325,13 +323,10 @@
             // combo glow around the board
             if (streak > 1) {
                 const g = 0.35 + 0.25 * Math.sin(time * 6);
-                ctx.shadowColor = comboCol(streak);
-                ctx.shadowBlur = 10 + streak * 3 * g;
             }
             // board
             ctx.fillStyle = T().frame;
             ctx.beginPath(); ctx.roundRect(BX - 6, BY - 6, N * CS + 12, N * CS + 12, 14); ctx.fill();
-            ctx.shadowBlur = 0;
             for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
                 const alt = (Math.floor(r / 3) + Math.floor(c / 3)) % 2;
                 ctx.fillStyle = alt ? T().cellA : T().cellB;
@@ -395,7 +390,7 @@
                     ctx.beginPath(); ctx.roundRect(mx + 4 + k * (pip + 4), METER_Y + 4, pip, 8, 4); ctx.fill();
                 }
                 ctx.globalAlpha = 1;
-                ctx.font = 'bold 11px "Segoe UI", sans-serif';
+                ctx.font = 'bold 11px Fredoka, sans-serif';
                 ctx.textAlign = 'left';
                 const label = streak > 1 ? `COMBO ×${streak}  ·  ${(1 + (streak - 1) * 0.5).toFixed(1)}× POINTS` : 'COMBO STARTED, CLEAR AGAIN!';
                 ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,16,33,0.9)'; ctx.lineJoin = 'round';
@@ -403,7 +398,7 @@
                 ctx.fillStyle = '#fff7e6';
                 ctx.fillText(label, mx + 10, METER_Y + 12);
             } else {
-                ctx.font = '600 10px "Segoe UI", sans-serif';
+                ctx.font = '600 10px Fredoka, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = 'rgba(255,255,255,0.25)';
                 ctx.fillText('CLEAR A LINE TO START A COMBO', mx + mw / 2, METER_Y + 12);
@@ -429,7 +424,7 @@
             ctx.textAlign = 'center';
             for (const p of popups) {
                 ctx.globalAlpha = Math.min(1, p.t * 2);
-                ctx.font = p.small ? '600 13px "Segoe UI", sans-serif' : 'bold 22px "Segoe UI", sans-serif';
+                ctx.font = p.small ? '600 13px Fredoka, sans-serif' : 'bold 22px Fredoka, sans-serif';
                 ctx.fillStyle = p.col || '#fde68a';
                 ctx.fillText(p.text, p.x, p.y - (1.1 - p.t) * 30);
             }
@@ -441,12 +436,12 @@
                 ctx.save();
                 ctx.translate(BX + N * CS / 2, BY + N * CS / 2 - 10);
                 ctx.scale(s, s);
-                ctx.font = '900 40px "Segoe UI", sans-serif';
+                ctx.font = '900 40px Fredoka, sans-serif';
                 ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(21,16,33,0.85)'; ctx.lineJoin = 'round';
                 ctx.strokeText(banner.title, 0, 0);
                 ctx.fillStyle = banner.col; ctx.fillText(banner.title, 0, 0);
                 if (banner.sub) {
-                    ctx.font = '800 17px "Segoe UI", sans-serif';
+                    ctx.font = '800 17px Fredoka, sans-serif';
                     ctx.lineWidth = 6; ctx.strokeText(banner.sub, 0, 30);
                     ctx.fillStyle = '#fff7e6'; ctx.fillText(banner.sub, 0, 30);
                 }

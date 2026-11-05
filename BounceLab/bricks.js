@@ -72,8 +72,8 @@
         post(S) { S.balls = S.balls.filter(b => !b.dead); for (const b of S.balls) BL.keepSpeed(b, S.P.speed, S.P.speed); },
         drawMid(S, g) {
             const p = S.pad;
-            g.fillStyle = '#f43f5e'; g.beginPath(); if (g.roundRect) g.roundRect(p.x - p.w / 2, p.y, p.w, 10, 5); else g.rect(p.x - p.w / 2, p.y, p.w, 10); g.fill();
-            for (const d of S.drops) { g.fillStyle = d.t === 'wide' ? '#22c55e' : '#22d3ee'; g.beginPath(); g.arc(d.x, d.y, 8, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.font = '800 9px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.t === 'wide' ? '⟷' : '×3', d.x, d.y); }
+            g.fillStyle = '#ee5a72'; g.beginPath(); if (g.roundRect) g.roundRect(p.x - p.w / 2, p.y, p.w, 10, 5); else g.rect(p.x - p.w / 2, p.y, p.w, 10); g.fill();
+            for (const d of S.drops) { g.fillStyle = d.t === 'wide' ? '#4fc07f' : '#56c8dc'; g.beginPath(); g.arc(d.x, d.y, 8, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.font = '800 9px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.t === 'wide' ? '⟷' : '×3', d.x, d.y); }
         },
         sub: (S) => `Bricks ${left(S)} · Drops ${S.lost}`, subY: 625,
     };
@@ -127,7 +127,7 @@
             for (const b of S.balls) {
                 if (b.dead) continue;
                 if (b.vy > 0 && b.y >= BZ.floor) { b.dead = true; if (S.firstBack == null) S.firstBack = clamp(b.x, BZ.x0 + 8, BZ.x0 + BZ.cols * BZ.cell - 8); }
-                for (const c of S.cells) if (c.alive && Math.hypot(b.x - c.x, b.y - c.y) < 12) { c.alive = false; S.pending++; S.text(c.x, c.y, '+1', '#4ade80'); BL.note(S, b, 12, true); }
+                for (const c of S.cells) if (c.alive && Math.hypot(b.x - c.x, b.y - c.y) < 12) { c.alive = false; S.pending++; S.text(c.x, c.y, '+1', '#6fd29a'); BL.note(S, b, 12, true); }
             }
         },
         post(S) {
@@ -146,10 +146,10 @@
         drawMid(S, g) {
             g.strokeStyle = 'rgba(239,68,68,0.5)'; g.setLineDash([6, 6]); g.lineWidth = 1.5; g.beginPath(); g.moveTo(BZ.x0, BZ.floor - BZ.cell + 4); g.lineTo(BZ.x0 + BZ.cols * BZ.cell, BZ.floor - BZ.cell + 4); g.stroke(); g.setLineDash([]);
             g.fillStyle = BL.accent(S); g.fillRect(BZ.x0, BZ.floor, BZ.cols * BZ.cell, 2);
-            for (const c of S.cells) if (c.alive) { g.strokeStyle = '#4ade80'; g.lineWidth = 3; g.beginPath(); g.arc(c.x, c.y, 9 + Math.sin(S.t * 6) * 1.5, 0, TAU); g.stroke(); g.fillStyle = '#4ade80'; g.beginPath(); g.arc(c.x, c.y, 4, 0, TAU); g.fill(); }
+            for (const c of S.cells) if (c.alive) { g.strokeStyle = '#6fd29a'; g.lineWidth = 3; g.beginPath(); g.arc(c.x, c.y, 9 + Math.sin(S.t * 6) * 1.5, 0, TAU); g.stroke(); g.fillStyle = '#6fd29a'; g.beginPath(); g.arc(c.x, c.y, 4, 0, TAU); g.fill(); }
             if (S.state === 'aim' && S.ang != null) { }
             g.fillStyle = '#fff'; g.beginPath(); g.arc(S.lx, BZ.floor - 6, 6, 0, TAU); g.fill();
-            g.font = '700 11px system-ui'; g.textAlign = 'center'; g.fillText('×' + (S.nBalls - (S.fired || 0) * (S.state === 'fire' ? 1 : 0)), S.lx, BZ.floor + 16);
+            g.font = '700 11px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('×' + (S.nBalls - (S.fired || 0) * (S.state === 'fire' ? 1 : 0)), S.lx, BZ.floor + 16);
         },
         sub: (S) => `Round ${S.round} · ${S.nBalls} balls`, subY: 632,
     };
@@ -233,7 +233,7 @@
             const n = counts(S), tot = S.grid.t.length;
             let x = 20;
             for (let i = 0; i < n.length; i++) { const w = 320 * n[i] / tot; g.fillStyle = S.teams[i][1]; g.fillRect(x, 590, w, 14); x += w; }
-            g.font = '800 12px system-ui'; g.textAlign = 'center'; g.fillStyle = '#fff';
+            g.font = '800 12px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#fff';
             g.fillText(S.teams.map((t, i) => `${t[0]} ${Math.round(n[i] / tot * 100)}%`).join('  ·  '), CX, 620);
         },
         sub: () => '',
@@ -242,7 +242,7 @@
     const counts = (S) => { const n = new Array(S.teams.length).fill(0); for (const v of S.grid.t) n[v]++; return n; };
     function flip(S, b, i) { if (Math.random() < 0.35) BL.note(S, b); const G = S.grid, c = i % G.cols, r = (i / G.cols) | 0; if (S.fx.list.length < 300) S.fx.emit(G.x0 + c * G.ts + G.ts / 2, G.y0 + r * G.ts + G.ts / 2, { n: 2, speed: 60, color: b.col, life: 0.3, size: 3 }); }
     /* ---------- colour-match bricks ---------- */
-    const CM = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'];
+    const CM = ['#ef5b56', '#4f8ef0', '#4fc07f', '#f6c445'];
     M.bcolor = {
         label: 'Colour breaker', icon: '🎨', name: 'It only breaks its own colour',
         P: (R, RI) => ({ g: 0, rest: 1, rand: 0.04, speed: 540, r: 7, genesis: 4 }),
@@ -278,7 +278,7 @@
         brokeBrick(S, k) {
             if (k.bomb) {
                 S.bombs++; S.shake = 0.5;
-                S.fx.emit(k.x + k.w / 2, k.y + k.h / 2, { n: 24, speed: 240, color: ['#a855f7', '#f0abfc', '#facc15', '#fff'], life: 0.6, size: 4 });
+                S.fx.emit(k.x + k.w / 2, k.y + k.h / 2, { n: 24, speed: 240, color: ['#9a6de0', '#e8a8dc', '#f6c445', '#fff'], life: 0.6, size: 4 });
                 if (S.audible) BL.noise(0.25, 0.08, 200);
                 BL.note(S, null, -12, true);
                 for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) { const o = S.map[(k.gc + dc) + ',' + (k.gr + dr)]; if (o && o.alive) S.queue.push({ k: o, t: S.t + 0.09 }); }

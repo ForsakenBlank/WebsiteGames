@@ -6,14 +6,14 @@
     <title>Tower Defense · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #65a30d; --accent-2: #facc15; --accent-ink: #0d1700; }
+        :root { --accent: #b9dc6e; --accent-2: #b9dc6e; --accent-ink: #26180a; }
         .stage { flex-direction: row; align-items: stretch; gap: 10px; padding: 10px; }
         .canvas-box { min-width: 0; }
         .side { width: 250px; flex: none; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-        .box2 { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+        .box2 { background: var(--surface); border: 1px solid transparent; border-radius: 14px; padding: 10px; }
         .box2 h4 { margin: 0 0 6px; font-size: 0.85rem; }
         .towers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .tw { border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg-2); color: var(--text); padding: 6px; cursor: pointer; font: inherit; font-size: 0.74rem; text-align: left; }
+        .tw { border: 1px solid transparent; border-radius: 10px; background: var(--bg-2); color: var(--text); padding: 6px; cursor: pointer; font: inherit; font-size: 0.74rem; text-align: left; }
         .tw b { display: block; font-size: 0.85rem; }
         .tw.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
         .tw:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -85,22 +85,22 @@
         const MAPS = [
             { name: 'Meadow Bend', icon: '🌾', grass: ['#3f6212', '#4d7c0f'], road: '#a16207', pts: [[-1, 3], [6, 3], [6, 11], [12, 11], [12, 2], [18, 2], [18, 12], [24, 12]] },
             { name: 'Desert Snake', icon: '🏜️', grass: ['#a16207', '#b45309'], road: '#78350f', pts: [[-1, 1], [21, 1], [21, 5], [2, 5], [2, 9], [21, 9], [21, 13], [24, 13]] },
-            { name: 'Frozen Spiral', icon: '❄️', grass: ['#94a3b8', '#cbd5e1'], road: '#475569', pts: [[-1, 7], [3, 7], [3, 1], [20, 1], [20, 13], [7, 13], [7, 4], [16, 4], [16, 10], [11, 10], [11, 7], [24, 7]] },
+            { name: 'Frozen Spiral', icon: '❄️', grass: [Arcade.ui.muted, Arcade.ui.muted], road: Arcade.ui.surface3, pts: [[-1, 7], [3, 7], [3, 1], [20, 1], [20, 13], [7, 13], [7, 4], [16, 4], [16, 10], [11, 10], [11, 7], [24, 7]] },
         ];
         const TOWERS = {
-            arrow:  { name: 'Arrow', ic: '🏹', cost: 50, col: '#a3e635', lv: [{ dmg: 9, range: 125, rate: 0.45 }, { dmg: 16, range: 140, rate: 0.38 }, { dmg: 28, range: 155, rate: 0.3 }, { dmg: 48, range: 175, rate: 0.22 }], desc: 'Fast single shots' },
-            cannon: { name: 'Cannon', ic: '💣', cost: 110, col: '#f97316', lv: [{ dmg: 28, range: 115, rate: 1.4, splash: 50 }, { dmg: 50, range: 125, rate: 1.3, splash: 58 }, { dmg: 90, range: 135, rate: 1.2, splash: 66 }, { dmg: 160, range: 150, rate: 1.05, splash: 78 }], desc: 'Splash damage, slow' },
-            frost:  { name: 'Frost', ic: '❄️', cost: 85, col: '#67e8f9', lv: [{ dmg: 3, range: 100, rate: 0.9, slow: 0.4 }, { dmg: 6, range: 110, rate: 0.8, slow: 0.5 }, { dmg: 10, range: 120, rate: 0.7, slow: 0.58 }, { dmg: 18, range: 135, rate: 0.6, slow: 0.66 }], desc: 'Slows everything nearby' },
-            laser:  { name: 'Laser', ic: '🔆', cost: 160, col: '#f43f5e', lv: [{ dmg: 30, range: 150 }, { dmg: 55, range: 165 }, { dmg: 95, range: 180 }, { dmg: 170, range: 200 }], desc: 'Beam that heats up on one target' },
-            tesla:  { name: 'Tesla', ic: '⚡', cost: 140, col: '#facc15', lv: [{ dmg: 14, range: 120, rate: 1.0, chain: 3 }, { dmg: 24, range: 130, rate: 0.9, chain: 4 }, { dmg: 40, range: 140, rate: 0.8, chain: 5 }, { dmg: 70, range: 155, rate: 0.7, chain: 7 }], desc: 'Chains between enemies' },
+            arrow:  { name: 'Arrow', ic: '🏹', cost: 50, col: '#b9dc6e', lv: [{ dmg: 9, range: 125, rate: 0.45 }, { dmg: 16, range: 140, rate: 0.38 }, { dmg: 28, range: 155, rate: 0.3 }, { dmg: 48, range: 175, rate: 0.22 }], desc: 'Fast single shots' },
+            cannon: { name: 'Cannon', ic: '💣', cost: 110, col: '#f2893d', lv: [{ dmg: 28, range: 115, rate: 1.4, splash: 50 }, { dmg: 50, range: 125, rate: 1.3, splash: 58 }, { dmg: 90, range: 135, rate: 1.2, splash: 66 }, { dmg: 160, range: 150, rate: 1.05, splash: 78 }], desc: 'Splash damage, slow' },
+            frost:  { name: 'Frost', ic: '❄️', cost: 85, col: '#86d9e6', lv: [{ dmg: 3, range: 100, rate: 0.9, slow: 0.4 }, { dmg: 6, range: 110, rate: 0.8, slow: 0.5 }, { dmg: 10, range: 120, rate: 0.7, slow: 0.58 }, { dmg: 18, range: 135, rate: 0.6, slow: 0.66 }], desc: 'Slows everything nearby' },
+            laser:  { name: 'Laser', ic: '🔆', cost: 160, col: '#ee5a72', lv: [{ dmg: 30, range: 150 }, { dmg: 55, range: 165 }, { dmg: 95, range: 180 }, { dmg: 170, range: 200 }], desc: 'Beam that heats up on one target' },
+            tesla:  { name: 'Tesla', ic: '⚡', cost: 140, col: '#f6c445', lv: [{ dmg: 14, range: 120, rate: 1.0, chain: 3 }, { dmg: 24, range: 130, rate: 0.9, chain: 4 }, { dmg: 40, range: 140, rate: 0.8, chain: 5 }, { dmg: 70, range: 155, rate: 0.7, chain: 7 }], desc: 'Chains between enemies' },
         };
         const TKEYS = Object.keys(TOWERS);
         const ENEMY = {
-            grunt:  { hp: 30, sp: 52, gold: 4, col: '#ef4444', r: 10 },
-            runner: { hp: 18, sp: 100, gold: 4, col: '#facc15', r: 8 },
+            grunt:  { hp: 30, sp: 52, gold: 4, col: '#ef5b56', r: 10 },
+            runner: { hp: 18, sp: 100, gold: 4, col: '#f6c445', r: 8 },
             tank:   { hp: 110, sp: 34, gold: 10, col: '#78716c', r: 14, armor: 4 },
-            healer: { hp: 45, sp: 48, gold: 8, col: '#4ade80', r: 10, heal: true },
-            swarm:  { hp: 9, sp: 75, gold: 2, col: '#c084fc', r: 6 },
+            healer: { hp: 45, sp: 48, gold: 8, col: '#6fd29a', r: 10, heal: true },
+            swarm:  { hp: 9, sp: 75, gold: 2, col: '#b58ce8', r: 6 },
             boss:   { hp: 900, sp: 30, gold: 120, col: '#7f1d1d', r: 20, armor: 6 },
         };
         let mapI = 0, path, road, towers, enemies, shots, fx, gold, lives, wave, spawnQ, spawnT, speed = 1, auto = false, placing = null, selT = null, hover = null, running = false, betweenWaves = true, nextAuto = 0, kills;
@@ -146,7 +146,7 @@
         function sendWave() {
             if (!running) return;
             if (!betweenWaves && spawnQ.length) return;
-            if (!betweenWaves && enemies.length) { const bonus = 5 + wave * 2; gold += bonus; floatText(W / 2, 40, '+' + bonus + ' early bonus', '#facc15'); }
+            if (!betweenWaves && enemies.length) { const bonus = 5 + wave * 2; gold += bonus; floatText(W / 2, 40, '+' + bonus + ' early bonus', '#f6c445'); }
             wave++; spawnQ.push(...makeWave(wave)); spawnT = 0.3; betweenWaves = false;
             Arcade.sfx('level');
             Arcade.report('wave', wave);
@@ -167,7 +167,7 @@
                 const g = Math.round(e.d.gold * (1 + wave * 0.015));
                 gold += g;
                 fx.emit(e.x, e.y, { n: e.type === 'boss' ? 40 : 8, speed: 120, color: [e.d.col, '#fff'], life: 0.5, size: 3 });
-                if (e.type === 'boss') { Arcade.sfx('boom'); floatText(e.x, e.y, '+' + g, '#facc15'); }
+                if (e.type === 'boss') { Arcade.sfx('boom'); floatText(e.x, e.y, '+' + g, '#f6c445'); }
                 else if (Math.random() < 0.3) Arcade.tone(700 + Math.random() * 200, 0.03, 'triangle', 0.02);
             }
         }
@@ -190,7 +190,7 @@
                 e.slowT -= dt; if (e.slowT <= 0) e.slow = 0;
                 e.dist += e.sp * (1 - e.slow) * dt;
                 [e.x, e.y] = posAt(e.dist);
-                if (e.d.heal) { e.healT = (e.healT || 0) - dt; if (e.healT <= 0) { e.healT = 1.5; for (const o of enemies) if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 70) { o.hp = Math.min(o.max, o.hp + o.max * 0.12); fx.emit(o.x, o.y, { n: 3, speed: 30, color: '#4ade80', life: 0.4, size: 3 }); } } }
+                if (e.d.heal) { e.healT = (e.healT || 0) - dt; if (e.healT <= 0) { e.healT = 1.5; for (const o of enemies) if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 70) { o.hp = Math.min(o.max, o.hp + o.max * 0.12); fx.emit(o.x, o.y, { n: 3, speed: 30, color: '#6fd29a', life: 0.4, size: 3 }); } } }
                 if (e.dist >= path.total) { e.dead = true; lives -= e.type === 'boss' ? 5 : 1; Arcade.sfx('bad'); if (lives <= 0) return gameOver(); }
             }
             for (const t of towers) {
@@ -232,7 +232,7 @@
                 const d = Math.hypot(tx - sh.x, ty - sh.y), mv = sh.sp * dt;
                 if (d <= mv) {
                     sh.t = 0;
-                    if (sh.kind === 'cannon') { for (const e of enemies) if (!e.dead && Math.hypot(e.x - tx, e.y - ty) < sh.splash) damage(e, sh.dmg, 'cannon'); fx.emit(tx, ty, { n: 14, speed: 140, color: ['#f97316', '#facc15', '#78716c'], life: 0.4, size: 4 }); Arcade.tone(120, 0.08, 'sawtooth', 0.03, 60); }
+                    if (sh.kind === 'cannon') { for (const e of enemies) if (!e.dead && Math.hypot(e.x - tx, e.y - ty) < sh.splash) damage(e, sh.dmg, 'cannon'); fx.emit(tx, ty, { n: 14, speed: 140, color: ['#f2893d', '#f6c445', '#78716c'], life: 0.4, size: 4 }); Arcade.tone(120, 0.08, 'sawtooth', 0.03, 60); }
                     else if (!tg.dead) damage(tg, sh.dmg, 'arrow');
                 } else { sh.x += (tx - sh.x) / d * mv; sh.y += (ty - sh.y) / d * mv; }
             }
@@ -245,7 +245,7 @@
             if (!betweenWaves && !spawnQ.length && !enemies.length) {
                 betweenWaves = true;
                 const bonus = 20 + wave * 4; gold += bonus;
-                floatText(W / 2, 60, `Wave ${wave} cleared! +${bonus}`, '#a3e635');
+                floatText(W / 2, 60, `Wave ${wave} cleared! +${bonus}`, '#b9dc6e');
                 Arcade.sfx('coin');
                 if (wave > best()) Arcade.save('arcade.td.best', wave);
                 nextAuto = 3;
@@ -285,38 +285,38 @@
             if (selT) { c.fillStyle = 'rgba(255,255,255,0.08)'; c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.5; c.beginPath(); c.arc(selT.x, selT.y, stat(selT).range, 0, TAU); c.fill(); c.stroke(); }
             for (const t of towers) {
                 const T = TOWERS[t.type];
-                c.fillStyle = '#1f2937'; c.beginPath(); c.roundRect ? c.roundRect(t.x - 16, t.y - 16, 32, 32, 8) : c.rect(t.x - 16, t.y - 16, 32, 32); c.fill();
+                c.fillStyle = Arcade.ui.surface; c.beginPath(); c.roundRect ? c.roundRect(t.x - 16, t.y - 16, 32, 32, 8) : c.rect(t.x - 16, t.y - 16, 32, 32); c.fill();
                 c.strokeStyle = T.col; c.lineWidth = 2 + t.lvl; c.stroke();
                 if (t.type === 'frost' && t.pulse) { c.strokeStyle = `rgba(103,232,249,${t.pulse * 2})`; c.lineWidth = 3; c.beginPath(); c.arc(t.x, t.y, stat(t).range * (1 - t.pulse * 2), 0, TAU); c.stroke(); }
                 c.save(); c.translate(t.x, t.y); c.rotate(t.ang || 0);
                 c.fillStyle = T.col; c.fillRect(4, -3, 14, 6); c.restore();
                 c.font = '18px "Segoe UI Emoji",sans-serif'; c.fillText(T.ic, t.x, t.y + 1);
-                for (let k = 0; k < t.lvl; k++) { c.fillStyle = '#facc15'; c.fillRect(t.x - 12 + k * 9, t.y + 12, 6, 3); }
+                for (let k = 0; k < t.lvl; k++) { c.fillStyle = '#f6c445'; c.fillRect(t.x - 12 + k * 9, t.y + 12, 6, 3); }
                 if (t.type === 'laser' && t.target && !t.target.dead) {
-                    c.strokeStyle = `rgba(244,63,94,${0.5 + t.heat * 0.15})`; c.lineWidth = 2 + t.heat * 1.5; c.shadowColor = '#f43f5e'; c.shadowBlur = 10;
-                    c.beginPath(); c.moveTo(t.x, t.y); c.lineTo(t.target.x, t.target.y); c.stroke(); c.shadowBlur = 0;
+                    c.strokeStyle = `rgba(244,63,94,${0.5 + t.heat * 0.15})`; c.lineWidth = 2 + t.heat * 1.5; 
+                    c.beginPath(); c.moveTo(t.x, t.y); c.lineTo(t.target.x, t.target.y); c.stroke(); 
                 }
             }
             for (const e of enemies) {
                 const r = e.d.r;
                 c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(e.x, e.y + r * 0.8, r, r * 0.35, 0, 0, TAU); c.fill();
                 c.fillStyle = e.d.col; c.beginPath(); c.arc(e.x, e.y, r, 0, TAU); c.fill();
-                if (e.armor > 0) { c.strokeStyle = '#e5e7eb'; c.lineWidth = 2; c.stroke(); }
+                if (e.armor > 0) { c.strokeStyle = Arcade.ui.text; c.lineWidth = 2; c.stroke(); }
                 if (e.slow) { c.fillStyle = 'rgba(103,232,249,0.45)'; c.beginPath(); c.arc(e.x, e.y, r, 0, TAU); c.fill(); }
                 c.fillStyle = '#fff'; c.beginPath(); c.arc(e.x - r * 0.3, e.y - r * 0.2, r * 0.22, 0, TAU); c.arc(e.x + r * 0.3, e.y - r * 0.2, r * 0.22, 0, TAU); c.fill();
-                if (e.hp < e.max) { c.fillStyle = '#000a'; c.fillRect(e.x - r, e.y - r - 7, r * 2, 4); c.fillStyle = '#4ade80'; c.fillRect(e.x - r, e.y - r - 7, r * 2 * Math.max(0, e.hp / e.max), 4); }
+                if (e.hp < e.max) { c.fillStyle = '#000a'; c.fillRect(e.x - r, e.y - r - 7, r * 2, 4); c.fillStyle = '#6fd29a'; c.fillRect(e.x - r, e.y - r - 7, r * 2 * Math.max(0, e.hp / e.max), 4); }
                 if (e.type === 'boss') { c.font = '16px sans-serif'; c.fillText('👑', e.x, e.y - r - 14); }
             }
             for (const s of shots) {
-                if (s.kind === 'zap') { c.strokeStyle = '#fde047'; c.lineWidth = 2.5; c.shadowColor = '#facc15'; c.shadowBlur = 12; c.beginPath(); s.chain.forEach(([x, y], i) => { if (!i) c.moveTo(x, y); else c.lineTo(x + (Math.random() - 0.5) * 6, y + (Math.random() - 0.5) * 6); }); c.stroke(); c.shadowBlur = 0; continue; }
-                c.fillStyle = s.kind === 'cannon' ? '#1f2937' : '#fef3c7';
+                if (s.kind === 'zap') { c.strokeStyle = '#f8d25c'; c.lineWidth = 2.5; c.beginPath(); s.chain.forEach(([x, y], i) => { if (!i) c.moveTo(x, y); else c.lineTo(x + (Math.random() - 0.5) * 6, y + (Math.random() - 0.5) * 6); }); c.stroke(); continue; }
+                c.fillStyle = s.kind === 'cannon' ? Arcade.ui.surface : '#fef3c7';
                 c.beginPath(); c.arc(s.x, s.y, s.kind === 'cannon' ? 5 : 2.5, 0, TAU); c.fill();
             }
             fx.draw(c);
-            c.textAlign = 'center'; c.font = '800 16px system-ui';
+            c.textAlign = 'center'; c.font = '800 16px Fredoka, sans-serif';
             for (const t of texts) { c.globalAlpha = Math.min(1, t.t * 2); c.fillStyle = t.col; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText(t.s, t.x, t.y); c.fillText(t.s, t.x, t.y); }
             c.globalAlpha = 1;
-            if (running && betweenWaves) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(W / 2 - 160, H - 44, 320, 32); c.fillStyle = '#fff'; c.font = '700 14px system-ui'; c.fillText(wave ? (auto ? `Next wave in ${Math.max(0, Math.ceil(nextAuto))}…` : 'Build, then press ▶ Send wave') : 'Build some towers, then press ▶ Send wave', W / 2, H - 28); }
+            if (running && betweenWaves) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(W / 2 - 160, H - 44, 320, 32); c.fillStyle = '#fff'; c.font = '700 14px Fredoka, sans-serif'; c.fillText(wave ? (auto ? `Next wave in ${Math.max(0, Math.ceil(nextAuto))}…` : 'Build, then press ▶ Send wave') : 'Build some towers, then press ▶ Send wave', W / 2, H - 28); }
         }
         const canPlace = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH && !road.has(x + ',' + y) && !towers.some(t => t.gx === x && t.gy === y);
 

@@ -6,7 +6,7 @@
     <title>Ludo · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #ef4444; --accent-2: #3b82f6; --accent-ink: #fff; }
+        :root { --accent: #ef5b56; --accent-2: #4f8ef0; --accent-ink: #fff; }
         .layout { flex: 1; min-height: 0; width: 100%; display: flex; gap: 14px; align-items: stretch; justify-content: center; }
         .layout .canvas-box { flex: 1; min-width: 0; }
         .side { width: 270px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
@@ -23,12 +23,12 @@
         .dice:disabled { cursor: default; opacity: 0.85; }
         .dice.ready { animation: wiggle 1s infinite; }
         .dice.rolling { animation: roll 0.15s infinite; }
-        .dice i { width: 13px; height: 13px; border-radius: 50%; background: #111827; margin: auto; visibility: hidden; }
+        .dice i { width: 13px; height: 13px; border-radius: 50%; background: var(--bg); margin: auto; visibility: hidden; }
         .dice i.on { visibility: visible; }
         @keyframes wiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-8deg) scale(1.05); } 20% { transform: rotate(8deg) scale(1.05); } 30% { transform: rotate(0); } }
         @keyframes roll { 50% { transform: rotate(18deg) scale(0.95); } }
         .players { display: flex; flex-direction: column; gap: 6px; }
-        .pl { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); font-size: 0.85rem; }
+        .pl { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; font-size: 0.85rem; }
         .pl.cur { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc) inset; }
         .pl .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--pc); flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
         .pl .nm { flex: 1; }
@@ -180,10 +180,10 @@
         /* ---------- board geometry (15 × 15 cells) ---------- */
         const CELL = 40, SIZE = CELL * 15;
         const COLORS = [
-            { name: 'Red', c: '#ef4444', d: '#991b1b', l: '#fecaca' },
-            { name: 'Green', c: '#22c55e', d: '#166534', l: '#bbf7d0' },
-            { name: 'Yellow', c: '#eab308', d: '#854d0e', l: '#fef08a' },
-            { name: 'Blue', c: '#3b82f6', d: '#1e40af', l: '#bfdbfe' },
+            { name: 'Red', c: '#ef5b56', d: '#991b1b', l: '#fecaca' },
+            { name: 'Green', c: '#4fc07f', d: '#166534', l: '#bbf7d0' },
+            { name: 'Yellow', c: '#e8b339', d: '#854d0e', l: '#fef08a' },
+            { name: 'Blue', c: '#4f8ef0', d: '#1e40af', l: '#bfdbfe' },
         ];
         const START = [0, 13, 26, 39];
         const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
@@ -549,7 +549,7 @@
             ctx.closePath(); ctx.fill();
         }
         function drawBoard() {
-            ctx.fillStyle = '#f8fafc';
+            ctx.fillStyle = Arcade.ui.text;
             ctx.fillRect(0, 0, SIZE, SIZE);
             // bases
             BASE.forEach(([bx, by], s) => {
@@ -573,9 +573,9 @@
                 if (startSeat >= 0) fill = COLORS[startSeat].c;
                 ctx.fillStyle = fill;
                 ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-                ctx.strokeStyle = '#94a3b8';
+                ctx.strokeStyle = Arcade.ui.muted;
                 ctx.strokeRect(c * CELL + 0.5, r * CELL + 0.5, CELL - 1, CELL - 1);
-                if (SAFE.has(i) && startSeat < 0) drawStar(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.32, '#cbd5e1');
+                if (SAFE.has(i) && startSeat < 0) drawStar(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.32, Arcade.ui.muted);
                 if (startSeat >= 0) drawStar(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.3, 'rgba(255,255,255,0.75)');
             });
             HOME.forEach((cells, s) => cells.forEach(([c, r]) => {
@@ -650,7 +650,7 @@
                     ctx.strokeStyle = C.d; ctx.lineWidth = 1.5; ctx.stroke();
                 }
                 if (tester.sel && tester.sel.p === it.p && tester.sel.k === it.k) {
-                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#f2a541'; ctx.lineWidth = 4;
                     ctx.beginPath(); ctx.arc(X, Y, r + 6, 0, Math.PI * 2); ctx.stroke();
                 }
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';

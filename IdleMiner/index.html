@@ -6,25 +6,25 @@
     <title>Idle Miner · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #f59e0b; --accent-2: #ea580c; --accent-ink: #1c1003; --earth: #2a1c10; }
+        :root { --accent: #e8d2a8; --accent-2: #e8d2a8; --accent-ink: #26180a; --earth: #2a1c10; }
         .stage { flex-direction: row; align-items: stretch; gap: 14px; padding: 12px; }
 
         /* ---- mine view ---- */
         .mine { flex: 1; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; border-radius: 18px;
-            border: 1px solid var(--line-2); background: var(--earth); box-shadow: var(--shadow); scroll-behavior: smooth; }
+            border: 1px solid transparent; background: var(--earth); box-shadow: var(--shadow); scroll-behavior: smooth; }
         .mine canvas { display: block; width: 100%; cursor: pointer; }
         .mine-hud { position: sticky; top: 10px; z-index: 2; height: 0; display: flex; justify-content: space-between; padding: 0 12px; pointer-events: none; }
         .mine-hud > div { pointer-events: auto; display: flex; gap: 6px; }
         .glass { background: rgba(15, 10, 5, 0.62); backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.12); color: #fef3c7;
             border-radius: 999px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
         .glass b { font-variant-numeric: tabular-nums; color: #fff; }
-        .glass.rush { color: #fde047; border-color: rgba(253, 224, 71, 0.5); }
+        .glass.rush { color: #f8d25c; border-color: rgba(253, 224, 71, 0.5); }
         .jump { cursor: pointer; }
         .jump:hover { border-color: rgba(253, 224, 71, 0.6); }
 
         /* ---- side panel ---- */
         .side { width: 340px; flex: none; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 2px; }
-        .pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+        .pcard { background: var(--surface); border: 1px solid transparent; border-radius: 16px; padding: 14px; }
         .pcard h3 { margin: 0 0 10px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
         .pcard h3 .seg { padding: 2px; gap: 2px; border-radius: 9px; }
         .pcard h3 .seg .btn { padding: 3px 8px; font-size: 0.72rem; letter-spacing: 0; text-transform: none; }
@@ -35,11 +35,11 @@
             border: 1px solid color-mix(in srgb, var(--tint, var(--accent)) 45%, transparent); }
         .st-name { font-weight: 800; font-size: 1.02rem; line-height: 1.2; }
         .st-sub { color: var(--muted); font-size: 0.76rem; }
-        .lv { margin-left: auto; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 4px 10px; text-align: center; line-height: 1.05; }
+        .lv { margin-left: auto; background: var(--bg-2); border: 1px solid transparent; border-radius: 10px; padding: 4px 10px; text-align: center; line-height: 1.05; }
         .lv small { display: block; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
         .lv b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 
-        .cmp { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; }
+        .cmp { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; background: var(--bg-2); border: 1px solid transparent; border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; }
         .cmp div small { display: block; font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
         .cmp div b { font-size: 0.98rem; font-variant-numeric: tabular-nums; }
         .cmp .arrow { color: var(--dim); font-weight: 800; }
@@ -50,7 +50,7 @@
         .ms-top { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
         .ms-top b { color: var(--gold); }
         .ms .bar { height: 7px; }
-        .ms .bar > i { background: linear-gradient(90deg, #f59e0b, #fde047); }
+        .ms .bar > i { background: linear-gradient(90deg, #f2a541, #f8d25c); }
 
         .upbtn { width: 100%; display: flex; justify-content: space-between; padding: 12px 14px; font-size: 0.95rem; border-radius: 12px; }
         .upbtn span:last-child { font-variant-numeric: tabular-nums; }
@@ -65,7 +65,7 @@
         .flow-row .bar { grid-column: 2 / -1; height: 6px; }
         .flow-row .val { font-variant-numeric: tabular-nums; font-weight: 700; }
         .flow-row.bottle .val { color: var(--bad); }
-        .flow-row.bottle .bar > i { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .flow-row.bottle .bar > i { background: linear-gradient(90deg, #ef5b56, #f2893d); }
         .flow-tip { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
         .flow-tip b { color: var(--text); }
 
@@ -82,10 +82,10 @@
         .dig { margin-top: 8px; }
 
         .pres-num { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-        .pres-num b { font-size: 1.5rem; color: #67e8f9; font-variant-numeric: tabular-nums; }
+        .pres-num b { font-size: 1.5rem; color: #86d9e6; font-variant-numeric: tabular-nums; }
         .pres-num span { color: var(--muted); font-size: 0.8rem; }
         .pcard .note { font-size: 0.74rem; color: var(--muted); margin: 0 0 10px; }
-        .pres .bar > i { background: linear-gradient(90deg, #06b6d4, #a5f3fc); }
+        .pres .bar > i { background: linear-gradient(90deg, #3fb3c8, #a8e4ec); }
 
         @media (max-width: 860px) {
             .stage { flex-direction: column; }
@@ -100,7 +100,7 @@
         <div class="stats">
             <span class="chip gold">💰 <b id="cash">0</b></span>
             <span class="chip accent">⏱ <b id="rate">0</b>/s</span>
-            <span class="chip hide-sm" style="--gold:#67e8f9">💎 <b id="sc">0</b></span>
+            <span class="chip hide-sm" style="--gold:#86d9e6">💎 <b id="sc">0</b></span>
         </div>
         <div class="actions"><button class="btn sm" id="boostBtn">Rush ×2</button><button class="btn sm icon" data-mute>🔊</button></div>
     </header>
@@ -144,8 +144,8 @@
         const cv = $('cv'), box = $('mineBox');
         const c = cv.getContext('2d');
         // name, ore colour, highlight colour
-        const ORES = [['Coal', '#3f4654', '#7b8494'], ['Copper', '#c2410c', '#fb923c'], ['Iron', '#8f9bb0', '#e2e8f0'], ['Silver', '#cbd5e1', '#ffffff'], ['Gold', '#eab308', '#fef08a'],
-            ['Ruby', '#e11d48', '#fda4af'], ['Sapphire', '#2563eb', '#93c5fd'], ['Emerald', '#059669', '#6ee7b7'], ['Amethyst', '#9333ea', '#d8b4fe'], ['Diamond', '#67e8f9', '#ecfeff']];
+        const ORES = [['Coal', Arcade.ui.surface3, '#7b8494'], ['Copper', '#c2410c', '#f59a55'], ['Iron', '#8f9bb0', Arcade.ui.text], ['Silver', Arcade.ui.muted, '#ffffff'], ['Gold', '#e8b339', '#fef08a'],
+            ['Ruby', '#e11d48', '#fda4af'], ['Sapphire', '#4478d9', '#94c0ee'], ['Emerald', '#059669', '#6ee7b7'], ['Amethyst', '#9333ea', '#d8b4fe'], ['Diamond', '#86d9e6', '#ecfeff']];
         const MAXSHAFT = 30;
         const KEY = 'arcade.idleminer.save';
         const MILESTONES = [10, 25, 50, 100, 200, 300, 400];
@@ -187,7 +187,7 @@
             Arcade.sfx('coin');
             const at = stationPos(kind, i);
             pops.push({ x: at.x, y: at.y, t: 0, text: `Lv ${st.lvl}`, col: '#fde68a' });
-            if (milestone(st.lvl) > before) { Arcade.toast(`⭐ Level ${st.lvl} milestone, ×2 boost!`, 'gold'); Arcade.sfx('level'); sparks(at.x, at.y, '#fde047', 26); }
+            if (milestone(st.lvl) > before) { Arcade.toast(`⭐ Level ${st.lvl} milestone, ×2 boost!`, 'gold'); Arcade.sfx('level'); sparks(at.x, at.y, '#f8d25c', 26); }
             render();
         }
         function hire(kind, i) {
@@ -196,7 +196,7 @@
             G.cash -= cost; st.mgr = true;
             Arcade.sfx('power');
             const at = stationPos(kind, i);
-            pops.push({ x: at.x, y: at.y, t: 0, text: 'Manager hired!', col: '#86efac' });
+            pops.push({ x: at.x, y: at.y, t: 0, text: 'Manager hired!', col: '#9fdfb8' });
             render();
         }
         function buyShaft() {
@@ -270,8 +270,8 @@
                     incomeWin.push([performance.now(), Wk.load]);
                     if (Wk.load > 0) {
                         if (Math.random() < 0.4) Arcade.tone(1300, 0.05, 'triangle', 0.02);
-                        pops.push({ x: MKT_X + 10, y: SURF - 120, t: 0, text: '+💰' + fmt(Wk.load), col: '#fde047', big: true });
-                        sparks(MKT_X, SURF - 70, '#fde047', 10);
+                        pops.push({ x: MKT_X + 10, y: SURF - 120, t: 0, text: '+💰' + fmt(Wk.load), col: '#f8d25c', big: true });
+                        sparks(MKT_X, SURF - 70, '#f8d25c', 10);
                     }
                     Wk.load = 0; Wk.state = 'idle';
                 }
@@ -303,7 +303,7 @@
 
         function rr(x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
         function pill(x, y, text, o = {}) {
-            c.font = `${o.weight || 700} ${o.size || 12}px system-ui, "Segoe UI", sans-serif`;
+            c.font = `${o.weight || 700} ${o.size || 12}px Fredoka, sans-serifFredoka, sans-serif`;
             const w = c.measureText(text).width + (o.padX || 10) * 2, h = (o.size || 12) + 10;
             const px = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
             c.fillStyle = o.bg || 'rgba(12, 8, 4, 0.72)';
@@ -432,12 +432,12 @@
             // wheel
             const ang = moving ? t * (E.state === 'down' ? 4 : -4) : 0;
             c.save(); c.translate(cx, topY);
-            c.fillStyle = '#334155'; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.fill();
-            c.strokeStyle = '#cbd5e1'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 20, 0, Math.PI * 2); c.stroke();
+            c.fillStyle = Arcade.ui.surface2; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = Arcade.ui.muted; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 20, 0, Math.PI * 2); c.stroke();
             c.rotate(ang); c.lineWidth = 2;
             for (let k = 0; k < 6; k++) { c.rotate(Math.PI / 3); c.beginPath(); c.moveTo(0, 0); c.lineTo(18, 0); c.stroke(); }
             c.restore();
-            c.fillStyle = '#e2e8f0'; c.beginPath(); c.arc(cx, topY, 4, 0, Math.PI * 2); c.fill();
+            c.fillStyle = Arcade.ui.text; c.beginPath(); c.arc(cx, topY, 4, 0, Math.PI * 2); c.fill();
             // winch house
             c.fillStyle = '#9a3412'; rr(EX - 52, SURF - 50, 44, 40, 4); c.fill();
             c.fillStyle = '#7c2d12'; c.beginPath(); c.moveTo(EX - 56, SURF - 50); c.lineTo(EX - 30, SURF - 66); c.lineTo(EX - 4, SURF - 50); c.fill();
@@ -455,24 +455,24 @@
             c.fillStyle = g; c.fillRect(EX, top, EW, bot - top);
             c.fillStyle = '#4a3420';
             for (let y = top + 30; y < bot; y += 60) c.fillRect(EX, y, EW, 5);     // cross beams
-            c.fillStyle = '#6b7280'; c.fillRect(EX + 6, top, 3, bot - top); c.fillRect(EX + EW - 9, top, 3, bot - top);   // guide rails
+            c.fillStyle = Arcade.ui.dim; c.fillRect(EX + 6, top, 3, bot - top); c.fillRect(EX + EW - 9, top, 3, bot - top);   // guide rails
             c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(EX, top, EW, bot - top);
             // cage
             const cy = SURF - 58 + E.y * ROW;
             const cx = EX + EW / 2;
-            c.strokeStyle = '#94a3b8'; c.lineWidth = 2; c.beginPath(); c.moveTo(cx, SURF - 150); c.lineTo(cx, cy); c.stroke();
-            c.fillStyle = '#475569'; rr(EX + 11, cy, EW - 22, 54, 5); c.fill();
-            c.fillStyle = '#1e293b'; rr(EX + 15, cy + 4, EW - 30, 46, 3); c.fill();
-            c.strokeStyle = '#64748b'; c.lineWidth = 1.5;
+            c.strokeStyle = Arcade.ui.muted; c.lineWidth = 2; c.beginPath(); c.moveTo(cx, SURF - 150); c.lineTo(cx, cy); c.stroke();
+            c.fillStyle = Arcade.ui.surface3; rr(EX + 11, cy, EW - 22, 54, 5); c.fill();
+            c.fillStyle = Arcade.ui.surface; rr(EX + 15, cy + 4, EW - 30, 46, 3); c.fill();
+            c.strokeStyle = Arcade.ui.dim; c.lineWidth = 1.5;
             for (let x = EX + 22; x < EX + EW - 16; x += 9) { c.beginPath(); c.moveTo(x, cy + 4); c.lineTo(x, cy + 50); c.stroke(); }
             // load inside the cage
             if (E.load > 0) {
                 const h = Math.min(30, 6 + Math.log10(1 + E.load) * 4);
                 c.fillStyle = '#a16207'; rr(EX + 18, cy + 50 - h, EW - 36, h, 3); c.fill();
-                c.fillStyle = '#facc15';
+                c.fillStyle = '#f6c445';
                 for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(EX + 24 + k * 9, cy + 50 - h, 4, Math.PI, 0); c.fill(); }
             }
-            c.fillStyle = '#f59e0b'; c.fillRect(EX + 11, cy - 3, EW - 22, 4);
+            c.fillStyle = '#f2a541'; c.fillRect(EX + 11, cy - 3, EW - 22, 4);
             if (E.load > 0) pill(cx, cy + 66, fmt(E.load), { align: 'center', size: 10 });
             if (!G.elev.mgr && E.state === 'idle') tapHint(cx, cy - 16, t);
         }
@@ -493,11 +493,11 @@
             const mx = MKT_X, my = SURF - 16;
             c.fillStyle = '#d6b88a'; rr(mx - 62, my - 78, 124, 78, 4); c.fill();
             c.fillStyle = '#b45309'; c.beginPath(); c.moveTo(mx - 72, my - 78); c.lineTo(mx, my - 112); c.lineTo(mx + 72, my - 78); c.fill();
-            for (let k = 0; k < 8; k++) { c.fillStyle = k % 2 ? '#fef3c7' : '#dc2626'; c.beginPath(); c.moveTo(mx - 64 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 56); c.arc(mx - 56 + k * 16, my - 56, 8, 0, Math.PI); c.fill(); }
+            for (let k = 0; k < 8; k++) { c.fillStyle = k % 2 ? '#fef3c7' : '#d9483f'; c.beginPath(); c.moveTo(mx - 64 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 66); c.lineTo(mx - 48 + k * 16, my - 56); c.arc(mx - 56 + k * 16, my - 56, 8, 0, Math.PI); c.fill(); }
             c.fillStyle = '#7c2d12'; rr(mx - 14, my - 38, 28, 38, 3); c.fill();
-            c.fillStyle = '#93c5fd'; rr(mx - 50, my - 40, 26, 20, 3); c.fill(); rr(mx + 24, my - 40, 26, 20, 3); c.fill();
+            c.fillStyle = '#94c0ee'; rr(mx - 50, my - 40, 26, 20, 3); c.fill(); rr(mx + 24, my - 40, 26, 20, 3); c.fill();
             c.fillStyle = '#422006'; rr(mx - 40, my - 104, 80, 18, 4); c.fill();
-            c.fillStyle = '#fde68a'; c.font = '800 11px system-ui'; c.textAlign = 'center'; c.fillText('MARKET', mx, my - 91);
+            c.fillStyle = '#fde68a'; c.font = '800 11px Fredoka, sans-serif'; c.textAlign = 'center'; c.fillText('MARKET', mx, my - 91);
             pill(mx, my - 130, `🏪 Market · Lv ${G.ware.lvl}`, { align: 'center', size: 11 });
 
             // truck
@@ -507,16 +507,16 @@
             const x0 = bx + 56, x1 = mx - 96, tx = x0 + (x1 - x0) * ease, ty = SURF - 19;
             const face = Wk.state === 'idle' ? 1 : goingOut ? 1 : -1;
             c.save(); c.translate(tx, ty); c.scale(face, 1);
-            c.fillStyle = '#15803d'; rr(-30, -24, 40, 18, 3); c.fill();             // bed
-            c.fillStyle = '#16a34a'; rr(10, -30, 22, 24, 4); c.fill();              // cab
+            c.fillStyle = '#2f8a58'; rr(-30, -24, 40, 18, 3); c.fill();             // bed
+            c.fillStyle = '#3da868'; rr(10, -30, 22, 24, 4); c.fill();              // cab
             c.fillStyle = '#bae6fd'; rr(16, -27, 12, 9, 2); c.fill();
             if (Wk.load > 0 && goingOut) {
-                c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(-10, -24, 18, 8, 0, Math.PI, 0); c.fill();
+                c.fillStyle = '#f6c445'; c.beginPath(); c.ellipse(-10, -24, 18, 8, 0, Math.PI, 0); c.fill();
             }
             const spin = Wk.state === 'idle' ? 0 : t * 12;
             for (const wx of [-20, 20]) {
-                c.fillStyle = '#111827'; c.beginPath(); c.arc(wx, -4, 7, 0, Math.PI * 2); c.fill();
-                c.strokeStyle = '#9ca3af'; c.lineWidth = 2; c.beginPath(); c.moveTo(wx + Math.cos(spin) * 4, -4 + Math.sin(spin) * 4); c.lineTo(wx - Math.cos(spin) * 4, -4 - Math.sin(spin) * 4); c.stroke();
+                c.fillStyle = Arcade.ui.bg; c.beginPath(); c.arc(wx, -4, 7, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = Arcade.ui.muted; c.lineWidth = 2; c.beginPath(); c.moveTo(wx + Math.cos(spin) * 4, -4 + Math.sin(spin) * 4); c.lineTo(wx - Math.cos(spin) * 4, -4 - Math.sin(spin) * 4); c.stroke();
             }
             c.restore();
             if (G.ware.mgr) managerBadge(mx + 60, my - 30);
@@ -526,13 +526,13 @@
 
         function managerBadge(x, y) {
             c.fillStyle = 'rgba(12,8,4,0.75)'; c.beginPath(); c.arc(x, y, 14, 0, Math.PI * 2); c.fill();
-            c.strokeStyle = '#86efac'; c.lineWidth = 2; c.stroke();
-            c.font = '15px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🧑‍💼', x, y + 1); c.textBaseline = 'alphabetic';
+            c.strokeStyle = '#9fdfb8'; c.lineWidth = 2; c.stroke();
+            c.font = '15px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🧑‍💼', x, y + 1); c.textBaseline = 'alphabetic';
         }
         function tapHint(x, y, t) {
             const s = 1 + Math.sin(t * 5) * 0.06;
             c.save(); c.translate(x, y); c.scale(s, s);
-            pill(0, 0, '👆 Tap', { align: 'center', bg: '#fbbf24', col: '#1c1003', weight: 800, size: 12 });
+            pill(0, 0, '👆 Tap', { align: 'center', bg: '#f5b942', col: '#1c1003', weight: 800, size: 12 });
             c.restore();
         }
 
@@ -544,17 +544,17 @@
             c.strokeStyle = '#1e3a8a'; c.lineWidth = 4; c.lineCap = 'round';
             c.beginPath(); c.moveTo(-2, -10); c.lineTo(-3 + step * 4, 0); c.moveTo(2, -10); c.lineTo(3 - step * 4, 0); c.stroke();
             // body
-            c.fillStyle = '#2563eb'; rr(-6, -24, 12, 15, 3); c.fill();
-            c.fillStyle = '#f97316'; c.fillRect(-6, -22, 12, 3);            // hi-vis stripe
+            c.fillStyle = '#4478d9'; rr(-6, -24, 12, 15, 3); c.fill();
+            c.fillStyle = '#f2893d'; c.fillRect(-6, -22, 12, 3);            // hi-vis stripe
             // head + helmet + lamp
             c.fillStyle = '#f2c79a'; c.beginPath(); c.arc(0, -29, 5.5, 0, Math.PI * 2); c.fill();
-            c.fillStyle = '#facc15'; c.beginPath(); c.arc(0, -31, 6.5, Math.PI, 0); c.fill(); c.fillRect(-7.5, -31.5, 15, 2);
+            c.fillStyle = '#f6c445'; c.beginPath(); c.arc(0, -31, 6.5, Math.PI, 0); c.fill(); c.fillRect(-7.5, -31.5, 15, 2);
             c.fillStyle = '#fffbeb'; c.beginPath(); c.arc(5.5, -33, 1.8, 0, Math.PI * 2); c.fill();
             // pickaxe
             if (swing !== null) {
                 c.save(); c.translate(4, -20); c.rotate(-1.6 + swing * 2.1);
                 c.strokeStyle = '#78350f'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, 0); c.lineTo(15, 0); c.stroke();
-                c.strokeStyle = '#cbd5e1'; c.lineWidth = 3; c.beginPath(); c.moveTo(15, -6); c.quadraticCurveTo(19, 0, 15, 6); c.stroke();
+                c.strokeStyle = Arcade.ui.muted; c.lineWidth = 3; c.beginPath(); c.moveTo(15, -6); c.quadraticCurveTo(19, 0, 15, 6); c.stroke();
                 c.restore();
             }
             if (carry) {
@@ -590,7 +590,7 @@
             // rails
             const fy = y + TH - 8;
             c.fillStyle = '#3b2a1a'; for (let rx = x0 + 6; rx < x1 - 40; rx += 16) c.fillRect(rx, fy - 1, 9, 5);
-            c.fillStyle = '#9ca3af'; c.fillRect(x0, fy - 3, w - 40, 2);
+            c.fillStyle = Arcade.ui.muted; c.fillRect(x0, fy - 3, w - 40, 2);
             c.fillStyle = '#0f0a06'; c.fillRect(x0, y + TH - 3, w, 3);
             // ore vein
             const vx = x1 - 64, R = Arcade.seeded('vein' + i);
@@ -659,8 +659,7 @@
 
         function selRing(x, y, w, h, r) {
             c.save();
-            c.shadowColor = 'rgba(251,191,36,0.6)'; c.shadowBlur = 10;
-            c.strokeStyle = '#fbbf24'; c.lineWidth = 2.5;
+            c.strokeStyle = '#f5b942'; c.lineWidth = 2.5;
             rr(x, y, w, h, r); c.stroke();
             c.restore();
         }
@@ -676,11 +675,11 @@
             c.restore();
             c.fillStyle = can ? 'rgba(253,224,71,0.06)' : 'rgba(0,0,0,0.12)'; rr(TX0, y, TX1 - TX0, TH, 14); c.fill();
             const cxm = (TX0 + TX1) / 2;
-            c.font = '800 14px system-ui'; c.textAlign = 'center'; c.fillStyle = can ? '#fde68a' : 'rgba(255,240,220,0.55)';
+            c.font = '800 14px Fredoka, sans-serif'; c.textAlign = 'center'; c.fillStyle = can ? '#fde68a' : 'rgba(255,240,220,0.55)';
             c.fillText(`⛏️ Dig shaft ${i + 1}, ${ORES[i % ORES.length][0]}`, cxm, y + TH / 2 - 4);
             const s = can ? 1 + Math.sin(t * 4) * 0.04 : 1;
             c.save(); c.translate(cxm, y + TH / 2 + 18); c.scale(s, s);
-            pill(0, 0, '💰 ' + fmt(newShaftCost(i)), { align: 'center', bg: can ? '#fbbf24' : 'rgba(0,0,0,0.4)', col: can ? '#1c1003' : '#a8a29e', weight: 800 });
+            pill(0, 0, '💰 ' + fmt(newShaftCost(i)), { align: 'center', bg: can ? '#f5b942' : 'rgba(0,0,0,0.4)', col: can ? '#1c1003' : '#a8a29e', weight: 800 });
             c.restore();
         }
 
@@ -701,7 +700,7 @@
             for (const p of pops) {
                 const k = p.t / 1.4;
                 c.globalAlpha = Math.max(0, 1 - k * k);
-                c.font = `900 ${p.big ? 16 : 13}px system-ui`; c.textAlign = 'center';
+                c.font = `900 ${p.big ? 16 : 13}px Fredoka, sans-serif`; c.textAlign = 'center';
                 c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.55)'; c.strokeText(p.text, p.x, p.y - k * 40);
                 c.fillStyle = p.col; c.fillText(p.text, p.x, p.y - k * 40);
             }
@@ -733,7 +732,7 @@
         $('jumpTop').onclick = () => scrollToY(0);
 
         /* ---------- side panel ---------- */
-        const TINT = { shaft: '#f59e0b', elev: '#94a3b8', ware: '#22c55e' };
+        const TINT = { shaft: '#f2a541', elev: Arcade.ui.muted, ware: '#4fc07f' };
         function selCard() {
             const { kind, i } = sel, st = stationOf(kind, i), { n, cost } = bulk(kind, i);
             let icon, title, sub, now, next, unit, extra = '';
@@ -781,7 +780,7 @@
         function listCard() {
             const rows = [
                 `<button class="li ${sel.kind === 'elev' ? 'on' : ''}" data-sel="elev"><span class="dot" style="background:#cbd5e1">🛗</span><span class="nm">Elevator<small>Lv ${G.elev.lvl}${G.elev.mgr ? ' · 🧑‍💼' : ''}</small></span><span class="rt"><b>${fmt(elevCap())}</b>per trip</span></button>`,
-                `<button class="li ${sel.kind === 'ware' ? 'on' : ''}" data-sel="ware"><span class="dot" style="background:#86efac">🏪</span><span class="nm">Market<small>Lv ${G.ware.lvl}${G.ware.mgr ? ' · 🧑‍💼' : ''}</small></span><span class="rt"><b>${fmt(wareCap())}</b>per trip</span></button>`,
+                `<button class="li ${sel.kind === 'ware' ? 'on' : ''}" data-sel="ware"><span class="dot" style="background:#9fdfb8">🏪</span><span class="nm">Market<small>Lv ${G.ware.lvl}${G.ware.mgr ? ' · 🧑‍💼' : ''}</small></span><span class="rt"><b>${fmt(wareCap())}</b>per trip</span></button>`,
                 ...G.shafts.map((s, i) => `<button class="li ${sel.kind === 'shaft' && sel.i === i ? 'on' : ''}" data-sel="shaft:${i}"><span class="dot" style="background:${ORES[i % ORES.length][2]}">${i + 1}</span>
                     <span class="nm">${ORES[i % ORES.length][0]}<small>Lv ${s.lvl}${s.mgr ? ' · 🧑‍💼' : ' · manual'}</small></span><span class="rt"><b>${fmt(shaftRate(i))}</b>/s</span></button>`),
             ];

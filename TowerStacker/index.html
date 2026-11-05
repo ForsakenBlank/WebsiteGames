@@ -6,7 +6,7 @@
     <title>Tower Stacker · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #2dd4bf; --accent-2: #818cf8; --accent-ink: #021714; }
+        :root { --accent: #54c9b4; --accent-2: #8b8fec; --accent-ink: #021714; }
         .themes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
         .themes .btn { flex-direction: column; gap: 3px; padding: 8px 4px; font-size: 0.74rem; white-space: normal; }
         .themes .btn span { font-size: 1.4rem; }
@@ -234,24 +234,24 @@
             ctx.globalAlpha = alpha === undefined ? 1 : alpha;
             switch (theme) {
                 case 'sky': {
-                    ctx.fillStyle = b.i % 2 ? '#475569' : '#3f4b5f';
+                    ctx.fillStyle = b.i % 2 ? Arcade.ui.surface3 : Arcade.ui.surface3;
                     ctx.fillRect(b.x, y, b.w, BH);
-                    ctx.fillStyle = '#94a3b8'; ctx.fillRect(b.x, y, b.w, 3);
+                    ctx.fillStyle = Arcade.ui.muted; ctx.fillRect(b.x, y, b.w, 3);
                     // windows, some lit
                     for (let wx = b.x + 5; wx < b.x + b.w - 8; wx += 12) {
                         const lit = ((Math.floor(wx) * 7 + b.i * 13) % 5) < 2;
-                        ctx.fillStyle = lit ? '#fde68a' : '#1e293b';
+                        ctx.fillStyle = lit ? '#fde68a' : Arcade.ui.surface;
                         ctx.fillRect(wx, y + 8, 7, 12);
                     }
                     break;
                 }
                 case 'cake': {
-                    const sponge = ['#f5d0a9', '#8b5a3c', '#f9a8d4', '#fef3c7'][b.i % 4];
+                    const sponge = ['#f5d0a9', '#8b5a3c', '#f5acc6', '#fef3c7'][b.i % 4];
                     ctx.fillStyle = sponge; ctx.fillRect(b.x, y, b.w, BH);
                     ctx.fillStyle = '#fff7ed'; ctx.fillRect(b.x, y, b.w, 6);
                     for (let dx = b.x + 4; dx < b.x + b.w - 4; dx += 14) { ctx.beginPath(); ctx.arc(dx + 4, y + 6, 4, 0, Math.PI); ctx.fill(); }
                     for (let k = 0; k < b.w / 12; k++) {
-                        ctx.fillStyle = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'][(k + b.i) % 4];
+                        ctx.fillStyle = ['#ef5b56', '#4f8ef0', '#4fc07f', '#f6c445'][(k + b.i) % 4];
                         ctx.fillRect(b.x + ((k * 37 + b.i * 11) % Math.max(1, b.w - 4)), y + 14 + (k % 3) * 4, 3, 2);
                     }
                     break;
@@ -266,7 +266,7 @@
                     break;
                 }
                 case 'candy': {
-                    ctx.fillStyle = b.i % 2 ? '#f472b6' : '#c084fc';
+                    ctx.fillStyle = b.i % 2 ? '#f08aa7' : '#b58ce8';
                     ctx.fillRect(b.x, y, b.w, BH);
                     ctx.save(); ctx.beginPath(); ctx.rect(b.x, y, b.w, BH); ctx.clip();
                     ctx.fillStyle = 'rgba(255,255,255,0.75)';
@@ -295,9 +295,9 @@
             const za = ZONES[zi], zb = ZONES[Math.min(zi + 1, ZONES.length - 1)];
             const k = zb === za ? 0 : Arcade.clamp((floors - za[0]) / (zb[0] - za[0]), 0, 1);
             const top = lerp3(za[1], zb[1], k), bot = lerp3(za[2], zb[2], k);
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, `hsl(${top[0]}, ${top[1]}%, ${top[2]}%)`);
-            g.addColorStop(1, `hsl(${bot[0]}, ${bot[1]}%, ${bot[2]}%)`);
+            const g = `hsl(${bot[0]}, ${Math.min(bot[1], 55)}%, ${bot[2]}%)`;
+            
+            
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
             const space = Arcade.clamp((floors - 55) / 35, 0, 1);
             for (const s of stars) {
@@ -321,14 +321,14 @@
                 ctx.globalAlpha = (space - 0.5) * 2;
                 const py = 140 + ((cam * 0.05) % 300);
                 const pg = ctx.createRadialGradient(300, py - 10, 5, 310, py, 46);
-                pg.addColorStop(0, '#fbbf24'); pg.addColorStop(1, '#b45309');
+                pg.addColorStop(0, '#f5b942'); pg.addColorStop(1, '#b45309');
                 ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(310, py, 40, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = 'rgba(253,230,138,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(310, py, 64, 12, -0.3, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = '#e2e8f0'; ctx.beginPath(); ctx.arc(70, py + 220, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = Arcade.ui.text; ctx.beginPath(); ctx.arc(70, py + 220, 18, 0, Math.PI * 2); ctx.fill();
                 ctx.globalAlpha = 1;
             }
             // ground
-            ctx.fillStyle = '#0f172a';
+            ctx.fillStyle = Arcade.ui.bg;
             ctx.fillRect(0, BASE_Y + BH + cam, W, H);
             ctx.fillStyle = 'rgba(45,212,191,0.25)';
             ctx.fillRect(0, BASE_Y + BH + cam, W, 3);
@@ -358,8 +358,8 @@
             }
             fx.draw(ctx);
             if (combo >= 2 && state === 'play') {
-                ctx.fillStyle = '#fbbf24';
-                ctx.font = 'bold 18px "Segoe UI", sans-serif';
+                ctx.fillStyle = '#f5b942';
+                ctx.font = 'bold 18px Fredoka, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('PERFECT ×' + combo, W / 2, 50);
             }
@@ -367,7 +367,7 @@
                 // power meter
                 ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(14, 14, 12, 140);
                 const mh = 140 * (steady > 0 ? steady / 6 : meter);
-                ctx.fillStyle = steady > 0 ? '#38bdf8' : meter >= 1 ? `hsl(45, 95%, ${55 + Math.sin(time * 10) * 12}%)` : '#fbbf24';
+                ctx.fillStyle = steady > 0 ? '#5bb8ea' : meter >= 1 ? `hsl(45, 95%, ${55 + Math.sin(time * 10) * 12}%)` : '#f5b942';
                 ctx.fillRect(14, 154 - mh, 12, mh);
                 ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(14.5, 14.5, 11, 139);
                 ctx.fillStyle = '#fff'; ctx.font = '12px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⚡', 20, 172);

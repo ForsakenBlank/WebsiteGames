@@ -6,15 +6,15 @@
     <title>Dice Poker · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #f97316; --accent-2: #facc15; --accent-ink: #1f0b00; }
+        :root { --accent: #f7a77a; --accent-2: #f7a77a; --accent-ink: #26180a; }
         body.no-scroll { overflow: auto; }
         .stage { justify-content: flex-start; gap: 12px; }
         .table { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; width: 100%; }
         .play { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 300px; }
-        .felt { padding: 18px 16px; border-radius: 18px; background: radial-gradient(circle at 50% 30%, #166534, #052e16); border: 1px solid var(--line-2); box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .felt { padding: 18px 16px; border-radius: 18px; background: radial-gradient(circle at 50% 30%, #166534, #052e16); border: 1px solid transparent; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .dice { display: flex; gap: 10px; }
-        .die { width: 58px; height: 58px; border-radius: 13px; background: #f8fafc; border: 0; cursor: pointer; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; box-shadow: 0 4px 0 #cbd5e1, 0 8px 14px rgba(0,0,0,0.4); transition: transform 0.12s; position: relative; }
-        .die i { width: 10px; height: 10px; border-radius: 50%; background: #0f172a; place-self: center; visibility: hidden; }
+        .die { width: 58px; height: 58px; border-radius: 13px; background: var(--text); border: 0; cursor: pointer; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 8px; box-shadow: 0 4px 0 var(--muted), 0 8px 14px rgba(0,0,0,0.4); transition: transform 0.12s; position: relative; }
+        .die i { width: 10px; height: 10px; border-radius: 50%; background: var(--bg); place-self: center; visibility: hidden; }
         .die.held { transform: translateY(-8px); box-shadow: 0 0 0 3px var(--accent), 0 8px 14px rgba(0,0,0,0.4); }
         .die.held::after { content: 'HELD'; position: absolute; bottom: -20px; left: 0; right: 0; font-size: 0.6rem; font-weight: 800; color: var(--accent); text-align: center; }
         .die.roll { animation: roll 0.45s ease-out; }

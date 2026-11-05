@@ -6,7 +6,7 @@
     <title>Encrypter · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #4ade80; --accent-2: #22d3ee; --accent-ink: #021a0b; }
+        :root { --accent: #ffe08a; --accent-2: #ffe08a; --accent-ink: #26180a; }
         canvas.screen { cursor: none; }
         .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; text-align: left; margin-top: 12px; font-size: 0.82rem; color: var(--muted); }
         .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
@@ -39,16 +39,16 @@
                     <h2>Encrypter</h2>
                     <p>Your cursor drags a data trail. <b>Close a loop</b> around viruses to encrypt them, the more in one loop, the bigger the bonus.</p>
                     <div class="legend">
-                        <span><i style="background:#f87171"></i>Bug, bounces</span>
-                        <span><i style="background:#fb923c"></i>Seeker, hunts you</span>
-                        <span><i style="background:#c084fc"></i>Cutter, slices trails</span>
-                        <span><i style="background:#38bdf8"></i>Shielded, loop twice</span>
-                        <span><i style="background:#facc15"></i>Swarm, tiny & fast</span>
-                        <span><i style="background:#e879f9"></i>Splitter, splits in two</span>
-                        <span><i style="background:#f43f5e"></i>Darter, sudden dashes</span>
+                        <span><i style="background:#f27a73"></i>Bug, bounces</span>
+                        <span><i style="background:#f59a55"></i>Seeker, hunts you</span>
+                        <span><i style="background:#b58ce8"></i>Cutter, slices trails</span>
+                        <span><i style="background:#5bb8ea"></i>Shielded, loop twice</span>
+                        <span><i style="background:#f6c445"></i>Swarm, tiny & fast</span>
+                        <span><i style="background:#d98ae0"></i>Splitter, splits in two</span>
+                        <span><i style="background:#ee5a72"></i>Darter, sudden dashes</span>
                         <span><i style="background:#94a3b8"></i>Armoured, loop 3 times</span>
-                        <span><i style="background:#2dd4bf"></i>Tracer, rides your trail</span>
-                        <span><i style="background:#dc2626;border-radius:50%"></i>Boss, every 5th level</span>
+                        <span><i style="background:#54c9b4"></i>Tracer, rides your trail</span>
+                        <span><i style="background:#d9483f;border-radius:50%"></i>Boss, every 5th level</span>
                         <span><i style="background:#fff;border-radius:50%"></i>Power-ups, loop them too</span>
                     </div>
                     <p class="small" style="margin-top:12px">Don't let a virus touch your cursor head. Clear a level, then pick an upgrade.</p>
@@ -230,7 +230,7 @@
                 if (e.dead || !caught(e)) continue;
                 if (e.kind === 'boss') {
                     e.hp--; e.spawn = 0.6;
-                    fx.emit(e.x, e.y, { n: 30, color: ['#dc2626', '#4ade80', '#fff'], speed: 220, life: 0.7 });
+                    fx.emit(e.x, e.y, { n: 30, color: ['#d9483f', '#6fd29a', '#fff'], speed: 220, life: 0.7 });
                     Arcade.sfx('boom');
                     if (e.hp > 0) { Arcade.toast('Boss integrity ' + e.hp + '/' + e.max, 'gold', 900); continue; }
                     e.dead = true; n += 5; kills++;
@@ -240,18 +240,18 @@
                 }
                 if (e.armor > 0) {
                     e.armor--;
-                    fx.emit(e.x, e.y, { n: 10, color: '#94a3b8', speed: 150, life: 0.4 });
+                    fx.emit(e.x, e.y, { n: 10, color: Arcade.ui.muted, speed: 150, life: 0.4 });
                     Arcade.sfx('hit');
                     continue;
                 }
                 if (e.kind === 'splitter') for (const s of [-1, 1]) born.push({ x: e.x + s * 8, y: e.y });
                 if (e.shield) {
                     e.shield = false;
-                    fx.emit(e.x, e.y, { n: 12, color: '#38bdf8', speed: 160, life: 0.4 });
+                    fx.emit(e.x, e.y, { n: 12, color: '#5bb8ea', speed: 160, life: 0.4 });
                     continue;
                 }
                 e.dead = true; n++; kills++;
-                fx.emit(e.x, e.y, { n: 16, color: ['#4ade80', '#bbf7d0', '#fff'], speed: 180, life: 0.6 });
+                fx.emit(e.x, e.y, { n: 16, color: ['#6fd29a', '#bbf7d0', '#fff'], speed: 180, life: 0.6 });
             }
             for (const it of items) {
                 if (it.dead || !inside(it, poly)) continue;
@@ -285,7 +285,7 @@
             inv = 2 + up.armor;
             trail = [];
             Arcade.sfx('hit');
-            fx.emit(head.x, head.y, { n: 30, color: ['#f87171', '#fff'], speed: 240, life: 0.6 });
+            fx.emit(head.x, head.y, { n: 30, color: ['#f27a73', '#fff'], speed: 240, life: 0.6 });
             hud();
             if (lives <= 0) gameOver();
         }
@@ -377,7 +377,7 @@
                 if (e.kind === 'cutter' && trail.length > 3) {
                     for (let i = 0; i < trail.length - 1; i++) {
                         if (distToSeg(e, trail[i], trail[i + 1]) < e.r) {
-                            fx.emit(trail[i].x, trail[i].y, { n: 8, color: '#c084fc', speed: 120, life: 0.3 });
+                            fx.emit(trail[i].x, trail[i].y, { n: 8, color: '#b58ce8', speed: 120, life: 0.3 });
                             trail = trail.slice(i + 1);
                             Arcade.sfx('bad');
                             break;
@@ -424,9 +424,9 @@
         }
 
         /* ---------- render ---------- */
-        const COLORS = { bug: '#f87171', seeker: '#fb923c', cutter: '#c084fc', shield: '#f87171', swarm: '#facc15', splitter: '#e879f9', darter: '#f43f5e', armor: '#94a3b8', tracer: '#2dd4bf', boss: '#dc2626' };
+        const COLORS = { bug: '#f27a73', seeker: '#f59a55', cutter: '#b58ce8', shield: '#f27a73', swarm: '#f6c445', splitter: '#d98ae0', darter: '#ee5a72', armor: Arcade.ui.muted, tracer: '#54c9b4', boss: '#d9483f' };
         function render() {
-            ctx.fillStyle = '#020a06'; ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = Arcade.ui.bg2; ctx.fillRect(0, 0, W, H);
             ctx.strokeStyle = 'rgba(74,222,128,0.06)'; ctx.lineWidth = 1;
             for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
             for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -437,7 +437,7 @@
                 ctx.beginPath(); f.poly.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.fill();
                 if (f.label) {
                     ctx.fillStyle = `rgba(220,252,231,${Math.min(1, f.t * 3)})`;
-                    ctx.font = 'bold 22px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+                    ctx.font = 'bold 22px Fredoka, sans-serif'; ctx.textAlign = 'center';
                     ctx.fillText(f.label.text, f.label.x, f.label.y - (0.5 - f.t) * 30);
                 }
             }
@@ -466,7 +466,7 @@
             for (const e of enemies || []) {
                 ctx.save(); ctx.translate(e.x, e.y);
                 ctx.globalAlpha = e.spawn > 0 ? 0.35 + 0.3 * Math.sin(time * 20) : 1;
-                ctx.fillStyle = COLORS[e.kind]; ctx.shadowColor = COLORS[e.kind]; ctx.shadowBlur = 10;
+                ctx.fillStyle = COLORS[e.kind]; 
                 if (e.kind === 'cutter') { ctx.rotate(e.t * 6); ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? e.r * 0.45 : e.r * 1.2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }
                 else if (e.kind === 'seeker' || e.kind === 'darter') { ctx.rotate(Math.atan2(e.vy, e.vx)); ctx.beginPath(); ctx.moveTo(e.r * 1.3, 0); ctx.lineTo(-e.r, -e.r * 0.8); ctx.lineTo(-e.r, e.r * 0.8); ctx.closePath(); ctx.fill(); if (e.dash) { ctx.fillStyle = 'rgba(244,63,94,0.35)'; ctx.fillRect(-e.r * 3, -e.r * 0.5, e.r * 2, e.r); } }
                 else if (e.kind === 'boss') {
@@ -474,42 +474,40 @@
                     ctx.beginPath();
                     for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? e.r * 0.72 : e.r * (1.05 + Math.sin(time * 6 + i) * 0.06); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
                     ctx.closePath(); ctx.fill();
-                    ctx.fillStyle = '#020a06'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.4, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#fca5a5'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.18, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = Arcade.ui.bg2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.4, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#f7a8a1'; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.18, 0, Math.PI * 2); ctx.fill();
                 }
                 else if (e.kind === 'splitter') { ctx.rotate(e.t); ctx.beginPath(); ctx.arc(-4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.arc(4, 0, e.r * 0.75, 0, Math.PI * 2); ctx.fill(); }
-                else if (e.kind === 'tracer') { ctx.beginPath(); ctx.arc(0, 0, e.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#020a06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, Math.PI * 2); ctx.stroke(); }
+                else if (e.kind === 'tracer') { ctx.beginPath(); ctx.arc(0, 0, e.r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = Arcade.ui.bg2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, Math.PI * 2); ctx.stroke(); }
                 else if (e.kind === 'armor') {
                     ctx.rotate(e.t * 0.5); ctx.beginPath();
                     for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * e.r, Math.sin(a) * e.r); }
                     ctx.closePath(); ctx.fill();
-                    ctx.fillStyle = '#020a06'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.rotate(-e.t * 0.5); ctx.fillText(e.armor + 1, 0, 1);
+                    ctx.fillStyle = Arcade.ui.bg2; ctx.font = 'bold 11px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.rotate(-e.t * 0.5); ctx.fillText(e.armor + 1, 0, 1);
                 }
                 else { ctx.rotate(e.t); ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2); }
-                ctx.shadowBlur = 0;
-                if (e.shield) { ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, e.r + 7, 0, Math.PI * 2); ctx.stroke(); }
+                if (e.shield) { ctx.strokeStyle = '#5bb8ea'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, e.r + 7, 0, Math.PI * 2); ctx.stroke(); }
                 ctx.restore();
             }
             ctx.globalAlpha = 1;
             const boss = (enemies || []).find(e => e.kind === 'boss');
             if (boss) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W / 2 - 140, 14, 280, 10);
-                ctx.fillStyle = '#dc2626'; ctx.fillRect(W / 2 - 140, 14, 280 * boss.hp / boss.max, 10);
-                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS, LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
+                ctx.fillStyle = '#d9483f'; ctx.fillRect(W / 2 - 140, 14, 280 * boss.hp / boss.max, 10);
+                ctx.fillStyle = '#fecaca'; ctx.font = 'bold 11px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('BOSS VIRUS, LOOP IT ' + boss.hp + ' MORE', W / 2, 28);
             }
             fx.draw(ctx);
 
             if (head && state === 'play') {
                 const blink = inv > 0 && Math.floor(time * 12) % 2;
                 if (!blink) {
-                    ctx.fillStyle = '#fff'; ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 16;
+                    ctx.fillStyle = '#fff'; 
                     ctx.beginPath(); ctx.arc(head.x, head.y, 6, 0, Math.PI * 2); ctx.fill();
-                    ctx.shadowBlur = 0;
                 }
                 // trail meter
                 const k = Math.min(1, trailLength() / maxLen);
                 ctx.fillStyle = 'rgba(74,222,128,0.15)'; ctx.fillRect(12, H - 14, 160, 5);
-                ctx.fillStyle = longT > 0 ? '#22d3ee' : '#4ade80'; ctx.fillRect(12, H - 14, 160 * k, 5);
+                ctx.fillStyle = longT > 0 ? '#56c8dc' : '#6fd29a'; ctx.fillRect(12, H - 14, 160 * k, 5);
             }
         }
 

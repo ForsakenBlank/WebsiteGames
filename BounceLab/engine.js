@@ -12,12 +12,12 @@
 
     /* ---------- look & feel (shared by every sim, saved) ---------- */
     BL.PALETTES = {
-        neon: ['#f43f5e', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899'],
-        pastel: ['#fda4af', '#fdba74', '#fde68a', '#bbf7d0', '#a5f3fc', '#bfdbfe', '#ddd6fe', '#fbcfe8'],
-        fire: ['#fef08a', '#fde047', '#facc15', '#fb923c', '#f97316', '#ef4444', '#dc2626', '#fca5a5'],
-        ocean: ['#e0f2fe', '#7dd3fc', '#38bdf8', '#0ea5e9', '#06b6d4', '#14b8a6', '#2dd4bf', '#a5f3fc'],
-        candy: ['#f472b6', '#c084fc', '#818cf8', '#60a5fa', '#34d399', '#fbbf24', '#fb7185', '#a78bfa'],
-        mono: ['#f8fafc', '#e2e8f0', '#cbd5e1', '#94a3b8', '#f1f5f9', '#e5e7eb', '#d1d5db', '#fafafa'],
+        neon: ['#ee5a72', '#f2893d', '#f6c445', '#4fc07f', '#3fb3c8', '#4f8ef0', '#9a6de0', '#e5659a'],
+        pastel: ['#fda4af', '#fdba74', '#fde68a', '#bbf7d0', '#a8e4ec', '#bfdbfe', '#ddd6fe', '#fbcfe8'],
+        fire: ['#fef08a', '#f8d25c', '#f6c445', '#f59a55', '#f2893d', '#ef5b56', '#d9483f', '#f7a8a1'],
+        ocean: ['#e0f2fe', '#8ccbee', '#5bb8ea', '#4aa8dd', '#3fb3c8', '#3fb09c', '#54c9b4', '#a8e4ec'],
+        candy: ['#f08aa7', '#b58ce8', '#8b8fec', '#6ba6ee', '#5fcda0', '#f5b942', '#f27d8e', '#a18bec'],
+        mono: [Arcade.ui.text, Arcade.ui.text, Arcade.ui.muted, Arcade.ui.muted, Arcade.ui.text, Arcade.ui.text, Arcade.ui.muted, '#fafafa'],
         rainbow: null,
     };
     BL.BGS = { midnight: 'Midnight', stars: 'Starfield', grid: 'Neon grid', sunset: 'Sunset', black: 'Pure black', paper: 'Paper' };
@@ -29,7 +29,7 @@
         const p = BL.PALETTES[BL.look.palette] || BL.PALETTES.neon;
         return p[((i % p.length) + p.length) % p.length];
     };
-    BL.TEAM = [['Red', '#ef4444'], ['Blue', '#3b82f6'], ['Green', '#22c55e'], ['Gold', '#facc15'], ['Purple', '#a855f7'], ['Pink', '#ec4899'], ['Cyan', '#06b6d4'], ['Orange', '#f97316']];
+    BL.TEAM = [['Red', '#ef5b56'], ['Blue', '#4f8ef0'], ['Green', '#4fc07f'], ['Gold', '#f6c445'], ['Purple', '#9a6de0'], ['Pink', '#e5659a'], ['Cyan', '#3fb3c8'], ['Orange', '#f2893d']];
 
     /* ---------- songs: each bounce plays the next note ---------- */
     BL.SONGS = [
@@ -430,8 +430,8 @@
         else if (bg === 'paper') { g.fillStyle = '#f5f0e6'; g.fillRect(0, 0, W, H); }
         else {
             const grd = g.createLinearGradient(0, 0, 0, H);
-            if (bg === 'sunset') { grd.addColorStop(0, '#2e1065'); grd.addColorStop(0.6, '#831843'); grd.addColorStop(1, '#f97316'); }
-            else { grd.addColorStop(0, '#0b0820'); grd.addColorStop(1, '#030409'); }
+            if (bg === 'sunset') { grd.addColorStop(0, '#2e1065'); grd.addColorStop(0.6, '#831843'); grd.addColorStop(1, '#f2893d'); }
+            else { grd.addColorStop(0, Arcade.ui.bg2); grd.addColorStop(1, Arcade.ui.bg2); }
             g.fillStyle = grd; g.fillRect(0, 0, W, H);
             if (bg === 'stars' || bg === 'sunset') { for (const s of starField) { g.globalAlpha = 0.3 + 0.3 * Math.sin(S.t * 2 + s.x); g.fillStyle = '#fff'; g.fillRect(s.x, (s.y + S.t * s.s * 6) % H, s.s, s.s); } g.globalAlpha = 1; }
             if (bg === 'grid') { g.strokeStyle = 'rgba(236,72,153,0.16)'; g.lineWidth = 1; const off = (S.t * 20) % 32; for (let x = 0; x <= W; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let y = -32 + off; y <= H; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); } }
@@ -439,7 +439,7 @@
         if (S.flash > 0) { g.globalAlpha = S.flash * 0.14; g.fillStyle = S.flashC; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
     };
     const light = () => BL.look.bg === 'paper';
-    BL.accent = (S) => (light() ? '#1f2937' : '#e2e8f0');
+    BL.accent = (S) => (light() ? Arcade.ui.surface : Arcade.ui.text);
     BL.drawSim = (S, g) => {
         g.save();
         if (S.shake > 0 && BL.look.shake) g.translate((Math.random() - 0.5) * 10 * S.shake, (Math.random() - 0.5) * 10 * S.shake);
@@ -452,25 +452,25 @@
         const glow = BL.look.glow;
         const acc = BL.accent(S);
         if (S.kind === 'circle' && !S.hideWall) {
-            g.strokeStyle = acc; g.lineWidth = 3; if (glow) { g.shadowColor = BL.pcol(0, S.t); g.shadowBlur = 14; }
-            g.beginPath(); g.arc(CX, CY, S.arena + 1.5, 0, TAU); g.stroke(); g.shadowBlur = 0;
+            g.strokeStyle = acc; g.lineWidth = 3; if (glow) { }
+            g.beginPath(); g.arc(CX, CY, S.arena + 1.5, 0, TAU); g.stroke(); 
         } else if (S.kind === 'rings') {
             g.lineWidth = 3.2;
             for (const R of S.rings) { if (!R.alive) continue; g.strokeStyle = R.col || `hsl(${R.hue},90%,62%)`; g.beginPath(); g.arc(CX, CY, R.r + 1.6, R.rot + R.gap, R.rot + TAU); g.stroke(); }
         } else if (S.kind === 'poly') {
             const P = S.poly, Rv = P.a / Math.cos(Math.PI / P.n);
             const V = (i) => [CX + Math.cos(P.rot + i * TAU / P.n) * (Rv + 2), CY + Math.sin(P.rot + i * TAU / P.n) * (Rv + 2)];
-            g.strokeStyle = acc; g.lineWidth = 3.5; if (glow) { g.shadowColor = BL.pcol(4, S.t); g.shadowBlur = 12; }
+            g.strokeStyle = acc; g.lineWidth = 3.5; if (glow) { }
             g.beginPath();
             for (let i = 0; i < P.n; i++) {
                 const [x0, y0] = V(i), [x1, y1] = V(i + 1);
                 if (i === P.gapEdge) { const f = (1 - P.gapFrac) / 2; g.moveTo(x0, y0); g.lineTo(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f); g.moveTo(x1 - (x1 - x0) * f, y1 - (y1 - y0) * f); g.lineTo(x1, y1); }
                 else { g.moveTo(x0, y0); g.lineTo(x1, y1); }
             }
-            g.stroke(); g.shadowBlur = 0;
+            g.stroke(); 
         } else if (S.kind === 'box' && !S.hideWall) {
-            const B = S.box; g.strokeStyle = acc; g.lineWidth = 3; if (glow) { g.shadowColor = BL.pcol(5, S.t); g.shadowBlur = 10; }
-            g.beginPath(); g.moveTo(B.x0, B.openBottom ? B.y1 + 40 : B.y1); g.lineTo(B.x0, B.y0); g.lineTo(B.x1, B.y0); g.lineTo(B.x1, B.openBottom ? B.y1 + 40 : B.y1); if (!B.openBottom) g.closePath(); g.stroke(); g.shadowBlur = 0;
+            const B = S.box; g.strokeStyle = acc; g.lineWidth = 3; if (glow) { }
+            g.beginPath(); g.moveTo(B.x0, B.openBottom ? B.y1 + 40 : B.y1); g.lineTo(B.x0, B.y0); g.lineTo(B.x1, B.y0); g.lineTo(B.x1, B.openBottom ? B.y1 + 40 : B.y1); if (!B.openBottom) g.closePath(); g.stroke(); 
         }
         // segments
         if (S.segs.length) {
@@ -517,18 +517,17 @@
             if (S.M.drawBall) { S.M.drawBall(S, g, b); continue; }
             const col = S.ballCol(b);
             g.fillStyle = col;
-            if (gl) { g.shadowColor = col; g.shadowBlur = 16; }
+            if (gl) { }
             g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill();
-            if (b.r > 9) { g.shadowBlur = 0; g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.3, 0, TAU); g.fill(); }
-            if (b.label) { g.shadowBlur = 0; g.fillStyle = 'rgba(0,0,0,0.65)'; g.font = `800 ${Math.max(9, Math.min(22, b.r * 0.8))}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.label, b.x, b.y + 1); }
+            if (b.r > 9) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.3, 0, TAU); g.fill(); }
+            if (b.label) { g.fillStyle = 'rgba(0,0,0,0.65)'; g.font = `800 ${Math.max(9, Math.min(22, b.r * 0.8))}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.label, b.x, b.y + 1); }
         }
-        g.shadowBlur = 0;
         for (const w of S.waves) { const k = w.t / 0.45; g.strokeStyle = w.c; g.globalAlpha = 1 - k; g.lineWidth = 2; g.beginPath(); g.arc(w.x, w.y, w.r + k * 26, 0, TAU); g.stroke(); }
         g.globalAlpha = 1;
         S.fx.draw(g);
         if (S.M.drawFront) S.M.drawFront(S, g);
         g.textAlign = 'center'; g.textBaseline = 'middle';
-        for (const t of S.texts) { g.globalAlpha = Math.min(1, t.t * 2); g.font = (t.big ? '900 22px' : '800 13px') + ' system-ui'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.strokeText(t.s, t.x, t.y); g.fillStyle = t.c; g.fillText(t.s, t.x, t.y); }
+        for (const t of S.texts) { g.globalAlpha = Math.min(1, t.t * 2); g.font = (t.big ? '900 22px' : '800 13px') + ' Fredoka, sans-serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.strokeText(t.s, t.x, t.y); g.fillStyle = t.c; g.fillText(t.s, t.x, t.y); }
         g.globalAlpha = 1;
         g.restore();
         if (S.M.drawHud) S.M.drawHud(S, g);
@@ -541,8 +540,8 @@
         g.beginPath(); if (g.roundRect) g.roundRect(k.x + 0.5, k.y + 0.5, k.w - 1, k.h - 1, r); else g.rect(k.x, k.y, k.w, k.h); g.fill();
         if (k.w > 14) { g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(k.x + 2, k.y + 2, k.w - 4, Math.max(1, k.h * 0.18)); }
         if (k.hitT > 0) { k.hitT -= 1 / 60; g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(k.x, k.y, k.w, k.h); }
-        if (k.bomb) { g.fillStyle = '#fde68a'; g.font = `900 ${Math.min(k.w, k.h) * 0.8}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('✸', k.x + k.w / 2, k.y + k.h / 2 + 1); }
-        else if (k.showHp && k.hp !== Infinity) { g.fillStyle = k.ink || 'rgba(0,0,0,0.7)'; g.font = `800 ${Math.min(16, k.h * 0.55)}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(k.hp, k.x + k.w / 2, k.y + k.h / 2 + 1); }
+        if (k.bomb) { g.fillStyle = '#fde68a'; g.font = `900 ${Math.min(k.w, k.h) * 0.8}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('✸', k.x + k.w / 2, k.y + k.h / 2 + 1); }
+        else if (k.showHp && k.hp !== Infinity) { g.fillStyle = k.ink || 'rgba(0,0,0,0.7)'; g.font = `800 ${Math.min(16, k.h * 0.55)}px Fredoka, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(k.hp, k.x + k.w / 2, k.y + k.h / 2 + 1); }
     };
     function wrap(g, text, x, y, maxW, lh) {
         const words = text.split(' '); let line = '', yy = y;
@@ -559,7 +558,7 @@
     };
     BL.drawHud = (S, g) => {
         const L = BL.look;
-        const ink = light() ? '#111827' : '#fff';
+        const ink = light() ? Arcade.ui.bg : '#fff';
         if (L.viz && !S.M.noViz) {
             const n = S.bars.length, bw = W / n;
             for (let i = 0; i < n; i++) { const v = S.bars[i]; if (v <= 0.01) continue; g.fillStyle = BL.pcol(i, S.t); g.globalAlpha = 0.55; g.fillRect(i * bw + 1, H - 6 - v * 46, bw - 2, v * 46); }
@@ -567,18 +566,17 @@
         }
         if (!L.hud) return;
         g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-        g.fillStyle = ink; g.font = '800 21px system-ui, sans-serif'; g.shadowColor = light() ? 'transparent' : '#000'; g.shadowBlur = 8;
+        g.fillStyle = ink; g.font = '800 21px Fredoka, sans-serif'; 
         wrap(g, S.title, W / 2, 62, 300, 25);
         const sub = S.M.sub ? S.M.sub(S) : '';
-        g.font = '700 16px system-ui, sans-serif'; g.fillStyle = light() ? '#b45309' : '#fde68a';
+        g.font = '700 16px Fredoka, sans-serif'; g.fillStyle = light() ? '#b45309' : '#fde68a';
         if (sub) g.fillText(sub, W / 2, S.subY || S.M.subY || 570);
-        if (!S.M.noSong) { g.font = '600 11px system-ui'; g.fillStyle = light() ? '#6b7280' : 'rgba(255,255,255,0.7)'; g.fillText('🎵 ' + S.songName, W / 2, (S.subY || S.M.subY || 570) + 20); }
+        if (!S.M.noSong) { g.font = '600 11px Fredoka, sans-serif'; g.fillStyle = light() ? Arcade.ui.dim : 'rgba(255,255,255,0.7)'; g.fillText('🎵 ' + S.songName, W / 2, (S.subY || S.M.subY || 570) + 20); }
         if (S.done) {
             g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, 136, W, 58);
-            g.fillStyle = '#fff'; g.font = '800 19px system-ui'; wrap(g, S.doneMsg, W / 2, 171, 330, 22);
-            if (S.autoNext) { g.font = '600 12px system-ui'; g.fillStyle = '#cbd5e1'; g.fillText('Next in ' + Math.max(0, Math.ceil(S.autoNext - S.doneT)) + '…', W / 2, 212); }
+            g.fillStyle = '#fff'; g.font = '800 19px Fredoka, sans-serif'; wrap(g, S.doneMsg, W / 2, 171, 330, 22);
+            if (S.autoNext) { g.font = '600 12px Fredoka, sans-serif'; g.fillStyle = Arcade.ui.muted; g.fillText('Next in ' + Math.max(0, Math.ceil(S.autoNext - S.doneT)) + '…', W / 2, 212); }
         }
-        g.shadowBlur = 0;
         g.font = '600 11px ui-monospace, monospace'; g.fillStyle = light() ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)'; g.textAlign = 'left';
         g.fillText('@bouncelab · ' + BL.codeOf(S.spec).slice(0, 26), 12, 16);
     };

@@ -6,7 +6,7 @@
     <title>Falling Blocks · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #818cf8; --accent-2: #c084fc; --accent-ink: #0b0a2a; }
+        :root { --accent: #ffd166; --accent-2: #ffd166; --accent-ink: #26180a; }
         .stage { gap: 10px; padding: 10px; }
         .pad { display: none; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .pad .btn { min-width: 54px; height: 50px; font-size: 1.15rem; touch-action: manipulation; }
@@ -83,7 +83,7 @@
             T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
             Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],
         };
-        const COLORS = { I: '#22d3ee', J: '#3b82f6', L: '#f97316', O: '#facc15', S: '#22c55e', T: '#a855f7', Z: '#ef4444', G: '#64748b' };
+        const COLORS = { I: '#56c8dc', J: '#4f8ef0', L: '#f2893d', O: '#f6c445', S: '#4fc07f', T: '#9a6de0', Z: '#ef5b56', G: Arcade.ui.dim };
         // SRS wall kicks (x right, y UP as in the guideline, flipped when applied)
         const KJ = { '01': [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]], '10': [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]], '12': [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]], '21': [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
             '23': [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]], '32': [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]], '30': [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]], '03': [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]] };
@@ -332,9 +332,9 @@
             for (const [x, y] of cells) drawCell(cx - w * s / 2 + (x - Math.min(...xs)) * s, cy - h * s / 2 + (y - Math.min(...ys)) * s, COLORS[t], alpha, s);
         }
         function draw() {
-            c.fillStyle = '#0a0d1e'; c.fillRect(0, 0, W, H);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(0, 0, W, H);
             // board
-            c.fillStyle = '#060814'; c.fillRect(BX, BY, COLS * CELL, VIS * CELL);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(BX, BY, COLS * CELL, VIS * CELL);
             c.strokeStyle = 'rgba(148,163,184,0.07)'; c.lineWidth = 1;
             for (let x = 1; x < COLS; x++) { c.beginPath(); c.moveTo(BX + x * CELL + 0.5, BY); c.lineTo(BX + x * CELL + 0.5, BY + VIS * CELL); c.stroke(); }
             for (let y = 1; y < VIS; y++) { c.beginPath(); c.moveTo(BX, BY + y * CELL + 0.5); c.lineTo(BX + COLS * CELL, BY + y * CELL + 0.5); c.stroke(); }
@@ -356,25 +356,25 @@
             }
             fx.draw(c);
             // panels
-            c.fillStyle = '#94a3b8'; c.font = '700 12px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillStyle = Arcade.ui.muted; c.font = '700 12px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
             c.fillText('HOLD', 65, BY + 10);
             c.strokeStyle = 'rgba(148,163,184,0.2)'; c.strokeRect(15, BY + 22, 100, 76);
             if (hold) drawMini(hold, 65, BY + 60, 20, holdUsed ? 0.35 : 1);
-            c.fillStyle = '#94a3b8'; c.font = '700 12px system-ui'; c.fillText('NEXT', BX + COLS * CELL + 65, BY + 10);
+            c.fillStyle = Arcade.ui.muted; c.font = '700 12px Fredoka, sans-serif'; c.fillText('NEXT', BX + COLS * CELL + 65, BY + 10);
             c.strokeRect(BX + COLS * CELL + 15, BY + 22, 100, 330);
             queue.slice(0, 5).forEach((t, i) => drawMini(t, BX + COLS * CELL + 65, BY + 62 + i * 64, i ? 16 : 20));
             const stats = mode === 'sprint'
                 ? [['TIME', fmtTime(time)], ['LINES', Math.max(0, 40 - lines) + ' left'], ['PIECES', pieces]]
                 : [['LEVEL', level], ['LINES', lines], ['TIME', fmtTime(time).replace(/\.\d+$/, '')]];
-            stats.forEach(([a, b], i) => { c.fillStyle = '#64748b'; c.font = '700 11px system-ui'; c.fillText(a, 65, BY + 150 + i * 56); c.fillStyle = '#e2e8f0'; c.font = '800 20px system-ui'; c.fillText(b, 65, BY + 172 + i * 56); });
-            if (mode === 'sprint') { const k = Math.min(1, lines / 40); c.fillStyle = 'rgba(129,140,248,0.25)'; c.fillRect(BX - 8, BY, 4, VIS * CELL); c.fillStyle = '#818cf8'; c.fillRect(BX - 8, BY + VIS * CELL * (1 - k), 4, VIS * CELL * k); }
+            stats.forEach(([a, b], i) => { c.fillStyle = Arcade.ui.dim; c.font = '700 11px Fredoka, sans-serif'; c.fillText(a, 65, BY + 150 + i * 56); c.fillStyle = Arcade.ui.text; c.font = '800 20px Fredoka, sans-serif'; c.fillText(b, 65, BY + 172 + i * 56); });
+            if (mode === 'sprint') { const k = Math.min(1, lines / 40); c.fillStyle = 'rgba(129,140,248,0.25)'; c.fillRect(BX - 8, BY, 4, VIS * CELL); c.fillStyle = '#8b8fec'; c.fillRect(BX - 8, BY + VIS * CELL * (1 - k), 4, VIS * CELL * k); }
             popups.forEach((p, i) => {
                 c.globalAlpha = Math.min(1, p.t * 2);
-                c.fillStyle = '#fde68a'; c.font = '900 22px system-ui';
+                c.fillStyle = '#fde68a'; c.font = '900 22px Fredoka, sans-serif';
                 c.fillText(p.text, BX + COLS * CELL / 2, BY + 230 - i * 30 - (1.4 - p.t) * 20);
                 c.globalAlpha = 1;
             });
-            if (paused) { c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(BX, BY, COLS * CELL, VIS * CELL); c.fillStyle = '#fff'; c.font = '900 30px system-ui'; c.fillText('Paused', BX + COLS * CELL / 2, BY + VIS * CELL / 2); c.font = '600 13px system-ui'; c.fillText('Press P to resume', BX + COLS * CELL / 2, BY + VIS * CELL / 2 + 30); }
+            if (paused) { c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(BX, BY, COLS * CELL, VIS * CELL); c.fillStyle = '#fff'; c.font = '900 30px Fredoka, sans-serif'; c.fillText('Paused', BX + COLS * CELL / 2, BY + VIS * CELL / 2); c.font = '600 13px Fredoka, sans-serif'; c.fillText('Press P to resume', BX + COLS * CELL / 2, BY + VIS * CELL / 2 + 30); }
         }
 
         function showStart() {

@@ -6,7 +6,7 @@
     <title>Snake · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #34d399; --accent-2: #22d3ee; --accent-ink: #03140d; }
+        :root { --accent: #f7c548; --accent-2: #f7c548; --accent-ink: #26180a; }
         .mode-list { display: grid; gap: 8px; margin-top: 14px; }
         .mode-btn { justify-content: space-between; text-align: left; padding: 12px 14px; white-space: normal; }
         .mode-btn small { color: var(--muted); font-weight: 500; display: block; }
@@ -16,17 +16,17 @@
         .lv { aspect-ratio: 1; padding: 2px; flex-direction: column; gap: 0; font-size: 0.95rem; }
         .lv small { font-size: 0.62rem; color: var(--gold); letter-spacing: -1px; }
         .lv.locked { opacity: 0.35; }
-        .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; margin-top: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); text-align: left; }
+        .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; margin-top: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; text-align: left; }
         .opt small { color: var(--muted); display: block; font-size: 0.74rem; }
-        .switch { width: 46px; height: 26px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-2); position: relative; cursor: pointer; flex: none; }
+        .switch { width: 46px; height: 26px; border-radius: 999px; background: var(--surface-3); border: 1px solid transparent; position: relative; cursor: pointer; flex: none; }
         .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: 0.15s; }
         .switch.on { background: var(--accent); }
         .switch.on::after { left: 22px; background: #fff; }
-        .custom-row { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .custom-row { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .custom-row b { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #editBar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: 720px; }
-        #editBar input[type=text] { width: 140px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: inherit; }
-        #editBar select { padding: 7px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: inherit; }
+        #editBar input[type=text] { width: 140px; padding: 7px 10px; border-radius: 9px; border: 1px solid transparent; background: var(--surface); color: var(--text); font: inherit; }
+        #editBar select { padding: 7px; border-radius: 9px; border: 1px solid transparent; background: var(--surface); color: var(--text); font: inherit; }
         .stars { font-size: 2rem; letter-spacing: 4px; color: var(--gold); }
         .stars .off { color: var(--surface-3); }
     </style>
@@ -421,10 +421,10 @@
 
         /* ---------- power-ups ---------- */
         const PW = {
-            slow: { icon: '🐌', name: 'Slow-mo', time: 6, color: '#60a5fa' },
-            ghost: { icon: '👻', name: 'Ghost, pass through yourself once', time: 10, color: '#e2e8f0' },
-            magnet: { icon: '🧲', name: 'Magnet', time: 8, color: '#f472b6' },
-            shrink: { icon: '✂️', name: 'Shrink', time: 0, color: '#facc15' },
+            slow: { icon: '🐌', name: 'Slow-mo', time: 6, color: '#6ba6ee' },
+            ghost: { icon: '👻', name: 'Ghost, pass through yourself once', time: 10, color: Arcade.ui.text },
+            magnet: { icon: '🧲', name: 'Magnet', time: 8, color: '#f08aa7' },
+            shrink: { icon: '✂️', name: 'Shrink', time: 0, color: '#f6c445' },
         };
         function maybeSpawnPickup() {
             if (!powerOn || pickup || rng() > 0.35) return;
@@ -439,7 +439,7 @@
             Arcade.toast(P.icon + ' ' + P.name, 'good', 1300);
             if (k === 'shrink') {
                 const cut = Math.max(0, Math.min(snake.length - 3, Math.floor(snake.length / 3)));
-                for (let i = 0; i < cut; i++) { const t = snake.pop(); fx.emit(t.x * CELL + CELL / 2, t.y * CELL + CELL / 2, { n: 4, color: '#facc15', speed: 80, life: 0.4 }); }
+                for (let i = 0; i < cut; i++) { const t = snake.pop(); fx.emit(t.x * CELL + CELL / 2, t.y * CELL + CELL / 2, { n: 4, color: '#f6c445', speed: 80, life: 0.4 }); }
                 prev.length = snake.length;
                 grow = 0;
             } else active[k] = P.time;
@@ -488,7 +488,7 @@
                 score += 10;
                 grow += 1;
                 speed = Math.min(run.max, speed + run.inc);
-                fx.emit(cx, cy, { n: 14, color: ['#f87171', '#fca5a5', '#fbbf24'], speed: 140, life: 0.5 });
+                fx.emit(cx, cy, { n: 14, color: ['#f27a73', '#f7a8a1', '#f5b942'], speed: 140, life: 0.5 });
                 Arcade.sfx('pop');
                 food = freeCell(0);
                 if (!golden && apples % 5 === 0) golden = Object.assign(freeCell(3) || { x: -5, y: -5 }, { t: 7 });
@@ -500,7 +500,7 @@
                 const bonus = 30 + Math.ceil(golden.t) * 10;
                 score += bonus;
                 grow += 3;
-                fx.emit(cx, cy, { n: 26, color: ['#fbbf24', '#fde68a', '#fff'], speed: 200, life: 0.7 });
+                fx.emit(cx, cy, { n: 26, color: ['#f5b942', '#fde68a', '#fff'], speed: 200, life: 0.7 });
                 Arcade.sfx('coin');
                 Arcade.toast('+' + bonus + ' golden apple!', 'gold', 1200);
                 golden = null;
@@ -523,7 +523,7 @@
             state = 'win';
             const stars = starsFor();
             Arcade.sfx('win');
-            fx.emit(W / 2, W / 2, { n: 60, color: ['#34d399', '#fde047', '#fff'], speed: 260, life: 1 });
+            fx.emit(W / 2, W / 2, { n: 60, color: ['#5fcda0', '#f8d25c', '#fff'], speed: 260, life: 1 });
             let info = `${run.name} · ${runTime.toFixed(1)}s`;
             if (run.kind === 'campaign') {
                 const i = run.level;
@@ -546,7 +546,7 @@
             state = 'over';
             shake = 0.4; flash = 1;
             const h = snake[0];
-            fx.emit(h.x * CELL + CELL / 2, h.y * CELL + CELL / 2, { n: 40, color: ['#34d399', '#f87171', '#fff'], speed: 220, life: 0.9 });
+            fx.emit(h.x * CELL + CELL / 2, h.y * CELL + CELL / 2, { n: 40, color: ['#5fcda0', '#f27a73', '#fff'], speed: 220, life: 0.9 });
             Arcade.sfx('die');
             let r = { best: score, isNew: false };
             if (run.kind === 'endless') r = Arcade.best(bestKey(mode), score);
@@ -664,18 +664,18 @@
 
         /* ---------- rendering ---------- */
         const SKINS = {
-            classic: { body: (f) => `hsl(${158 - f * 30}, 70%, ${52 - f * 22}%)`, head: '#5eead4', glow: '#34d399' },
-            fire: { body: (f) => `hsl(${35 - f * 30}, 95%, ${56 - f * 16}%)`, head: '#fde047', glow: '#f97316' },
-            ice: { body: (f) => `hsl(${190 + f * 25}, 85%, ${72 - f * 26}%)`, head: '#e0f2fe', glow: '#38bdf8' },
-            gold: { body: (f) => `hsl(45, 95%, ${60 - f * 22}%)`, head: '#fef08a', glow: '#facc15' },
-            candy: { body: (f, i) => (i % 2 ? '#f472b6' : '#fdf2f8'), head: '#f9a8d4', glow: '#ec4899' },
-            void: { body: (f) => `hsl(${270 + f * 25}, 70%, ${48 - f * 26}%)`, head: '#c4b5fd', glow: '#a855f7' },
-            rainbow: { body: (f, i) => `hsl(${(i * 18 + time * 140) % 360}, 85%, 58%)`, head: '#fff', glow: '#f0abfc' },
+            classic: { body: (f) => `hsl(${158 - f * 30}, 70%, ${52 - f * 22}%)`, head: '#5eead4', glow: '#5fcda0' },
+            fire: { body: (f) => `hsl(${35 - f * 30}, 95%, ${56 - f * 16}%)`, head: '#f8d25c', glow: '#f2893d' },
+            ice: { body: (f) => `hsl(${190 + f * 25}, 85%, ${72 - f * 26}%)`, head: '#e0f2fe', glow: '#5bb8ea' },
+            gold: { body: (f) => `hsl(45, 95%, ${60 - f * 22}%)`, head: '#fef08a', glow: '#f6c445' },
+            candy: { body: (f, i) => (i % 2 ? '#f08aa7' : '#fdf2f8'), head: '#f5acc6', glow: '#e5659a' },
+            void: { body: (f) => `hsl(${270 + f * 25}, 70%, ${48 - f * 26}%)`, head: '#c0b2f0', glow: '#9a6de0' },
+            rainbow: { body: (f, i) => `hsl(${(i * 18 + time * 140) % 360}, 85%, 58%)`, head: '#fff', glow: '#e8a8dc' },
         };
         function drawBoard() {
-            ctx.fillStyle = '#0c1424';
+            ctx.fillStyle = Arcade.ui.bg;
             ctx.fillRect(0, 0, W, W);
-            ctx.fillStyle = '#0f192d';
+            ctx.fillStyle = Arcade.ui.bg;
             for (let y = 0; y < N; y++) for (let x = (y % 2); x < N; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
             const wrap = state === 'edit' ? edit.wrap : run ? run.wrap : MODES[mode].wrap;
             if (!wrap) {
@@ -686,9 +686,9 @@
             const cells = state === 'edit' ? edit.cells : walls;
             for (const k of cells) {
                 const x = (k % N) * CELL, y = Math.floor(k / N) * CELL;
-                ctx.fillStyle = '#3b4a6b'; ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+                ctx.fillStyle = Arcade.ui.surface3; ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
                 ctx.fillStyle = '#56688f'; ctx.fillRect(x + 1, y + 1, CELL - 2, 4);
-                ctx.fillStyle = '#2a3652'; ctx.fillRect(x + 1, y + CELL - 4, CELL - 2, 3);
+                ctx.fillStyle = Arcade.ui.surface2; ctx.fillRect(x + 1, y + CELL - 4, CELL - 2, 3);
             }
             if (state === 'edit') {
                 run = { wrap: edit.wrap, walls: [] }; walls = edit.cells;
@@ -696,7 +696,7 @@
                 walls = new Set();
                 ctx.fillStyle = 'rgba(52,211,153,0.35)';
                 for (let i = -2; i <= 0; i++) ctx.fillRect(((s.x + i + N) % N) * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4);
-                ctx.fillStyle = '#34d399'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#5fcda0'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText('▶', (s.x + 1.5) * CELL, (s.y + 0.5) * CELL);
             }
         }
@@ -723,10 +723,8 @@
                 ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
             }
             const h = pts[0];
-            ctx.fillStyle = state === 'over' ? '#f87171' : S.head;
-            ctx.shadowColor = S.glow; ctx.shadowBlur = 16;
+            ctx.fillStyle = state === 'over' ? '#f27a73' : S.head;
             ctx.beginPath(); ctx.arc(h.x, h.y, CELL * 0.43, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
             // eyes
             const ex = dir.x, ey = dir.y;
@@ -734,16 +732,14 @@
             for (const s of [-1, 1]) {
                 const x = h.x + ex * 4 + px * 5 * s, y = h.y + ey * 4 + py * 5 * s;
                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#0b1020'; ctx.beginPath(); ctx.arc(x + ex * 1.3, y + ey * 1.3, 1.7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = Arcade.ui.bg2; ctx.beginPath(); ctx.arc(x + ex * 1.3, y + ey * 1.3, 1.7, 0, Math.PI * 2); ctx.fill();
             }
         }
 
         function drawApple(p, color, r) {
             const x = p.x * CELL + CELL / 2, y = p.y * CELL + CELL / 2;
             ctx.fillStyle = color;
-            ctx.shadowColor = color; ctx.shadowBlur = 14;
             ctx.beginPath(); ctx.arc(x, y + 1, r, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
             ctx.fillStyle = 'rgba(255,255,255,0.45)';
             ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.25, r * 0.28, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#65a30d'; ctx.lineWidth = 2.2;
@@ -756,15 +752,15 @@
             drawBoard();
             for (const r of rocks || []) {
                 const x = r.x * CELL, y = r.y * CELL;
-                ctx.fillStyle = '#334155'; ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-                ctx.fillStyle = '#475569'; ctx.fillRect(x + 4, y + 4, CELL - 12, CELL - 12);
+                ctx.fillStyle = Arcade.ui.surface2; ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
+                ctx.fillStyle = Arcade.ui.surface3; ctx.fillRect(x + 4, y + 4, CELL - 12, CELL - 12);
             }
             if (food) {
-                drawApple(food, '#f87171', 8 + Math.sin(time * 6) * 0.8);
+                drawApple(food, '#f27a73', 8 + Math.sin(time * 6) * 0.8);
                 if (active.magnet > 0) { ctx.strokeStyle = 'rgba(244,114,182,0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.7 + Math.sin(time * 8) * 2, 0, Math.PI * 2); ctx.stroke(); }
             }
             if (golden) {
-                drawApple(golden, '#fbbf24', 8.5 + Math.sin(time * 10) * 1.2);
+                drawApple(golden, '#f5b942', 8.5 + Math.sin(time * 10) * 1.2);
                 const x = golden.x * CELL + CELL / 2, y = golden.y * CELL + CELL / 2;
                 ctx.strokeStyle = 'rgba(251,191,36,0.8)'; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.arc(x, y, CELL * 0.62, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (golden.t / 7)); ctx.stroke();

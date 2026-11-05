@@ -1,5 +1,5 @@
 /* Chicken Farming — page styles shared by the farm and market pages */
-:root { --accent: #fbbf24; --accent-2: #f97316; --accent-ink: #1f1300; }
+:root { --accent: #f5b942; --accent-2: #f2893d; --accent-ink: #1f1300; }
 
 .page { width: min(1120px, 100%); margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 16px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -11,14 +11,14 @@
 .hero .eggs { font-size: 2.6rem; font-weight: 850; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .hero .sub { color: var(--muted); font-size: 0.85rem; }
 .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
-.mini { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.mini { background: var(--bg-2); border: 1px solid transparent; border-radius: 10px; padding: 8px; }
 .mini small { display: block; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .mini b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 
 .tap-target {
     font-size: 5rem; line-height: 1; padding: 10px 26px; border-radius: 26px;
     background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
-    border: 1px solid var(--line); cursor: pointer; user-select: none; transition: transform 0.08s;
+    border: 1px solid transparent; cursor: pointer; user-select: none; transition: transform 0.08s;
     position: relative; display: inline-block;
 }
 .tap-target:active { transform: scale(0.92); }
@@ -31,9 +31,9 @@
 @keyframes floatUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -60px); } }
 
 .xp { margin-top: 6px; }
-.bar.hp > i { background: linear-gradient(90deg, #22c55e, #86efac); }
-.bar.hp.boss > i { background: linear-gradient(90deg, #ef4444, #f97316); }
-.bar.evil > i { background: linear-gradient(90deg, #a855f7, #ef4444); }
+.bar.hp > i { background: linear-gradient(90deg, #4fc07f, #9fdfb8); }
+.bar.hp.boss > i { background: linear-gradient(90deg, #ef5b56, #f2893d); }
+.bar.evil > i { background: linear-gradient(90deg, #9a6de0, #ef5b56); }
 .bar.big { height: 16px; }
 
 .evil-panel { border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); }
@@ -54,7 +54,7 @@
 
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
 .up-list { display: flex; flex-direction: column; gap: 8px; }
-.up-item { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.up-item { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; }
 .up-item .ic { font-size: 1.5rem; grid-row: span 2; }
 .up-item b { font-size: 0.9rem; }
 .up-item small { color: var(--muted); font-size: 0.75rem; grid-column: 2; }
@@ -66,11 +66,11 @@
 .danger-zone { text-align: center; }
 .page[hidden] { display: none !important; }
 .nav-seg .btn { position: relative; }
-.dotnote { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); }
+.dotnote { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
 
 /* expeditions */
 .trip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
-.trip, .art { display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.trip, .art { display: flex; flex-direction: column; gap: 3px; padding: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; }
 .trip .ti, .art .ti { font-size: 1.8rem; }
 .trip small, .art small { color: var(--muted); font-size: 0.75rem; }
 .trip .btn { margin-top: 6px; }
@@ -84,7 +84,7 @@
 .golden-panel { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface) 60%); }
 .golden-panel h3 { color: var(--gold) !important; }
 .retire { display: grid; grid-template-columns: 1fr 230px; gap: 16px; align-items: center; }
-.retire-box { text-align: center; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
+.retire-box { text-align: center; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 14px; background: var(--bg-2); border: 1px solid transparent; }
 .retire-box small { color: var(--muted); font-size: 0.75rem; }
 .retire-box .gain { font-size: 2rem; font-weight: 900; color: var(--gold); }
 .golden-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
@@ -92,7 +92,7 @@
 
 /* egg hunt */
 .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.field { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.field { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; color: var(--text); font: inherit; cursor: pointer; text-align: left; }
 .field:hover:not(:disabled) { border-color: var(--accent); }
 .field.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent) inset; }
 .field:disabled { opacity: 0.5; cursor: default; }
@@ -102,21 +102,21 @@
 .hearts { font-size: 1.15rem; letter-spacing: 2px; }
 .hunt-msg { min-height: 1.4em; text-align: center; font-weight: 700; margin-bottom: 6px; }
 .hunt-wrap { display: flex; justify-content: center; overflow-x: auto; padding: 4px 0; }
-.hunt-board { display: grid; gap: 3px; padding: 8px; border-radius: 14px; background: #2b2113; border: 1px solid var(--line-2); width: max-content; max-width: 100%; touch-action: manipulation; user-select: none; }
+.hunt-board { display: grid; gap: 3px; padding: 8px; border-radius: 14px; background: #2b2113; border: 1px solid transparent; width: max-content; max-width: 100%; touch-action: manipulation; user-select: none; }
 .hunt-board.bite { animation: hitShake 0.25s; }
 .hunt-empty { padding: 30px 20px; color: var(--muted); }
 .hcell { width: var(--cs, 32px); height: var(--cs, 32px); padding: 0; border: 0; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: calc(var(--cs, 32px) * 0.55); line-height: 1; display: grid; place-items: center; color: #fff;
     background: linear-gradient(160deg, #5fae45, #3f8a33); box-shadow: 0 2px 0 #2c6024; font-family: "Segoe UI", system-ui, "Segoe UI Emoji", sans-serif; }
 .hcell:hover:not(.open) { filter: brightness(1.15); }
 .hcell.open { background: #d8c49a; box-shadow: none; cursor: default; }
-.hcell.open.egg { background: #fde68a; box-shadow: 0 0 8px rgba(251, 191, 36, 0.7) inset; }
+.hcell.open.egg { background: #fde68a; }
 .hcell.open.egg { font-size: calc(var(--cs, 32px) * 0.62); }
 .hcell.flag { background: linear-gradient(160deg, #6fbf55, #468f39); }
-.hcell.fox { background: #f87171; }
+.hcell.fox { background: #f27a73; }
 .hcell.ghost { background: #c8b690; opacity: 0.75; }
 .hcell.wrong { background: #7f1d1d; }
-.hcell.n1 { color: #2563eb; } .hcell.n2 { color: #15803d; } .hcell.n3 { color: #dc2626; } .hcell.n4 { color: #7c3aed; }
-.hcell.n5 { color: #9a3412; } .hcell.n6 { color: #0e7490; } .hcell.n7 { color: #1f2937; } .hcell.n8 { color: #6b7280; }
+.hcell.n1 { color: #4478d9; } .hcell.n2 { color: #2f8a58; } .hcell.n3 { color: #d9483f; } .hcell.n4 { color: #7c3aed; }
+.hcell.n5 { color: #9a3412; } .hcell.n6 { color: #0e7490; } .hcell.n7 { color: var(--surface); } .hcell.n8 { color: var(--dim); }
 .hcell.open.n0 { color: transparent; }
 
 /* with more tabs the top bar wraps onto two rows; make sure it grows instead of being squashed over the page */

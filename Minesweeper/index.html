@@ -6,7 +6,7 @@
     <title>Minesweeper · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #60a5fa; --accent-2: #a78bfa; --accent-ink: #04122a; --cell: 30px; }
+        :root { --accent: #82c3ec; --accent-2: #82c3ec; --accent-ink: #26180a; --cell: 30px; }
         .board-wrap { position: relative; flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto; }
         .board {
             display: grid;
@@ -56,11 +56,11 @@
         .editor h2, .editor > p { text-align: center; }
         .ed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
         .ed-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-        .ed-grid input[type=number], .ed-name { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 9px; font: inherit; }
+        .ed-grid input[type=number], .ed-name { background: var(--bg-2); color: var(--text); border: 1px solid transparent; border-radius: 8px; padding: 7px 9px; font: inherit; }
         .ed-grid input[type=range] { width: 100%; accent-color: var(--accent); }
         .ed-check { display: inline-flex; align-items: center; gap: 7px; font-size: .86rem; color: var(--text); cursor: pointer; }
         .ed-check input { accent-color: var(--accent); width: 16px; height: 16px; }
-        .ed-board-wrap { overflow: auto; max-height: 44vh; display: flex; padding: 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; touch-action: none; }
+        .ed-board-wrap { overflow: auto; max-height: 44vh; display: flex; padding: 10px; background: var(--bg-2); border: 1px solid transparent; border-radius: 12px; touch-action: none; }
         .ed-board { display: grid; gap: 1px; user-select: none; margin: auto; }
         .ed-board div { width: var(--ec); height: var(--ec); border-radius: 3px; background: #8fd3a8; cursor: crosshair; display: flex; align-items: center; justify-content: center; font-size: calc(var(--ec) * .68); line-height: 1; }
         .ed-board div.off { background: transparent; outline: 1px dashed rgba(148,163,184,.18); outline-offset: -1px; }

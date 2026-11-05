@@ -6,7 +6,7 @@
     <title>Automato · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #f59e0b; --accent-2: #22c55e; --accent-ink: #1c1000; }
+        :root { --accent: #f7a77a; --accent-2: #f7a77a; --accent-ink: #26180a; }
         .world { position: relative; flex: 1; min-height: 0; overflow: hidden; }
         #c { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
         .float { position: absolute; z-index: 10; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); }
@@ -21,16 +21,16 @@
         .side .tabs { display: flex; gap: 4px; }
         .side .tabs .btn { flex: 1; }
         .side .body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-        .goal { padding: 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .goal { padding: 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .goal.done { opacity: 0.55; }
         .goal b { font-size: 0.86rem; }
         .goal small { display: block; color: var(--muted); font-size: 0.74rem; margin: 2px 0 6px; }
-        .tech { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .tech { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .tech small { color: var(--muted); font-size: 0.72rem; grid-column: 1; }
         .tech .btn { grid-row: span 2; grid-column: 2; }
         .tech.owned { border-color: color-mix(in srgb, var(--good) 45%, transparent); }
         .hotbar { left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px; max-width: calc(100% - 24px); overflow-x: auto; }
-        .slot { position: relative; width: 62px; min-width: 62px; height: 62px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: inherit; font-size: 0.64rem; padding: 4px; }
+        .slot { position: relative; width: 62px; min-width: 62px; height: 62px; border-radius: 12px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: inherit; font-size: 0.64rem; padding: 4px; }
         .slot .ic { font-size: 1.3rem; line-height: 1; }
         .slot .k { position: absolute; top: 3px; left: 6px; font-size: 0.6rem; color: var(--dim); }
         .slot.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--bg-2)); }
@@ -45,22 +45,22 @@
         .guide { left: 50%; top: 12px; transform: translateX(-50%); width: min(460px, calc(100% - 520px)); min-width: 260px; padding: 10px 14px; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); box-shadow: 0 10px 30px -14px var(--gold); font-size: 0.85rem; }
         .guide b.step { color: var(--gold); }
         .guide .row { justify-content: space-between; }
-        .tip { position: absolute; z-index: 11; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-2); font-size: 0.78rem; white-space: nowrap; transform: translate(14px, 14px); }
+        .tip { position: absolute; z-index: 11; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid transparent; font-size: 0.78rem; white-space: nowrap; transform: translate(14px, 14px); }
         .mine-bar { position: absolute; z-index: 12; pointer-events: none; width: 44px; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.6); overflow: hidden; transform: translate(-50%, -30px); }
         .mine-bar i { display: block; height: 100%; background: var(--good); }
         /* research tree */
-        .tree-wrap { position: relative; overflow: auto; max-height: 64vh; margin-top: 10px; padding: 6px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+        .tree-wrap { position: relative; overflow: auto; max-height: 64vh; margin-top: 10px; padding: 6px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; }
         .tree { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 170px; gap: 18px 46px; padding: 8px; }
         .tree svg { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
         .tcol { display: flex; flex-direction: column; gap: 12px; }
         .tcol h5 { margin: 0; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: center; }
-        .tnode { position: relative; z-index: 1; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-2); text-align: left; font: inherit; color: var(--text); cursor: pointer; }
+        .tnode { position: relative; z-index: 1; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid transparent; text-align: left; font: inherit; color: var(--text); cursor: pointer; }
         .tnode b { display: block; font-size: 0.8rem; }
         .tnode small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 4px; }
         .tnode .cost { font-size: 0.72rem; font-weight: 700; color: var(--gold); }
         .tnode.owned { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--surface)); }
         .tnode.owned .cost { color: var(--good); }
-        .tnode.avail { border-color: var(--accent); box-shadow: 0 0 14px -6px var(--accent); }
+        .tnode.avail { border-color: var(--accent); }
         .tnode.locked { opacity: 0.45; }
         @media (max-width: 760px) {
             .stash { width: 150px; }
@@ -156,21 +156,21 @@
         const DV = [[1, 0], [0, 1], [-1, 0], [0, -1]];
         const ITEMS = {
             wood:       { n: 'Wood',          c: '#b45309', v: 1 },
-            stone:      { n: 'Stone',         c: '#94a3b8', v: 1 },
-            coal:       { n: 'Coal',          c: '#334155', v: 3 },
+            stone:      { n: 'Stone',         c: Arcade.ui.muted, v: 1 },
+            coal:       { n: 'Coal',          c: Arcade.ui.surface2, v: 3 },
             iron_ore:   { n: 'Iron ore',      c: '#a8a29e', v: 2 },
-            copper_ore: { n: 'Copper ore',    c: '#ea580c', v: 2 },
-            iron:       { n: 'Iron plate',    c: '#e2e8f0', v: 6 },
-            copper:     { n: 'Copper plate',  c: '#fb923c', v: 6 },
-            brick:      { n: 'Brick',         c: '#dc2626', v: 5 },
-            steel:      { n: 'Steel',         c: '#64748b', v: 25 },
-            gear:       { n: 'Gear',          c: '#cbd5e1', v: 16 },
-            wire:       { n: 'Wire',          c: '#facc15', v: 5 },
-            circuit:    { n: 'Circuit',       c: '#22c55e', v: 60 },
-            frame:      { n: 'Frame',         c: '#475569', v: 110 },
-            robot:      { n: 'Robot',         c: '#38bdf8', v: 600 },
-            ai_core:    { n: 'AI core',       c: '#a855f7', v: 450 },
-            android:    { n: 'Android',       c: '#f472b6', v: 2800 },
+            copper_ore: { n: 'Copper ore',    c: '#d9722e', v: 2 },
+            iron:       { n: 'Iron plate',    c: Arcade.ui.text, v: 6 },
+            copper:     { n: 'Copper plate',  c: '#f59a55', v: 6 },
+            brick:      { n: 'Brick',         c: '#d9483f', v: 5 },
+            steel:      { n: 'Steel',         c: Arcade.ui.dim, v: 25 },
+            gear:       { n: 'Gear',          c: Arcade.ui.muted, v: 16 },
+            wire:       { n: 'Wire',          c: '#f6c445', v: 5 },
+            circuit:    { n: 'Circuit',       c: '#4fc07f', v: 60 },
+            frame:      { n: 'Frame',         c: Arcade.ui.surface3, v: 110 },
+            robot:      { n: 'Robot',         c: '#5bb8ea', v: 600 },
+            ai_core:    { n: 'AI core',       c: '#9a6de0', v: 450 },
+            android:    { n: 'Android',       c: '#f08aa7', v: 2800 },
         };
         const RES = {
             tree:   { item: 'wood',       n: 'Trees' },
@@ -970,7 +970,7 @@
                 let svg = `<svg width="${host.scrollWidth}" height="${host.scrollHeight}">`;
                 for (const t of TECH) for (const r of t.req || []) {
                     const a = pos(r, 1), b = pos(t.id, 0), mx = (a.x + b.x) / 2;
-                    const col = has(t.id) ? '#22c55e' : has(r) ? '#f59e0b' : 'rgba(148,163,184,0.35)';
+                    const col = has(t.id) ? '#4fc07f' : has(r) ? '#f2a541' : 'rgba(148,163,184,0.35)';
                     svg += `<path d="M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}" stroke="${col}" stroke-width="2" fill="none"/>`;
                 }
                 host.insertAdjacentHTML('afterbegin', svg + '</svg>');
@@ -1085,11 +1085,11 @@
             if (type === 'tree') {
                 c.fillStyle = '#5b3a1a'; c.fillRect(cx - s * 0.06, cy + s * 0.05, s * 0.12, s * 0.3);
                 c.fillStyle = '#166534'; c.beginPath(); c.arc(cx, cy - s * 0.04, s * 0.34, 0, Math.PI * 2); c.fill();
-                c.fillStyle = '#22c55e'; c.beginPath(); c.arc(cx - s * 0.1, cy - s * 0.12, s * 0.16, 0, Math.PI * 2); c.fill();
+                c.fillStyle = '#4fc07f'; c.beginPath(); c.arc(cx - s * 0.1, cy - s * 0.12, s * 0.16, 0, Math.PI * 2); c.fill();
                 return;
             }
             const base = { stone: '#3f4756', iron: '#3b3633', copper: '#3a2a1f', coal: '#16181d' }[type];
-            const spot = { stone: '#94a3b8', iron: '#d6d3d1', copper: '#f97316', coal: '#475569' }[type];
+            const spot = { stone: Arcade.ui.muted, iron: '#d6d3d1', copper: '#f2893d', coal: Arcade.ui.surface3 }[type];
             c.fillStyle = base;
             c.beginPath(); c.roundRect(x + s * 0.1, y + s * 0.14, s * 0.8, s * 0.72, s * 0.22); c.fill();
             c.fillStyle = spot;
@@ -1116,7 +1116,7 @@
                 const x = cx * CH + i, y = cy * CH + j;
                 if (x < b.min || y < b.min || x > b.max || y > b.max) continue;
                 const fresh = !(x >= 0 && y >= 0 && x < ORIG && y < ORIG);
-                g.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : '#0f1720');
+                g.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : Arcade.ui.bg);
                 g.fillRect(i * CPX, j * CPX, CPX, CPX);
                 const r = resAt(x, y);
                 if (r) drawResource(g, r, i * CPX, j * CPX, CPX);
@@ -1137,7 +1137,7 @@
             c.width = c.height = s * scale;
             const g = c.getContext('2d');
             g.scale(scale, scale);
-            const col = { drill: '#ca8a04', drill2: '#ea580c', drill3: '#0891b2', smelter: '#b91c1c', assembler: '#1d4ed8', assembler2: '#4338ca', storage: '#92400e', seller: '#15803d', splitter: '#7c3aed', lab: '#0f766e', generator: '#3f3f46', pole: '#57534e', solar: '#1e3a8a' }[type];
+            const col = { drill: '#ca8a04', drill2: '#d9722e', drill3: '#2f9ab0', smelter: '#b83c35', assembler: '#1d4ed8', assembler2: '#4338ca', storage: '#92400e', seller: '#2f8a58', splitter: '#7c3aed', lab: '#0f766e', generator: '#3f3f46', pole: '#57534e', solar: '#1e3a8a' }[type];
             g.fillStyle = col;
             g.beginPath(); g.roundRect(4, 4, s - 8, s - 8, 9); g.fill();
             g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(8, 7, s - 16, 4);
@@ -1180,9 +1180,9 @@
 
         function drawBelt(b) {
             const x = b.x * T, y = b.y * T, s = T, cx = x + s / 2, cy = y + s / 2, t = b.type;
-            ctx.fillStyle = '#1f2937'; ctx.fillRect(x + 3, y + 3, s - 6, s - 6);
+            ctx.fillStyle = Arcade.ui.surface; ctx.fillRect(x + 3, y + 3, s - 6, s - 6);
             ctx.save(); ctx.translate(cx, cy); ctx.rotate(b.dir * Math.PI / 2);
-            ctx.fillStyle = t === 'fastbelt' ? '#38bdf8' : '#f59e0b';
+            ctx.fillStyle = t === 'fastbelt' ? '#5bb8ea' : '#f2a541';
             ctx.fillRect(-s / 2 + 3, -s / 2 + 5, s - 6, 3); ctx.fillRect(-s / 2 + 3, s / 2 - 8, s - 6, 3);
             if (S.cam.z > 0.45) {
                 ctx.strokeStyle = t === 'fastbelt' ? 'rgba(56,189,248,0.5)' : 'rgba(245,158,11,0.45)'; ctx.lineWidth = 3;
@@ -1212,17 +1212,17 @@
             if (ghost) return;
             if ((b.active || 0) > 0 && (b.type === 'smelter' || b.type === 'generator')) { ctx.fillStyle = `rgba(251,146,60,${0.3 + 0.2 * Math.sin(time * 12)})`; ctx.beginPath(); ctx.arc(cx, cy, s * 0.2, 0, Math.PI * 2); ctx.fill(); }
             if ((b.flash || 0) > 0) { ctx.fillStyle = `rgba(250,204,21,${b.flash * 2})`; ctx.beginPath(); ctx.roundRect(x + 4, y + 4, s - 8, s - 8, 9); ctx.fill(); }
-            if (b.ob && b.ob.length >= 3 && b.type !== 'splitter' && b.type !== 'lab') { ctx.fillStyle = '#f87171'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
+            if (b.ob && b.ob.length >= 3 && b.type !== 'splitter' && b.type !== 'lab') { ctx.fillStyle = '#f27a73'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
             if (BUILD[b.type].power < 0) {
                 ctx.font = `${s * 0.26}px "Segoe UI Emoji", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(!b.net ? '🔌' : (b.pw || 0) < 0.5 ? '⚠️' : '⚡', x + 10, y + s - 10);
             }
-            if (b.type === 'generator' && !(b.burn > 0) && !Object.keys(FUEL).some(f => (b.inp[f] || 0) > 0)) { ctx.fillStyle = '#f87171'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
+            if (b.type === 'generator' && !(b.burn > 0) && !Object.keys(FUEL).some(f => (b.inp[f] || 0) > 0)) { ctx.fillStyle = '#f27a73'; ctx.beginPath(); ctx.arc(x + s - 9, y + 9, 4, 0, Math.PI * 2); ctx.fill(); }
         }
 
         function render() {
             ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-            ctx.fillStyle = '#070b11'; ctx.fillRect(0, 0, VW, VH);
+            ctx.fillStyle = Arcade.ui.bg2; ctx.fillRect(0, 0, VW, VH);
             const z = S.cam.z, bd = bounds();
             ctx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (VW / 2 - S.cam.x * z), DPR * (VH / 2 - S.cam.y * z));
             const tl = toWorld(0, 0), br = toWorld(VW, VH);
@@ -1236,7 +1236,7 @@
             } else {
                 for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
                     const fresh = !(x >= 0 && y >= 0 && x < ORIG && y < ORIG);
-                    ctx.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : '#0f1720');
+                    ctx.fillStyle = (x + y) % 2 ? (fresh ? '#141d16' : '#111a24') : (fresh ? '#121a14' : Arcade.ui.bg);
                     ctx.fillRect(x * T, y * T, T, T);
                     const r = resAt(x, y);
                     if (r) drawResource(ctx, r, x * T, y * T, T);
@@ -1255,7 +1255,7 @@
             for (const b of vis) drawBuilding(b);
             const simple = z < 0.5;
             for (const b of vis) if (b.item) { const p = itemPos(b); drawItem(b.item.t, p.x, p.y, T * 0.15, simple); }
-            if (inspect) { ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.5 / z; ctx.strokeRect(inspect.x * T + 2, inspect.y * T + 2, T - 4, T - 4); }
+            if (inspect) { ctx.strokeStyle = '#f5b942'; ctx.lineWidth = 2.5 / z; ctx.strokeRect(inspect.x * T + 2, inspect.y * T + 2, T - 4, T - 4); }
             if (inspect && (inspect.type === 'pole' || BUILD[inspect.type].power)) {
                 ctx.strokeStyle = 'rgba(250,204,21,0.35)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 2 / z;
                 const r = inspect.type === 'pole' ? 6 : 4;
@@ -1273,7 +1273,7 @@
                     ctx.globalAlpha = 0.55;
                     drawBuilding({ type: tool, x: hover.x, y: hover.y, dir: placeDir }, true);
                     ctx.globalAlpha = 1;
-                    ctx.strokeStyle = why ? '#f87171' : '#4ade80'; ctx.lineWidth = 2 / z;
+                    ctx.strokeStyle = why ? '#f27a73' : '#6fd29a'; ctx.lineWidth = 2 / z;
                     ctx.strokeRect(hover.x * T + 1, hover.y * T + 1, T - 2, T - 2);
                     if (tool === 'pole' || BUILD[tool].power < 0) {
                         const r = tool === 'pole' ? 6 : 4;
@@ -1281,7 +1281,7 @@
                         ctx.strokeRect((hover.x - r) * T, (hover.y - r) * T, (r * 2 + 1) * T, (r * 2 + 1) * T); ctx.setLineDash([]);
                     }
                 } else {
-                    ctx.strokeStyle = tool === 'demolish' ? '#f87171' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2 / z;
+                    ctx.strokeStyle = tool === 'demolish' ? '#f27a73' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2 / z;
                     ctx.strokeRect(hover.x * T + 1, hover.y * T + 1, T - 2, T - 2);
                 }
             }

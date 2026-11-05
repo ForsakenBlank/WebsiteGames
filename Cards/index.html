@@ -6,11 +6,11 @@
     <title>Crazy Cards · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #dc2626; --accent-2: #facc15; --accent-ink: #fff; --cw: 74px; --ch: 108px; }
+        :root { --accent: #e8655a; --accent-2: #e8655a; --accent-ink: #26180a; --cw: 74px; --ch: 108px; }
         body.no-scroll { overflow: auto; }
         .stage { justify-content: space-between; gap: 10px; padding: 10px; }
         .opps { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; width: 100%; }
-        .opp { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); min-width: 130px; transition: box-shadow 0.2s; }
+        .opp { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 14px; border: 1px solid transparent; background: var(--surface); min-width: 130px; transition: box-shadow 0.2s; }
         .opp.turn { box-shadow: 0 0 0 2px var(--accent-2), 0 0 24px -6px var(--accent-2); }
         .opp b { font-size: 0.9rem; }
         .opp small { color: var(--muted); font-size: 0.72rem; min-height: 1.1em; }
@@ -28,11 +28,11 @@
         .card .cn { position: absolute; font-size: calc(var(--cw) * 0.2); color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.4); }
         .card .cn.tl { top: 4px; left: 6px; } .card .cn.br { bottom: 4px; right: 6px; transform: rotate(180deg); }
         .card.wild { background: #111; }
-        .card.wild::before { background: conic-gradient(#ef4444 0 25%, #3b82f6 0 50%, #22c55e 0 75%, #facc15 0); }
-        .card.wild .v { color: #fff; text-shadow: 0 0 4px #000, 0 0 4px #000; }
-        .card.back { background: #111827; }
-        .card.back::before { background: #dc2626; width: 70%; height: 82%; }
-        .card.back .v { color: #facc15; font-size: calc(var(--cw) * 0.22); transform: rotate(-28deg); text-shadow: 1px 1px 0 #000; }
+        .card.wild::before { background: conic-gradient(#ef5b56 0 25%, #4f8ef0 0 50%, #4fc07f 0 75%, #f6c445 0); }
+        .card.wild .v { color: #fff; }
+        .card.back { background: var(--bg); }
+        .card.back::before { background: #d9483f; width: 70%; height: 82%; }
+        .card.back .v { color: #f6c445; font-size: calc(var(--cw) * 0.22); transform: rotate(-28deg); text-shadow: 1px 1px 0 #000; }
         .deck { cursor: pointer; }
         .deck.can { box-shadow: 0 0 0 3px var(--accent-2), 0 6px 20px rgba(250,204,21,0.4); }
         .hand { display: flex; justify-content: center; padding: 24px 10px 6px; min-height: calc(var(--ch) + 30px); max-width: 100%; overflow-x: auto; }
@@ -48,7 +48,7 @@
         .bottom { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
         .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .one { font-weight: 900; letter-spacing: 0.05em; }
-        .one.armed { background: #facc15; color: #000; }
+        .one.armed { background: #f6c445; color: #000; }
         .log { font-size: 0.85rem; font-weight: 700; min-height: 1.3em; text-align: center; }
         .picker { display: grid; grid-template-columns: repeat(2, 90px); gap: 10px; justify-content: center; margin-top: 12px; }
         .picker button { height: 70px; border-radius: 14px; border: 3px solid #fff; cursor: pointer; font-weight: 800; color: #fff; text-shadow: 1px 1px 0 #000; }
@@ -113,7 +113,7 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const COL = { r: '#ef4444', b: '#3b82f6', g: '#22c55e', y: '#eab308' };
+        const COL = { r: '#ef5b56', b: '#4f8ef0', g: '#4fc07f', y: '#e8b339' };
         const CNAME = { r: 'Red', b: 'Blue', g: 'Green', y: 'Yellow' };
         const SYM = { skip: '⊘', rev: '⇄', d2: '+2', wild: '★', d4: '+4' };
         const cfg = Object.assign({ bots: 2, stack: false, level: 'normal' }, Arcade.load('arcade.cards.cfg', {}));

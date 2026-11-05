@@ -6,9 +6,9 @@
     <title>Upload Labs · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #22d3ee; --accent-2: #a78bfa; --accent-ink: #021619; }
+        :root { --accent: #8fe3ff; --accent-2: #8fe3ff; --accent-ink: #26180a; }
         .desk { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: grab;
-            background-color: #070b14;
+            background-color: var(--bg-2);
             background-image: radial-gradient(rgba(148,163,184,0.12) 1px, transparent 1px);
             background-size: 28px 28px; touch-action: none; }
         .desk.panning { cursor: grabbing; }
@@ -16,21 +16,21 @@
         #layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
         .node {
             position: absolute; width: 186px; border-radius: 14px; background: var(--surface);
-            border: 1px solid var(--line-2); box-shadow: var(--shadow); cursor: default; user-select: none;
+            border: 1px solid transparent; box-shadow: var(--shadow); cursor: default; user-select: none;
         }
         .node.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
-        .node.busy .nhead::after { content: ""; position: absolute; right: 9px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); }
+        .node.busy .nhead::after { content: ""; position: absolute; right: 9px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
         .node.jam { border-color: var(--bad); }
         .node.terminal { width: 210px; border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); }
         .nhead { position: relative; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-bottom: 1px solid var(--line); cursor: move; font-weight: 750; font-size: 0.8rem; border-radius: 14px 14px 0 0; background: var(--surface-2); }
         .nhead .lv { margin-left: auto; margin-right: 12px; font-size: 0.66rem; color: var(--muted); font-weight: 600; }
         .nbody { padding: 7px 10px; font-size: 0.7rem; color: var(--muted); display: flex; flex-direction: column; gap: 5px; min-height: 38px; }
         .nbody .bar { height: 5px; }
-        .nbody select { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 7px; padding: 3px 5px; font: inherit; font-size: 0.72rem; }
+        .nbody select { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid transparent; border-radius: 7px; padding: 3px 5px; font: inherit; font-size: 0.72rem; }
         .nbody .pills { display: flex; flex-wrap: wrap; gap: 3px; }
         .nbody .row2 { display: flex; gap: 4px; }
         .nbody .row2 .btn { flex: 1; padding: 6px 4px; font-size: 0.74rem; }
-        .pill { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); color: var(--text); font-size: 0.68rem; }
+        .pill { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 999px; background: var(--bg-2); border: 1px solid transparent; color: var(--text); font-size: 0.68rem; }
         .warn { color: var(--bad); }
         .nfoot { display: flex; gap: 4px; padding: 0 8px 8px; }
         .nfoot .btn { flex: 1; padding: 4px 6px; font-size: 0.68rem; }
@@ -38,13 +38,13 @@
         .port { position: absolute; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: var(--bg-2); border: 2px solid var(--accent); cursor: crosshair; z-index: 2; }
         .port.in { left: -10px; top: 50%; border-color: var(--accent-2); }
         .port.out { right: -10px; top: 50%; }
-        .port.out.p0 { top: 38%; } .port.out.p1 { top: 72%; border-color: #fb923c; }
+        .port.out.p0 { top: 38%; } .port.out.p1 { top: 72%; border-color: #f59a55; }
         .port:hover { background: var(--accent); }
         .port-lbl { position: absolute; right: 12px; font-size: 0.58rem; color: var(--muted); pointer-events: none; }
         .float { position: absolute; z-index: 10; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); }
         .shop { left: 12px; top: 12px; width: 232px; max-height: calc(100% - 24px); overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
         .shop h4 { margin: 8px 0 2px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-        .buy { display: grid; grid-template-columns: auto 1fr auto; gap: 1px 8px; align-items: center; padding: 7px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; text-align: left; color: var(--text); font: inherit; }
+        .buy { display: grid; grid-template-columns: auto 1fr auto; gap: 1px 8px; align-items: center; padding: 7px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; cursor: pointer; text-align: left; color: var(--text); font: inherit; }
         .buy:hover:not(:disabled) { border-color: var(--accent); }
         .buy:disabled { opacity: 0.45; cursor: not-allowed; }
         .buy .ic { font-size: 1.2rem; grid-row: span 2; }
@@ -55,7 +55,7 @@
         .side .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
         .side .tabs .btn { padding: 6px 2px; font-size: 0.72rem; }
         .side .body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-        .goal, .tech { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .goal, .tech { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .goal.done { opacity: 0.5; }
         .goal b, .tech b { font-size: 0.8rem; }
         .goal small, .tech small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 6px; }
@@ -71,15 +71,15 @@
         .power-chip.over b { color: var(--bad); }
         .side .tabs { grid-template-columns: repeat(6, 1fr) !important; }
         .node.multi { box-shadow: 0 0 0 2px var(--gold), var(--shadow); }
-        .node.hacked { border-color: #ef4444; animation: shake 0.4s infinite; }
-        .node.hacked .nhead { background: color-mix(in srgb, #ef4444 25%, var(--surface-2)); }
+        .node.hacked { border-color: #ef5b56; animation: shake 0.4s infinite; }
+        .node.hacked .nhead { background: color-mix(in srgb, #ef5b56 25%, var(--surface-2)); }
         .bar-float { left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 8px 12px; font-size: 0.8rem; }
         .selbar { bottom: 12px; }
-        .hackbar { top: 12px; border-color: #ef4444; box-shadow: 0 0 30px -10px #ef4444; }
+        .hackbar { top: 12px; border-color: #ef5b56; }
         .chalbar { top: 12px; border-color: var(--gold); }
         .hackbar + .chalbar, .chalbar.low { top: 64px; }
         #selBox { position: absolute; border: 1.5px dashed var(--gold); background: rgba(251, 191, 36, 0.08); pointer-events: none; z-index: 5; }
-        .bp, .chal { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .bp, .chal { padding: 9px 10px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .bp b, .chal b { font-size: 0.8rem; }
         .bp small, .chal small { display: block; color: var(--muted); font-size: 0.68rem; margin: 2px 0 6px; }
         .chal.done { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
@@ -155,20 +155,20 @@
         /* ================= DATA ================= */
         // file types: size in MB, base value in $, research value
         const FT = {
-            text:    { n: 'Text', ic: '📄', c: '#cbd5e1', s: 1, v: 1, rp: 1 },
-            image:   { n: 'Image', ic: '🖼️', c: '#38bdf8', s: 3, v: 3, rp: 1 },
-            audio:   { n: 'Audio', ic: '🎵', c: '#a78bfa', s: 6, v: 6, rp: 2 },
-            video:   { n: 'Video', ic: '🎬', c: '#f472b6', s: 20, v: 18, rp: 3 },
-            virus:   { n: 'Infected', ic: '🦠', c: '#ef4444', s: 2, v: -3, rp: 0 },
-            sample:  { n: 'Virus sample', ic: '🧫', c: '#84cc16', s: 0.5, v: 2, rp: 10 },
-            code:    { n: 'Source code', ic: '💾', c: '#22c55e', s: 2, v: 12, rp: 4 },
+            text:    { n: 'Text', ic: '📄', c: Arcade.ui.muted, s: 1, v: 1, rp: 1 },
+            image:   { n: 'Image', ic: '🖼️', c: '#5bb8ea', s: 3, v: 3, rp: 1 },
+            audio:   { n: 'Audio', ic: '🎵', c: '#a18bec', s: 6, v: 6, rp: 2 },
+            video:   { n: 'Video', ic: '🎬', c: '#f08aa7', s: 20, v: 18, rp: 3 },
+            virus:   { n: 'Infected', ic: '🦠', c: '#ef5b56', s: 2, v: -3, rp: 0 },
+            sample:  { n: 'Virus sample', ic: '🧫', c: '#9cc552', s: 0.5, v: 2, rp: 10 },
+            code:    { n: 'Source code', ic: '💾', c: '#4fc07f', s: 2, v: 12, rp: 4 },
             app:     { n: 'App', ic: '📦', c: '#10b981', s: 8, v: 65, rp: 10 },
-            site:    { n: 'Website', ic: '🌐', c: '#06b6d4', s: 10, v: 60, rp: 10 },
-            movie:   { n: 'Movie', ic: '🎞️', c: '#e879f9', s: 45, v: 95, rp: 12 },
-            dataset: { n: 'Dataset', ic: '📊', c: '#fb923c', s: 15, v: 42, rp: 14 },
-            game:    { n: 'Game', ic: '🎮', c: '#facc15', s: 60, v: 480, rp: 40 },
-            model:   { n: 'AI Model', ic: '🧠', c: '#f59e0b', s: 30, v: 700, rp: 80 },
-            zip:     { n: 'Archive', ic: '🗜️', c: '#c4b5fd', s: 0, v: 0, rp: 0 },
+            site:    { n: 'Website', ic: '🌐', c: '#3fb3c8', s: 10, v: 60, rp: 10 },
+            movie:   { n: 'Movie', ic: '🎞️', c: '#d98ae0', s: 45, v: 95, rp: 12 },
+            dataset: { n: 'Dataset', ic: '📊', c: '#f59a55', s: 15, v: 42, rp: 14 },
+            game:    { n: 'Game', ic: '🎮', c: '#f6c445', s: 60, v: 480, rp: 40 },
+            model:   { n: 'AI Model', ic: '🧠', c: '#f2a541', s: 30, v: 700, rp: 80 },
+            zip:     { n: 'Archive', ic: '🗜️', c: '#c0b2f0', s: 0, v: 0, rp: 0 },
         };
         const SOURCES = {
             forum:   { n: 'Forums', mix: { text: 72, image: 23, virus: 5 } },
@@ -887,7 +887,7 @@
                 const a = byId(w.from), b = byId(w.to);
                 if (!a || !b) continue;
                 const c = bez(portPos(a, 'out', w.port), portPos(b, 'in'));
-                const col = a.type === 'filter' && w.port === 1 ? '#fb923c' : '#22d3ee';
+                const col = a.type === 'filter' && w.port === 1 ? '#f59a55' : '#56c8dc';
                 ctx.strokeStyle = col + '44'; ctx.lineWidth = 4;
                 ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); ctx.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y); ctx.stroke();
                 ctx.setLineDash([6, 10]); ctx.lineDashOffset = -time * 30;
@@ -895,7 +895,7 @@
                 for (const p of w.packets) {
                     const q = bezAt(c, p.p);
                     const T = FT[p.f.t];
-                    ctx.fillStyle = '#0b1020'; ctx.strokeStyle = T.c; ctx.lineWidth = 1.5;
+                    ctx.fillStyle = Arcade.ui.bg2; ctx.strokeStyle = T.c; ctx.lineWidth = 1.5;
                     ctx.beginPath(); ctx.roundRect(q.x - 9, q.y - 9, 18, 18, 5); ctx.fill(); ctx.stroke();
                     ctx.font = '11px "Segoe UI Emoji", sans-serif';
                     ctx.fillText(T.ic, q.x, q.y + 1);
@@ -905,7 +905,7 @@
             if (drag && drag.kind === 'wire') {
                 const a = portPos(drag.from, 'out', drag.port);
                 const c = bez(a, drag.to);
-                ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = Arcade.ui.text; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
                 ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); ctx.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y); ctx.stroke();
                 ctx.setLineDash([]);
             }

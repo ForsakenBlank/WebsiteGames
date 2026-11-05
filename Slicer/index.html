@@ -6,9 +6,9 @@
     <title>Fruit Slicer · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #22c55e; --accent-2: #facc15; --accent-ink: #03170a; }
+        :root { --accent: #b9dc6e; --accent-2: #b9dc6e; --accent-ink: #26180a; }
         .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-        .modes button { padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; }
+        .modes button { padding: 12px 8px; border-radius: 12px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; }
         .modes button:hover { border-color: var(--accent); }
         .modes button b { display: block; font-size: 1.6rem; }
         .modes button small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 4px; line-height: 1.3; }
@@ -50,7 +50,7 @@
                 </div>
             </div>
         </div>
-        <p class="tiny dim center" style="margin:0"><span class="desktop-only">Hold the mouse button and swipe</span><span class="touch-only">Swipe with your finger</span> · Bananas in Arcade: <b style="color:#60a5fa">freeze</b>, <b style="color:#facc15">double</b>, <b style="color:#f87171">frenzy</b></p>
+        <p class="tiny dim center" style="margin:0"><span class="desktop-only">Hold the mouse button and swipe</span><span class="touch-only">Swipe with your finger</span> · Bananas in Arcade: <b style="color:#6ba6ee">freeze</b>, <b style="color:#f6c445">double</b>, <b style="color:#f27a73">frenzy</b></p>
     </main>
     <script src="../_shared/arcade.js"></script>
     <script>
@@ -62,12 +62,12 @@
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.8 });
         const c = view.ctx;
         const FRUITS = [
-            { e: '🍉', juice: '#ef4444', r: 46 }, { e: '🍊', juice: '#fb923c', r: 38 }, { e: '🍎', juice: '#f87171', r: 38 }, { e: '🍋', juice: '#fde047', r: 36 },
-            { e: '🥝', juice: '#84cc16', r: 34 }, { e: '🍑', juice: '#fdba74', r: 37 }, { e: '🍍', juice: '#facc15', r: 44 }, { e: '🍇', juice: '#a855f7', r: 38 },
-            { e: '🍓', juice: '#e11d48', r: 32 }, { e: '🥥', juice: '#f5f5f4', r: 38 }, { e: '🍐', juice: '#bef264', r: 37 }, { e: '🥭', juice: '#f59e0b', r: 39 },
+            { e: '🍉', juice: '#ef5b56', r: 46 }, { e: '🍊', juice: '#f59a55', r: 38 }, { e: '🍎', juice: '#f27a73', r: 38 }, { e: '🍋', juice: '#f8d25c', r: 36 },
+            { e: '🥝', juice: '#9cc552', r: 34 }, { e: '🍑', juice: '#fdba74', r: 37 }, { e: '🍍', juice: '#f6c445', r: 44 }, { e: '🍇', juice: '#9a6de0', r: 38 },
+            { e: '🍓', juice: '#e11d48', r: 32 }, { e: '🥥', juice: '#f5f5f4', r: 38 }, { e: '🍐', juice: '#c9e486', r: 37 }, { e: '🥭', juice: '#f2a541', r: 39 },
         ];
         const BOMB = { e: '💣', r: 36, bomb: true };
-        const BANANAS = { freeze: { e: '🍌', glow: '#60a5fa', r: 38, label: 'FREEZE' }, double: { e: '🍌', glow: '#facc15', r: 38, label: 'DOUBLE SCORE' }, frenzy: { e: '🍌', glow: '#f87171', r: 38, label: 'FRENZY' } };
+        const BANANAS = { freeze: { e: '🍌', glow: '#6ba6ee', r: 38, label: 'FREEZE' }, double: { e: '🍌', glow: '#f6c445', r: 38, label: 'DOUBLE SCORE' }, frenzy: { e: '🍌', glow: '#f27a73', r: 38, label: 'FRENZY' } };
         const sprites = {};
         function sprite(e) {
             if (sprites[e]) return sprites[e];
@@ -128,7 +128,7 @@
             it.dead = true;
             if (it.kind === 'bomb') return boom(it);
             sliced++;
-            const juice = it.def.juice || '#fde047';
+            const juice = it.def.juice || '#f8d25c';
             for (const side of [-1, 1]) {
                 const nx = Math.cos(ang + Math.PI / 2) * side, ny = Math.sin(ang + Math.PI / 2) * side;
                 halves.push({ x: it.x, y: it.y, vx: it.vx * 0.6 + nx * 140, vy: it.vy * 0.4 + ny * 140 - 60, rot: it.rot, rot0: it.rot, spin: it.spin + side * 3, ang, side, def: it.def, life: 2.5 });
@@ -153,16 +153,16 @@
         function boom(it) {
             Arcade.sfx('boom');
             flash = 1; flashC = '#fff'; shake = 0.5;
-            fx.emit(it.x, it.y, { n: 60, speed: 420, color: ['#f97316', '#facc15', '#ef4444', '#fff', '#1f2937'], life: 0.9, size: 6 });
+            fx.emit(it.x, it.y, { n: 60, speed: 420, color: ['#f2893d', '#f6c445', '#ef5b56', '#fff', Arcade.ui.surface], life: 0.9, size: 6 });
             if (mode === 'classic') { setTimeout(() => endGame('Boom!'), 650); running = false; }
-            else { score = Math.max(0, score - 10); popups.push({ x: it.x, y: it.y, text: '−10', t: 1, col: '#f87171', big: true }); hud(); }
+            else { score = Math.max(0, score - 10); popups.push({ x: it.x, y: it.y, text: '−10', t: 1, col: '#f27a73', big: true }); hud(); }
         }
         function endSwipe() {
             if (swipeHits.length >= 3) {
                 const n = swipeHits.length, bonus = n * (dbl > 0 ? 2 : 1);
                 score += bonus; maxCombo = Math.max(maxCombo, n);
                 const cx = swipeHits.reduce((a, s) => a + s.x, 0) / n, cy = swipeHits.reduce((a, s) => a + s.y, 0) / n;
-                popups.push({ x: cx, y: cy - 30, text: n + ' fruit combo! +' + bonus, t: 1.3, col: '#fde047', big: true });
+                popups.push({ x: cx, y: cy - 30, text: n + ' fruit combo! +' + bonus, t: 1.3, col: '#f8d25c', big: true });
                 Arcade.sfx('coin');
                 hud();
             }
@@ -210,7 +210,7 @@
                     if (mode === 'classic' && it.kind === 'fruit') {
                         lives--; missed++;
                         Arcade.sfx('bad');
-                        popups.push({ x: Arcade.clamp(it.x, 40, W - 40), y: H - 40, text: '✗', t: 1, col: '#ef4444', big: true });
+                        popups.push({ x: Arcade.clamp(it.x, 40, W - 40), y: H - 40, text: '✗', t: 1, col: '#ef5b56', big: true });
                         if (lives <= 0) { endGame('Game over'); return; }
                     }
                 }
@@ -234,10 +234,10 @@
         function draw() {
             c.save();
             if (shake > 0) c.translate((Math.random() - 0.5) * 16 * shake, (Math.random() - 0.5) * 16 * shake);
-            const grd = c.createLinearGradient(0, 0, 0, H);
-            grd.addColorStop(0, '#5b3a1e'); grd.addColorStop(1, '#3b2412');
-            c.fillStyle = grd; c.fillRect(-20, -20, W + 40, H + 40);
-            c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 3;
+            c.fillStyle = '#5a4030';
+            
+            c.fillRect(-20, -20, W + 40, H + 40);
+            c.strokeStyle = 'rgba(0,0,0,0.14)'; c.lineWidth = 3;
             for (let y = 70; y < H; y += 90) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
             c.strokeStyle = 'rgba(255,255,255,0.04)'; c.lineWidth = 1;
             for (let i = 0; i < 30; i++) { const y = (i * 37) % H; c.beginPath(); c.moveTo(0, y); c.bezierCurveTo(W * 0.3, y + 8, W * 0.6, y - 8, W, y + 4); c.stroke(); }
@@ -246,11 +246,10 @@
             for (const h of halves) { c.globalAlpha = Math.min(1, h.life); drawItem(sprite(h.def.e), h.x, h.y, h.rot, h.def.r, h.ang + h.rot - h.rot0, h.side); }
             c.globalAlpha = 1;
             for (const it of items) {
-                if (it.def.glow) { c.shadowColor = it.def.glow; c.shadowBlur = 26; }
-                if (it.kind === 'bomb') { c.shadowColor = '#ef4444'; c.shadowBlur = 14 + Math.sin(elapsed * 20) * 8; }
+                if (it.def.glow) { }
+                if (it.kind === 'bomb') { }
                 drawItem(sprite(it.def.e), it.x, it.y, it.rot, it.r);
-                c.shadowBlur = 0;
-                if (it.kind === 'bomb') { fx.emit(it.x + Math.cos(it.rot - 0.9) * it.r * 0.9, it.y + Math.sin(it.rot - 0.9) * it.r * 0.9, { n: 1, speed: 40, color: ['#facc15', '#f97316'], life: 0.25, size: 3 }); }
+                if (it.kind === 'bomb') { fx.emit(it.x + Math.cos(it.rot - 0.9) * it.r * 0.9, it.y + Math.sin(it.rot - 0.9) * it.r * 0.9, { n: 1, speed: 40, color: ['#f6c445', '#f2893d'], life: 0.25, size: 3 }); }
             }
             fx.draw(c);
             // blade
@@ -260,32 +259,30 @@
                 for (let i = 1; i < trail.length; i++) {
                     const a = trail[i - 1], b = trail[i], k = 1 - (now - b.t) / 140;
                     c.strokeStyle = `rgba(255,255,255,${k})`; c.lineWidth = 2 + k * 9;
-                    c.shadowColor = '#bae6fd'; c.shadowBlur = 12;
                     c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
                 }
-                c.shadowBlur = 0;
             }
             c.textAlign = 'center'; c.textBaseline = 'middle';
             for (const p of popups) {
                 c.globalAlpha = Math.min(1, p.t * 2.5);
-                c.font = (p.big ? '900 28px' : '800 18px') + ' system-ui'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.6)';
+                c.font = (p.big ? '900 28px' : '800 18px') + ' Fredoka, sans-serif'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.6)';
                 c.strokeText(p.text, p.x, p.y); c.fillStyle = p.col; c.fillText(p.text, p.x, p.y);
             }
             c.globalAlpha = 1;
             c.restore();
             // HUD
-            c.font = '900 34px system-ui'; c.textAlign = 'left'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.fillStyle = '#fde68a';
+            c.font = '900 34px Fredoka, sans-serif'; c.textAlign = 'left'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.fillStyle = '#fde68a';
             c.strokeText(score, 22, 38); c.fillText(score, 22, 38);
             if (mode === 'classic') {
-                c.textAlign = 'right'; c.font = '900 30px system-ui';
-                for (let i = 0; i < 3; i++) { c.fillStyle = i < 3 - lives ? '#ef4444' : 'rgba(255,255,255,0.25)'; c.fillText('✗', W - 22 - i * 34, 38); }
+                c.textAlign = 'right'; c.font = '900 30px Fredoka, sans-serif';
+                for (let i = 0; i < 3; i++) { c.fillStyle = i < 3 - lives ? '#ef5b56' : 'rgba(255,255,255,0.25)'; c.fillText('✗', W - 22 - i * 34, 38); }
             } else if (mode) {
-                c.textAlign = 'right'; c.fillStyle = timeLeft < 10 ? '#f87171' : '#fff'; c.font = '900 30px system-ui';
+                c.textAlign = 'right'; c.fillStyle = timeLeft < 10 ? '#f27a73' : '#fff'; c.font = '900 30px Fredoka, sans-serif';
                 c.strokeText(Math.ceil(timeLeft) + 's', W - 22, 38); c.fillText(Math.ceil(timeLeft) + 's', W - 22, 38);
             }
             let px = 22;
-            c.font = '800 13px system-ui'; c.textAlign = 'left';
-            for (const [v, label, col] of [[slow, 'FREEZE', '#60a5fa'], [dbl, '×2', '#facc15'], [frenzy, 'FRENZY', '#f87171']]) if (v > 0) { c.fillStyle = col; c.fillText(label + ' ' + v.toFixed(1), px, 70); px += 100; }
+            c.font = '800 13px Fredoka, sans-serif'; c.textAlign = 'left';
+            for (const [v, label, col] of [[slow, 'FREEZE', '#6ba6ee'], [dbl, '×2', '#f6c445'], [frenzy, 'FRENZY', '#f27a73']]) if (v > 0) { c.fillStyle = col; c.fillText(label + ' ' + v.toFixed(1), px, 70); px += 100; }
             if (flash > 0) { c.fillStyle = flashC; c.globalAlpha = flash; c.fillRect(0, 0, W, H); c.globalAlpha = 1; }
         }
 

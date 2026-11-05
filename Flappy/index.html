@@ -6,9 +6,9 @@
     <title>Flappy · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #facc15; --accent-2: #fb923c; --accent-ink: #1f1600; }
+        :root { --accent: #82c3ec; --accent-2: #82c3ec; --accent-ink: #26180a; }
         .skins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
-        .skin { border: 1px solid var(--line-2); border-radius: 12px; background: var(--bg-2); padding: 6px 4px; cursor: pointer; color: var(--text); font: inherit; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .skin { border: 1px solid transparent; border-radius: 12px; background: var(--bg-2); padding: 6px 4px; cursor: pointer; color: var(--text); font: inherit; font-size: 0.72rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .skin canvas { width: 56px; height: 44px; }
         .skin.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
         .skin.locked { opacity: 0.55; cursor: not-allowed; }
@@ -67,13 +67,13 @@
         const view = Arcade.fitCanvas(cv, W, H, { max: 2 });
         const c = view.ctx;
         const BIRDS = [
-            { id: 'chick', name: 'Chick', body: '#facc15', belly: '#fef08a', wing: '#f59e0b', beak: '#fb923c', need: null },
-            { id: 'jay', name: 'Blue Jay', body: '#3b82f6', belly: '#dbeafe', wing: '#1d4ed8', beak: '#334155', need: ['total', 25] },
-            { id: 'cardinal', name: 'Cardinal', body: '#dc2626', belly: '#fca5a5', wing: '#991b1b', beak: '#f97316', need: ['best', 10], crest: true },
-            { id: 'owl', name: 'Owl', body: '#a16207', belly: '#fde68a', wing: '#713f12', beak: '#f59e0b', need: ['best', 20], owl: true },
-            { id: 'parrot', name: 'Parrot', body: '#22c55e', belly: '#facc15', wing: '#ef4444', beak: '#e5e7eb', need: ['total', 150] },
-            { id: 'penguin', name: 'Penguin', body: '#1e293b', belly: '#f8fafc', wing: '#0f172a', beak: '#f97316', need: ['best', 30] },
-            { id: 'phoenix', name: 'Phoenix', body: '#f97316', belly: '#fde047', wing: '#dc2626', beak: '#fef3c7', need: ['best', 50], fire: true },
+            { id: 'chick', name: 'Chick', body: '#f6c445', belly: '#fef08a', wing: '#f2a541', beak: '#f59a55', need: null },
+            { id: 'jay', name: 'Blue Jay', body: '#4f8ef0', belly: '#dbeafe', wing: '#1d4ed8', beak: Arcade.ui.surface2, need: ['total', 25] },
+            { id: 'cardinal', name: 'Cardinal', body: '#d9483f', belly: '#f7a8a1', wing: '#991b1b', beak: '#f2893d', need: ['best', 10], crest: true },
+            { id: 'owl', name: 'Owl', body: '#a16207', belly: '#fde68a', wing: '#713f12', beak: '#f2a541', need: ['best', 20], owl: true },
+            { id: 'parrot', name: 'Parrot', body: '#4fc07f', belly: '#f6c445', wing: '#ef5b56', beak: Arcade.ui.text, need: ['total', 150] },
+            { id: 'penguin', name: 'Penguin', body: Arcade.ui.surface, belly: Arcade.ui.text, wing: Arcade.ui.bg, beak: '#f2893d', need: ['best', 30] },
+            { id: 'phoenix', name: 'Phoenix', body: '#f2893d', belly: '#f8d25c', wing: '#d9483f', beak: '#fef3c7', need: ['best', 50], fire: true },
             { id: 'ufo', name: 'Saucer', ufo: true, need: ['total', 500] },
         ];
         let best = Arcade.load('arcade.flappy.best', 0) || 0;
@@ -102,7 +102,7 @@
             if (state !== 'play') return;
             B.vy = -400; B.flap = 0.25;
             Arcade.tone(660, 0.07, 'triangle', 0.05, 900);
-            if (bird().fire) fx.emit(110, B.y + 8, { n: 6, speed: 80, angle: Math.PI * 0.75, spread: 0.8, color: ['#f97316', '#facc15', '#ef4444'], life: 0.5, size: 4 });
+            if (bird().fire) fx.emit(110, B.y + 8, { n: 6, speed: 80, angle: Math.PI * 0.75, spread: 0.8, color: ['#f2893d', '#f6c445', '#ef5b56'], life: 0.5, size: 4 });
         }
         function gapSize() { return Math.max(118, 160 - score * 1.2); }
         function spawnPipe() {
@@ -157,7 +157,7 @@
                     p.scored = true; score++; total++;
                     Arcade.save('arcade.flappy.total', total);
                     Arcade.sfx('score');
-                    if (score % 10 === 0) { Arcade.sfx('level'); fx.emit(110, B.y, { n: 24, speed: 220, color: ['#facc15', '#fff', '#fb923c'], life: 0.8 }); }
+                    if (score % 10 === 0) { Arcade.sfx('level'); fx.emit(110, B.y, { n: 24, speed: 220, color: ['#f6c445', '#fff', '#f59a55'], life: 0.8 }); }
                     hud();
                 }
                 // collision (circle vs rects)
@@ -167,27 +167,27 @@
             }
             for (const co of coins) {
                 co.x -= speed * dt;
-                if (!co.got && Math.hypot(co.x - 110, co.y - B.y) < 22) { co.got = true; score += 1; Arcade.sfx('coin'); fx.emit(co.x, co.y, { n: 12, speed: 120, color: ['#fde047', '#facc15'], life: 0.5 }); hud(); }
+                if (!co.got && Math.hypot(co.x - 110, co.y - B.y) < 22) { co.got = true; score += 1; Arcade.sfx('coin'); fx.emit(co.x, co.y, { n: 12, speed: 120, color: ['#f8d25c', '#f6c445'], life: 0.5 }); hud(); }
             }
             pipes = pipes.filter(p => p.x > -80);
             coins = coins.filter(co => co.x > -30 && !co.got);
             if (B.y > GROUND - 14 || B.y < -40) die();
-            if (bird().fire && Math.random() < 0.5) fx.emit(100, B.y + 4, { n: 1, speed: 40, angle: Math.PI, spread: 0.6, color: ['#f97316', '#facc15', '#ef4444'], life: 0.4, size: 4 });
+            if (bird().fire && Math.random() < 0.5) fx.emit(100, B.y + 4, { n: 1, speed: 40, angle: Math.PI, spread: 0.6, color: ['#f2893d', '#f6c445', '#ef5b56'], life: 0.4, size: 4 });
             fx.update(dt);
         }
 
         function skyColors() {
             // day → sunset → night as the score climbs, then back again
             const k = (Math.floor(score / 15) % 3);
-            return [['#7dd3fc', '#e0f2fe'], ['#fb923c', '#fde68a'], ['#0b1026', '#312e81']][k];
+            return [['#8ccbee', '#e0f2fe'], ['#f59a55', '#fde68a'], [Arcade.ui.bg2, '#312e81']][k];
         }
         function drawBird(g, x, y, rot, b, flapK, size = 1) {
             g.save(); g.translate(x, y); g.rotate(rot); g.scale(size, size);
             if (b.ufo) {
                 g.fillStyle = 'rgba(125,211,252,0.6)'; g.beginPath(); g.ellipse(0, -5, 9, 9, 0, Math.PI, TAU); g.fill();
-                g.fillStyle = '#94a3b8'; g.beginPath(); g.ellipse(0, 1, 19, 7, 0, 0, TAU); g.fill();
-                g.fillStyle = '#475569'; g.fillRect(-19, 0, 38, 3);
-                for (let i = -2; i <= 2; i++) { g.fillStyle = (Math.floor(t * 6) + i) % 2 ? '#facc15' : '#22d3ee'; g.beginPath(); g.arc(i * 7, 4, 1.8, 0, TAU); g.fill(); }
+                g.fillStyle = Arcade.ui.muted; g.beginPath(); g.ellipse(0, 1, 19, 7, 0, 0, TAU); g.fill();
+                g.fillStyle = Arcade.ui.surface3; g.fillRect(-19, 0, 38, 3);
+                for (let i = -2; i <= 2; i++) { g.fillStyle = (Math.floor(t * 6) + i) % 2 ? '#f6c445' : '#56c8dc'; g.beginPath(); g.arc(i * 7, 4, 1.8, 0, TAU); g.fill(); }
                 g.restore(); return;
             }
             g.fillStyle = b.body; g.beginPath(); g.ellipse(0, 0, 17, 13, 0, 0, TAU); g.fill();
@@ -204,8 +204,8 @@
         }
         function draw() {
             const [s0, s1] = skyColors();
-            const grd = c.createLinearGradient(0, 0, 0, GROUND);
-            grd.addColorStop(0, s0); grd.addColorStop(1, s1);
+            const grd = s1;
+            
             c.fillStyle = grd; c.fillRect(0, 0, W, GROUND);
             const night = Math.floor(score / 15) % 3 === 2;
             if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const x = (i * 97) % W, y = (i * 53) % 300; c.globalAlpha = 0.4 + 0.4 * Math.sin(t * 2 + i); c.fillRect(x, y, 2, 2); } c.globalAlpha = 1; c.fillStyle = '#fef9c3'; c.beginPath(); c.arc(320, 90, 26, 0, TAU); c.fill(); }
@@ -216,8 +216,8 @@
             if (night) { c.fillStyle = '#fde68a'; for (const b of city) for (let y = GROUND - b.h + 6; y < GROUND - 6; y += 10) for (let x = b.x + 4; x < b.x + b.w - 4; x += 7) if ((x * 7 + y) % 3 === 0) c.fillRect(x, y, 3, 4); }
             // pipes
             for (const p of pipes) {
-                const pg = c.createLinearGradient(p.x, 0, p.x + p.w, 0);
-                pg.addColorStop(0, '#15803d'); pg.addColorStop(0.45, '#4ade80'); pg.addColorStop(1, '#166534');
+                const pg = '#4fc07f';
+                
                 c.fillStyle = pg;
                 c.fillRect(p.x, -10, p.w, p.top + 10);
                 c.fillRect(p.x, p.top + p.gap, p.w, GROUND - p.top - p.gap);
@@ -225,30 +225,30 @@
                 c.fillRect(p.x - 5, p.top + p.gap, p.w + 10, 24);
                 c.strokeStyle = '#052e16'; c.lineWidth = 2;
                 c.strokeRect(p.x - 5, p.top - 24, p.w + 10, 24); c.strokeRect(p.x - 5, p.top + p.gap, p.w + 10, 24);
-                if (p.moving) { c.fillStyle = '#fde047'; c.fillRect(p.x + p.w / 2 - 6, p.top - 14, 12, 4); c.fillRect(p.x + p.w / 2 - 6, p.top + p.gap + 10, 12, 4); }
+                if (p.moving) { c.fillStyle = '#f8d25c'; c.fillRect(p.x + p.w / 2 - 6, p.top - 14, 12, 4); c.fillRect(p.x + p.w / 2 - 6, p.top + p.gap + 10, 12, 4); }
             }
             for (const co of coins) {
                 const sx = Math.abs(Math.cos(t * 4));
-                c.fillStyle = '#facc15'; c.beginPath(); c.ellipse(co.x, co.y, 9 * sx + 1, 9, 0, 0, TAU); c.fill();
+                c.fillStyle = '#f6c445'; c.beginPath(); c.ellipse(co.x, co.y, 9 * sx + 1, 9, 0, 0, TAU); c.fill();
                 c.strokeStyle = '#a16207'; c.lineWidth = 2; c.stroke();
             }
             // ground
             c.fillStyle = '#ded895'; c.fillRect(0, GROUND, W, H - GROUND);
-            c.fillStyle = '#84cc16'; c.fillRect(0, GROUND, W, 14);
+            c.fillStyle = '#9cc552'; c.fillRect(0, GROUND, W, 14);
             c.fillStyle = '#65a30d'; for (let x = groundX; x < W; x += 24) { c.beginPath(); c.moveTo(x, GROUND + 14); c.lineTo(x + 12, GROUND); c.lineTo(x + 24, GROUND); c.lineTo(x + 12, GROUND + 14); c.fill(); }
             c.fillStyle = '#c2b97a'; for (let x = groundX * 1.5 % 40; x < W; x += 40) c.fillRect(x, GROUND + 30, 20, 4);
             fx.draw(c);
             drawBird(c, 110, B.y, B.rot, bird(), B.flap);
             // score
             c.textAlign = 'center'; c.textBaseline = 'middle';
-            c.font = '900 52px system-ui, sans-serif'; c.lineWidth = 6; c.strokeStyle = '#1f2937'; c.fillStyle = '#fff';
+            c.font = '900 52px Fredoka, sans-serif'; c.lineWidth = 6; c.strokeStyle = Arcade.ui.surface; c.fillStyle = '#fff';
             if (state !== 'ready') { c.strokeText(score, W / 2, 80); c.fillText(score, W / 2, 80); }
             if (state === 'ready') {
-                c.font = '900 40px system-ui'; c.strokeText('Get ready!', W / 2, 170); c.fillStyle = '#facc15'; c.fillText('Get ready!', W / 2, 170);
-                c.font = '700 16px system-ui'; c.fillStyle = '#1f2937'; c.fillText('Tap, click or press Space to flap', W / 2, 400);
+                c.font = '900 40px Fredoka, sans-serif'; c.strokeText('Get ready!', W / 2, 170); c.fillStyle = '#f6c445'; c.fillText('Get ready!', W / 2, 170);
+                c.font = '700 16px Fredoka, sans-serif'; c.fillStyle = Arcade.ui.surface; c.fillText('Tap, click or press Space to flap', W / 2, 400);
                 c.fillText('Best ' + best, W / 2, 426);
             }
-            if (paused) { c.fillStyle = 'rgba(0,0,0,0.4)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 34px system-ui'; c.fillText('Paused', W / 2, H / 2); }
+            if (paused) { c.fillStyle = 'rgba(0,0,0,0.4)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 34px Fredoka, sans-serif'; c.fillText('Paused', W / 2, H / 2); }
             if (flash > 0) { c.fillStyle = `rgba(255,255,255,${flash * 0.7})`; c.fillRect(0, 0, W, H); }
         }
 

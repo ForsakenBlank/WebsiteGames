@@ -8,25 +8,26 @@
     <style>
         /* petdoku: soft casual look, chunky round controls */
         :root {
-            --accent: #f472b6; --accent-2: #fb923c; --accent-ink: #2a0717;
+            --accent: var(--pd-primary); --accent-2: var(--pd-gold); --accent-ink: var(--pd-onbtn);
+            --gold: var(--pd-hint);
             --ink: var(--text); --bw: 280px; --gap: 5px;
         }
         html, body { overflow-x: hidden; }
         body { background: var(--bg); }
         button { font-family: inherit; }
         .pbtn {
-            appearance: none; border: none; cursor: pointer; font-weight: 900; color: #fff; letter-spacing: 0.02em;
+            appearance: none; border: none; cursor: pointer; font-weight: 900; color: var(--pd-onbtn); letter-spacing: 0.02em;
             border-radius: 16px; padding: 12px 22px; font-size: 1rem;
-            background: var(--c1, #ec4899);
-            box-shadow: 0 5px 0 var(--c3, #9d174d), 0 10px 18px -8px rgba(0,0,0,0.6);
+            background: var(--c1, var(--pd-primary));
+            box-shadow: 0 5px 0 var(--c3, color-mix(in srgb, var(--pd-primary) 62%, #000)), 0 10px 18px -8px rgba(0,0,0,0.6);
             transition: transform 0.08s, box-shadow 0.08s;
         }
-        .pbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--c3, #9d174d); }
+        .pbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--c3, color-mix(in srgb, var(--pd-primary) 62%, #000)); }
         .pbtn:disabled { filter: grayscale(0.8) opacity(0.6); cursor: default; }
-        .pbtn.green { --c1: #22c55e; --c3: #15803d; }
-        .pbtn.blue { --c1: #3b82f6; --c3: #1e40af; }
-        .pbtn.gold { --c1: #f59e0b; --c3: #b45309; }
-        .pbtn.white { --c1: var(--surface-2); --c3: #0b1020; color: var(--text); }
+        .pbtn.green { --c1: var(--pd-green); --c3: color-mix(in srgb, var(--pd-green) 62%, #000); }
+        .pbtn.blue { --c1: var(--pd-blue); --c3: color-mix(in srgb, var(--pd-blue) 62%, #000); }
+        .pbtn.gold { --c1: var(--pd-gold); --c3: color-mix(in srgb, var(--pd-gold) 62%, #000); color: var(--pd-ongold); }
+        .pbtn.white { --c1: var(--surface-2); --c3: var(--lip); color: var(--text); }
         .pbtn.lg { font-size: 1.2rem; padding: 15px 28px; border-radius: 20px; }
 
         /* top bar */
@@ -37,7 +38,7 @@
         .ptitle small { font-weight: 800; color: var(--muted); font-size: 0.8rem; }
         .infobar { display: flex; justify-content: center; gap: 8px; padding: 2px 12px 8px; flex-wrap: wrap; }
         .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; font-weight: 900; color: var(--text); font-size: 0.92rem; }
-        .pill .hearts { letter-spacing: 1px; color: #f87171; }
+        .pill .hearts { letter-spacing: 1px; color: var(--pd-heart); }
         .pill .hearts .lost { color: var(--surface-3); }
 
         /* board: separate solid tiles with slightly rounded corners and gaps between them, no outlines */
@@ -59,14 +60,14 @@
         }
         @media (hover: hover) { .cell:hover { filter: brightness(1.1); } }
         .cell:active { transform: scale(0.94); }
-        .cell .x { display: block; width: 62%; height: 62%; overflow: visible; filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.85)) drop-shadow(0 1px 1px rgba(0,0,0,0.5)); }
-        .cell .x path { stroke: #fff; stroke-width: 24; stroke-linecap: round; fill: none; }
+        .cell .x { display: block; width: 62%; height: 62%; overflow: visible; }
+        .cell .x path { stroke: var(--xc, var(--pd-crossl)); stroke-width: 24; stroke-linecap: round; fill: none; }
         .cell .pet { filter: drop-shadow(0 2px 1px rgba(0,0,0,0.3)); animation: petIn 0.3s cubic-bezier(.2, 1.6, .4, 1); }
         @keyframes petIn { from { transform: scale(0.2) rotate(-25deg); } to { transform: none; } }
-        .cell.bad { box-shadow: inset 0 0 0 3px #ef4444; background: repeating-linear-gradient(45deg, var(--rc), var(--rc) 6px, color-mix(in srgb, #ef4444 45%, var(--rc)) 6px, color-mix(in srgb, #ef4444 45%, var(--rc)) 12px); }
+        .cell.bad { box-shadow: inset 0 0 0 3px var(--pd-bad); background: repeating-linear-gradient(45deg, var(--rc), var(--rc) 6px, color-mix(in srgb, var(--pd-bad) 55%, var(--rc)) 6px, color-mix(in srgb, var(--pd-bad) 55%, var(--rc)) 12px); }
         .cell.bad .pet { animation: shake 0.35s; }
-        .cell.hinted { box-shadow: inset 0 0 0 3px #fff, 0 0 14px 2px var(--gold); }
-        .cell.hintzone { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9); filter: brightness(1.12); }
+        .cell.hinted { box-shadow: inset 0 0 0 3px var(--pd-hintring), 0 0 14px 2px var(--gold); }
+        .cell.hintzone { box-shadow: inset 0 0 0 3px var(--pd-hintring); filter: brightness(1.12); }
         .cell.hinted.hintzone { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 3px var(--gold); }
         .hint-box { width: min(var(--bw), 100%); display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 16px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); box-shadow: 0 10px 30px -14px var(--gold); color: var(--text); font-weight: 700; font-size: 0.86rem; line-height: 1.4; text-align: left; animation: popIn 0.22s; }
         .hint-box .hb-ic { font-size: 1.4rem; line-height: 1; }
@@ -78,21 +79,20 @@
         .rule { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 14px; background: var(--surface); font-size: 0.74rem; font-weight: 800; color: var(--muted); line-height: 1.15; }
         .mini { display: grid; grid-template-columns: repeat(3, 9px); gap: 2px; flex: none; }
         .mini i { width: 9px; height: 9px; border-radius: 2px; background: var(--surface-3); }
-        .mini i.p { background: #f6c445; border-radius: 50%; }
-        .mini i.x { background: transparent; box-shadow: inset 0 0 0 2px #e8655a; }
+        .mini i.p { background: var(--pd-ruledot); border-radius: 50%; }
+        .mini i.x { background: transparent; box-shadow: inset 0 0 0 2px var(--pd-rulex); }
         @media (max-width: 380px) { .rule { flex-direction: column; text-align: center; } }
 
         /* bottom toolbar */
         .toolbar { display: flex; justify-content: center; align-items: flex-end; gap: clamp(8px, 3vw, 18px); padding: 6px 10px max(14px, env(safe-area-inset-bottom)); }
         .tool { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: var(--muted); font-weight: 900; font-size: 0.72rem; position: relative; }
-        .tool .ic { width: 56px; height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 5px 0 #0b1020; transition: transform 0.08s, box-shadow 0.08s; }
-        .tool:active .ic { transform: translateY(4px); box-shadow: 0 1px 0 #0b1020; }
+        .tool .ic { width: 56px; height: 56px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 5px 0 var(--lip); transition: transform 0.08s, box-shadow 0.08s; }
+        .tool:active .ic { transform: translateY(4px); box-shadow: 0 1px 0 var(--lip); }
         .tool:disabled { opacity: 0.4; cursor: default; }
-        .tool.on .ic { background: #f59e0b; border-color: transparent; box-shadow: 0 5px 0 #b45309; }
-        .tool.mode .ic { width: 70px; height: 70px; font-size: 2rem; border-radius: 22px; background: #ec4899; border-color: transparent; box-shadow: 0 6px 0 #9d174d; color: #fff; }
-        .tool.mode.pet .ic { background: #3b82f6; box-shadow: 0 6px 0 #1e40af; }
-        .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
-        .badge.ok { background: #22c55e; }
+        .tool.mode .ic { width: 70px; height: 70px; font-size: 2rem; border-radius: 22px; background: var(--pd-modemark); border-color: transparent; box-shadow: 0 6px 0 color-mix(in srgb, var(--pd-modemark) 62%, #000); color: var(--pd-onbtn); }
+        .tool.mode.pet .ic { background: var(--pd-modepet); box-shadow: 0 6px 0 color-mix(in srgb, var(--pd-modepet) 62%, #000); }
+        .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--pd-badge); color: var(--pd-onbtn); font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
+        .badge.ok { background: var(--pd-green); }
 
         /* screens */
         .screen { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg); }
@@ -106,10 +106,10 @@
         @media (max-width: 520px) { .home-head { padding-top: calc(max(16px, env(safe-area-inset-top)) + 54px); } .logo { font-size: 2.3rem; } }
         .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px 14px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
         .tabs::-webkit-scrollbar { display: none; }
-        .dtab { flex: none; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 84px; padding: 9px 10px 8px; border-radius: 18px; border: 1px solid var(--line-2); cursor: pointer; background: var(--surface); color: var(--text); font-weight: 900; font-size: 0.82rem; box-shadow: 0 4px 0 #0b1020; }
+        .dtab { flex: none; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 84px; padding: 9px 10px 8px; border-radius: 18px; border: 1px solid var(--line-2); cursor: pointer; background: var(--surface); color: var(--text); font-weight: 900; font-size: 0.82rem; box-shadow: 0 4px 0 var(--lip); }
         .dtab span { font-size: 1.6rem; line-height: 1.1; }
         .dtab small { font-size: 0.68rem; color: var(--muted); font-weight: 800; }
-        .dtab.on { background: #ec4899; border-color: transparent; color: #fff; box-shadow: 0 4px 0 #9d174d; }
+        .dtab.on { background: var(--pd-primary); border-color: transparent; color: var(--pd-onbtn); box-shadow: 0 4px 0 color-mix(in srgb, var(--pd-primary) 62%, #000); }
         .dtab.on small { color: rgba(255,255,255,0.85); }
         .dinfo { margin: 0 14px; padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
         .dinfo .big { font-size: 2.2rem; }
@@ -120,10 +120,10 @@
         .chapter h4 { margin: 16px 4px 10px; color: var(--text); font-size: 0.95rem; font-weight: 900; display: flex; justify-content: space-between; }
         .chapter h4 small { color: var(--muted); font-weight: 800; }
         .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 8px; }
-        .lv { position: relative; aspect-ratio: 1; border-radius: 18px; border: none; cursor: pointer; font-weight: 900; font-size: 1.15rem; color: #fff; background: #3b82f6; box-shadow: 0 5px 0 #1e40af; max-width: 64px; justify-self: center; width: 100%; }
-        .lv.done { background: #22c55e; box-shadow: 0 5px 0 #15803d; }
-        .lv.cur { background: #ec4899; box-shadow: 0 5px 0 #9d174d, 0 0 0 5px rgba(236,72,153,0.25); animation: bob 1.2s ease-in-out infinite; }
-        .lv.locked { background: var(--surface-2); color: var(--dim); box-shadow: 0 5px 0 #0b1020; cursor: default; }
+        .lv { position: relative; aspect-ratio: 1; border-radius: 18px; border: none; cursor: pointer; font-weight: 900; font-size: 1.15rem; color: var(--pd-onbtn); background: var(--pd-lvopen); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-lvopen) 62%, #000); max-width: 64px; justify-self: center; width: 100%; }
+        .lv.done { background: var(--pd-lvdone); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-lvdone) 62%, #000); }
+        .lv.cur { background: var(--pd-lvcur); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-lvcur) 62%, #000), 0 0 0 5px color-mix(in srgb, var(--pd-lvcur) 25%, transparent); animation: bob 1.2s ease-in-out infinite; }
+        .lv.locked { background: var(--pd-lvlocked); color: var(--dim); box-shadow: 0 5px 0 var(--lip); cursor: default; }
         .lv .st { position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%); font-size: 0.66rem; letter-spacing: -1px; white-space: nowrap; }
         .lv .size { position: absolute; top: -6px; right: -8px; font-size: 0.6rem; background: var(--surface-3); color: var(--text); border-radius: 999px; padding: 1px 5px; }
         @keyframes bob { 50% { transform: translateY(-4px); } }
@@ -131,13 +131,13 @@
         .home-foot .pbtn { width: min(420px, 100%); }
 
         /* popups */
-        .pop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(5, 8, 18, 0.72); backdrop-filter: blur(6px); animation: fadeIn 0.18s; }
+        .pop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 18px; background: color-mix(in srgb, var(--bg-2) 78%, transparent); backdrop-filter: blur(6px); animation: fadeIn 0.18s; }
         .pop[hidden] { display: none !important; }
         .card { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line-2); border-radius: 26px; padding: 22px 20px 20px; text-align: center; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8); animation: popIn 0.28s cubic-bezier(.2, 1.5, .4, 1); position: relative; }
         .card h2 { margin: 0; font-size: 1.8rem; font-weight: 900; color: var(--text); }
         .card p { color: var(--muted); font-weight: 700; margin: 6px 0; }
-        .ribbon { margin: -40px auto 6px; width: max-content; padding: 8px 26px; border-radius: 14px; background: #ec4899; color: #fff; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 0 #9d174d; }
-        .ribbon.sad { background: #64748b; box-shadow: 0 5px 0 #334155; }
+        .ribbon { margin: -40px auto 6px; width: max-content; padding: 8px 26px; border-radius: 14px; background: var(--pd-primary); color: var(--pd-onbtn); font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-primary) 62%, #000); }
+        .ribbon.sad { background: var(--pd-sad); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-sad) 62%, #000); }
         .stars { font-size: 3rem; letter-spacing: 6px; margin: 6px 0 4px; }
         .stars i { font-style: normal; display: inline-block; filter: grayscale(1) opacity(0.3); }
         .stars i.on { filter: none; animation: starIn 0.5s cubic-bezier(.2, 1.8, .4, 1) both; }
@@ -160,7 +160,7 @@
         .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; text-align: left; }
         .howto div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 0.78rem; color: var(--muted); font-weight: 700; }
         .howto b { display: block; color: var(--text); font-size: 0.84rem; }
-        .gen { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(5, 8, 18, 0.5); }
+        .gen { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg-2) 50%, transparent); }
         .gen[hidden] { display: none !important; }
         .gen span { padding: 14px 22px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-2); font-weight: 900; color: var(--text); }
         .gen span i { display: inline-block; font-style: normal; animation: bob 0.6s ease-in-out infinite; }
@@ -168,7 +168,7 @@
         .confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 3px; animation: fall linear forwards; }
         @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
         /* new soft look */
-        .pbtn { font-family: var(--display); font-weight: 600; letter-spacing: 0; box-shadow: 0 5px 0 var(--c3, #9d174d); }
+        .pbtn { font-family: var(--display); font-weight: 600; letter-spacing: 0; box-shadow: 0 5px 0 var(--c3, color-mix(in srgb, var(--pd-primary) 62%, #000)); }
         .pbtn.white { --c1: var(--surface); --c3: var(--lip); }
         .rbtn { border-radius: 50%; }
         .rbtn svg { width: 22px; height: 22px; }
@@ -176,13 +176,13 @@
         .ptitle b { font-family: var(--display); font-weight: 600; font-size: 1.7rem; }
         .ptitle small { padding: 3px 12px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--display); font-weight: 600; font-size: 0.78rem; letter-spacing: 0.04em; }
         .pill { background: var(--pill); color: var(--pill-ink); border: 0; font-family: var(--display); font-weight: 600; font-size: 1.15rem; padding: 6px 16px; box-shadow: 0 3px 0 var(--lip); }
-        .pill .hearts { color: #e2463a; font-size: 1.25rem; letter-spacing: 3px; }
+        .pill .hearts { color: var(--pd-heart); font-size: 1.25rem; letter-spacing: 3px; }
         .pill .hearts .lost { color: color-mix(in srgb, var(--pill-ink) 18%, var(--pill)); }
         .tool { color: var(--text); font-family: var(--display); font-weight: 600; font-size: 0.82rem; }
         .tool .ic { border-radius: 50%; border: 0; background: var(--surface); box-shadow: 0 5px 0 var(--lip); }
         .tool:active .ic { box-shadow: 0 1px 0 var(--lip); }
-        .tool.on .ic { background: #f6c445; color: #4a3200; box-shadow: 0 5px 0 #b98a13; }
-        #undoBtn .ic, #hintBtn .ic { background: #f6c445; color: #4a3200; box-shadow: 0 5px 0 #b98a13; }
+        .tool.on .ic { background: var(--pd-gold); color: var(--pd-ongold); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-gold) 62%, #000); }
+        #undoBtn .ic, #hintBtn .ic { background: var(--pd-gold); color: var(--pd-ongold); box-shadow: 0 5px 0 color-mix(in srgb, var(--pd-gold) 62%, #000); }
         .tool.mode .ic { border-radius: 50%; }
         .badge { border: 0; }
         .logo { font-family: var(--display); font-weight: 600; }
@@ -196,6 +196,30 @@
         .pop { background: color-mix(in srgb, var(--bg-2) 78%, transparent); backdrop-filter: blur(4px); }
         .hint-box { border: 0; box-shadow: 0 8px 24px -12px rgba(0,0,0,.6); }
         .gen span { border: 0; font-family: var(--display); font-weight: 600; }
+        .swatch { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 4px; margin-right: 3px; vertical-align: -0.05em; box-shadow: 0 0 0 1px var(--line-2); }
+
+        /* colour editor */
+        #colorScr { z-index: 70; }
+        .ce-head { position: sticky; top: 0; z-index: 3; background: var(--bg); padding: max(10px, env(safe-area-inset-top)) 14px 10px; }
+        .ce-top { display: flex; align-items: center; gap: 10px; width: min(620px, 100%); margin: 0 auto; }
+        .ce-top h2 { flex: 1; margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.4rem; color: var(--text); }
+        .ce-prev { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px auto 0; max-width: 420px; }
+        .ce-prev .cell { aspect-ratio: 1; border-radius: 9px; font-size: clamp(0.9rem, 5vw, 1.5rem); cursor: default; }
+        .ce-body { width: min(620px, 100%); margin: 0 auto; padding: 0 14px 40px; }
+        .ce-body h4 { margin: 18px 4px 8px; font-family: var(--display); font-weight: 600; font-size: 1rem; color: var(--text); }
+        .ce-row { background: var(--surface); border-radius: 16px; margin-bottom: 8px; padding: 8px 10px; }
+        .ce-line { display: flex; align-items: center; gap: 10px; }
+        .ce-sw { flex: none; width: 40px; height: 40px; border-radius: 12px; border: 0; padding: 0; cursor: pointer; box-shadow: inset 0 -3px 0 rgba(0,0,0,.14), 0 0 0 1px var(--line-2); }
+        .ce-name { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: var(--text); font: inherit; font-weight: 800; font-size: 0.9rem; line-height: 1.2; }
+        .ce-name small { display: block; color: var(--muted); font-weight: 700; font-size: 0.74rem; font-family: var(--mono); }
+        .ce-name .warn { font-family: var(--font); color: var(--warn); }
+        .ce-reset { flex: none; padding: 8px 12px; font-size: 0.82rem; }
+        .ce-pick { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px 2px 4px; }
+        .ce-slide { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 8px; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+        .ce-slide input { appearance: none; -webkit-appearance: none; width: 100%; height: 18px; margin: 0; border-radius: 99px; outline-offset: 2px; cursor: pointer; }
+        .ce-slide input::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 3px solid rgba(0,0,0,.45); }
+        .ce-slide input::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 3px solid rgba(0,0,0,.45); }
+        .ce-hex { width: 110px; padding: 8px 10px; border-radius: 10px; border: 0; background: var(--bg-2); color: var(--text); font-family: var(--mono); font-size: 0.9rem; user-select: text; -webkit-user-select: text; }
     </style>
 </head>
 <body class="no-scroll no-select">
@@ -243,6 +267,19 @@
         <div class="dinfo" id="dinfo"></div>
         <div class="chapters" id="chapters"></div>
         <div class="home-foot"><button class="pbtn lg" id="playBtn">Play level 1</button></div>
+    </div>
+
+    <!-- ================= COLOUR EDITOR ================= -->
+    <div class="screen" id="colorScr" hidden>
+        <div class="ce-head">
+            <div class="ce-top">
+                <button class="pbtn white rbtn" id="ceBack" title="Back">‹</button>
+                <h2>Colours</h2>
+                <button class="pbtn white" id="ceResetAll">Reset all</button>
+            </div>
+            <div class="ce-prev" id="cePrev"></div>
+        </div>
+        <div class="ce-body" id="ceBody"></div>
     </div>
 
     <!-- ================= POPUPS ================= -->
@@ -300,6 +337,7 @@
                 <div><b>✋ Hold</b>also places a pet</div>
                 <div><b>👉 Drag</b>mark lots of ✕ at once</div>
             </div>
+            <button class="opt" id="colorsBtn" style="width:100%"><span>Colours<small>Change or reset every colour in the game</small></span><span aria-hidden="true">›</span></button>
             <div class="acts"><button class="pbtn" id="setClose">Done</button></div>
         </div>
     </div>
@@ -310,8 +348,118 @@
     <script>
     (() => {
         /* ---------- content ---------- */
-        // solid, clearly different colours, a region is simply the tiles of one colour
-        const REGION_COLORS = ['#ea6b5f', '#5b9be6', '#f6c445', '#5fb37a', '#9b7ae0', '#f29a4a', '#6fd0d6', '#f39ac0', '#9a7058', '#b6dc6e', '#5d6b7a', '#d070d8', '#d9d2c5', '#3f9a8c']; // soft colours, still spread across hue and lightness so no two look alike
+        // bright, clearly different colours, a region is simply the tiles of one colour.
+        // picked so the closest pair is still far apart in perceived colour, see deltaE below
+        const REGION_COLORS = ['#ef3b45', '#2f80ff', '#ffd60a', '#22b84f', '#8c4ef0', '#ff8a14', '#1fd8ee', '#ff7ec8', '#8b5a2b', '#b5ee2c', '#1f2f73', '#c9169f', '#f5f0e1', '#0b8378'];
+        // every colour in the game lives here. each one becomes the css variable --pd-<key> and can be
+        // changed and reset on its own. page colours override the shared theme instead of having a fixed default
+        const COLOR_GROUPS = [
+            ['Board tiles', REGION_COLORS.map((c, k) => ({ key: 'r' + k, label: 'Tile colour ' + (k + 1), def: c, region: k }))],
+            ['Board marks', [
+                { key: 'crossl', label: 'Cross on dark tiles', def: '#ffffff' },
+                { key: 'crossd', label: 'Cross on light tiles', def: '#1f1f24' },
+                { key: 'bad', label: 'Mistake stripes', def: '#d90429' },
+                { key: 'hint', label: 'Hint glow and text', def: '#ffc21f' },
+                { key: 'hintring', label: 'Hint outline', def: '#ffffff' },
+                { key: 'ruledot', label: 'Rules: pet dot', def: '#ffc21f' },
+                { key: 'rulex', label: 'Rules: blocked square', def: '#ff5a4f' },
+            ]],
+            ['Buttons', [
+                { key: 'primary', label: 'Main buttons and tabs', def: '#f2508f' },
+                { key: 'green', label: 'Next level button', def: '#22b84f' },
+                { key: 'blue', label: 'Blue buttons', def: '#2f80ff' },
+                { key: 'gold', label: 'Undo and hint buttons', def: '#ffc21f' },
+                { key: 'modemark', label: 'Tap mode: mark', def: '#f2508f' },
+                { key: 'modepet', label: 'Tap mode: pet', def: '#2f80ff' },
+                { key: 'onbtn', label: 'Text on buttons', def: '#ffffff' },
+                { key: 'ongold', label: 'Text on gold buttons', def: '#4a3200' },
+            ]],
+            ['Level map', [
+                { key: 'lvopen', label: 'Open level', def: '#2f80ff' },
+                { key: 'lvdone', label: 'Finished level', def: '#22b84f' },
+                { key: 'lvcur', label: 'Current level', def: '#f2508f' },
+                { key: 'lvlocked', label: 'Locked level', def: '#323237' },
+            ]],
+            ['Game info', [
+                { key: 'heart', label: 'Lives', def: '#ef3b45' },
+                { key: 'badge', label: 'Hint count badge', def: '#ef3b45' },
+                { key: 'sad', label: 'Out of lives banner', def: '#6b7688' },
+            ]],
+            ['Confetti', ['#ff4f9a', '#ff8a14', '#22b84f', '#2f80ff', '#8c4ef0', '#ffd60a'].map((c, i) => ({ key: 'confetti' + (i + 1), label: 'Confetti ' + (i + 1), def: c }))],
+            ['Page', [
+                { key: 'page-bg', label: 'Background', page: '--bg' },
+                { key: 'page-bg2', label: 'Popup shade', page: '--bg-2' },
+                { key: 'page-surface', label: 'Panels', page: '--surface' },
+                { key: 'page-surface2', label: 'Raised panels', page: '--surface-2' },
+                { key: 'page-text', label: 'Text', page: '--text' },
+                { key: 'page-muted', label: 'Soft text', page: '--muted' },
+                { key: 'page-pill', label: 'Info pills', page: '--pill' },
+                { key: 'page-pillink', label: 'Info pill text', page: '--pill-ink' },
+            ]],
+        ];
+        const COLOR_DEFS = COLOR_GROUPS.flatMap(g => g[1]);
+        const COLORS_KEY = 'arcade.petdoku.colors';
+        let userColors = Arcade.load(COLORS_KEY, {}) || {};
+        const rootEl = document.documentElement;
+
+        const hexRgb = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+        const rgbHex = (r, g, b) => '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+        function rgbHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+            let h = 0;
+            if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+            return [h * 60, d ? d / (1 - Math.abs(2 * l - 1)) * 100 : 0, l * 100];
+        }
+        function hslHex(h, s, l) {
+            s /= 100; l /= 100;
+            const f = (n) => { const k = (n + h / 30) % 12; return 255 * (l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1))); };
+            return rgbHex(f(0), f(8), f(4));
+        }
+        function toLab(hex) {
+            const [r, g, b] = hexRgb(hex).map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+            const t = (v) => v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116;
+            const x = t((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047), y = t(0.2126 * r + 0.7152 * g + 0.0722 * b), z = t((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+            return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+        }
+        // how different two colours look to a person (cie94), under about 12 is hard to tell apart on a board
+        function deltaE(a, b) {
+            const [L1, a1, b1] = toLab(a), [L2, a2, b2] = toLab(b);
+            const c1 = Math.hypot(a1, b1), c2 = Math.hypot(a2, b2), dc = c1 - c2;
+            const dh2 = Math.max(0, (a1 - a2) ** 2 + (b1 - b2) ** 2 - dc * dc);
+            return Math.sqrt((L1 - L2) ** 2 + (dc / (1 + 0.045 * c1)) ** 2 + dh2 / (1 + 0.015 * c1) ** 2);
+        }
+        const isLightHex = (hex) => toLab(hex)[0] > 68;
+        function defColor(d) {
+            if (d.def) return d.def;
+            // page colours default to whatever the arcade theme says, so read it with the override removed
+            const cur = rootEl.style.getPropertyValue(d.page);
+            rootEl.style.removeProperty(d.page);
+            const v = getComputedStyle(rootEl).getPropertyValue(d.page).trim();
+            if (cur) rootEl.style.setProperty(d.page, cur);
+            return v;
+        }
+        const curColor = (d) => userColors[d.key] || defColor(d);
+        function applyColors() {
+            for (const d of COLOR_DEFS) {
+                const v = userColors[d.key];
+                if (d.page) { if (v) rootEl.style.setProperty(d.page, v); else rootEl.style.removeProperty(d.page); continue; }
+                rootEl.style.setProperty('--pd-' + d.key, v || d.def);
+            }
+            // crosses flip between light and dark so they stay readable on any tile
+            REGION_COLORS.forEach((c, k) => rootEl.style.setProperty('--pd-rx' + k, `var(--pd-cross${isLightHex(userColors['r' + k] || c) ? 'd' : 'l'})`));
+        }
+        applyColors();
+
+        // names used by the hints, worked out from the actual colour so they stay right after editing
+        const NAMED = { red: '#e6322e', orange: '#ff8a14', yellow: '#ffd60a', green: '#22b84f', cyan: '#1fd8ee', blue: '#2f80ff', navy: '#1f2f73', purple: '#8c4ef0', magenta: '#c9169f', pink: '#ff7ec8', brown: '#8b5a2b', lime: '#b5ee2c', cream: '#f5f0e1', teal: '#0b8378', white: '#ffffff', black: '#151515', grey: '#808080' };
+        function colourName(k) {
+            const hex = userColors['r' + k % REGION_COLORS.length] || REGION_COLORS[k % REGION_COLORS.length];
+            let best = 'that', bd = Infinity;
+            for (const [n, h] of Object.entries(NAMED)) { const dd = deltaE(hex, h); if (dd < bd) { bd = dd; best = n; } }
+            return `the <i class="swatch" style="background:${hex}"></i><b>${best}</b> colour`;
+        }
+
         const THEMES = {
             pets: { name: 'Pets', icon: '🐶', set: ['🐶', '🐱', '🐰', '🐹', '🦊', '🐼', '🐨', '🐸', '🐵', '🐷', '🐮', '🐯', '🐻', '🐭'] },
             farm: { name: 'Farm', icon: '🐮', set: ['🐮', '🐷', '🐔', '🐴', '🐑', '🦆', '🐐', '🦃', '🐝', '🐶', '🐱', '🐭', '🐇', '🐓'] },
@@ -705,7 +853,9 @@
                     const d = document.createElement('div');
                     d.dataset.i = i;
                     d.className = 'cell';
-                    d.style.setProperty('--rc', REGION_COLORS[reg[i] % REGION_COLORS.length]);
+                    const rk = reg[i] % REGION_COLORS.length;
+                    d.style.setProperty('--rc', `var(--pd-r${rk})`);
+                    d.style.setProperty('--xc', `var(--pd-rx${rk})`);
                     d.addEventListener('animationend', (e) => { if (e.animationName === 'winWave') d.classList.remove('won'); });
                     boardEl.appendChild(d);
                 }
@@ -822,7 +972,7 @@
         function confetti() {
             const host = $('confetti');
             host.innerHTML = '';
-            const cols = ['#ff5fa2', '#ffb020', '#4ade80', '#60c3ff', '#bdb2ff', '#fde047'];
+            const cols = [1, 2, 3, 4, 5, 6].map(k => `var(--pd-confetti${k})`);
             for (let k = 0; k < 70; k++) {
                 const i = document.createElement('i');
                 i.style.left = Math.random() * 100 + 'vw';
@@ -859,11 +1009,10 @@
         }
 
         /* ---------- hints that explain the reasoning ---------- */
-        const COLOUR_NAMES = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink', 'brown', 'lime', 'peach', 'grey', 'violet', 'teal'];
         /** "row 3", "column 2" or "the <b>red</b> colour" (capitalised when it starts a sentence). */
         function unitName(u, cap) {
             const n = game.n;
-            const s = u < n ? 'row ' + (u + 1) : u < 2 * n ? 'column ' + (u - n + 1) : 'the <b>' + COLOUR_NAMES[(u - 2 * n) % COLOUR_NAMES.length] + '</b> colour';
+            const s = u < n ? 'row ' + (u + 1) : u < 2 * n ? 'column ' + (u - n + 1) : colourName(u - 2 * n);
             return cap ? s[0].toUpperCase() + s.slice(1) : s;
         }
         const cellName = (i) => `row ${((i / game.n) | 0) + 1}, column ${i % game.n + 1}`;
@@ -934,7 +1083,7 @@
                         const out = [];
                         for (const l of lines) for (const j of U[l]) if (avail[j] && !mineCells.has(j)) out.push(j);
                         if (!out.length) continue;
-                        const names = set.map(unitName).join(k === 2 ? ' and ' : ', ');
+                        const names = set.map(u => unitName(u)).join(k === 2 ? ' and ' : ', ');
                         const lineNames = [...lines].map(unitName).join(' and ');
                         return {
                             cross: out, zone: [...mineCells],
@@ -1122,6 +1271,104 @@
         $('playBtn').onclick = () => {
             const saved = Arcade.load(CUR_KEY, null);
             playLevel(saved && saved.diff === diff.id ? saved.level : levelOf(diff));
+        };
+
+        /* ---------- colour editor ---------- */
+        let cePick = null; // key of the row with its picker open
+        function setColor(d, hex) {
+            if (hex && hex.toLowerCase() !== String(defColor(d)).toLowerCase()) userColors[d.key] = hex.toLowerCase(); else delete userColors[d.key];
+            Arcade.save(COLORS_KEY, userColors);
+            applyColors();
+        }
+        function similarTo(d) {
+            if (d.region === undefined) return '';
+            const hex = curColor(d);
+            for (const o of COLOR_GROUPS[0][1]) if (o !== d && deltaE(hex, curColor(o)) < 12) return o.label;
+            return '';
+        }
+        function ceRefresh() {
+            for (const d of COLOR_DEFS) {
+                const row = document.getElementById('ce-' + d.key);
+                if (!row) continue;
+                const sim = similarTo(d);
+                row.querySelector('.ce-sw').style.background = curColor(d);
+                row.querySelector('.ce-name small').innerHTML = curColor(d).toLowerCase() + (sim ? ` <span class="warn">looks like ${sim}</span>` : '');
+                row.querySelector('.ce-reset').disabled = !userColors[d.key];
+            }
+        }
+        function renderCePreview() {
+            const pets = THEMES[theme].set;
+            $('cePrev').innerHTML = REGION_COLORS.map((c, k) =>
+                `<div class="cell" style="--rc:var(--pd-r${k});--xc:var(--pd-rx${k})">${k % 2 ? X_SVG : `<span class="pet">${pets[k]}</span>`}</div>`).join('');
+        }
+        function pickerHtml(d) {
+            const [h, sa, l] = rgbHsl(...hexRgb(curColor(d)));
+            return `<div class="ce-pick">
+                <label class="ce-slide">H<input type="range" min="0" max="360" value="${Math.round(h)}" data-c="h"></label>
+                <label class="ce-slide">S<input type="range" min="0" max="100" value="${Math.round(sa)}" data-c="s"></label>
+                <label class="ce-slide">L<input type="range" min="0" max="100" value="${Math.round(l)}" data-c="l"></label>
+                <input class="ce-hex" maxlength="7" spellcheck="false" autocomplete="off" value="${curColor(d).toLowerCase()}" aria-label="Hex colour">
+            </div>`;
+        }
+        function paintSliders(pick) {
+            const [h, sa, l] = ['h', 's', 'l'].map(c => +pick.querySelector(`[data-c=${c}]`).value);
+            pick.querySelector('[data-c=h]').style.background = 'linear-gradient(90deg,' + [0, 60, 120, 180, 240, 300, 360].map(x => hslHex(x, Math.max(sa, 40), Math.min(Math.max(l, 35), 65))).join(',') + ')';
+            pick.querySelector('[data-c=s]').style.background = `linear-gradient(90deg,${hslHex(h, 0, l)},${hslHex(h, 100, l)})`;
+            pick.querySelector('[data-c=l]').style.background = `linear-gradient(90deg,#000,${hslHex(h, sa, 50)},#fff)`;
+        }
+        function wirePicker(row, d) {
+            const pick = row.querySelector('.ce-pick');
+            paintSliders(pick);
+            const hexIn = pick.querySelector('.ce-hex');
+            pick.querySelectorAll('input[type=range]').forEach(inp => inp.oninput = () => {
+                const [h, sa, l] = ['h', 's', 'l'].map(c => +pick.querySelector(`[data-c=${c}]`).value);
+                const hex = hslHex(h, sa, l);
+                hexIn.value = hex;
+                setColor(d, hex);
+                paintSliders(pick);
+                ceRefresh();
+            });
+            hexIn.oninput = () => {
+                let v = hexIn.value.trim();
+                if (v && v[0] !== '#') v = '#' + v;
+                if (!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+                setColor(d, v);
+                const [h, sa, l] = rgbHsl(...hexRgb(v));
+                pick.querySelector('[data-c=h]').value = h; pick.querySelector('[data-c=s]').value = sa; pick.querySelector('[data-c=l]').value = l;
+                paintSliders(pick);
+                ceRefresh();
+            };
+        }
+        function buildColorEditor() {
+            renderCePreview();
+            $('ceBody').innerHTML = COLOR_GROUPS.map(([title, list]) => `<h4>${title}</h4>` + list.map(d => `
+                <div class="ce-row" id="ce-${d.key}">
+                    <div class="ce-line">
+                        <button class="ce-sw" title="Change ${d.label}"></button>
+                        <button class="ce-name">${d.label}<small></small></button>
+                        <button class="pbtn white ce-reset" title="Back to default">Reset</button>
+                    </div>
+                    ${cePick === d.key ? pickerHtml(d) : ''}
+                </div>`).join('')).join('');
+            for (const d of COLOR_DEFS) {
+                const row = document.getElementById('ce-' + d.key);
+                const toggle = () => { cePick = cePick === d.key ? null : d.key; Arcade.sfx('click'); buildColorEditor(); };
+                row.querySelector('.ce-sw').onclick = toggle;
+                row.querySelector('.ce-name').onclick = toggle;
+                row.querySelector('.ce-reset').onclick = () => { setColor(d, null); Arcade.sfx('select'); buildColorEditor(); };
+                if (cePick === d.key) wirePicker(row, d);
+            }
+            ceRefresh();
+        }
+        $('colorsBtn').onclick = () => { Arcade.hide('setPop'); cePick = null; buildColorEditor(); Arcade.show('colorScr'); };
+        $('ceBack').onclick = () => { Arcade.hide('colorScr'); buildSettings(); Arcade.show('setPop'); };
+        $('ceResetAll').onclick = () => {
+            if (!confirm('Put every colour back to its default?')) return;
+            userColors = {};
+            Arcade.save(COLORS_KEY, userColors);
+            applyColors();
+            cePick = null;
+            buildColorEditor();
         };
 
         /* ---------- settings ---------- */

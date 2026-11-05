@@ -6,7 +6,7 @@
     <title>Typing Speed · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #14b8a6; --accent-2: #38bdf8; --accent-ink: #011a17; }
+        :root { --accent: #3fb09c; --accent-2: #5bb8ea; --accent-ink: #011a17; }
         .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .test { width: min(860px, 100%); display: flex; flex-direction: column; gap: 14px; align-items: center; }
         .live { display: flex; gap: 24px; font-family: var(--mono); font-size: 1.4rem; font-weight: 800; color: var(--accent); min-height: 1.6em; }
@@ -14,10 +14,10 @@
         .words { position: relative; width: 100%; height: 9.6em; overflow: hidden; font-family: var(--mono); font-size: 1.55rem; line-height: 3.2rem; color: var(--dim); padding: 0 6px; cursor: text; outline: none; }
         .words .inner { display: flex; flex-wrap: wrap; gap: 0 0.65em; transition: transform 0.15s; }
         .word { position: relative; white-space: nowrap; }
-        .word.err { text-decoration: underline wavy #f87171; text-underline-offset: 6px; }
+        .word.err { text-decoration: underline wavy #f27a73; text-underline-offset: 6px; }
         .ch.ok { color: var(--text); }
-        .ch.bad { color: #f87171; }
-        .ch.extra { color: #b91c1c; }
+        .ch.bad { color: #f27a73; }
+        .ch.extra { color: #b83c35; }
         .caret { position: absolute; width: 2px; height: 1.6rem; background: var(--accent); top: 0.8rem; transition: left 0.08s, top 0.08s; animation: blink 1s infinite; }
         .typing .caret { animation: none; }
         @keyframes blink { 50% { opacity: 0; } }
@@ -173,12 +173,12 @@
             const cvs = $('chart'), g = cvs.getContext('2d'), Wc = cvs.width, Hc = cvs.height;
             g.clearRect(0, 0, Wc, Hc);
             const data = perSec.length ? perSec : [0], max = Math.max(20, ...data) * 1.15;
-            g.strokeStyle = 'rgba(148,163,184,0.2)'; g.fillStyle = '#64748b'; g.font = '11px system-ui';
+            g.strokeStyle = 'rgba(148,163,184,0.2)'; g.fillStyle = Arcade.ui.dim; g.font = '11px Fredoka, sans-serif';
             for (let v = 0; v <= max; v += Math.ceil(max / 4 / 10) * 10) { const y = Hc - 18 - v / max * (Hc - 28); g.beginPath(); g.moveTo(34, y); g.lineTo(Wc, y); g.stroke(); g.fillText(v, 4, y + 4); }
-            g.strokeStyle = '#14b8a6'; g.lineWidth = 3; g.beginPath();
+            g.strokeStyle = '#3fb09c'; g.lineWidth = 3; g.beginPath();
             data.forEach((v, i) => { const x = 34 + i / Math.max(1, data.length - 1) * (Wc - 44), y = Hc - 18 - v / max * (Hc - 28); i ? g.lineTo(x, y) : g.moveTo(x, y); });
             g.stroke();
-            g.fillStyle = '#64748b'; g.fillText('seconds →', Wc - 70, Hc - 3);
+            g.fillStyle = Arcade.ui.dim; g.fillText('seconds →', Wc - 70, Hc - 3);
         }
         function testKey(e) {
             if (done) return;
@@ -257,7 +257,7 @@
                     S.meteors = S.meteors.filter(m => m !== T);
                     S.combo++;
                     S.score += T.word.length * 10 * (1 + Math.min(5, Math.floor(S.combo / 5)));
-                    fx.emit(T.x, T.y, { n: 26, speed: 200, color: ['#f97316', '#facc15', '#a8a29e'], life: 0.6, size: 4 });
+                    fx.emit(T.x, T.y, { n: 26, speed: 200, color: ['#f2893d', '#f6c445', '#a8a29e'], life: 0.6, size: 4 });
                     Arcade.sfx('hit');
                     S.target = null;
                     hud();
@@ -274,7 +274,7 @@
                 if (m.y > SH - 70) {
                     m.dead = true; S.lives--; S.combo = 0;
                     if (S.target === m) S.target = null;
-                    fx.emit(m.x, SH - 70, { n: 40, speed: 260, color: ['#ef4444', '#f97316', '#fff'], life: 0.8, size: 5 });
+                    fx.emit(m.x, SH - 70, { n: 40, speed: 260, color: ['#ef5b56', '#f2893d', '#fff'], life: 0.8, size: 5 });
                     Arcade.sfx('boom');
                     if (S.lives <= 0) return endShooter();
                 }
@@ -301,13 +301,13 @@
         }
         function drawShooter() {
             const g = sc;
-            g.fillStyle = '#030712'; g.fillRect(0, 0, SW, SH);
+            g.fillStyle = Arcade.ui.bg2; g.fillRect(0, 0, SW, SH);
             for (const s of stars) { g.fillStyle = `rgba(255,255,255,${0.3 + s.s * 0.3})`; g.fillRect(s.x, (s.y + (S ? S.t : 0) * s.s * 8) % SH, s.s, s.s); }
             // city
-            g.fillStyle = '#0f172a'; g.fillRect(0, SH - 60, SW, 60);
-            for (let i = 0; i < 18; i++) { const x = i * 47 + 6, h = 20 + ((i * 37) % 40); g.fillStyle = '#1e293b'; g.fillRect(x, SH - 60 - h, 36, h); g.fillStyle = '#fde68a'; for (let y = SH - 56 - h; y < SH - 64; y += 9) for (let k = 0; k < 3; k++) if ((i + y + k) % 3) g.fillRect(x + 5 + k * 11, y, 4, 4); }
+            g.fillStyle = Arcade.ui.bg; g.fillRect(0, SH - 60, SW, 60);
+            for (let i = 0; i < 18; i++) { const x = i * 47 + 6, h = 20 + ((i * 37) % 40); g.fillStyle = Arcade.ui.surface; g.fillRect(x, SH - 60 - h, 36, h); g.fillStyle = '#fde68a'; for (let y = SH - 56 - h; y < SH - 64; y += 9) for (let k = 0; k < 3; k++) if ((i + y + k) % 3) g.fillRect(x + 5 + k * 11, y, 4, 4); }
             // turret
-            g.fillStyle = '#14b8a6'; g.beginPath(); g.arc(SW / 2, SH - 40, 22, Math.PI, 0); g.fill();
+            g.fillStyle = '#3fb09c'; g.beginPath(); g.arc(SW / 2, SH - 40, 22, Math.PI, 0); g.fill();
             if (S) {
                 const T = S.target;
                 const ang = T ? Math.atan2(T.y - (SH - 40), T.x - SW / 2) : -Math.PI / 2;
@@ -327,16 +327,16 @@
                     const done = m.word.slice(0, m.typed), rest = m.word.slice(m.typed);
                     const x0 = m.x - w / 2;
                     g.textAlign = 'left';
-                    g.fillStyle = '#facc15'; g.fillText(done, x0, m.y + m.r + 16);
+                    g.fillStyle = '#f6c445'; g.fillText(done, x0, m.y + m.r + 16);
                     g.fillStyle = '#fff'; g.fillText(rest, x0 + g.measureText(done).width, m.y + m.r + 16);
                 }
                 fx.draw(g);
-                g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = '800 18px system-ui';
+                g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = '800 18px Fredoka, sans-serif';
                 g.fillText(`Score ${S.score}`, 16, 28);
                 g.fillText(`Wave ${S.wave}`, 16, 52);
                 g.textAlign = 'right'; g.fillText('❤'.repeat(Math.max(0, S.lives)), SW - 16, 28);
-                if (S.combo >= 5) { g.fillStyle = '#facc15'; g.fillText(`Combo ×${1 + Math.min(5, Math.floor(S.combo / 5))}`, SW - 16, 52); }
-                if (S.t < 3 && S.wave === 1) { g.textAlign = 'center'; g.fillStyle = '#e2e8f0'; g.font = '700 18px system-ui'; g.fillText('Type the words to shoot the meteors before they hit the city!', SW / 2, SH / 2); }
+                if (S.combo >= 5) { g.fillStyle = '#f6c445'; g.fillText(`Combo ×${1 + Math.min(5, Math.floor(S.combo / 5))}`, SW - 16, 52); }
+                if (S.t < 3 && S.wave === 1) { g.textAlign = 'center'; g.fillStyle = Arcade.ui.text; g.font = '700 18px Fredoka, sans-serif'; g.fillText('Type the words to shoot the meteors before they hit the city!', SW / 2, SH / 2); }
             }
         }
 

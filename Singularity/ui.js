@@ -244,7 +244,7 @@
         c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
         if (H.length < 2) return;
         const mn = Math.min(...H), mx = Math.max(...H);
-        const col = H[H.length - 1] >= H[0] ? '#22c55e' : '#ef4444';
+        const col = H[H.length - 1] >= H[0] ? '#4fc07f' : '#ef5b56';
         c.beginPath();
         H.forEach((v, i) => { const x = i / (H.length - 1) * w, y = h - 6 - (v - mn) / (mx - mn || 1) * (h - 12); i ? c.lineTo(x, y) : c.moveTo(x, y); });
         c.strokeStyle = col; c.lineWidth = 1.8; c.stroke();
@@ -321,7 +321,7 @@
         for (let i = 0; i < 80; i++) { c.fillStyle = `rgba(255,255,255,${0.15 + (i * 37 % 10) / 25})`; c.fillRect((i * 97) % w, (i * 53) % h, 1, 1); }
         const pos = mapPos(L, w, h);
         if (L === 'sol') {
-            const g = c.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, 26); g.addColorStop(0, '#fff7d6'); g.addColorStop(0.4, '#fbbf24'); g.addColorStop(1, 'rgba(251,146,60,0)');
+            const g = c.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, 26); g.addColorStop(0, '#fff7d6'); g.addColorStop(0.4, '#f5b942'); g.addColorStop(1, 'rgba(251,146,60,0)');
             c.fillStyle = g; c.fillRect(w / 2 - 30, h / 2 - 30, 60, 60);
             c.strokeStyle = 'rgba(255,255,255,0.06)';
             pos.forEach(p => { const rx = Math.hypot(p[0] - w / 2, p[1] - h / 2); c.beginPath(); c.arc(w / 2, h / 2, rx, 0, 7); c.stroke(); });
@@ -336,14 +336,14 @@
             const got = st.got[i], tg = st.target === i;
             if (got) { c.fillStyle = 'rgba(52,211,153,0.25)'; c.beginPath(); c.arc(p[0], p[1], 9, 0, 7); c.fill(); }
             if (tg) { const k = (t * 1.2) % 1; c.strokeStyle = `rgba(251,146,60,${1 - k})`; c.lineWidth = 2; c.beginPath(); c.arc(p[0], p[1], 6 + k * 12, 0, 7); c.stroke(); }
-            c.fillStyle = got ? '#34d399' : tg ? '#fb923c' : i === mapHover ? '#fff' : 'rgba(203,213,225,0.55)';
+            c.fillStyle = got ? '#5fcda0' : tg ? '#f59a55' : i === mapHover ? '#fff' : 'rgba(203,213,225,0.55)';
             c.beginPath(); c.arc(p[0], p[1], got || tg ? 4 : 3, 0, 7); c.fill();
         });
         const lbl = mapHover >= 0 ? mapHover : st.target;
         if (lbl !== null && lbl !== undefined && lbl >= 0 && pos[lbl]) {
             const p = pos[lbl], cost = E.mapCost(L, lbl);
             const txt = `${list[lbl]}${st.got[lbl] ? ' ✅' : ' · ' + fmt(cost) + ' ' + ITEMS[MAP[L].item].icon}`;
-            c.font = '700 11px system-ui'; const tw = c.measureText(txt).width + 12;
+            c.font = '700 11px Fredoka, sans-serif'; const tw = c.measureText(txt).width + 12;
             const x = Math.min(w - tw - 4, Math.max(4, p[0] - tw / 2)), y = p[1] > 26 ? p[1] - 26 : p[1] + 10;
             c.fillStyle = 'rgba(10,12,20,0.9)'; c.beginPath(); c.roundRect(x, y, tw, 18, 9); c.fill();
             c.fillStyle = '#fff'; c.textBaseline = 'middle'; c.fillText(txt, x + 6, y + 9.5); c.textBaseline = 'alphabetic';
@@ -422,7 +422,7 @@
         if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
         const c = cv.getContext('2d'), w = r.width, h = r.height, H = S().hist.slice(-360).map(x => Math.log10(1 + x[1]));
         c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-        if (H.length < 2) { c.fillStyle = '#888'; c.font = '12px system-ui'; c.fillText('Collecting data…', 10, 20); return; }
+        if (H.length < 2) { c.fillStyle = '#888'; c.font = '12px Fredoka, sans-serif'; c.fillText('Collecting data…', 10, 20); return; }
         const mn = Math.min(...H), mx = Math.max(...H);
         c.beginPath();
         H.forEach((v, i) => { const x = i / (H.length - 1) * w, y = h - 8 - (v - mn) / (mx - mn || 1) * (h - 16); i ? c.lineTo(x, y) : c.moveTo(x, y); });

@@ -6,36 +6,36 @@
     <title>Bounce Lab · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #f43f5e; --accent-2: #fb923c; --accent-ink: #1f0309; }
+        :root { --accent: #e8655a; --accent-2: #e8655a; --accent-ink: #26180a; }
         .stage { gap: 8px; padding: 8px 12px 10px; }
         .tbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .tbar .btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
         .work { flex: 1; min-height: 0; width: 100%; display: flex; gap: 12px; justify-content: center; align-items: stretch; }
         .canvas-box { flex: 1 1 auto; min-width: 0; }
         .phone { position: relative; line-height: 0; }
-        .phone canvas { display: block; border-radius: 18px; border: 1px solid var(--line-2); background: #05060d; box-shadow: var(--shadow), 0 0 70px -30px var(--accent); touch-action: none; }
+        .phone canvas { display: block; border-radius: 18px; border: 1px solid transparent; background: var(--bg-2); box-shadow: var(--shadow), 0 0 70px -30px var(--accent); touch-action: none; }
         .side-btns { position: absolute; right: 8px; bottom: 70px; display: flex; flex-direction: column; gap: 9px; z-index: 5; line-height: 1.2; align-items: center; }
         .side-btns button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(15, 23, 42, 0.62); color: #fff; font-size: 1.15rem; cursor: pointer; backdrop-filter: blur(6px); display: grid; place-items: center; }
         .side-btns button:hover { background: rgba(244, 63, 94, 0.55); }
         .side-btns button.on { background: var(--accent); }
         .side-btns button.rec.on { animation: pulse 1s infinite; }
         @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.35); } }
-        .side-btns small { display: block; text-align: center; font-size: 0.6rem; color: #cbd5e1; margin-top: -6px; text-shadow: 0 1px 2px #000; }
+        .side-btns small { display: block; text-align: center; font-size: 0.6rem; color: var(--muted); margin-top: -6px; text-shadow: 0 1px 2px #000; }
         /* studio panel */
-        .studio { width: 330px; flex: none; overflow-y: auto; background: var(--surface); border: 1px solid var(--line-2); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem; }
+        .studio { width: 330px; flex: none; overflow-y: auto; background: var(--surface); border: 1px solid transparent; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem; }
         .studio h3 { margin: 0; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .studio h4 { margin: 4px 0 0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
         .types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
-        .types button { padding: 6px 7px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.74rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .types button { padding: 6px 7px; border-radius: 9px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.74rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .types button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--bg-2)); }
         .prow { display: grid; grid-template-columns: 112px 1fr 44px; gap: 6px; align-items: center; }
         .prow span { color: var(--muted); font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .prow span.set { color: var(--accent-2); font-weight: 700; }
         .prow input[type=range] { width: 100%; accent-color: var(--accent); }
         .prow b { font-size: 0.72rem; text-align: right; font-variant-numeric: tabular-nums; }
-        .studio select, .studio input[type=text] { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.8rem; }
+        .studio select, .studio input[type=text] { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; font-size: 0.8rem; }
         .togs { display: flex; flex-wrap: wrap; gap: 4px; }
-        .togs button { padding: 4px 8px; border-radius: 99px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--muted); cursor: pointer; font: inherit; font-size: 0.72rem; }
+        .togs button { padding: 4px 8px; border-radius: 99px; border: 1px solid transparent; background: var(--bg-2); color: var(--muted); cursor: pointer; font: inherit; font-size: 0.72rem; }
         .togs button.on { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg-2)); }
         .sbtns { display: flex; gap: 6px; flex-wrap: wrap; }
         .sbtns .btn { flex: 1; }
@@ -47,15 +47,15 @@
         .pal button { min-width: 36px; height: 32px; border-radius: 8px; border: 2px solid transparent; color: #fff; font-weight: 800; cursor: pointer; font-size: 0.82rem; }
         .pal button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
         .lv-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; text-align: left; margin-top: 10px; }
-        .lv-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+        .lv-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: var(--bg-2); border: 1px solid transparent; }
         .lv-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
         .lv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 10px; max-height: 58vh; overflow: auto; }
-        .lv-grid button { padding: 8px 4px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.76rem; }
+        .lv-grid button { padding: 8px 4px; border-radius: 10px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit; font-size: 0.76rem; }
         .lv-grid button:disabled { opacity: 0.35; cursor: not-allowed; }
         .lv-grid button b { display: block; font-size: 1rem; }
         .lv-grid button i { display: block; font-style: normal; color: var(--gold); letter-spacing: 1px; }
         .rm-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; text-align: left; font-size: 0.85rem; }
-        .rm-row input[type=text] { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); font: inherit; }
+        .rm-row input[type=text] { flex: 1; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; background: var(--bg-2); color: var(--text); font: inherit; }
         .manual { text-align: left; max-height: 66vh; overflow-y: auto; font-size: 0.86rem; line-height: 1.5; }
         .manual h3 { margin: 14px 0 4px; font-size: 0.95rem; }
         .manual table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }

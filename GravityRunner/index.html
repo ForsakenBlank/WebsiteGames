@@ -6,16 +6,16 @@
     <title>Gravity Runner · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #a78bfa; --accent-2: #f472b6; --accent-ink: #12082a; }
+        :root { --accent: #8d6be0; --accent-2: #8d6be0; --accent-ink: #26180a; }
         .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 12px; }
-        .skin { padding: 10px 6px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+        .skin { padding: 10px 6px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
         .skin:hover { border-color: var(--line-2); }
         .skin.on { border-color: var(--accent); color: var(--text); }
         .skin.locked { opacity: 0.75; }
         .skin canvas { width: 34px; height: 34px; }
         .skin b { color: var(--text); font-size: 0.8rem; }
         .diffs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
-        .diff { padding: 8px 4px; border-radius: 11px; background: var(--bg-2); border: 1px solid var(--line); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font: inherit; }
+        .diff { padding: 8px 4px; border-radius: 11px; background: var(--bg-2); border: 1px solid transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font: inherit; }
         .diff b { color: var(--text); font-size: 0.82rem; }
         .diff small { font-size: 0.66rem; }
         .diff:hover { border-color: var(--line-2); }
@@ -112,25 +112,25 @@
         // every difficulty has a speed limit except Unleashed, which just keeps accelerating.
         // ramp = metres-ish of distance until obstacle patterns reach full difficulty.
         const DIFFS = [
-            { id: 'easy', name: 'Easy', col: '#34d399', start: 250, accel: 4, max: 470, ramp: 9000, gapMul: 1.3, coinMul: 0.5, powerChance: 0.18,
+            { id: 'easy', name: 'Easy', col: '#5fcda0', start: 250, accel: 4, max: 470, ramp: 9000, gapMul: 1.3, coinMul: 0.5, powerChance: 0.18,
               info: 'Gentle pace, wide gaps, more power-ups. Speed limit 47 m/s. Coins ×0.5.' },
-            { id: 'normal', name: 'Normal', col: '#a78bfa', start: 330, accel: 7, max: 620, ramp: 6000, gapMul: 1, coinMul: 1, powerChance: 0.12,
+            { id: 'normal', name: 'Normal', col: '#a18bec', start: 330, accel: 7, max: 620, ramp: 6000, gapMul: 1, coinMul: 1, powerChance: 0.12,
               info: 'The classic run. Speed limit 62 m/s. Coins ×1.' },
-            { id: 'hard', name: 'Hard', col: '#fbbf24', start: 400, accel: 9, max: 760, ramp: 4000, gapMul: 0.86, coinMul: 1.5, powerChance: 0.1,
+            { id: 'hard', name: 'Hard', col: '#f5b942', start: 400, accel: 9, max: 760, ramp: 4000, gapMul: 0.86, coinMul: 1.5, powerChance: 0.1,
               info: 'Starts fast, tighter gaps, tricky patterns earlier. Speed limit 76 m/s. Coins ×1.5.' },
-            { id: 'insane', name: 'Insane', col: '#f87171', start: 480, accel: 12, max: 900, ramp: 2400, gapMul: 0.74, coinMul: 2, powerChance: 0.08,
+            { id: 'insane', name: 'Insane', col: '#f27a73', start: 480, accel: 12, max: 900, ramp: 2400, gapMul: 0.74, coinMul: 2, powerChance: 0.08,
               info: 'Every pattern from the first second. Speed limit 90 m/s. Coins ×2.' },
-            { id: 'unleashed', name: 'Unleashed', col: '#f0abfc', start: 420, accel: 16, max: Infinity, ramp: 3500, gapMul: 0.82, coinMul: 3, powerChance: 0.1, unleashed: true,
+            { id: 'unleashed', name: 'Unleashed', col: '#e8a8dc', start: 420, accel: 16, max: Infinity, ramp: 3500, gapMul: 0.82, coinMul: 3, powerChance: 0.1, unleashed: true,
               info: 'NO speed limit. It never stops getting faster. How long can you last? Coins ×3.' },
         ];
 
         // classic look, plus the four biomes that cycle every 600m in Biome mode.
-        const CLASSIC = { id: 'classic', name: 'Classic', bg: ['#120c2a', '#0b1020'], floor: '#1b1440', line: 'rgba(167,139,250,0.25)', glow: '#a78bfa', obst: '#f472b6', fill: '#2a1650', star: '196,181,253', grav: 1 };
+        const CLASSIC = { id: 'classic', name: 'Classic', bg: Arcade.ui.bg, floor: Arcade.ui.surface, line: 'rgba(255,255,255,0.07)', glow: '#a18bec', obst: '#f08aa7', fill: Arcade.ui.surface2, star: '255,255,255', grav: 1 };
         const BIOMES = [
-            { id: 'cave', name: 'The Caves', icon: '🦇', bg: ['#1c140d', '#0b0805'], floor: '#3b2a1c', line: 'rgba(214,164,107,0.22)', glow: '#d6a46b', obst: '#e7b77a', fill: '#4a3424', star: '214,164,107', grav: 1, special: 'faller' },
-            { id: 'space', name: 'Deep Space', icon: '🪐', bg: ['#02030a', '#0b1238'], floor: '#151b3d', line: 'rgba(147,197,253,0.22)', glow: '#93c5fd', obst: '#c4b5fd', fill: '#1e1b4b', star: '226,232,240', grav: 0.78, special: 'asteroid' },
-            { id: 'lava', name: 'Lava Core', icon: '🌋', bg: ['#2c0a04', '#120402'], floor: '#3a1208', line: 'rgba(251,146,60,0.25)', glow: '#fb923c', obst: '#f87171', fill: '#4c1308', star: '253,186,116', grav: 1.08, special: 'fireball' },
-            { id: 'neon', name: 'Neon City', icon: '🌃', bg: ['#0a0822', '#140a2e'], floor: '#151030', line: 'rgba(34,211,238,0.25)', glow: '#22d3ee', obst: '#f0abfc', fill: '#2a0f3f', star: '240,171,252', grav: 1, special: 'laser' },
+            { id: 'cave', name: 'The Caves', icon: '🦇', bg: '#2a2019', floor: '#3e2f25', line: 'rgba(255,255,255,0.07)', glow: '#d6a46b', obst: '#e7b77a', fill: '#4e3c2f', star: '214,164,107', grav: 1, special: 'faller' },
+            { id: 'space', name: 'Deep Space', icon: '🪐', bg: '#1c2130', floor: '#2b3247', line: 'rgba(255,255,255,0.07)', glow: '#94c0ee', obst: '#c0b2f0', fill: '#3a4260', star: '226,232,240', grav: 0.78, special: 'asteroid' },
+            { id: 'lava', name: 'Lava Core', icon: '🌋', bg: '#2e1e1a', floor: '#472a22', line: 'rgba(255,255,255,0.07)', glow: '#f59a55', obst: '#f27a73', fill: '#5a352a', star: '253,186,116', grav: 1.08, special: 'fireball' },
+            { id: 'neon', name: 'Neon City', icon: '🌃', bg: '#231e33', floor: '#352e4c', line: 'rgba(255,255,255,0.07)', glow: '#56c8dc', obst: '#e8a8dc', fill: '#453c62', star: '240,171,252', grav: 1, special: 'laser' },
         ];
         const BIOME_LEN = 6000; // 600m
         let worldMode = Arcade.load('arcade.gravity.world', 'classic');
@@ -288,14 +288,14 @@
             if (state !== 'play') return;
             const air = !(p.grounded || coyote > 0);
             if (!air || (airFlip > 0 && !p.airUsed)) {
-                if (air) { p.airUsed = true; fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 14, color: ['#4ade80', '#bbf7d0'], speed: 140, life: 0.4 }); }
+                if (air) { p.airUsed = true; fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 14, color: ['#6fd29a', '#bbf7d0'], speed: 140, life: 0.4 }); }
                 p.g *= -1;
                 p.vy = p.g * FLIP_KICK * Math.sqrt(gScale());
                 p.grounded = false;
                 coyote = 0; bufferFlip = 0;
                 p.rotT += Math.PI;
                 flips++;
-                fx.emit(p.x + PS / 2, p.g === 1 ? TOP + 2 : BOT - 2, { n: 10, color: ['#a78bfa', '#f0abfc'], speed: 120, life: 0.35 });
+                fx.emit(p.x + PS / 2, p.g === 1 ? TOP + 2 : BOT - 2, { n: 10, color: ['#a18bec', '#e8a8dc'], speed: 120, life: 0.35 });
                 Arcade.sfx('tick');
             } else {
                 bufferFlip = 0.14;
@@ -322,14 +322,14 @@
             if (shield) {
                 shield = false;
                 shake = 0.25;
-                fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 30, color: ['#67e8f9', '#fff'], speed: 220, life: 0.6 });
+                fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 30, color: ['#86d9e6', '#fff'], speed: 220, life: 0.6 });
                 Arcade.sfx('hit');
                 obstacles = obstacles.filter(o => o.x > p.x + 200 || o.x + o.w < p.x - 20);
                 return;
             }
             state = 'dead';
             shake = 0.5;
-            fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 60, color: ['#a78bfa', '#f472b6', '#fff'], speed: 300, life: 1 });
+            fx.emit(p.x + PS / 2, p.y + PS / 2, { n: 60, color: ['#a18bec', '#f08aa7', '#fff'], speed: 300, life: 1 });
             Arcade.sfx('boom');
             const m = Math.floor(dist / 10);
             Arcade.report('distance', m);
@@ -381,7 +381,7 @@
             if (p.g === 1 && p.y + PS >= BOT) { p.y = BOT - PS; p.vy = 0; p.grounded = true; }
             if (p.g === -1 && p.y <= TOP) { p.y = TOP; p.vy = 0; p.grounded = true; }
             if (p.grounded) p.airUsed = false;
-            if (p.grounded && !wasGrounded) fx.emit(p.x + PS / 2, p.g === 1 ? BOT : TOP, { n: 6, color: '#c4b5fd', speed: 80, life: 0.25 });
+            if (p.grounded && !wasGrounded) fx.emit(p.x + PS / 2, p.g === 1 ? BOT : TOP, { n: 6, color: '#c0b2f0', speed: 80, life: 0.25 });
             if (wasGrounded && !p.grounded) coyote = 0.08;
             coyote = Math.max(0, coyote - dt);
             if (bufferFlip > 0) { bufferFlip -= dt; if (p.grounded) tryFlip(); }
@@ -410,7 +410,7 @@
                 else if (o.type === 'fireball') {
                     if (!o.armed && o.x - p.x < speed * 0.75 + 80) { o.armed = true; o.vy = (o.side === 'floor' ? -1 : 1) * 1150; }
                     if (o.armed) { o.vy += (o.side === 'floor' ? 1 : -1) * 1900 * sdt; o.y += o.vy * sdt; }
-                    if (o.armed && Math.random() < 0.6) fx.emit(o.x + 13, o.y, { n: 1, color: ['#fb923c', '#fde047'], speed: 40, life: 0.35 });
+                    if (o.armed && Math.random() < 0.6) fx.emit(o.x + 13, o.y, { n: 1, color: ['#f59a55', '#f8d25c'], speed: 40, life: 0.35 });
                 }
             }
             for (const c of coins) c.x -= dx;
@@ -444,7 +444,7 @@
                 }
                 if (Math.hypot(cx - c.x, cy - c.y) < 22) {
                     c.taken = true; runCoins++;
-                    fx.emit(c.x, c.y, { n: 6, color: ['#fbbf24', '#fde68a'], speed: 90, life: 0.3 });
+                    fx.emit(c.x, c.y, { n: 6, color: ['#f5b942', '#fde68a'], speed: 90, life: 0.3 });
                     Arcade.sfx('coin');
                 }
             }
@@ -489,38 +489,35 @@
             const h = s / 2;
             switch (id) {
                 case 'neon':
-                    c.shadowColor = '#22d3ee'; c.shadowBlur = 16;
-                    c.strokeStyle = '#67e8f9'; c.lineWidth = 3;
+                    c.strokeStyle = '#86d9e6'; c.lineWidth = 3;
                     c.strokeRect(-h + 2, -h + 2, s - 4, s - 4);
                     c.fillStyle = 'rgba(34,211,238,0.25)'; c.fillRect(-h + 2, -h + 2, s - 4, s - 4);
                     break;
                 case 'gold': {
                     const g = c.createLinearGradient(-h, -h, h, h);
-                    g.addColorStop(0, '#fde68a'); g.addColorStop(0.5, '#f59e0b'); g.addColorStop(1, '#b45309');
+                    g.addColorStop(0, '#fde68a'); g.addColorStop(0.5, '#f2a541'); g.addColorStop(1, '#b45309');
                     c.fillStyle = g; c.fillRect(-h, -h, s, s);
                     c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(-h + 3, -h + 3, s * 0.3, 3);
                     break;
                 }
                 case 'ghost':
                     c.globalAlpha *= 0.75;
-                    c.fillStyle = '#e2e8f0';
+                    c.fillStyle = Arcade.ui.text;
                     c.beginPath(); c.arc(0, -2, h, Math.PI, 0); c.lineTo(h, h);
                     for (let i = 0; i < 4; i++) c.lineTo(h - (i + 0.5) * s / 4, i % 2 ? h : h - 5);
                     c.lineTo(-h, h); c.closePath(); c.fill();
-                    c.fillStyle = '#0b1020'; c.fillRect(-6, -5, 4, 6); c.fillRect(3, -5, 4, 6);
+                    c.fillStyle = Arcade.ui.bg2; c.fillRect(-6, -5, 4, 6); c.fillRect(3, -5, 4, 6);
                     break;
                 case 'ember':
-                    c.shadowColor = '#f97316'; c.shadowBlur = 18;
-                    c.fillStyle = '#f97316'; c.fillRect(-h, -h, s, s);
-                    c.fillStyle = '#fde047'; c.fillRect(-h + 6, -h + 6, s - 12, s - 12);
+                    c.fillStyle = '#f2893d'; c.fillRect(-h, -h, s, s);
+                    c.fillStyle = '#f8d25c'; c.fillRect(-h + 6, -h + 6, s - 12, s - 12);
                     break;
                 case 'rainbow':
                     c.fillStyle = `hsl(${(time * 220) % 360}, 90%, 62%)`;
-                    c.shadowColor = c.fillStyle; c.shadowBlur = 14;
                     c.fillRect(-h, -h, s, s);
                     break;
                 default:
-                    c.fillStyle = '#a78bfa'; c.fillRect(-h, -h, s, s);
+                    c.fillStyle = '#a18bec'; c.fillRect(-h, -h, s, s);
                     c.fillStyle = '#ddd6fe'; c.fillRect(-h + 4, -h + 4, s - 8, 5);
             }
             c.restore();
@@ -530,9 +527,9 @@
             ctx.save();
             if (shake > 0) ctx.translate(Arcade.rand(-8, 8) * shake, Arcade.rand(-8, 8) * shake);
             const T = theme();
-            const bg = ctx.createLinearGradient(0, 0, 0, H);
-            bg.addColorStop(0, T.bg[0]); bg.addColorStop(0.5, T.bg[1]); bg.addColorStop(1, T.bg[0]);
-            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = T.bg;
+            
+            ctx.fillRect(0, 0, W, H);
             if (slow > 0) { ctx.fillStyle = 'rgba(56,189,248,0.06)'; ctx.fillRect(0, 0, W, H); }
 
             for (const s of stars) { ctx.fillStyle = `rgba(${T.star},${s.z})`; ctx.fillRect(s.x, s.y, 2 * s.z + 1, 2 * s.z + 1); }
@@ -555,18 +552,14 @@
                 ctx.beginPath(); ctx.moveTo(x, TOP - 6); ctx.lineTo(x - 20, 0); ctx.stroke();
             }
             ctx.fillStyle = T.glow;
-            ctx.shadowColor = T.glow; ctx.shadowBlur = 12;
             ctx.fillRect(0, BOT, W, 3); ctx.fillRect(0, TOP - 3, W, 3);
-            ctx.shadowBlur = 0;
 
             // obstacles
             for (const o of obstacles) {
                 if (o.type === 'spinner') {
                     const hx = Math.cos(o.ang) * o.len / 2, hy = Math.sin(o.ang) * o.len / 2;
                     ctx.strokeStyle = T.obst; ctx.lineWidth = 12; ctx.lineCap = 'round';
-                    ctx.shadowColor = T.obst; ctx.shadowBlur = 14;
                     ctx.beginPath(); ctx.moveTo(o.cx - hx, o.cy - hy); ctx.lineTo(o.cx + hx, o.cy + hy); ctx.stroke();
-                    ctx.shadowBlur = 0;
                     ctx.fillStyle = T.fill; ctx.beginPath(); ctx.arc(o.cx, o.cy, 9, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = T.obst; ctx.lineWidth = 2; ctx.stroke();
                     continue;
@@ -584,9 +577,9 @@
                 if (o.type === 'fireball') {
                     if (!o.armed) { ctx.fillStyle = 'rgba(251,146,60,' + (0.3 + Math.sin(time * 14) * 0.2) + ')'; ctx.fillRect(o.x, o.side === 'floor' ? BOT - 4 : TOP, 26, 4); continue; }
                     const g = ctx.createRadialGradient(o.x + o.r, o.y, 2, o.x + o.r, o.y, o.r);
-                    g.addColorStop(0, '#fef08a'); g.addColorStop(0.5, '#fb923c'); g.addColorStop(1, '#dc2626');
-                    ctx.fillStyle = g; ctx.shadowColor = '#fb923c'; ctx.shadowBlur = 18;
-                    ctx.beginPath(); ctx.arc(o.x + o.r, o.y, o.r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                    g.addColorStop(0, '#fef08a'); g.addColorStop(0.5, '#f59a55'); g.addColorStop(1, '#d9483f');
+                    ctx.fillStyle = g; 
+                    ctx.beginPath(); ctx.arc(o.x + o.r, o.y, o.r, 0, Math.PI * 2); ctx.fill(); 
                     continue;
                 }
                 if (o.type === 'laser') {
@@ -594,21 +587,17 @@
                     ctx.fillStyle = T.fill; ctx.fillRect(o.x, TOP, o.w, 14); ctx.fillRect(o.x, BOT - 14, o.w, 14);
                     if (on || soon) {
                         ctx.fillStyle = on ? T.obst : 'rgba(240,171,252,0.25)';
-                        ctx.shadowColor = T.obst; ctx.shadowBlur = on ? 22 : 0;
                         ctx.fillRect(o.x + (on ? 4 : 8), TOP + 14, on ? o.w - 8 : 2, BOT - TOP - 28);
-                        ctx.shadowBlur = 0;
                     }
                     continue;
                 }
                 if (o.type === 'faller') {
-                    ctx.fillStyle = T.obst; ctx.shadowColor = T.obst; ctx.shadowBlur = 8;
+                    ctx.fillStyle = T.obst; 
                     ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + o.w, o.y); ctx.lineTo(o.x + o.w / 2, o.y + o.h); ctx.closePath(); ctx.fill();
-                    ctx.shadowBlur = 0;
                     continue;
                 }
                 if (o.type === 'spike') {
                     ctx.fillStyle = T.obst;
-                    ctx.shadowColor = T.obst; ctx.shadowBlur = 10;
                     for (let i = 0; i < o.w / 30; i++) {
                         const x = o.x + i * 30;
                         ctx.beginPath();
@@ -616,15 +605,12 @@
                         else { ctx.moveTo(x, TOP); ctx.lineTo(x + 15, TOP + o.h); ctx.lineTo(x + 30, TOP); }
                         ctx.fill();
                     }
-                    ctx.shadowBlur = 0;
                 } else {
                     const [x, y, w, h] = obstacleRect(o);
                     ctx.fillStyle = T.fill;
                     ctx.fillRect(x, y, w, h);
                     ctx.strokeStyle = T.obst; ctx.lineWidth = 2;
-                    ctx.shadowColor = T.obst; ctx.shadowBlur = 12;
                     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-                    ctx.shadowBlur = 0;
                     if (o.type === 'mover') { ctx.fillStyle = T.obst; ctx.fillRect(x + w / 2 - 2, y - 6, 4, 6); ctx.fillRect(x + w / 2 - 2, y + h, 4, 6); }
                     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
                     for (let yy = y + 10; yy < y + h; yy += 14) { ctx.beginPath(); ctx.moveTo(x + 4, yy); ctx.lineTo(x + w - 4, yy); ctx.stroke(); }
@@ -634,17 +620,15 @@
             // coins
             for (const c of coins) {
                 const sx = Math.abs(Math.cos(time * 5 + c.x * 0.02));
-                ctx.fillStyle = '#fbbf24';
+                ctx.fillStyle = '#f5b942';
                 ctx.beginPath(); ctx.ellipse(c.x, c.y, 8 * sx + 1.5, 8, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#fde68a';
                 ctx.beginPath(); ctx.ellipse(c.x, c.y, 4 * sx + 0.5, 4, 0, 0, Math.PI * 2); ctx.fill();
             }
             for (const u of powerups) {
-                const col = { shield: '#67e8f9', magnet: '#f87171', slow: '#38bdf8', double: '#4ade80' }[u.kind];
+                const col = { shield: '#86d9e6', magnet: '#f27a73', slow: '#5bb8ea', double: '#6fd29a' }[u.kind];
                 ctx.strokeStyle = col; ctx.lineWidth = 2;
-                ctx.shadowColor = col; ctx.shadowBlur = 14;
                 ctx.beginPath(); ctx.arc(u.x, u.y, 14 + Math.sin(time * 6) * 1.5, 0, Math.PI * 2); ctx.stroke();
-                ctx.shadowBlur = 0;
                 ctx.font = '16px "Segoe UI Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText({ shield: '🛡', magnet: '🧲', slow: '⏳', double: '🦘' }[u.kind], u.x, u.y + 1);
             }
@@ -653,7 +637,7 @@
             if (state === 'play' || state === 'menu') {
                 trail.forEach((t, i) => {
                     ctx.globalAlpha = (i / trail.length) * 0.35;
-                    ctx.fillStyle = skin === 'rainbow' ? `hsl(${(time * 220 + i * 20) % 360},90%,62%)` : skin === 'ember' ? '#f97316' : '#a78bfa';
+                    ctx.fillStyle = skin === 'rainbow' ? `hsl(${(time * 220 + i * 20) % 360},90%,62%)` : skin === 'ember' ? '#f2893d' : '#a18bec';
                     const s = PS * (0.3 + i / trail.length * 0.5);
                     ctx.fillRect(t.x - s / 2, t.y - s / 2, s, s);
                 });
@@ -668,11 +652,11 @@
 
             // status bars
             let by = 52;
-            for (const [v, max, col, label] of [[magnet, 8, '#f87171', 'MAGNET'], [slow, 5, '#38bdf8', 'SLOW'], [airFlip, 10, '#4ade80', p && p.airUsed ? 'AIR FLIP USED' : 'AIR FLIP']]) {
+            for (const [v, max, col, label] of [[magnet, 8, '#f27a73', 'MAGNET'], [slow, 5, '#5bb8ea', 'SLOW'], [airFlip, 10, '#6fd29a', p && p.airUsed ? 'AIR FLIP USED' : 'AIR FLIP']]) {
                 if (v <= 0) continue;
                 ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(W - 130, by, 110, 14);
                 ctx.fillStyle = col; ctx.fillRect(W - 130, by, 110 * v / max, 14);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
                 ctx.fillText(label, W - 126, by + 7);
                 by += 20;
             }
@@ -681,7 +665,7 @@
                 const into = (dist % BIOME_LEN) / BIOME_LEN, T2 = theme();
                 ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(12, 52, 150, 16);
                 ctx.fillStyle = T2.glow; ctx.fillRect(12, 52, 150 * into, 16);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
                 ctx.fillText(T2.icon + ' ' + T2.name.toUpperCase(), 16, 60);
             }
             ctx.restore();

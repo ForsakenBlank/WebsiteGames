@@ -6,7 +6,7 @@
     <title>Pong · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #e2e8f0; --accent-2: #94a3b8; --accent-ink: #0b1020; }
+        :root { --accent: var(--text); --accent-2: var(--muted); --accent-ink: var(--bg-2); }
         .opts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; align-items: center; }
         .opts .seg { justify-content: center; }
         .opts label { font-size: 0.8rem; color: var(--muted); }
@@ -71,7 +71,7 @@
         const opts = Object.assign({ opp: 'normal', to: 7, style: 'classic' }, Arcade.load('arcade.pong.opts', {}));
         const stats = Object.assign({ wins: 0, losses: 0, played: 0, byLevel: {} }, Arcade.load('arcade.pong.stats', {}));
         const AI = { easy: { sp: 260, react: 0.22, err: 60 }, normal: { sp: 400, react: 0.12, err: 28 }, hard: { sp: 620, react: 0.04, err: 8 } };
-        const POW = { big: { c: '#22c55e', l: '⬆', t: 'Big paddle' }, small: { c: '#ef4444', l: '⬇', t: 'Shrink opponent' }, multi: { c: '#38bdf8', l: '×3', t: 'Multi-ball' }, fast: { c: '#facc15', l: '⚡', t: 'Fast ball' } };
+        const POW = { big: { c: '#4fc07f', l: '⬆', t: 'Big paddle' }, small: { c: '#ef5b56', l: '⬇', t: 'Shrink opponent' }, multi: { c: '#5bb8ea', l: '×3', t: 'Multi-ball' }, fast: { c: '#f6c445', l: '⚡', t: 'Fast ball' } };
         let L, Rp, balls, score, running, paused, serveT, server, trail = [], powers, powT, flash = 0, aiTarget, aiT, msg;
         let fx = new Arcade.Particles(300);
         function seg(id, key, conv = (v) => v) {
@@ -163,7 +163,7 @@
                     b.x = dir > 0 ? px + b.r : px - b.r;
                     b.last = dir > 0 ? 0 : 1;
                     Arcade.tone(dir > 0 ? 440 : 520, 0.06, 'square', 0.05);
-                    fx.emit(b.x, b.y, { n: 10, speed: 160, color: ['#fff', '#cbd5e1'], life: 0.35, size: 3, angle: dir > 0 ? 0 : Math.PI, spread: 1.4 });
+                    fx.emit(b.x, b.y, { n: 10, speed: 160, color: ['#fff', Arcade.ui.muted], life: 0.35, size: 3, angle: dir > 0 ? 0 : Math.PI, spread: 1.4 });
                 }
             }
         }
@@ -214,30 +214,27 @@
             else { const b = balls[0]; for (const d of [-0.35, 0.35]) { const a = Math.atan2(b.vy, b.vx) + d; balls.push({ x: b.x, y: b.y, vx: Math.cos(a) * b.sp, vy: Math.sin(a) * b.sp, r: 8, sp: b.sp, spin: 0, last: b.last }); } }
         }
         function draw() {
-            c.fillStyle = '#05070f'; c.fillRect(0, 0, W, H);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(0, 0, W, H);
             if (flash > 0) { c.fillStyle = `rgba(255,255,255,${flash * 0.08})`; c.fillRect(0, 0, W, H); }
             c.strokeStyle = 'rgba(226,232,240,0.18)'; c.lineWidth = 4; c.setLineDash([14, 14]);
             c.beginPath(); c.moveTo(W / 2, 0); c.lineTo(W / 2, H); c.stroke(); c.setLineDash([]);
             c.fillStyle = 'rgba(226,232,240,0.85)'; c.font = '900 72px ui-monospace, monospace'; c.textAlign = 'center'; c.textBaseline = 'top';
             if (score) { c.fillText(score[0], W / 2 - 90, 24); c.fillText(score[1], W / 2 + 90, 24); }
-            for (const t of trail) { c.globalAlpha = t.t * 1.6; c.fillStyle = '#94a3b8'; c.beginPath(); c.arc(t.x, t.y, 8 * t.t * 4, 0, TAU); c.fill(); }
+            for (const t of trail) { c.globalAlpha = t.t * 1.6; c.fillStyle = Arcade.ui.muted; c.beginPath(); c.arc(t.x, t.y, 8 * t.t * 4, 0, TAU); c.fill(); }
             c.globalAlpha = 1;
-            for (const p of powers || []) { c.fillStyle = POW[p.t].c; c.globalAlpha = Math.min(1, p.life); c.beginPath(); c.arc(p.x, p.y, 16, 0, TAU); c.fill(); c.fillStyle = '#05070f'; c.font = '800 14px system-ui'; c.textBaseline = 'middle'; c.fillText(POW[p.t].l, p.x, p.y + 1); c.globalAlpha = 1; }
+            for (const p of powers || []) { c.fillStyle = POW[p.t].c; c.globalAlpha = Math.min(1, p.life); c.beginPath(); c.arc(p.x, p.y, 16, 0, TAU); c.fill(); c.fillStyle = Arcade.ui.bg2; c.font = '800 14px Fredoka, sans-serif'; c.textBaseline = 'middle'; c.fillText(POW[p.t].l, p.x, p.y + 1); c.globalAlpha = 1; }
             if (L) for (const p of [L, Rp]) {
                 const h = ph(p);
-                c.fillStyle = p.big > 0 ? '#86efac' : p.small > 0 ? '#fca5a5' : '#e2e8f0';
-                c.shadowColor = c.fillStyle; c.shadowBlur = 16;
+                c.fillStyle = p.big > 0 ? '#9fdfb8' : p.small > 0 ? '#f7a8a1' : Arcade.ui.text;
                 c.fillRect(p.x, p.y - h / 2, PW, h);
             }
-            c.shadowBlur = 0;
-            for (const b of balls || []) { c.fillStyle = '#fff'; c.shadowColor = '#fff'; c.shadowBlur = 18; c.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2); }
-            c.shadowBlur = 0;
+            for (const b of balls || []) { c.fillStyle = '#fff'; c.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2); }
             fx.draw(c);
             c.textBaseline = 'middle';
-            if (running && serveT > 0) { c.fillStyle = '#cbd5e1'; c.font = '700 18px system-ui'; c.fillText(server > 0 ? 'Serving →' : '← Serving', W / 2, H / 2 + 60); }
-            if (msg) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.c; c.font = '900 26px system-ui'; c.fillText(msg.s, W / 2, H - 50); c.globalAlpha = 1; }
-            if (paused) { c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 36px system-ui'; c.fillText('Paused', W / 2, H / 2); }
-            if (opts.opp !== '2p' && running) { c.fillStyle = 'rgba(148,163,184,0.5)'; c.font = '600 12px system-ui'; c.fillText('YOU', W / 2 - 90, 112); c.fillText('AI · ' + opts.opp.toUpperCase(), W / 2 + 90, 112); }
+            if (running && serveT > 0) { c.fillStyle = Arcade.ui.muted; c.font = '700 18px Fredoka, sans-serif'; c.fillText(server > 0 ? 'Serving →' : '← Serving', W / 2, H / 2 + 60); }
+            if (msg) { c.globalAlpha = Math.min(1, msg.t * 2); c.fillStyle = msg.c; c.font = '900 26px Fredoka, sans-serif'; c.fillText(msg.s, W / 2, H - 50); c.globalAlpha = 1; }
+            if (paused) { c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = '900 36px Fredoka, sans-serif'; c.fillText('Paused', W / 2, H / 2); }
+            if (opts.opp !== '2p' && running) { c.fillStyle = 'rgba(148,163,184,0.5)'; c.font = '600 12px Fredoka, sans-serif'; c.fillText('YOU', W / 2 - 90, 112); c.fillText('AI · ' + opts.opp.toUpperCase(), W / 2 + 90, 112); }
         }
         let mouseY = null;
         cv.addEventListener('pointermove', (e) => {

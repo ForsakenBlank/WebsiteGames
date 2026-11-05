@@ -6,7 +6,7 @@
     <title>Wordle · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #22c55e; --accent-2: #eab308; --accent-ink: #03140a; --hit: #22a355; --near: #c9a20f; --miss: #353c57; --tile: 58px; }
+        :root { --accent: #ffe08a; --accent-2: #ffe08a; --accent-ink: #26180a; --hit: #22a355; --near: #c9a20f; --miss: #353c57; --tile: 58px; }
         body.contrast { --hit: #f5793a; --near: #85c0f9; }
         .stage { justify-content: space-between; gap: 10px; padding: 10px 8px 12px; }
         .modes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
@@ -35,7 +35,7 @@
         .kb .krow { display: flex; gap: 5px; justify-content: center; }
         .key {
             flex: 1; max-width: 46px; height: 54px; border: none; border-radius: 7px;
-            background: #4b5578; color: var(--text); font: inherit; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
+            background: var(--surface-3); color: var(--text); font: inherit; font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
             cursor: pointer; touch-action: manipulation; transition: background 0.2s, transform 0.06s;
         }
         .key:active { transform: scale(0.94); }
@@ -58,7 +58,7 @@
         .pchain { display: flex; flex-direction: column; gap: 5px; max-height: calc(100vh - 470px); min-height: 150px; overflow-y: auto; padding: 4px 8px; width: 100%; align-items: center; }
         .prow { display: flex; gap: 5px; align-items: center; }
         .prow .tile { width: 44px; height: 44px; font-size: 1.4rem; }
-        .prow .tile.start { background: #4b5578; border-color: transparent; color: #fff; }
+        .prow .tile.start { background: var(--surface-3); border-color: transparent; color: #fff; }
         .prow .tile.chg { background: var(--near); border-color: transparent; color: #fff; }
         .prow .tile.same { background: var(--miss); border-color: transparent; color: #cdd3ea; }
         .prow .tile.goal { border-color: transparent; background: #7a4a24; color: #fff; }

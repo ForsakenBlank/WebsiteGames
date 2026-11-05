@@ -6,7 +6,7 @@
     <title>Shape Match · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #facc15; --accent-2: #fb923c; --accent-ink: #1c1500; }
+        :root { --accent: #f6c445; --accent-2: #f6c445; --accent-ink: #26180a; }
         .opts { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
         .stars { font-size: 2rem; letter-spacing: 4px; color: var(--gold); }
         .stars .off { color: var(--surface-3); }
@@ -80,7 +80,7 @@
     (() => {
         const W = 480, H = 720, BIN_H = 104, FLOOR = H - BIN_H, BELT_Y = 300;
         const SHAPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart', 'cross'];
-        const COLORS = { red: '#f87171', blue: '#60a5fa', green: '#4ade80', yellow: '#facc15', purple: '#c084fc', orange: '#fb923c', pink: '#f9a8d4' };
+        const COLORS = { red: '#f27a73', blue: '#6ba6ee', green: '#6fd29a', yellow: '#f6c445', purple: '#b58ce8', orange: '#f59a55', pink: '#f5acc6' };
         const CNAMES = Object.keys(COLORS);
         const DIFFS = {
             easy: { name: 'Easy', lives: 5, speed: 0.75, bomb: 0.6, spawn: 1.25 },
@@ -208,7 +208,7 @@
             if (state === 'bonus') { popups.push({ x, y: y - 20, text: why, t: 0.8, bad: true }); Arcade.sfx('bad'); streak = 0; return; }
             lives--;
             streak = 0;
-            fx.emit(x, y, { n: 24, color: ['#f87171', '#fff'], speed: 220, life: 0.6 });
+            fx.emit(x, y, { n: 24, color: ['#f27a73', '#fff'], speed: 220, life: 0.6 });
             popups.push({ x, y: y - 20, text: why, t: 1, bad: true });
             Arcade.sfx(why === 'BOOM' ? 'boom' : 'bad');
             hud();
@@ -222,7 +222,7 @@
             const gain = (it.gold ? 5 : it.inner ? 3 : 1) * mult;
             score += gain;
             popups.push({ x: it.x, y: it.y - 20, text: '+' + gain + (mult > 1 ? ' ×' + mult : ''), t: 0.8 });
-            fx.emit(it.x, it.y, { n: 14, color: it.gold ? ['#facc15', '#fff'] : [COLORS[it.color], '#fff'], speed: 160, life: 0.5 });
+            fx.emit(it.x, it.y, { n: 14, color: it.gold ? ['#f6c445', '#fff'] : [COLORS[it.color], '#fff'], speed: 160, life: 0.5 });
             Arcade.sfx(it.gold ? 'coin' : 'score');
             if (it.inner) {
                 // the shell cracks open and the inner shape drops back in from the top
@@ -256,7 +256,7 @@
             if (level + 1 > p) { progress[diffId] = level + 1; Arcade.save('arcade.shapematch.progress', progress); }
             Arcade.report('level', level + 1);
             Arcade.sfx('win');
-            for (const it of items) if (!it.dead) fx.emit(it.x, it.y, { n: 6, color: '#facc15', speed: 90, life: 0.4 });
+            for (const it of items) if (!it.dead) fx.emit(it.x, it.y, { n: 6, color: '#f6c445', speed: 90, life: 0.4 });
             items = [];
             Arcade.text('clearTitle', 'Level ' + level + ' clear');
             $('clearStars').innerHTML = [1, 2, 3].map(n => n <= stars ? '★' : '<span class="off">★</span>').join('');
@@ -286,8 +286,8 @@
             const P = POWERS[it.power];
             if (it.power === 'freeze') freezeT = 5;
             if (it.power === 'auto') { autoN += 5; for (const o of items) if (!o.bomb && !o.power && !o.dead && autoN > 0 && !o.auto) { o.auto = true; autoN--; } }
-            if (it.power === 'defuse') for (const b of items) if (b.bomb && !b.dead) { b.dead = true; score += 2; fx.emit(b.x, b.y, { n: 12, color: ['#94a3b8', '#fde047'], speed: 120, life: 0.4 }); }
-            fx.emit(it.x, it.y, { n: 18, color: ['#a5f3fc', '#fff'], speed: 160, life: 0.5 });
+            if (it.power === 'defuse') for (const b of items) if (b.bomb && !b.dead) { b.dead = true; score += 2; fx.emit(b.x, b.y, { n: 12, color: [Arcade.ui.muted, '#f8d25c'], speed: 120, life: 0.4 }); }
+            fx.emit(it.x, it.y, { n: 18, color: ['#a8e4ec', '#fff'], speed: 160, life: 0.5 });
             Arcade.toast(P.e + ' ' + P.name, 'good', 1400);
             Arcade.sfx('power');
             hud();
@@ -364,14 +364,14 @@
         function drawItem(it) {
             if (it.bomb) {
                 const pulse = 1 + Math.sin(it.fuse * 10) * 0.06;
-                ctx.fillStyle = '#1f2937';
+                ctx.fillStyle = Arcade.ui.surface;
                 ctx.beginPath(); ctx.arc(it.x, it.y, it.r * pulse, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.strokeStyle = '#f27a73'; ctx.lineWidth = 3; ctx.stroke();
                 ctx.strokeStyle = '#a16207'; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(it.x + 8, it.y - 16); ctx.quadraticCurveTo(it.x + 16, it.y - 28, it.x + 22, it.y - 24); ctx.stroke();
-                ctx.fillStyle = Math.floor(time * 10) % 2 ? '#fde047' : '#f97316';
+                ctx.fillStyle = Math.floor(time * 10) % 2 ? '#f8d25c' : '#f2893d';
                 ctx.beginPath(); ctx.arc(it.x + 22, it.y - 24, 4, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#f87171'; ctx.font = 'bold 13px "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#f27a73'; ctx.font = 'bold 13px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText('TAP', it.x, it.y + 1);
                 return;
             }
@@ -382,13 +382,11 @@
                 ctx.fillText(POWERS[it.power].e, it.x, it.y + 1);
                 return;
             }
-            const col = it.gold ? '#facc15' : COLORS[it.color];
+            const col = it.gold ? '#f6c445' : COLORS[it.color];
             ctx.fillStyle = col;
-            ctx.shadowColor = col; ctx.shadowBlur = it.gold ? 20 : 8;
             shapePath(ctx, it.shape, it.x, it.y, it.r, it.rot);
             ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = it.auto ? '#a5f3fc' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = it.auto ? 3 : 2;
+            ctx.strokeStyle = it.auto ? '#a8e4ec' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = it.auto ? 3 : 2;
             ctx.stroke();
             if (it.inner) {
                 ctx.fillStyle = 'rgba(15,23,42,0.55)';
@@ -403,7 +401,7 @@
             const x = b.x + 6, y = FLOOR + 6, w = b.w - 12, h = BIN_H - 12;
             ctx.fillStyle = hot === 'ok' ? 'rgba(74,222,128,0.18)' : hot === 'bad' ? 'rgba(248,113,113,0.18)' : 'rgba(255,255,255,0.04)';
             ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.fill();
-            ctx.strokeStyle = hot === 'ok' ? '#4ade80' : hot === 'bad' ? '#f87171' : 'rgba(255,255,255,0.18)';
+            ctx.strokeStyle = hot === 'ok' ? '#6fd29a' : hot === 'bad' ? '#f27a73' : 'rgba(255,255,255,0.18)';
             ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ctx.stroke(); ctx.setLineDash([]);
             const cx = x + w / 2, cy = y + h / 2 - 8;
             if (b.rule === 'color') {
@@ -411,35 +409,35 @@
                 ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
             } else {
                 ctx.fillStyle = b.rule === 'both' ? COLORS[b.color] : 'transparent';
-                ctx.strokeStyle = b.rule === 'shape' ? '#e2e8f0' : 'transparent';
+                ctx.strokeStyle = b.rule === 'shape' ? Arcade.ui.text : 'transparent';
                 ctx.lineWidth = 3;
                 shapePath(ctx, b.shape, cx, cy, 18, 0);
                 if (b.rule === 'both') ctx.fill(); else ctx.stroke();
             }
-            ctx.fillStyle = '#94a3b8'; ctx.font = `bold ${bins.length > 4 ? 9 : 11}px "Segoe UI", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = Arcade.ui.muted; ctx.font = `bold ${bins.length > 4 ? 9 : 11}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             const label = b.rule === 'both' ? `${b.color} ${b.shape}` : b.rule === 'shape' ? `any ${b.shape}` : `any ${b.color}`;
             ctx.fillText(label.toUpperCase(), cx, y + h - 10);
         }
 
         function render() {
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#0f172a'); g.addColorStop(1, '#1a1530');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = Arcade.ui.bg;
+            
+            ctx.fillRect(0, 0, W, H);
             ctx.strokeStyle = 'rgba(250,204,21,0.05)'; ctx.lineWidth = 18;
             const off = (time * 30) % 60;
             if (freezeT <= 0) for (let y = -60 + off; y < FLOOR; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + 40); ctx.stroke(); }
             if (freezeT > 0) { ctx.fillStyle = 'rgba(165,243,252,0.07)'; ctx.fillRect(0, 0, W, FLOOR); }
             if (state === 'bonus') {
                 // the conveyor belt
-                ctx.fillStyle = '#1f2937'; ctx.fillRect(0, BELT_Y + 22, W, 22);
-                ctx.fillStyle = '#374151';
+                ctx.fillStyle = Arcade.ui.surface; ctx.fillRect(0, BELT_Y + 22, W, 22);
+                ctx.fillStyle = Arcade.ui.surface2;
                 const bo = (time * (120 + level * 4)) % 30;
                 for (let x = -30 + bo; x < W; x += 30) ctx.fillRect(x, BELT_Y + 26, 14, 14);
-                ctx.fillStyle = '#facc15'; ctx.fillRect(0, BELT_Y + 22, W, 2);
-                ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+                ctx.fillStyle = '#f6c445'; ctx.fillRect(0, BELT_Y + 22, W, 2);
+                ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px Fredoka, sans-serif'; ctx.textAlign = 'center';
                 ctx.fillText('🎁 BONUS ×2, ' + Math.ceil(bonusT) + 's', W / 2, 40);
             }
-            ctx.fillStyle = '#facc15'; ctx.fillRect(0, FLOOR - 2, W, 2);
+            ctx.fillStyle = '#f6c445'; ctx.fillRect(0, FLOOR - 2, W, 2);
 
             let hotBin = null, hotKind = null;
             if (drag && !drag.item.bomb && !drag.item.power) {
@@ -452,17 +450,17 @@
             ctx.textAlign = 'center';
             for (const p of popups) {
                 ctx.globalAlpha = Math.min(1, p.t * 2);
-                ctx.fillStyle = p.bad ? '#f87171' : '#fde68a';
-                ctx.font = 'bold 18px "Segoe UI", sans-serif';
+                ctx.fillStyle = p.bad ? '#f27a73' : '#fde68a';
+                ctx.font = 'bold 18px Fredoka, sans-serif';
                 ctx.fillText(p.text, p.x, p.y - (1 - p.t) * 30);
             }
             ctx.globalAlpha = 1;
             if (state === 'play') {
                 ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(W - 132, 12, 120, 8);
-                ctx.fillStyle = '#facc15'; ctx.fillRect(W - 132, 12, 120 * Math.min(1, levelSorted / goal()), 8);
+                ctx.fillStyle = '#f6c445'; ctx.fillRect(W - 132, 12, 120 * Math.min(1, levelSorted / goal()), 8);
             }
             if (streak >= 5 && (state === 'play' || state === 'bonus')) {
-                ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 15px "Segoe UI", sans-serif'; ctx.textAlign = 'left';
+                ctx.fillStyle = '#f5b942'; ctx.font = 'bold 15px Fredoka, sans-serif'; ctx.textAlign = 'left';
                 ctx.fillText('STREAK ' + streak + ' · ×' + (1 + Math.floor(streak / 5)), 12, 24);
             }
         }
@@ -487,7 +485,7 @@
             if (hit.bomb) {
                 hit.dead = true;
                 score += 2; hud();
-                fx.emit(hit.x, hit.y, { n: 16, color: ['#94a3b8', '#fde047'], speed: 140, life: 0.4 });
+                fx.emit(hit.x, hit.y, { n: 16, color: [Arcade.ui.muted, '#f8d25c'], speed: 140, life: 0.4 });
                 popups.push({ x: hit.x, y: hit.y - 20, text: 'DEFUSED +2', t: 0.8 });
                 Arcade.sfx('pop');
                 return;

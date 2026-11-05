@@ -18,26 +18,26 @@
         { // shack: paper card taped to a plank
             bg: '#efe3c6', bg2: '#e2d2ad', ink: '#3b2f1e', sub: '#7a6646', head: '#d9c79e', edge: '#b39b6c', r: 3, font: '"Courier New", ui-monospace, monospace', tape: true, bar: '#b7791f', port: '#5b4630' },
         { // garage: steel plate with rivets and a hazard stripe
-            bg: '#3d434b', bg2: '#353a41', ink: '#f1f5f9', sub: '#aab3bf', head: '#2c3036', edge: '#59616c', r: 5, font: 'system-ui, "Segoe UI", sans-serif', rivets: true, stripe: '#facc15', bar: '#f59e0b', port: '#facc15' },
+            bg: '#3d434b', bg2: '#353a41', ink: Arcade.ui.text, sub: '#aab3bf', head: '#2c3036', edge: '#59616c', r: 5, font: 'Fredoka, sans-serifFredoka, sans-serif', rivets: true, stripe: '#f6c445', bar: '#f2a541', port: '#f6c445' },
         { // loft: clean slate card with a teal accent
-            bg: '#1b2433', bg2: '#182030', ink: '#e8eef8', sub: '#94a3b8', head: '#212c3e', edge: '#2f3d55', r: 10, font: 'system-ui, "Segoe UI", sans-serif', accent: '#2dd4bf', bar: '#2dd4bf', port: '#2dd4bf' },
+            bg: Arcade.ui.surface, bg2: Arcade.ui.surface, ink: '#e8eef8', sub: Arcade.ui.muted, head: Arcade.ui.surface, edge: Arcade.ui.surface2, r: 10, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#54c9b4', bar: '#54c9b4', port: '#54c9b4' },
         { // datacenter: navy glass with a cyan edge
-            bg: '#0d1a2e', bg2: '#0b1627', ink: '#e0f2fe', sub: '#7dd3fc', head: '#10233d', edge: '#1e4a7a', r: 12, font: 'system-ui, "Segoe UI", sans-serif', accent: '#38bdf8', glow: 'rgba(56,189,248,0.25)', bar: '#38bdf8', port: '#38bdf8' },
+            bg: '#0d1a2e', bg2: '#0b1627', ink: '#e0f2fe', sub: '#8ccbee', head: '#10233d', edge: '#1e4a7a', r: 12, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#5bb8ea', glow: 'rgba(56,189,248,0.25)', bar: '#5bb8ea', port: '#5bb8ea' },
         { // campus: graphite with violet
-            bg: '#17161d', bg2: '#141319', ink: '#f5f3ff', sub: '#c4b5fd', head: '#1f1c29', edge: '#3b3356', r: 14, font: 'system-ui, "Segoe UI", sans-serif', accent: '#a78bfa', glow: 'rgba(167,139,250,0.22)', bar: '#a78bfa', port: '#a78bfa' },
+            bg: '#17161d', bg2: '#141319', ink: '#f5f3ff', sub: '#c0b2f0', head: '#1f1c29', edge: '#3b3356', r: 14, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#a18bec', glow: 'rgba(167,139,250,0.22)', bar: '#a18bec', port: '#a18bec' },
         { // orbit: white hairline on deep blue
-            bg: 'rgba(10,18,40,0.86)', bg2: 'rgba(10,18,40,0.86)', ink: '#f8fafc', sub: '#cbd5e1', head: 'rgba(255,255,255,0.05)', edge: 'rgba(226,232,240,0.55)', r: 16, font: 'system-ui, "Segoe UI", sans-serif', accent: '#e2e8f0', glow: 'rgba(226,232,240,0.18)', bar: '#e2e8f0', port: '#f8fafc' },
+            bg: 'rgba(10,18,40,0.86)', bg2: 'rgba(10,18,40,0.86)', ink: Arcade.ui.text, sub: Arcade.ui.muted, head: 'rgba(255,255,255,0.05)', edge: 'rgba(226,232,240,0.55)', r: 16, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: Arcade.ui.text, glow: 'rgba(226,232,240,0.18)', bar: Arcade.ui.text, port: Arcade.ui.text },
         { // sol: gold
-            bg: 'rgba(28,18,4,0.88)', bg2: 'rgba(28,18,4,0.88)', ink: '#fffbeb', sub: '#fcd34d', head: 'rgba(251,191,36,0.08)', edge: 'rgba(251,191,36,0.6)', r: 16, font: 'system-ui, "Segoe UI", sans-serif', accent: '#fbbf24', glow: 'rgba(251,191,36,0.22)', bar: '#fbbf24', port: '#fbbf24' },
+            bg: 'rgba(28,18,4,0.88)', bg2: 'rgba(28,18,4,0.88)', ink: '#fffbeb', sub: '#fcd34d', head: 'rgba(251,191,36,0.08)', edge: 'rgba(251,191,36,0.6)', r: 16, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#f5b942', glow: 'rgba(251,191,36,0.22)', bar: '#f5b942', port: '#f5b942' },
         { // galaxy: nebula purple
-            bg: 'rgba(24,10,40,0.86)', bg2: 'rgba(24,10,40,0.86)', ink: '#fdf4ff', sub: '#f0abfc', head: 'rgba(240,171,252,0.07)', edge: 'rgba(240,171,252,0.55)', r: 18, font: 'system-ui, "Segoe UI", sans-serif', accent: '#e879f9', glow: 'rgba(232,121,249,0.22)', bar: '#e879f9', port: '#f0abfc' },
+            bg: 'rgba(24,10,40,0.86)', bg2: 'rgba(24,10,40,0.86)', ink: '#fdf4ff', sub: '#e8a8dc', head: 'rgba(240,171,252,0.07)', edge: 'rgba(240,171,252,0.55)', r: 18, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#d98ae0', glow: 'rgba(232,121,249,0.22)', bar: '#d98ae0', port: '#e8a8dc' },
         { // universe: iridescent
-            bg: 'rgba(6,6,12,0.9)', bg2: 'rgba(6,6,12,0.9)', ink: '#ffffff', sub: '#d4d4f8', head: 'rgba(255,255,255,0.04)', edge: 'iri', r: 20, font: 'system-ui, "Segoe UI", sans-serif', accent: '#a5b4fc', glow: 'rgba(165,180,252,0.25)', bar: 'iri', port: '#ffffff' },
+            bg: 'rgba(6,6,12,0.9)', bg2: 'rgba(6,6,12,0.9)', ink: '#ffffff', sub: '#d4d4f8', head: 'rgba(255,255,255,0.04)', edge: 'iri', r: 20, font: 'Fredoka, sans-serifFredoka, sans-serif', accent: '#a5b4fc', glow: 'rgba(165,180,252,0.25)', bar: 'iri', port: '#ffffff' },
     ];
     const STATUS = {
-        ok: ['#22c55e', 'Working'], flooded: ['#f59e0b', '📉 Market flooded, prices down'], idle: ['#64748b', 'Waiting for input'], full: ['#f59e0b', 'Output full, connect it'], nopower: ['#f97316', 'Not enough power'],
-        hot: ['#ef4444', 'Overheating, throttled'], broken: ['#ef4444', 'Broken, click to repair'], off: ['#475569', 'Switched off'], broke: ['#ef4444', 'Out of cash'],
-        nogrid: ['#64748b', 'No grid here'], cut: ['#ef4444', 'Power company cut you off'], done: ['#64748b', 'No model to train'], notarget: ['#f59e0b', 'Pick a target on the Map'], night: ['#64748b', 'Night'],
+        ok: ['#4fc07f', 'Working'], flooded: ['#f2a541', '📉 Market flooded, prices down'], idle: [Arcade.ui.dim, 'Waiting for input'], full: ['#f2a541', 'Output full, connect it'], nopower: ['#f2893d', 'Not enough power'],
+        hot: ['#ef5b56', 'Overheating, throttled'], broken: ['#ef5b56', 'Broken, click to repair'], off: [Arcade.ui.surface3, 'Switched off'], broke: ['#ef5b56', 'Out of cash'],
+        nogrid: [Arcade.ui.dim, 'No grid here'], cut: ['#ef5b56', 'Power company cut you off'], done: [Arcade.ui.dim, 'No model to train'], notarget: ['#f2a541', 'Pick a target on the Map'], night: [Arcade.ui.dim, 'Night'],
     };
 
     /* ---------- coordinates ---------- */
@@ -83,17 +83,17 @@
             g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 2; g.strokeRect(0, 0, T, T);
             g.fillStyle = 'rgba(250,204,21,0.22)'; g.fillRect(0, 0, T, 4); g.fillRect(0, 0, 4, T);
         } else if (siteIdx === 2) {     // clean dot grid
-            g.fillStyle = '#121925'; g.fillRect(0, 0, T, T);
+            g.fillStyle = Arcade.ui.bg; g.fillRect(0, 0, T, T);
             g.fillStyle = 'rgba(148,163,184,0.16)';
             for (let y = 0; y < T; y += 30) for (let x = 0; x < T; x += 30) { g.beginPath(); g.arc(x, y, 1.3, 0, 7); g.fill(); }
         } else if (siteIdx === 3) {     // raised floor tiles
-            g.fillStyle = '#0b1424'; g.fillRect(0, 0, T, T);
+            g.fillStyle = Arcade.ui.bg2; g.fillRect(0, 0, T, T);
             for (let y = 0; y < T; y += 120) for (let x = 0; x < T; x += 120) {
-                g.fillStyle = '#0e1a2d'; g.fillRect(x + 2, y + 2, 116, 116);
+                g.fillStyle = Arcade.ui.bg; g.fillRect(x + 2, y + 2, 116, 116);
                 if ((x / 120 + y / 120) % 3 === 0) { g.fillStyle = 'rgba(56,189,248,0.10)'; for (let a = 12; a < 116; a += 12) for (let b = 12; b < 116; b += 12) g.fillRect(x + a, y + b, 3, 3); }
             }
         } else if (siteIdx === 4) {     // graphite with a fine grid
-            g.fillStyle = '#111116'; g.fillRect(0, 0, T, T);
+            g.fillStyle = Arcade.ui.bg2; g.fillRect(0, 0, T, T);
             g.strokeStyle = 'rgba(167,139,250,0.07)'; g.lineWidth = 1;
             for (let k = 0; k <= T; k += 40) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k, T); g.moveTo(0, k); g.lineTo(T, k); g.stroke(); }
             g.strokeStyle = 'rgba(167,139,250,0.13)';
@@ -133,7 +133,7 @@
             return;
         }
         // space eras: deep background, parallax stars and a feature per era
-        const bgc = ['#050914', '#0b0703', '#0a0414', '#020205'][site - 5];
+        const bgc = [Arcade.ui.bg2, '#0b0703', '#0a0414', Arcade.ui.bg2][site - 5];
         c.fillStyle = bgc; c.fillRect(0, 0, W, H);
         if (site === 5) {
             const g = c.createRadialGradient(W * 0.5, H * 2.1, H * 1.2, W * 0.5, H * 2.1, H * 1.65);
@@ -216,8 +216,8 @@
         const [x, y] = [n.x, n.y];
         const sel = G.sel === n, multi = G.multi.has(n.id);
         c.save();
-        if (s.glow) { c.shadowColor = sel ? s.accent : s.glow; c.shadowBlur = sel ? 22 : 14; }
-        else { c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 10; c.shadowOffsetY = 4; }
+        if (s.glow) { }
+        else { c.shadowOffsetY = 4; }
         c.fillStyle = s.bg; rr(x, y, NW, NH, s.r); c.fill();
         c.restore();
         c.save();
@@ -232,22 +232,22 @@
         c.fillStyle = s.bar === 'iri' ? iriGrad(x, y, NW, NH, t) : s.bar; c.fillRect(x + 10, y + NH - 12, (NW - 20) * Math.max(0, prog), 4);
         c.restore();
         c.lineWidth = sel ? 2.5 : 1.2;
-        c.strokeStyle = sel ? (s.accent || '#fbbf24') : s.edge === 'iri' ? iriGrad(x, y, NW, NH, t) : s.edge;
-        if (n.br) c.strokeStyle = '#ef4444';
+        c.strokeStyle = sel ? (s.accent || '#f5b942') : s.edge === 'iri' ? iriGrad(x, y, NW, NH, t) : s.edge;
+        if (n.br) c.strokeStyle = '#ef5b56';
         rr(x, y, NW, NH, s.r); c.stroke();
-        if (multi) { c.save(); c.setLineDash([7, 5]); c.lineDashOffset = -t * 20; c.strokeStyle = '#fbbf24'; c.lineWidth = 2.5; rr(x - 5, y - 5, NW + 10, NH + 10, s.r + 4); c.stroke(); c.restore(); }
+        if (multi) { c.save(); c.setLineDash([7, 5]); c.lineDashOffset = -t * 20; c.strokeStyle = '#f5b942'; c.lineWidth = 2.5; rr(x - 5, y - 5, NW + 10, NH + 10, s.r + 4); c.stroke(); c.restore(); }
         if (s.tape) {
             c.fillStyle = 'rgba(253,246,178,0.55)';
             c.save(); c.translate(x + NW / 2, y - 2); c.rotate(-0.04); c.fillRect(-22, -6, 44, 12); c.restore();
         }
         if (s.rivets) { c.fillStyle = '#8b939e'; [[6, 6], [NW - 6, 6], [6, NH - 6], [NW - 6, NH - 6]].forEach(([a, b]) => { c.beginPath(); c.arc(x + a, y + b, 2, 0, 7); c.fill(); }); }
         if (view.z < 0.42) {
-            c.font = '34px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.font = '34px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
             c.fillText(d.icon, x + NW / 2, y + NH / 2);
             c.textBaseline = 'alphabetic';
         } else {
             c.textAlign = 'left'; c.textBaseline = 'middle';
-            c.font = '15px system-ui'; c.fillStyle = s.ink; c.fillText(d.icon, x + 10, y + 14);
+            c.font = '15px Fredoka, sans-serif'; c.fillStyle = s.ink; c.fillText(d.icon, x + 10, y + 14);
             c.font = `700 12.5px ${s.font}`; c.fillStyle = s.ink;
             c.fillText(fitText(d.name, NW - 86), x + 32, y + 15);
             const q = '×' + Eng.fmt(n.q);
@@ -272,17 +272,17 @@
             if (lt) c.fillText(fitText(lt, NW - 34 - rw), x + 12, y + 60);
             c.font = `600 11px ${s.font}`;
             let info = '';
-            if (n.br) { c.fillStyle = '#ef4444'; info = '🔧 BROKEN, click to repair'; }
+            if (n.br) { c.fillStyle = '#ef5b56'; info = '🔧 BROKEN, click to repair'; }
             else if (d.kind === 'dyson') { c.fillStyle = s.ink; info = `${Eng.fmt(n.abs)} panels · ${Eng.fmtW(n.abs * 5e16)}`; }
             else if (d.kind === 'batt') { c.fillStyle = s.ink; info = `${Math.round((Eng.P.battCap ? Eng.S.batt / Eng.P.battCap : 0) * 100)}% charged`; }
-            else { const S2 = STATUS[n.st] || STATUS.idle; c.fillStyle = S2[0] === '#22c55e' ? s.ink : S2[0]; info = S2[1]; }
+            else { const S2 = STATUS[n.st] || STATUS.idle; c.fillStyle = S2[0] === '#4fc07f' ? s.ink : S2[0]; info = S2[1]; }
             if (n.c < 0.5 && !n.br) info += ` · ${Math.round(n.c * 100)}% condition`;
             c.fillText(fitText(info, NW - 20), x + 10, y + 82);
             c.textBaseline = 'alphabetic';
         }
         if (d.wear > 0 && n.c < 0.999 && !n.br) {
             c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(x + 10, y + NH - 6, NW - 20, 2);
-            c.fillStyle = n.c > 0.5 ? '#22c55e' : n.c > 0.25 ? '#f59e0b' : '#ef4444'; c.fillRect(x + 10, y + NH - 6, (NW - 20) * n.c, 2);
+            c.fillStyle = n.c > 0.5 ? '#4fc07f' : n.c > 0.25 ? '#f2a541' : '#ef5b56'; c.fillRect(x + 10, y + NH - 6, (NW - 20) * n.c, 2);
         }
         const hasIn = d.kind === 'sell' || d.kind === 'store' || d.kind === 'train' || d.kind === 'dyson' || Object.keys(d.in).length > 0;
         const hasOut = Object.keys(d.out).some(it => !ITEMS[it].cur);
@@ -290,7 +290,7 @@
         if (hasOut) port(...outPort(n), s.port, true);
     }
     function port(x, y, col, out) {
-        c.fillStyle = '#0b0f19'; c.beginPath(); c.arc(x, y, PORT, 0, 7); c.fill();
+        c.fillStyle = Arcade.ui.bg2; c.beginPath(); c.arc(x, y, PORT, 0, 7); c.fill();
         c.strokeStyle = col; c.lineWidth = 2.5; c.stroke();
         if (out) { c.fillStyle = col; c.beginPath(); c.arc(x, y, 3, 0, 7); c.fill(); }
     }
@@ -300,7 +300,7 @@
         c.save();
         c.strokeStyle = `rgba(251,191,36,${1 - k})`; c.lineWidth = 3;
         c.beginPath(); c.arc(x, y, r + k * 22, 0, 7); c.stroke();
-        c.strokeStyle = '#fbbf24'; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke();
+        c.strokeStyle = '#f5b942'; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke();
         c.restore();
     }
 
@@ -324,7 +324,7 @@
         const col = active && l.it ? ITEMS[l.it].col : site === 0 ? '#8a7350' : '#5b6684';
         const sel = G.selLink === l;
         c.lineCap = 'round';
-        c.strokeStyle = sel ? '#fbbf24' : 'rgba(0,0,0,0.45)'; c.lineWidth = sel ? 7 : 6;
+        c.strokeStyle = sel ? '#f5b942' : 'rgba(0,0,0,0.45)'; c.lineWidth = sel ? 7 : 6;
         curve(p); c.stroke();
         if (active && l.flow >= STREAM) {
             // heavy traffic: a solid stream, thicker the more it carries, with a slow shimmer
@@ -332,9 +332,9 @@
             c.strokeStyle = col; c.globalAlpha = 0.55; c.lineWidth = w + 2; curve(p); c.stroke();
             c.globalAlpha = 1; c.lineWidth = w;
             c.setLineDash([16, 10]); c.lineDashOffset = -t * (40 + 12 * Math.log10(l.flow));
-            if (site >= 3) { c.shadowColor = col; c.shadowBlur = 8; }
+            if (site >= 3) { }
             curve(p); c.stroke();
-            c.setLineDash([]); c.shadowBlur = 0;
+            c.setLineDash([]); 
         } else {
             c.strokeStyle = col; c.globalAlpha = active ? 0.9 : 0.5; c.lineWidth = site >= 3 ? 2.5 : 3.5;
             curve(p); c.stroke();
@@ -345,9 +345,8 @@
                 for (let i = 0; i < nDots; i++) {
                     const k = ((t * sp + i / nDots) % 1 + 1) % 1, q = bpt(p, k);
                     c.fillStyle = col;
-                    if (site >= 3) { c.shadowColor = col; c.shadowBlur = 8; }
+                    if (site >= 3) { }
                     c.beginPath(); c.arc(q[0], q[1], 3.6, 0, 7); c.fill();
-                    c.shadowBlur = 0;
                 }
             }
         }
@@ -358,11 +357,11 @@
     function drawLabel([l, m, active, col]) {
         {
             const txt = (l.f && !active ? ITEMS[l.f].icon + ' only' : `${l.f ? '⛃ ' : ''}${ITEMS[l.it] ? ITEMS[l.it].icon : ''} ${Eng.fmt(l.flow)}/s`);
-            c.font = '700 11px system-ui';
+            c.font = '700 11px Fredoka, sans-serif';
             const w = c.measureText(txt).width + 12;
             c.fillStyle = 'rgba(10,12,20,0.82)'; rr(m[0] - w / 2, m[1] - 10, w, 20, 10); c.fill();
             c.strokeStyle = l.f ? ITEMS[l.f].col : col; c.lineWidth = 1.2; c.stroke();
-            c.fillStyle = '#f8fafc'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, m[0], m[1] + 0.5); c.textBaseline = 'alphabetic';
+            c.fillStyle = Arcade.ui.text; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, m[0], m[1] + 0.5); c.textBaseline = 'alphabetic';
         }
     }
     function linkHit(wx, wy) {
@@ -408,7 +407,7 @@
         const { bp, full } = G.placingBp;
         const [ox, oy] = bpOrigin();
         const err = Eng.bpProblem(bp, full);
-        const col = err ? '#ef4444' : '#fbbf24';
+        const col = err ? '#ef5b56' : '#f5b942';
         c.save();
         c.globalAlpha = 0.85;
         c.strokeStyle = col; c.lineWidth = 2.5;
@@ -416,11 +415,11 @@
         bp.nodes.forEach(b => {
             c.fillStyle = 'rgba(15,23,42,0.75)'; rr(ox + b.x, oy + b.y, NW, NH, 10); c.fill();
             c.setLineDash([6, 5]); c.strokeStyle = col; c.stroke(); c.setLineDash([]);
-            c.fillStyle = '#fff'; c.font = '700 13px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.fillStyle = '#fff'; c.font = '700 13px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
             c.fillText(`${NODES[b.t].icon} ${NODES[b.t].name}${full && b.q > 1 ? ' ×' + b.q : ''}`, ox + b.x + NW / 2, oy + b.y + NH / 2);
         });
         const [w] = bpBounds(bp);
-        c.font = '700 13px system-ui'; c.fillStyle = col;
+        c.font = '700 13px Fredoka, sans-serif'; c.fillStyle = col;
         c.fillText(err || `Click to place “${bp.name}” · Esc to cancel`, ox + w / 2, oy - 18);
         c.textBaseline = 'alphabetic';
         c.restore();
@@ -439,12 +438,12 @@
         for (const l of S.links) drawLink(l, t, S.site, idx);
         if (drag && drag.kind === 'link') {
             const A = drag.from, a = outPort(A), b = [drag.wx, drag.wy];
-            c.setLineDash([8, 6]); c.strokeStyle = '#fbbf24'; c.lineWidth = 2.5;
+            c.setLineDash([8, 6]); c.strokeStyle = '#f5b942'; c.lineWidth = 2.5;
             curve(bez(a, b)); c.stroke(); c.setLineDash([]);
             const tgt = nodeAt(drag.wx, drag.wy);
             if (tgt && tgt !== A) {
                 const ok = Eng.producible(A).some(it => Eng.accepts(tgt, it));
-                c.strokeStyle = ok ? '#22c55e' : '#ef4444'; c.lineWidth = 3;
+                c.strokeStyle = ok ? '#4fc07f' : '#ef5b56'; c.lineWidth = 3;
                 rr(tgt.x - 4, tgt.y - 4, NW + 8, NH + 8, 14); c.stroke();
             }
         }
@@ -459,7 +458,7 @@
         if (drag && drag.kind === 'box') {
             const bx = Math.min(drag.wx0, drag.wx), by = Math.min(drag.wy0, drag.wy);
             c.fillStyle = 'rgba(251,191,36,0.08)'; c.fillRect(bx, by, Math.abs(drag.wx - drag.wx0), Math.abs(drag.wy - drag.wy0));
-            c.setLineDash([7, 5]); c.strokeStyle = '#fbbf24'; c.lineWidth = 1.5 / view.z; c.strokeRect(bx, by, Math.abs(drag.wx - drag.wx0), Math.abs(drag.wy - drag.wy0)); c.setLineDash([]);
+            c.setLineDash([7, 5]); c.strokeStyle = '#f5b942'; c.lineWidth = 1.5 / view.z; c.strokeRect(bx, by, Math.abs(drag.wx - drag.wx0), Math.abs(drag.wy - drag.wy0)); c.setLineDash([]);
         }
         if (G.placingBp) drawBpGhost();
     }

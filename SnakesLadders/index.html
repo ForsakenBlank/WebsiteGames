@@ -6,7 +6,7 @@
     <title>Snakes &amp; Ladders · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #84cc16; --accent-2: #facc15; --accent-ink: #0f1a02; }
+        :root { --accent: #b9dc6e; --accent-2: #b9dc6e; --accent-ink: #26180a; }
         .slots { display: grid; gap: 8px; margin-top: 10px; }
         .slot { display: flex; align-items: center; gap: 8px; }
         .slot i { width: 18px; height: 18px; border-radius: 50%; flex: none; }
@@ -63,7 +63,7 @@
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.5 });
         const c = view.ctx;
-        const PCOL = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'];
+        const PCOL = ['#ef5b56', '#4f8ef0', '#4fc07f', '#f6c445'];
         const PNAME = ['Red', 'Blue', 'Green', 'Yellow'];
         const CLASSIC = { ladders: [[1, 38], [4, 14], [9, 31], [21, 42], [28, 84], [36, 44], [51, 67], [71, 91], [80, 100]], snakes: [[16, 6], [47, 26], [49, 11], [56, 53], [62, 19], [64, 60], [87, 24], [93, 73], [95, 75], [98, 78]] };
         const cfg = Object.assign({ slots: ['you', 'bot', 'bot', 'off'], board: 'classic', exact: true, six: true, speed: 1 }, Arcade.load('arcade.snl.cfg', {}));
@@ -90,7 +90,7 @@
             jumps = {};
             for (const [a, b] of board.ladders) jumps[a] = { to: b, kind: 'ladder' };
             for (const [a, b] of board.snakes) jumps[a] = { to: b, kind: 'snake' };
-            board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#16a34a', '#ea580c', '#7c3aed', '#db2777', '#0891b2'][i % 5] }));
+            board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#3da868', '#d9722e', '#7c3aed', '#db2777', '#2f9ab0'][i % 5] }));
             players = cfg.slots.map((s, i) => s === 'off' ? null : { i, kind: s, pos: 0, shown: 0, x: 0, y: 0, name: s === 'you' ? 'You' : s === 'bot' ? PNAME[i] + ' bot' : PNAME[i] }).filter(Boolean);
             for (const p of players) { [p.x, p.y] = [OX - 30, OY + B - 20 - p.i * 6]; }
             turn = 0; phase = 'roll'; dice = 1; diceAnim = 0; anim = null; log = []; winner = null;
@@ -215,7 +215,7 @@
             c.beginPath(); c.ellipse(2, 0, 13, 10, 0, 0, TAU); c.fill(); c.stroke();
             c.fillStyle = '#fff'; c.beginPath(); c.arc(6, -5, 3.2, 0, TAU); c.arc(6, 5, 3.2, 0, TAU); c.fill();
             c.fillStyle = '#000'; c.beginPath(); c.arc(7, -5, 1.6, 0, TAU); c.arc(7, 5, 1.6, 0, TAU); c.fill();
-            c.strokeStyle = '#dc2626'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(14, 0); c.lineTo(20, 0); c.lineTo(23, -3); c.moveTo(20, 0); c.lineTo(23, 3); c.stroke();
+            c.strokeStyle = '#d9483f'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(14, 0); c.lineTo(20, 0); c.lineTo(23, -3); c.moveTo(20, 0); c.lineTo(23, 3); c.stroke();
             c.restore();
         }
         function drawLadder(a, b) {
@@ -232,24 +232,24 @@
             c.stroke();
         }
         function drawDie(x, y, s, v, col) {
-            c.fillStyle = '#f8fafc'; c.strokeStyle = col; c.lineWidth = 4;
+            c.fillStyle = Arcade.ui.text; c.strokeStyle = col; c.lineWidth = 4;
             c.beginPath(); c.roundRect ? c.roundRect(x, y, s, s, s * 0.18) : c.rect(x, y, s, s); c.fill(); c.stroke();
             const P = { 1: [[0.5, 0.5]], 2: [[0.25, 0.25], [0.75, 0.75]], 3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]], 4: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]], 5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]], 6: [[0.25, 0.22], [0.75, 0.22], [0.25, 0.5], [0.75, 0.5], [0.25, 0.78], [0.75, 0.78]] };
-            c.fillStyle = '#0f172a';
+            c.fillStyle = Arcade.ui.bg;
             for (const [px, py] of P[v]) { c.beginPath(); c.arc(x + px * s, y + py * s, s * 0.085, 0, TAU); c.fill(); }
         }
         function draw() {
-            c.fillStyle = '#0b1020'; c.fillRect(0, 0, W, H);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(0, 0, W, H);
             if (!board) return;
             for (let n = 1; n <= 100; n++) {
                 const [x, y] = cellXY(n), r = Math.floor((n - 1) / 10), col = (n - 1) % 10;
                 c.fillStyle = (r + col) % 2 ? '#fef3c7' : '#fde68a';
-                if (n === 100) c.fillStyle = '#fbbf24';
+                if (n === 100) c.fillStyle = '#f5b942';
                 c.fillRect(x - CS / 2, y - CS / 2, CS, CS);
-                c.fillStyle = 'rgba(120,53,15,0.55)'; c.font = '700 12px system-ui'; c.textAlign = 'left'; c.textBaseline = 'top';
+                c.fillStyle = 'rgba(120,53,15,0.55)'; c.font = '700 12px Fredoka, sans-serif'; c.textAlign = 'left'; c.textBaseline = 'top';
                 c.fillText(n, x - CS / 2 + 4, y - CS / 2 + 3);
             }
-            c.font = '22px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.font = '22px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
             const [fx, fy] = cellXY(100); c.fillText('👑', fx + 6, fy + 6);
             c.strokeStyle = '#78350f'; c.lineWidth = 3; c.strokeRect(OX, OY, B, B);
             for (const [a, b] of board.ladders) drawLadder(a, b);
@@ -257,31 +257,31 @@
             // tokens
             for (const p of players.slice().sort((a, b) => (a === cur()) - (b === cur()))) {
                 c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(p.x, p.y + 12, 12, 4, 0, 0, TAU); c.fill();
-                c.fillStyle = PCOL[p.i]; c.strokeStyle = '#0f172a'; c.lineWidth = 2.5;
+                c.fillStyle = PCOL[p.i]; c.strokeStyle = Arcade.ui.bg; c.lineWidth = 2.5;
                 c.beginPath(); c.arc(p.x, p.y, 13, 0, TAU); c.fill(); c.stroke();
                 c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.arc(p.x - 4, p.y - 4, 4, 0, TAU); c.fill();
                 if (p === cur() && phase !== 'over') { c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y, 17 + Math.sin(performance.now() / 150) * 2, 0, TAU); c.stroke(); }
-                if (p.kind === 'you') { c.fillStyle = '#fff'; c.font = '800 10px system-ui'; c.fillText('YOU', p.x, p.y + 1); }
+                if (p.kind === 'you') { c.fillStyle = '#fff'; c.font = '800 10px Fredoka, sans-serif'; c.fillText('YOU', p.x, p.y + 1); }
             }
             // side panel
             const px = OX + B + 20, pw = W - px - 10;
-            c.fillStyle = '#111a30'; c.beginPath(); c.roundRect ? c.roundRect(px, OY, pw, B, 14) : c.rect(px, OY, pw, B); c.fill();
+            c.fillStyle = Arcade.ui.bg; c.beginPath(); c.roundRect ? c.roundRect(px, OY, pw, B, 14) : c.rect(px, OY, pw, B); c.fill();
             c.textAlign = 'left';
             players.forEach((p, k) => {
                 const y = OY + 20 + k * 44, on = p === cur();
                 if (on) { c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(px + 8, y - 6, pw - 16, 38); }
                 c.fillStyle = PCOL[p.i]; c.beginPath(); c.arc(px + 26, y + 13, 10, 0, TAU); c.fill();
-                c.fillStyle = '#e2e8f0'; c.font = (on ? '800' : '600') + ' 15px system-ui'; c.fillText(p.name, px + 44, y + 6);
-                c.fillStyle = '#94a3b8'; c.font = '600 12px system-ui'; c.fillText(p.pos ? 'Square ' + p.pos : 'Waiting to start', px + 44, y + 24);
+                c.fillStyle = Arcade.ui.text; c.font = (on ? '800' : '600') + ' 15px Fredoka, sans-serif'; c.fillText(p.name, px + 44, y + 6);
+                c.fillStyle = Arcade.ui.muted; c.font = '600 12px Fredoka, sans-serif'; c.fillText(p.pos ? 'Square ' + p.pos : 'Waiting to start', px + 44, y + 24);
             });
             const dx = px + pw / 2 - 48, dy = OY + 230;
             drawDie(dx, dy, 96, dice, PCOL[cur().i]);
-            c.textAlign = 'center'; c.fillStyle = '#e2e8f0'; c.font = '700 14px system-ui';
+            c.textAlign = 'center'; c.fillStyle = Arcade.ui.text; c.font = '700 14px Fredoka, sans-serif';
             const myTurn = phase === 'roll' && human(cur());
             c.fillText(phase === 'over' ? 'Game over' : myTurn ? (cur().kind === 'you' ? 'Your turn, tap to roll' : cur().name + ': tap to roll') : phase === 'roll' ? cur().name + ' is thinking…' : '', px + pw / 2, dy + 120);
             if (myTurn) { c.strokeStyle = PCOL[cur().i]; c.lineWidth = 2; c.globalAlpha = 0.5 + Math.sin(performance.now() / 200) * 0.3; c.strokeRect(dx - 8, dy - 8, 112, 112); c.globalAlpha = 1; }
-            c.textAlign = 'left'; c.font = '500 12px system-ui';
-            log.forEach((s, k) => { c.fillStyle = k ? '#64748b' : '#cbd5e1'; c.fillText(s, px + 14, OY + 400 + k * 22, pw - 24); });
+            c.textAlign = 'left'; c.font = '500 12px Fredoka, sans-serif';
+            log.forEach((s, k) => { c.fillStyle = k ? Arcade.ui.dim : Arcade.ui.muted; c.fillText(s, px + 14, OY + 400 + k * 22, pw - 24); });
             Object.assign(diceRect, { x: dx, y: dy, w: 96, h: 96 });
         }
         const diceRect = { x: 0, y: 0, w: 0, h: 0 };
@@ -321,7 +321,7 @@
         $('setupBtn').onclick = () => { Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
         $('newBtn').onclick = () => { clearTimeout(timer); Arcade.hide('endOv'); buildSetup(); Arcade.show('setupOv'); };
         buildSetup(); hud();
-        board = CLASSIC; board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#16a34a', '#ea580c', '#7c3aed', '#db2777', '#0891b2'][i % 5] }));
+        board = CLASSIC; board.snakeShapes = board.snakes.map(([a, b], i) => ({ a, b, wig: 0.6 + (i % 3) * 0.3, col: ['#3da868', '#d9722e', '#7c3aed', '#db2777', '#2f9ab0'][i % 5] }));
         players = [{ i: 0, kind: 'you', pos: 0, x: -50, y: 0, name: 'You' }]; turn = 0; phase = 'idle'; dice = 6; log = [];
         const loop = Arcade.loop((dt) => { step(dt); draw(); });
         loop.start();

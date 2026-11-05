@@ -6,7 +6,7 @@
     <title>Pipe Puzzle · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #3b82f6; --accent-2: #22d3ee; --accent-ink: #020b1f; }
+        :root { --accent: #4f8ef0; --accent-2: #56c8dc; --accent-ink: #020b1f; }
         .tbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
         #cv { cursor: pointer; }
     </style>
@@ -167,33 +167,33 @@
         function draw(dt) {
             anim += dt;
             const cs = S / N;
-            c.fillStyle = '#0a1020'; c.fillRect(0, 0, S, S);
+            c.fillStyle = Arcade.ui.bg2; c.fillRect(0, 0, S, S);
             for (let i = 0; i < N * N; i++) {
                 const t = tiles[i], x = (i % N) * cs, y = ((i / N) | 0) * cs;
                 const target = t.rot * 90;
                 let diff = ((target - t.show) % 360 + 540) % 360 - 180;
                 t.show += diff * Math.min(1, dt * 18);
-                c.fillStyle = locked[i] ? '#1e293b' : (i % N + ((i / N) | 0)) % 2 ? '#0f172a' : '#111a30';
+                c.fillStyle = locked[i] ? Arcade.ui.surface : (i % N + ((i / N) | 0)) % 2 ? Arcade.ui.bg : Arcade.ui.bg;
                 c.fillRect(x, y, cs, cs);
                 c.save(); c.translate(x + cs / 2, y + cs / 2); c.rotate(t.show * Math.PI / 180);
                 const deg = [0, 1, 2, 3].filter(b => t.m >> b & 1).length;
                 const isWet = wet[i];
-                const col = isWet ? (won ? `hsl(${190 + Math.sin(anim * 4 + i * 0.3) * 15},90%,60%)` : '#38bdf8') : '#64748b';
+                const col = isWet ? (won ? `hsl(${190 + Math.sin(anim * 4 + i * 0.3) * 15},90%,60%)` : '#5bb8ea') : Arcade.ui.dim;
                 c.lineCap = 'round';
-                for (const [w, cc] of [[cs * 0.3, '#020617'], [cs * 0.2, col]]) {
+                for (const [w, cc] of [[cs * 0.3, Arcade.ui.bg2], [cs * 0.2, col]]) {
                     c.strokeStyle = cc; c.lineWidth = w;
                     c.beginPath();
                     for (let d = 0; d < 4; d++) if (t.m >> d & 1) { c.moveTo(0, 0); c.lineTo(DX[d] * cs / 2, DY[d] * cs / 2); }
                     c.stroke();
                 }
                 c.restore();
-                if (i === src) { c.fillStyle = '#0ea5e9'; c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.26, 0, Math.PI * 2); c.fill(); c.font = `${cs * 0.32}px system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💧', x + cs / 2, y + cs / 2 + 1); }
+                if (i === src) { c.fillStyle = '#4aa8dd'; c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.26, 0, Math.PI * 2); c.fill(); c.font = `${cs * 0.32}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💧', x + cs / 2, y + cs / 2 + 1); }
                 else if (deg === 1) {
-                    c.fillStyle = isWet ? '#22d3ee' : '#334155'; c.strokeStyle = '#020617'; c.lineWidth = 3;
+                    c.fillStyle = isWet ? '#56c8dc' : Arcade.ui.surface2; c.strokeStyle = Arcade.ui.bg2; c.lineWidth = 3;
                     c.beginPath(); c.arc(x + cs / 2, y + cs / 2, cs * 0.2, 0, Math.PI * 2); c.fill(); c.stroke();
-                    c.font = `${cs * 0.22}px system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(isWet ? '🌱' : '🥀', x + cs / 2, y + cs / 2 + 1);
+                    c.font = `${cs * 0.22}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(isWet ? '🌱' : '🥀', x + cs / 2, y + cs / 2 + 1);
                 }
-                if (locked[i]) { c.font = `${cs * 0.18}px system-ui`; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('🔒', x + cs - 3, y + 3); }
+                if (locked[i]) { c.font = `${cs * 0.18}px Fredoka, sans-serif`; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('🔒', x + cs - 3, y + 3); }
             }
             c.strokeStyle = 'rgba(148,163,184,0.12)'; c.lineWidth = 1;
             for (let k = 1; k < N; k++) { c.beginPath(); c.moveTo(k * cs, 0); c.lineTo(k * cs, S); c.stroke(); c.beginPath(); c.moveTo(0, k * cs); c.lineTo(S, k * cs); c.stroke(); }

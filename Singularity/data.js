@@ -13,34 +13,34 @@
     /* ---------- items that flow along cables ---------- */
     // price = base sell value in $. cur = goes straight to a wallet instead of a buffer.
     const ITEMS = {
-        cash: { name: 'Cash', icon: '💵', col: '#4ade80', cur: true },
-        coin: { name: 'CrypToken', icon: '🪙', col: '#fbbf24', cur: true },
-        rp: { name: 'Research', icon: '🔬', col: '#c084fc', cur: true },
-        rep: { name: 'Reputation', icon: '⭐', col: '#facc15', cur: true },
-        infl: { name: 'Influence', icon: '🏛️', col: '#f472b6', cur: true },
+        cash: { name: 'Cash', icon: '💵', col: '#6fd29a', cur: true },
+        coin: { name: 'CrypToken', icon: '🪙', col: '#f5b942', cur: true },
+        rp: { name: 'Research', icon: '🔬', col: '#b58ce8', cur: true },
+        rep: { name: 'Reputation', icon: '⭐', col: '#f6c445', cur: true },
+        infl: { name: 'Influence', icon: '🏛️', col: '#f08aa7', cur: true },
 
         scrap: { name: 'E-waste', icon: '🗑️', col: '#a8a29e', price: 0.25 },
-        parts: { name: 'Salvaged Parts', icon: '⚙️', col: '#f59e0b', price: 2 },
-        pc: { name: 'Refurbished PC', icon: '🖥️', col: '#60a5fa', price: 60 },
-        raw: { name: 'Raw Data', icon: '📄', col: '#94a3b8', price: 0.15 },
-        data: { name: 'Clean Data', icon: '📚', col: '#34d399', price: 1 },
-        labels: { name: 'Labeled Data', icon: '🏷️', col: '#a3e635', price: 4, trainAs: { data: 4 } },
-        compute: { name: 'Compute', icon: '🧮', col: '#38bdf8', price: 0.01, unit: 'PF' },
-        chip: { name: 'Chips', icon: '🔲', col: '#22c55e', price: 95 },
-        gpu: { name: 'GPU', icon: '🎮', col: '#f472b6', price: 650 },
-        server: { name: 'Server Blade', icon: '🗄️', col: '#818cf8', price: 7000 },
-        wafer: { name: 'Silicon Wafer', icon: '💿', col: '#e2e8f0', price: 2500 },
-        asic: { name: 'AI Accelerator', icon: '🧠', col: '#c084fc', price: 9e4 },
+        parts: { name: 'Salvaged Parts', icon: '⚙️', col: '#f2a541', price: 2 },
+        pc: { name: 'Refurbished PC', icon: '🖥️', col: '#6ba6ee', price: 60 },
+        raw: { name: 'Raw Data', icon: '📄', col: Arcade.ui.muted, price: 0.15 },
+        data: { name: 'Clean Data', icon: '📚', col: '#5fcda0', price: 1 },
+        labels: { name: 'Labeled Data', icon: '🏷️', col: '#b9dc6e', price: 4, trainAs: { data: 4 } },
+        compute: { name: 'Compute', icon: '🧮', col: '#5bb8ea', price: 0.01, unit: 'PF' },
+        chip: { name: 'Chips', icon: '🔲', col: '#4fc07f', price: 95 },
+        gpu: { name: 'GPU', icon: '🎮', col: '#f08aa7', price: 650 },
+        server: { name: 'Server Blade', icon: '🗄️', col: '#8b8fec', price: 7000 },
+        wafer: { name: 'Silicon Wafer', icon: '💿', col: Arcade.ui.text, price: 2500 },
+        asic: { name: 'AI Accelerator', icon: '🧠', col: '#b58ce8', price: 9e4 },
         ore: { name: 'Ore', icon: '🪨', col: '#b45309', price: 25 },
-        steel: { name: 'Steel', icon: '🔩', col: '#cbd5e1', price: 120 },
-        robot: { name: 'Robot', icon: '🤖', col: '#fbbf24', price: 4e5 },
-        deut: { name: 'Deuterium', icon: '💧', col: '#67e8f9', price: 4e4 },
-        rocket: { name: 'Rocket', icon: '🚀', col: '#f87171', price: 8e6 },
+        steel: { name: 'Steel', icon: '🔩', col: Arcade.ui.muted, price: 120 },
+        robot: { name: 'Robot', icon: '🤖', col: '#f5b942', price: 4e5 },
+        deut: { name: 'Deuterium', icon: '💧', col: '#86d9e6', price: 4e4 },
+        rocket: { name: 'Rocket', icon: '🚀', col: '#f27a73', price: 8e6 },
         payload: { name: 'Orbital Payload', icon: '🛰️', col: '#fde68a', price: 6e7 },
-        nanite: { name: 'Nanites', icon: '🦠', col: '#a78bfa', price: 2e8 },
-        panel: { name: 'Dyson Panel', icon: '🔆', col: '#facc15', price: 3e10 },
-        probe: { name: 'Von Neumann Probe', icon: '🛸', col: '#f0abfc', price: 5e13 },
-        exotic: { name: 'Exotic Matter', icon: '✴️', col: '#fb7185', price: 2e16 },
+        nanite: { name: 'Nanites', icon: '🦠', col: '#a18bec', price: 2e8 },
+        panel: { name: 'Dyson Panel', icon: '🔆', col: '#f6c445', price: 3e10 },
+        probe: { name: 'Von Neumann Probe', icon: '🛸', col: '#e8a8dc', price: 5e13 },
+        exotic: { name: 'Exotic Matter', icon: '✴️', col: '#f27d8e', price: 2e16 },
     };
 
     /* ---------- places you work from (eras) ---------- */
@@ -473,7 +473,7 @@
     /* ---------- focus trees (builds) ---------- */
     // 1 point per trained model and per move. Pick a direction: you cannot max everything.
     const FOCUS = [
-        { id: 'hustler', name: 'Hustler', icon: '🖱️', col: '#f59e0b', desc: 'Manual work and captchas. Turns captchas into a whole business.', perks: [
+        { id: 'hustler', name: 'Hustler', icon: '🖱️', col: '#f2a541', desc: 'Manual work and captchas. Turns captchas into a whole business.', perks: [
             { id: 'h1', name: 'Quick Fingers', cost: 1, fx: { captcha: 1.5 }, desc: 'Captchas and desk jobs pay 50% more.' },
             { id: 'h2', name: 'Captcha Bots', cost: 1, fx: { 'autocap+': 0.1 }, desc: '+1 automatic captcha every 10 s.' },
             { id: 'h3', name: 'Gig Economy', cost: 2, fx: { contract: 1.4, 'slots_c+': 1 }, desc: 'Contracts pay 40% more. +1 contract slot.' },
@@ -481,7 +481,7 @@
             { id: 'h5', name: 'Human Interface', cost: 3, fx: { capbonus: 2 }, desc: 'Desk jobs give double their side reward (labels, research, influence...).' },
             { id: 'h6', name: 'Turing Master', cost: 4, fx: { captcha: 2, 'autocap+': 0.3, mini: 2 }, desc: 'Captchas ×2, +3 auto per 10 s, every minigame reward ×2.' },
         ] },
-        { id: 'engineer', name: 'Engineer', icon: '🔧', col: '#38bdf8', desc: 'Hardware that lasts, runs cool and costs less.', perks: [
+        { id: 'engineer', name: 'Engineer', icon: '🔧', col: '#5bb8ea', desc: 'Hardware that lasts, runs cool and costs less.', perks: [
             { id: 'e1', name: 'Duct Tape', cost: 1, fx: { 'wear:*': 0.6 }, desc: 'Machines wear out 40% slower.' },
             { id: 'e2', name: 'Bulk Orders', cost: 1, fx: { cost: 0.85 }, desc: 'Machines cost 15% less.' },
             { id: 'e3', name: 'Efficient PSUs', cost: 2, fx: { 'power:*': 0.85 }, desc: 'All machines use 15% less power.' },
@@ -489,7 +489,7 @@
             { id: 'e5', name: 'Hot-Swap', cost: 3, fx: { fastfix: 1 }, desc: 'Paid repairs are free and instant.' },
             { id: 'e6', name: 'Tight Packing', cost: 4, fx: { 'slots+': 6 }, desc: '+6 machine slots everywhere.' },
         ] },
-        { id: 'researcher', name: 'Researcher', icon: '🔬', col: '#c084fc', desc: 'Better models with less compute.', perks: [
+        { id: 'researcher', name: 'Researcher', icon: '🔬', col: '#b58ce8', desc: 'Better models with less compute.', perks: [
             { id: 'r1', name: 'Curiosity', cost: 1, fx: { rp: 1.5 }, desc: 'Research +50%.' },
             { id: 'r2', name: 'Clean Data', cost: 1, fx: { 'need:data': 0.8 }, desc: 'Models need 20% less data.' },
             { id: 'r3', name: 'Tuning Intuition', cost: 2, fx: { tunemax: 1.25 }, desc: 'Hyperparameter tuning can give +25% more.' },
@@ -497,7 +497,7 @@
             { id: 'r5', name: 'Parallel Runs', cost: 3, fx: { train: 1.5 }, desc: 'Training throughput +50%.' },
             { id: 'r6', name: 'Recursive Insight', cost: 4, fx: { recursive: 1 }, desc: 'Every trained model gives +10% to all production.' },
         ] },
-        { id: 'tycoon', name: 'Tycoon', icon: '💼', col: '#4ade80', desc: 'Money, markets and paying fewer bills.', perks: [
+        { id: 'tycoon', name: 'Tycoon', icon: '💼', col: '#6fd29a', desc: 'Money, markets and paying fewer bills.', perks: [
             { id: 't1', name: 'Haggler', cost: 1, fx: { sell: 1.25 }, desc: 'Sell prices +25%.' },
             { id: 't2', name: 'Tax Lawyer', cost: 1, fx: { bills: 0.75, tax: 0.75 }, desc: 'Bills and tax −25%.' },
             { id: 't3', name: 'Day Trader', cost: 2, fx: { nofee: 1, coinsight: 1 }, desc: 'No crypto trading fee, and you can see the trend.' },

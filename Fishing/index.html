@@ -6,21 +6,21 @@
     <title>Fishing · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
-        :root { --accent: #0891b2; --accent-2: #22d3ee; --accent-ink: #011b22; }
+        :root { --accent: #82c3ec; --accent-2: #82c3ec; --accent-ink: #26180a; }
         .stage { gap: 8px; padding: 8px 10px; }
         .tbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
         #cv { cursor: pointer; }
         .shop { display: grid; gap: 8px; margin-top: 10px; text-align: left; }
-        .item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+        .item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; }
         .item .ic { font-size: 1.6rem; width: 36px; text-align: center; }
         .item b { display: block; font-size: 0.9rem; }
         .item small { color: var(--muted); font-size: 0.74rem; }
         .item .btn { margin-left: auto; white-space: nowrap; }
         .dex { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 10px; max-height: 56vh; overflow: auto; }
-        .fish { border-radius: 10px; padding: 6px; background: var(--bg-2); border: 1px solid var(--line); font-size: 0.7rem; text-align: center; }
+        .fish { border-radius: 10px; padding: 6px; background: var(--bg-2); border: 1px solid transparent; font-size: 0.7rem; text-align: center; }
         .fish .e { font-size: 1.7rem; display: block; }
         .fish.no .e { filter: brightness(0) opacity(0.35); }
-        .fish.L { border-color: #facc15; } .fish.e2 { border-color: #a855f7; } .fish.r { border-color: #3b82f6; }
+        .fish.L { border-color: #f6c445; } .fish.e2 { border-color: #9a6de0; } .fish.r { border-color: #4f8ef0; }
         .areas { display: grid; gap: 6px; margin-top: 10px; }
     </style>
 </head>
@@ -61,13 +61,13 @@
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.6 });
         const c = view.ctx;
         const fmt = Arcade.fmt;
-        const RAR = { c: ['Common', '#94a3b8', 60, 1], u: ['Uncommon', '#22c55e', 25, 1.6], r: ['Rare', '#3b82f6', 10, 2.4], e: ['Epic', '#a855f7', 4, 3.4], L: ['Legendary', '#facc15', 1, 4.6] };
+        const RAR = { c: ['Common', Arcade.ui.muted, 60, 1], u: ['Uncommon', '#4fc07f', 25, 1.6], r: ['Rare', '#4f8ef0', 10, 2.4], e: ['Epic', '#9a6de0', 4, 3.4], L: ['Legendary', '#f6c445', 1, 4.6] };
         const AREAS = [
             { id: 'pond', name: 'Village Pond', icon: '🪷', depth: 12, water: ['#0e7490', '#164e63'], boat: 0 },
             { id: 'lake', name: 'Misty Lake', icon: '🏞️', depth: 25, water: ['#0369a1', '#0c4a6e'], boat: 1 },
-            { id: 'coast', name: 'Coral Coast', icon: '🏝️', depth: 45, water: ['#0891b2', '#155e75'], boat: 2 },
+            { id: 'coast', name: 'Coral Coast', icon: '🏝️', depth: 45, water: ['#2f9ab0', '#155e75'], boat: 2 },
             { id: 'deep', name: 'Open Ocean', icon: '🌊', depth: 80, water: ['#1d4ed8', '#172554'], boat: 3 },
-            { id: 'abyss', name: 'The Abyss', icon: '🌑', depth: 160, water: ['#1e1b4b', '#020617'], boat: 4 },
+            { id: 'abyss', name: 'The Abyss', icon: '🌑', depth: 160, water: ['#1e1b4b', Arcade.ui.bg2], boat: 4 },
         ];
         // [name, emoji, rarity, value, minDepth(m), hue, size scale]
         const FISH = {
@@ -246,7 +246,7 @@
         function draw() {
             const A = area();
             const sky = c.createLinearGradient(0, 0, 0, SURF);
-            sky.addColorStop(0, S.area === 'abyss' ? '#0f172a' : '#7dd3fc'); sky.addColorStop(1, S.area === 'abyss' ? '#312e81' : '#e0f2fe');
+            sky.addColorStop(0, S.area === 'abyss' ? Arcade.ui.bg : '#8ccbee'); sky.addColorStop(1, S.area === 'abyss' ? '#312e81' : '#e0f2fe');
             c.fillStyle = sky; c.fillRect(0, 0, W, SURF);
             if (S.area !== 'abyss') { c.fillStyle = '#fef9c3'; c.beginPath(); c.arc(780, 50, 26, 0, TAU); c.fill(); }
             c.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 3; i++) { const x = (i * 300 + t * 8) % (W + 200) - 100; c.beginPath(); c.arc(x, 40 + i * 18, 16, 0, TAU); c.arc(x + 20, 34 + i * 18, 20, 0, TAU); c.arc(x + 40, 40 + i * 18, 15, 0, TAU); c.fill(); }
@@ -259,7 +259,7 @@
             c.fillStyle = 'rgba(255,255,255,0.04)';
             for (let i = 0; i < 5; i++) { const x = (i * 210 + Math.sin(t * 0.3 + i) * 30); c.beginPath(); c.moveTo(x, SURF); c.lineTo(x + 60, SURF); c.lineTo(x + 140, H); c.lineTo(x + 40, H); c.fill(); }
             // depth markers
-            c.fillStyle = 'rgba(255,255,255,0.35)'; c.font = '600 11px system-ui'; c.textAlign = 'right';
+            c.fillStyle = 'rgba(255,255,255,0.35)'; c.font = '600 11px Fredoka, sans-serif'; c.textAlign = 'right';
             const step = rodDepth() > 60 ? 20 : rodDepth() > 25 ? 10 : 5;
             for (let d = step; d <= rodDepth(); d += step) { const y = depthY(d); c.fillRect(W - 30, y, 14, 1); c.fillText(d + 'm', W - 34, y + 4); }
             if (area().depth < rodDepth()) { const y = depthY(area().depth); c.fillStyle = 'rgba(68,64,60,0.85)'; c.fillRect(0, y, W, H - y); c.fillStyle = '#d6d3d1'; c.textAlign = 'center'; c.fillText('sea floor · ' + area().depth + 'm', W / 2, y + 16); }
@@ -273,7 +273,7 @@
                 const s = 34 * fi.size;
                 c.save(); c.translate(fi.x, fy);
                 if (fi.dir > 0 && fi !== hooked) c.scale(-1, 1);
-                if (fi.f[2] === 'L' || fi.f[2] === 'e') { c.shadowColor = RAR[fi.f[2]][1]; c.shadowBlur = 14; }
+                if (fi.f[2] === 'L' || fi.f[2] === 'e') { }
                 c.globalAlpha = fi === hooked ? 1 : 0.85;
                 c.drawImage(spr(fi.f[1], fi.f[5]), -s / 2, -s / 2, s, s);
                 c.restore();
@@ -284,7 +284,7 @@
             const by = SURF - 8 + Math.sin(t * 1.4) * 3;
             c.fillStyle = '#92400e'; c.beginPath(); c.moveTo(boatX - 60, by - 14); c.lineTo(boatX + 60, by - 14); c.lineTo(boatX + 40, by + 12); c.lineTo(boatX - 45, by + 12); c.fill();
             c.fillStyle = '#b45309'; c.fillRect(boatX - 60, by - 18, 120, 6);
-            if (S.up.boat >= 2) { c.fillStyle = '#f8fafc'; c.beginPath(); c.moveTo(boatX - 10, by - 18); c.lineTo(boatX - 10, by - 80); c.lineTo(boatX + 30, by - 24); c.fill(); }
+            if (S.up.boat >= 2) { c.fillStyle = Arcade.ui.text; c.beginPath(); c.moveTo(boatX - 10, by - 18); c.lineTo(boatX - 10, by - 80); c.lineTo(boatX + 30, by - 24); c.fill(); }
             c.font = '34px "Segoe UI Emoji",sans-serif'; c.textAlign = 'center'; c.fillText('🧑', boatX + 10, by - 26);
             if (S.up.net) { c.font = '18px sans-serif'; c.fillText('🥅', boatX - 40, by - 20); }
             // rod & line
@@ -293,20 +293,20 @@
             if (state !== 'idle' && state !== 'charge') {
                 c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1;
                 c.beginPath(); c.moveTo(tipX, tipY); c.quadraticCurveTo((tipX + hook.x) / 2, Math.min(tipY, hook.y) + (state === 'reeling' ? 0 : 40), hook.x, hook.y); c.stroke();
-                c.fillStyle = '#ef4444'; c.beginPath(); c.arc(hook.x, Math.min(hook.y, SURF) - (hook.y > SURF ? 2 : 0), 5, 0, TAU); c.fill();
-                if (hook.y > SURF) { c.strokeStyle = '#cbd5e1'; c.lineWidth = 2; c.beginPath(); c.arc(hook.x, hook.y, 5, 0, Math.PI); c.stroke(); c.font = '12px sans-serif'; c.fillText('🪱', hook.x, hook.y + 10); }
+                c.fillStyle = '#ef5b56'; c.beginPath(); c.arc(hook.x, Math.min(hook.y, SURF) - (hook.y > SURF ? 2 : 0), 5, 0, TAU); c.fill();
+                if (hook.y > SURF) { c.strokeStyle = Arcade.ui.muted; c.lineWidth = 2; c.beginPath(); c.arc(hook.x, hook.y, 5, 0, Math.PI); c.stroke(); c.font = '12px sans-serif'; c.fillText('🪱', hook.x, hook.y + 10); }
             }
             c.textAlign = 'center';
             if (state === 'charge') {
                 c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(boatX - 50, by - 120, 100, 12);
                 c.fillStyle = `hsl(${120 - power * 120},90%,55%)`; c.fillRect(boatX - 50, by - 120, 100 * power, 12);
-                c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.fillText('Release to cast', boatX, by - 128);
+                c.fillStyle = '#fff'; c.font = '700 12px Fredoka, sans-serif'; c.fillText('Release to cast', boatX, by - 128);
             }
-            if (state === 'sinking') { c.fillStyle = '#fff'; c.font = '700 13px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m, click to stop here`, hook.x, hook.y - 22); }
-            if (state === 'waiting') { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = '600 12px system-ui'; c.fillText(`${hook.depth.toFixed(1)}m · waiting for a bite… (click to reel in)`, Math.min(W - 160, Math.max(160, hook.x)), hook.y - 22); }
-            if (state === 'bite') { c.fillStyle = '#facc15'; c.font = '900 34px system-ui'; c.fillText('!', hook.x, hook.y - 30 + Math.sin(t * 30) * 3); c.font = '800 13px system-ui'; c.fillText('HOLD NOW!', hook.x, hook.y - 60); }
+            if (state === 'sinking') { c.fillStyle = '#fff'; c.font = '700 13px Fredoka, sans-serif'; c.fillText(`${hook.depth.toFixed(1)}m, click to stop here`, hook.x, hook.y - 22); }
+            if (state === 'waiting') { c.fillStyle = 'rgba(255,255,255,0.8)'; c.font = '600 12px Fredoka, sans-serif'; c.fillText(`${hook.depth.toFixed(1)}m · waiting for a bite… (click to reel in)`, Math.min(W - 160, Math.max(160, hook.x)), hook.y - 22); }
+            if (state === 'bite') { c.fillStyle = '#f6c445'; c.font = '900 34px Fredoka, sans-serif'; c.fillText('!', hook.x, hook.y - 30 + Math.sin(t * 30) * 3); c.font = '800 13px Fredoka, sans-serif'; c.fillText('HOLD NOW!', hook.x, hook.y - 60); }
             if (state === 'reeling') drawReel();
-            if (state === 'idle') { c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = '700 14px system-ui'; c.fillText(`Hold to charge, release to cast · ${area().icon} ${area().name}`, W / 2, SURF + 40); }
+            if (state === 'idle') { c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = '700 14px Fredoka, sans-serif'; c.fillText(`Hold to charge, release to cast · ${area().icon} ${area().name}`, W / 2, SURF + 40); }
             if (popup) drawPopup();
         }
         function drawReel() {
@@ -315,10 +315,10 @@
             c.fillStyle = '#0c4a6e'; c.fillRect(BX, BY, 30, BAR);
             c.fillStyle = 'rgba(74,222,128,0.75)'; c.fillRect(BX, BY + R.zone, 30, zs);
             c.drawImage(spr(R.fish.f[1], R.fish.f[5]), BX - 2, BY + R.fy - 17, 34, 34);
-            c.fillStyle = '#1e293b'; c.fillRect(BX + 42, BY, 12, BAR);
-            c.fillStyle = R.progress > 0.7 ? '#4ade80' : R.progress > 0.35 ? '#facc15' : '#f87171';
+            c.fillStyle = Arcade.ui.surface; c.fillRect(BX + 42, BY, 12, BAR);
+            c.fillStyle = R.progress > 0.7 ? '#6fd29a' : R.progress > 0.35 ? '#f6c445' : '#f27a73';
             c.fillRect(BX + 42, BY + BAR * (1 - R.progress), 12, BAR * R.progress);
-            c.fillStyle = '#fff'; c.font = '800 12px system-ui'; c.textAlign = 'center';
+            c.fillStyle = '#fff'; c.font = '800 12px Fredoka, sans-serif'; c.textAlign = 'center';
             c.fillText('HOLD ▲', BX + 26, BY - 22);
             c.fillStyle = RAR[R.fish.f[2]][1]; c.fillText(RAR[R.fish.f[2]][0], BX + 26, BY + BAR + 16);
         }
@@ -327,15 +327,15 @@
             c.globalAlpha = a;
             c.fillStyle = 'rgba(2,6,23,0.85)'; c.beginPath(); c.roundRect ? c.roundRect(W / 2 - 170, 170, 340, p.lostName ? 60 : 150, 16) : c.rect(W / 2 - 170, 170, 340, 150); c.fill();
             c.textAlign = 'center'; c.fillStyle = '#fff';
-            if (p.lostName) { c.font = '800 16px system-ui'; c.fillText(p.early ? `Too slow! The ${p.lostName} got away` : `The ${p.lostName} escaped!`, W / 2, 205); }
+            if (p.lostName) { c.font = '800 16px Fredoka, sans-serif'; c.fillText(p.early ? `Too slow! The ${p.lostName} got away` : `The ${p.lostName} escaped!`, W / 2, 205); }
             else {
                 const col = RAR[p.f[2]][1];
                 c.drawImage(spr(p.f[1], p.f[5]), W / 2 - 160, 180, 80, 80);
                 c.textAlign = 'left';
-                c.fillStyle = col; c.font = '800 12px system-ui'; c.fillText(RAR[p.f[2]][0].toUpperCase() + (p.isNew ? ' · NEW!' : ''), W / 2 - 70, 200);
-                c.fillStyle = '#fff'; c.font = '900 22px system-ui'; c.fillText(p.f[0], W / 2 - 70, 226);
-                c.fillStyle = '#cbd5e1'; c.font = '600 14px system-ui'; c.fillText(`${p.size} cm · 🪙 ${fmt(p.value)}`, W / 2 - 70, 250);
-                if (p.note) { c.fillStyle = '#fca5a5'; c.font = '600 12px system-ui'; c.fillText(p.note, W / 2 - 160, 300); }
+                c.fillStyle = col; c.font = '800 12px Fredoka, sans-serif'; c.fillText(RAR[p.f[2]][0].toUpperCase() + (p.isNew ? ' · NEW!' : ''), W / 2 - 70, 200);
+                c.fillStyle = '#fff'; c.font = '900 22px Fredoka, sans-serif'; c.fillText(p.f[0], W / 2 - 70, 226);
+                c.fillStyle = Arcade.ui.muted; c.font = '600 14px Fredoka, sans-serif'; c.fillText(`${p.size} cm · 🪙 ${fmt(p.value)}`, W / 2 - 70, 250);
+                if (p.note) { c.fillStyle = '#f7a8a1'; c.font = '600 12px Fredoka, sans-serif'; c.fillText(p.note, W / 2 - 160, 300); }
             }
             c.globalAlpha = 1;
         }
