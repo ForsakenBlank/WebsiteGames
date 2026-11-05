@@ -43,7 +43,7 @@
           best: () => or(max('arcade.flow.solved'), v => v + ' solved') },
         { id: 'pipes', title: 'Pipes', path: 'Pipes/index.html', genre: 'Puzzle', pal: P.teal, art: ['🚰', '💧', '🔧'], desc: 'Rotate pipes until water reaches every drain.',
           best: () => or(max('arcade.pipes.solved'), v => v + ' solved') },
-        { id: 'memory', title: 'Memory', path: 'Memory/index.html', genre: 'Puzzle', pal: P.lime, art: ['🐸', '🍄', '🐸'], desc: 'Flip cards and find the pairs. Solo or with a friend.', fresh: 'New', players: '1-2',
+        { id: 'memory', title: 'Memory', path: 'Memory/index.html', genre: 'Puzzle', pal: P.lime, art: ['🐸', '🍄', '🐸'], desc: 'Flip cards and find the pairs. Solo or with a friend.', fresh: 'Updated', players: '1-2',
           best: () => { const n = stat('memory', 'win'); return n ? n + ' cleared' : ''; } },
 
         // arcade
@@ -53,7 +53,7 @@
           best: () => or(max('arcade.blocks.best'), v => 'Best ' + A.fmt(v)) },
         { id: 'pacman', title: 'Pac-Man', path: 'PacMan/index.html', genre: 'Arcade', pal: P.navy, art: ['🟡', '👻', '🍒'], desc: 'Mazes, power-ups, a maze editor and a ghost mode.',
           best: () => or(max('arcade.pacman.best', 'arcade.pacman.best.arcade', 'arcade.pacman.best.original', 'arcade.pacman.best.infinite'), v => 'Best ' + v) },
-        { id: 'flappy', title: 'Flappy', path: 'Flappy/index.html', genre: 'Arcade', pal: P.sky, art: ['🐤', '☁️', '🌿'], desc: 'Tap to flap through the gaps. Unlock new birds.',
+        { id: 'flappy', title: 'Flappy', path: 'Flappy/index.html', genre: 'Arcade', pal: P.sky, art: ['🐤', '☁️', '🌿'], desc: 'Tap to flap through the gaps. Unlock new birds.', fresh: 'Updated',
           best: () => or(max('arcade.flappy.best'), v => 'Best ' + v) },
         { id: 'stacker', title: 'Tower Stacker', path: 'TowerStacker/index.html', genre: 'Arcade', pal: P.teal, art: ['🏗️', '🧱', '☁️'], desc: 'Drop floors as straight as you can and climb into space.',
           best: () => or(max('stackerBest'), v => v + ' floors') },

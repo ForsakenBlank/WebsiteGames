@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Flappy · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
@@ -85,7 +85,8 @@
 
         let state = 'ready', score = 0, t = 0, paused = false;
         let B = { y: 300, vy: 0, rot: 0, flap: 0 };
-        let pipes = [], coins = [], speed = 150, nextPipe = 0, groundX = 0, deathT = 0, flash = 0;
+        let pipes = [], coins = [], ups = [], speed = 150, nextPipe = 0, groundX = 0, deathT = 0, flash = 0;
+        let shield = false, slowT = 0, closeCalls = 0, callText = null;
         const fx = new Arcade.Particles(300);
         const clouds = Array.from({ length: 6 }, (_, i) => ({ x: i * 90 + Math.random() * 60, y: 40 + Math.random() * 180, s: 0.6 + Math.random() * 0.8 }));
         const city = Array.from({ length: 24 }, (_, i) => ({ x: i * 26, h: 40 + Math.random() * 90, w: 22 + Math.random() * 10 }));
@@ -93,7 +94,7 @@
         function reset() {
             state = 'ready'; score = 0; t = 0; paused = false;
             B = { y: 300, vy: 0, rot: 0, flap: 0 };
-            pipes = []; coins = []; speed = 150; nextPipe = 0.2; deathT = 0;
+            pipes = []; coins = []; ups = []; speed = 150; nextPipe = 0.2; deathT = 0; shield = false; slowT = 0; closeCalls = 0; callText = null;
             fx.clear(); hud();
         }
         function flap() {
@@ -109,7 +110,11 @@
             const gap = gapSize(), top = 70 + Math.random() * (GROUND - 140 - gap);
             const moving = score > 15 && Math.random() < Math.min(0.45, (score - 15) * 0.02);
             pipes.push({ x: W + 30, top, gap, w: 64, scored: false, moving, phase: Math.random() * TAU, baseTop: top });
-            if (Math.random() < 0.3) coins.push({ x: W + 30 + 32, y: top + gap / 2, got: false });
+            // pickups sit in the gap: a shield takes one hit for you, the snail slows everything for a few seconds
+            const roll = Math.random();
+            if (score >= 3 && roll < 0.1 && !shield) ups.push({ x: W + 30 + 32, y: top + gap / 2, kind: 'shield' });
+            else if (score >= 3 && roll < 0.18) ups.push({ x: W + 30 + 32, y: top + gap / 2, kind: 'slow' });
+            else if (roll < 0.48) coins.push({ x: W + 30 + 32, y: top + gap / 2, got: false });
         }
         function die() {
             if (state !== 'play') return;
@@ -147,7 +152,9 @@
             B.y += B.vy * dt;
             B.rot = Arcade.clamp(B.vy / 600, -0.5, 1.4);
             if (state === 'dead') { deathT += dt; if (B.y > GROUND - 14) { B.y = GROUND - 14; B.vy = 0; } fx.update(dt); return; }
-            speed = Math.min(225, 150 + score * 2);
+            slowT = Math.max(0, slowT - dt);
+            speed = Math.min(225, 150 + score * 2) * (slowT > 0 ? 0.65 : 1);
+            if (callText) { callText.t -= dt; if (callText.t <= 0) callText = null; }
             nextPipe -= dt;
             if (nextPipe <= 0) { spawnPipe(); nextPipe = 215 / speed; }
             for (const p of pipes) {
@@ -155,6 +162,8 @@
                 if (p.moving) p.top = Arcade.clamp(p.baseTop + Math.sin(t * 1.6 + p.phase) * 45, 50, GROUND - 60 - p.gap);
                 if (!p.scored && p.x + p.w < 100) {
                     p.scored = true; score++; total++;
+                    // threading the gap right next to a pipe pays a bonus
+                    if (p.tight) { score++; closeCalls++; callText = { t: 0.9, s: 'Close call +1' }; Arcade.tone(880, 0.09, 'triangle', 0.04, 1320); }
                     Arcade.save('arcade.flappy.total', total);
                     Arcade.sfx('score');
                     if (score % 10 === 0) { Arcade.sfx('level'); fx.emit(110, B.y, { n: 24, speed: 220, color: ['#f6c445', '#fff', '#f59a55'], life: 0.8 }); }
@@ -163,12 +172,30 @@
                 // collision (circle vs rects)
                 const bx = 110, by = B.y, r = 13;
                 const hitR = (x, y, w, h) => { const cx = Arcade.clamp(bx, x, x + w), cy = Arcade.clamp(by, y, y + h); return (bx - cx) ** 2 + (by - cy) ** 2 < r * r; };
-                if (hitR(p.x, -100, p.w, p.top + 100) || hitR(p.x, p.top + p.gap, p.w, GROUND)) die();
+                if (bx > p.x - 4 && bx < p.x + p.w + 4 && (by - p.top < 24 || p.top + p.gap - by < 24)) p.tight = true;
+                if (!p.smashed && (hitR(p.x, -100, p.w, p.top + 100) || hitR(p.x, p.top + p.gap, p.w, GROUND))) {
+                    if (shield) {
+                        shield = false; p.smashed = true; flash = 0.5; p.tight = false;
+                        B.vy = -260;
+                        Arcade.sfx('hit');
+                        fx.emit(bx, by, { n: 26, speed: 220, color: ['#86d9e6', '#fff'], life: 0.6 });
+                    } else die();
+                }
             }
             for (const co of coins) {
                 co.x -= speed * dt;
                 if (!co.got && Math.hypot(co.x - 110, co.y - B.y) < 22) { co.got = true; score += 1; Arcade.sfx('coin'); fx.emit(co.x, co.y, { n: 12, speed: 120, color: ['#f8d25c', '#f6c445'], life: 0.5 }); hud(); }
             }
+            for (const u of ups) {
+                u.x -= speed * dt;
+                if (!u.got && Math.hypot(u.x - 110, u.y - B.y) < 24) {
+                    u.got = true;
+                    if (u.kind === 'shield') shield = true; else slowT = 4;
+                    Arcade.sfx('power');
+                    fx.emit(u.x, u.y, { n: 14, speed: 130, color: u.kind === 'shield' ? ['#86d9e6', '#fff'] : ['#b9dc6e', '#fff'], life: 0.5 });
+                }
+            }
+            ups = ups.filter(u => u.x > -30 && !u.got);
             pipes = pipes.filter(p => p.x > -80);
             coins = coins.filter(co => co.x > -30 && !co.got);
             if (B.y > GROUND - 14 || B.y < -40) die();
@@ -232,6 +259,12 @@
                 c.fillStyle = '#f6c445'; c.beginPath(); c.ellipse(co.x, co.y, 9 * sx + 1, 9, 0, 0, TAU); c.fill();
                 c.strokeStyle = '#a16207'; c.lineWidth = 2; c.stroke();
             }
+            for (const u of ups) {
+                c.fillStyle = u.kind === 'shield' ? '#56c8dc' : '#9cc552';
+                c.beginPath(); c.arc(u.x, u.y + Math.sin(t * 4) * 3, 15, 0, TAU); c.fill();
+                c.font = '16px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff';
+                c.fillText(u.kind === 'shield' ? '🛡' : '🐌', u.x, u.y + 1 + Math.sin(t * 4) * 3);
+            }
             // ground
             c.fillStyle = '#ded895'; c.fillRect(0, GROUND, W, H - GROUND);
             c.fillStyle = '#9cc552'; c.fillRect(0, GROUND, W, 14);
@@ -239,6 +272,9 @@
             c.fillStyle = '#c2b97a'; for (let x = groundX * 1.5 % 40; x < W; x += 40) c.fillRect(x, GROUND + 30, 20, 4);
             fx.draw(c);
             drawBird(c, 110, B.y, B.rot, bird(), B.flap);
+            if (shield) { c.strokeStyle = '#56c8dc'; c.lineWidth = 4; c.beginPath(); c.arc(110, B.y, 25, 0, TAU); c.stroke(); }
+            if (slowT > 0) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.roundRect(W / 2 - 50, 118, 100, 10, 5); c.fill(); c.fillStyle = '#9cc552'; c.beginPath(); c.roundRect(W / 2 - 50, 118, Math.max(10, 100 * slowT / 4), 10, 5); c.fill(); }
+            if (callText) { c.globalAlpha = Math.min(1, callText.t * 2); c.font = '600 22px Fredoka, sans-serif'; c.textAlign = 'center'; c.lineWidth = 5; c.strokeStyle = Arcade.ui.surface; c.fillStyle = '#f6c445'; c.strokeText(callText.s, 110 + 90, B.y - 34); c.fillText(callText.s, 110 + 90, B.y - 34); c.globalAlpha = 1; }
             // score
             c.textAlign = 'center'; c.textBaseline = 'middle';
             c.font = '900 52px Fredoka, sans-serif'; c.lineWidth = 6; c.strokeStyle = Arcade.ui.surface; c.fillStyle = '#fff';

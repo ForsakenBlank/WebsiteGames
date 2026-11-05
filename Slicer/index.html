@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Fruit Slicer · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
@@ -57,7 +57,8 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const W = 800, H = 560, TAU = Math.PI * 2, G = 900;
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 540 : 800, H = TALL ? 780 : 560, TAU = Math.PI * 2, G = 900, LIFT = TALL ? 1.18 : 1;
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.8 });
         const c = view.ctx;
@@ -107,7 +108,7 @@
             const def = kind === 'bomb' ? BOMB : BANANAS[kind] || Arcade.pick(FRUITS);
             let x, y, vx, vy;
             if (fromSide) { const left = Math.random() < 0.5; x = left ? -40 : W + 40; y = H * (0.45 + Math.random() * 0.3); vx = (left ? 1 : -1) * (380 + Math.random() * 200); vy = -(420 + Math.random() * 220); }
-            else { x = 120 + Math.random() * (W - 240); y = H + 50; vx = (W / 2 - x) * (0.35 + Math.random() * 0.5) + (Math.random() - 0.5) * 120; vy = -(640 + Math.random() * 190); }
+            else { x = 120 + Math.random() * (W - 240); y = H + 50; vx = (W / 2 - x) * (0.35 + Math.random() * 0.5) + (Math.random() - 0.5) * 120; vy = -(640 + Math.random() * 190) * LIFT; }
             items.push({ x, y, vx, vy, rot: Math.random() * TAU, spin: (Math.random() - 0.5) * 6, def, kind: kind || 'fruit', r: def.r, born: elapsed });
             Arcade.tone(180 + Math.random() * 60, 0.08, 'sine', 0.03, 260);
         }

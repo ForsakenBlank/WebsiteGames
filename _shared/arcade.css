@@ -150,7 +150,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
-html { height: 100%; }
+html { height: 100%; touch-action: manipulation; }
 
 body {
     margin: 0;
@@ -635,6 +635,22 @@ input, select, textarea { font-family: inherit; }
     .modal { padding: 24px 16px 18px; border-radius: 24px; }
     .modal h2 { font-size: 1.5rem; }
 }
+
+/* on phones a game's menu can't be trapped inside a small canvas: it fills the screen under the top bar */
+@media (max-width: 640px) {
+    .canvas-box > .overlay { position: fixed; z-index: 45; padding: calc(var(--topbar-h) + 52px) 12px max(14px, env(safe-area-inset-bottom)); align-items: flex-start; }
+    .canvas-box > .overlay > .modal { max-height: 100%; }
+}
+/* phones held sideways: every pixel of height goes to the game */
+@media (max-height: 480px) {
+    :root { --topbar-h: 48px; }
+    .topbar { min-height: 48px; padding-block: 4px; flex-wrap: nowrap; }
+    .topbar .stats { flex-wrap: nowrap; overflow: hidden; }
+    .stage { padding: 4px 8px; gap: 4px; }
+    .stage > p.tiny { display: none; }
+}
+.rotate-hint { display: none; align-self: center; padding: 6px 14px; border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+@media (max-width: 640px) and (orientation: portrait) { .rotate-hint { display: block; } }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

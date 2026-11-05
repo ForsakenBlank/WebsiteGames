@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Snakes &amp; Ladders · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
@@ -59,7 +59,8 @@
     (() => {
         'use strict';
         const $ = (id) => document.getElementById(id);
-        const W = 880, H = 620, B = 600, CS = 60, OX = 10, OY = 10, TAU = Math.PI * 2;
+        const TALL = window.innerHeight > window.innerWidth * 1.15;
+        const W = TALL ? 620 : 880, H = TALL ? 900 : 620, B = 600, CS = 60, OX = 10, OY = 10, TAU = Math.PI * 2;
         const cv = $('cv');
         const view = Arcade.fitCanvas(cv, W, H, { max: 1.5 });
         const c = view.ctx;
@@ -264,31 +265,31 @@
                 if (p.kind === 'you') { c.fillStyle = '#fff'; c.font = '800 10px Fredoka, sans-serif'; c.fillText('YOU', p.x, p.y + 1); }
             }
             // side panel
-            const px = OX + B + 20, pw = W - px - 10;
-            c.fillStyle = Arcade.ui.bg; c.beginPath(); c.roundRect ? c.roundRect(px, OY, pw, B, 14) : c.rect(px, OY, pw, B); c.fill();
+            const px = TALL ? OX : OX + B + 20, py = TALL ? OY + B + 10 : OY, pw = TALL ? B : W - px - 10, ph = TALL ? H - py - 10 : B;
+            c.fillStyle = Arcade.ui.bg; c.beginPath(); c.roundRect ? c.roundRect(px, py, pw, ph, 14) : c.rect(px, py, pw, ph); c.fill();
             c.textAlign = 'left';
             players.forEach((p, k) => {
-                const y = OY + 20 + k * 44, on = p === cur();
-                if (on) { c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(px + 8, y - 6, pw - 16, 38); }
+                const y = py + (TALL ? 12 : 20) + k * (TALL ? 42 : 44), on = p === cur();
+                if (on) { c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(px + 8, y - 6, (TALL ? pw * 0.6 : pw) - 16, 38); }
                 c.fillStyle = PCOL[p.i]; c.beginPath(); c.arc(px + 26, y + 13, 10, 0, TAU); c.fill();
                 c.fillStyle = Arcade.ui.text; c.font = (on ? '800' : '600') + ' 15px Fredoka, sans-serif'; c.fillText(p.name, px + 44, y + 6);
                 c.fillStyle = Arcade.ui.muted; c.font = '600 12px Fredoka, sans-serif'; c.fillText(p.pos ? 'Square ' + p.pos : 'Waiting to start', px + 44, y + 24);
             });
-            const dx = px + pw / 2 - 48, dy = OY + 230;
+            const dx = TALL ? px + pw - 150 : px + pw / 2 - 48, dy = TALL ? py + 22 : OY + 230;
             drawDie(dx, dy, 96, dice, PCOL[cur().i]);
             c.textAlign = 'center'; c.fillStyle = Arcade.ui.text; c.font = '700 14px Fredoka, sans-serif';
             const myTurn = phase === 'roll' && human(cur());
             c.fillText(phase === 'over' ? 'Game over' : myTurn ? (cur().kind === 'you' ? 'Your turn, tap to roll' : cur().name + ': tap to roll') : phase === 'roll' ? cur().name + ' is thinking…' : '', px + pw / 2, dy + 120);
             if (myTurn) { c.strokeStyle = PCOL[cur().i]; c.lineWidth = 2; c.globalAlpha = 0.5 + Math.sin(performance.now() / 200) * 0.3; c.strokeRect(dx - 8, dy - 8, 112, 112); c.globalAlpha = 1; }
             c.textAlign = 'left'; c.font = '500 12px Fredoka, sans-serif';
-            log.forEach((s, k) => { c.fillStyle = k ? Arcade.ui.dim : Arcade.ui.muted; c.fillText(s, px + 14, OY + 400 + k * 22, pw - 24); });
+            log.forEach((s, k) => { c.fillStyle = k ? Arcade.ui.dim : Arcade.ui.muted; c.fillText(s, px + 14, py + (TALL ? 190 : 390) + k * 22, pw - 24); });
             Object.assign(diceRect, { x: dx, y: dy, w: 96, h: 96 });
         }
         const diceRect = { x: 0, y: 0, w: 0, h: 0 };
         cv.addEventListener('pointerdown', (e) => {
             if (!players || phase !== 'roll' || !human(cur())) return;
             const p = Arcade.pointer(cv, e, W, H);
-            if (p.x > OX + B) roll();
+            if (TALL ? p.y > OY + B : p.x > OX + B) roll();
         });
         window.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter') && players && phase === 'roll' && human(cur()) && $('setupOv').hidden) { e.preventDefault(); roll(); } });
 

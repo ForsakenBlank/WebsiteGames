@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tower Defense · Arcade</title>
     <link rel="stylesheet" href="../_shared/arcade.css">
     <style>
@@ -25,7 +25,7 @@
         @media (max-width: 860px) { .stage { flex-direction: column; } .side { width: auto; flex-direction: row; flex-wrap: wrap; } .side .box2 { flex: 1; min-width: 220px; } }
     </style>
 </head>
-<body class="no-scroll no-select">
+<body data-wide class="no-scroll no-select">
     <header class="topbar">
         <a class="btn ghost sm hub-link" href="../GameIndex.html">Hub</a>
         <h1 class="title">Tower Defense</h1>
@@ -404,6 +404,7 @@
         document.addEventListener('visibilitychange', () => { if (document.hidden) { const b = Arcade.load('arcade.td.bestByMap', {}) || {}; if (wave > (b[mapI] || 0)) { b[mapI] = wave; Arcade.save('arcade.td.bestByMap', b); } } });
         setInterval(() => { if (running && wave) { const b = Arcade.load('arcade.td.bestByMap', {}) || {}; if (wave > (b[mapI] || 0)) { b[mapI] = wave; Arcade.save('arcade.td.bestByMap', b); } } }, 5000);
         path = buildPath(MAPS[0]); towers = []; enemies = []; shots = []; fx = new Arcade.Particles(10);
+        gold = 220; lives = 20; wave = 0; spawnQ = [];
         buildMaps(); buildTowers(); hud();
         const loop = Arcade.loop((dt) => { step(dt); draw(); });
         loop.start();

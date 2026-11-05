@@ -70,7 +70,7 @@
         }
         function newGame() {
             chips($('sizeChips'), [['s', '6 pairs'], ['m', '8'], ['l', '10'], ['xl', '15'], ['xxl', '18']], cfg.size, v => cfg.size = v);
-            chips($('modeChips'), [['solo', 'Solo'], ['duo', '2 players']], cfg.mode, v => cfg.mode = v);
+            chips($('modeChips'), [['solo', 'Solo'], ['shuffle', 'Shuffle'], ['duo', '2 players']], cfg.mode, v => cfg.mode = v);
             const [cols, rows] = SIZES[cfg.size];
             const pairs = cols * rows / 2;
             const pick = Arcade.shuffle(SETS.slice()).slice(0, pairs);
@@ -91,9 +91,10 @@
             Arcade.text('time', '0:00');
             renderHud();
         }
+        const bestKey = () => cfg.mode === 'shuffle' ? cfg.size + '-shuffle' : cfg.size;
         function renderHud() {
             Arcade.text('moves', moves);
-            const b = bests[cfg.size];
+            const b = bests[bestKey()];
             Arcade.text('best', b ? b.moves + ' moves' : '-');
             $('players').innerHTML = [0, 1].map(i => `<span class="pl ${i === turn ? 'turn' : ''}" style="--pc:${PCOL[i]}">Player ${i + 1}: ${scores[i]}</span>`).join('');
         }
@@ -121,18 +122,30 @@
                     for (const x of [a, b]) { x.up = false; x.el.classList.remove('up'); }
                     open = []; lock = false;
                     if (cfg.mode === 'duo') { turn = 1 - turn; renderHud(); }
+                    if (cfg.mode === 'shuffle') swapTwo();
                 }, 800);
             }
             renderHud();
+        }
+        // shuffle mode: every miss swaps two hidden cards, and shows you which two moved
+        function swapTwo() {
+            const hidden = cards.filter(c => !c.done && !c.up);
+            if (hidden.length < 3) return;
+            const a = hidden.splice(Math.floor(Math.random() * hidden.length), 1)[0], b = hidden[Math.floor(Math.random() * hidden.length)];
+            [a.e, b.e] = [b.e, a.e];
+            a.el.querySelector('.b').textContent = a.e;
+            b.el.querySelector('.b').textContent = b.e;
+            for (const x of [a, b]) { x.el.classList.add('shake'); setTimeout(() => x.el.classList.remove('shake'), 400); }
+            Arcade.tone(300, 0.08, 'triangle', 0.05, 200);
         }
         function finish() {
             clearInterval(timer);
             const secs = Math.round((Date.now() - t0) / 1000);
             Arcade.sfx('win');
-            if (cfg.mode === 'solo') {
-                const b = bests[cfg.size];
+            if (cfg.mode !== 'duo') {
+                const b = bests[bestKey()];
                 const isNew = !b || moves < b.moves || (moves === b.moves && secs < b.secs);
-                if (isNew) { bests[cfg.size] = { moves, secs }; Arcade.save('arcade.memory.best', bests); }
+                if (isNew) { bests[bestKey()] = { moves, secs }; Arcade.save('arcade.memory.best', bests); }
                 $('endTitle').textContent = isNew && b ? 'New best!' : 'Cleared!';
                 $('endText').textContent = `${moves} moves in ${Arcade.time(secs)}. A perfect game is ${cards.length / 2} moves.`;
                 Arcade.count('win');

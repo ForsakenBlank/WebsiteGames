@@ -1252,5 +1252,22 @@
     // apply the chosen theme straight away (games can still override)
     try { if (!document.documentElement.dataset.theme) document.documentElement.dataset.theme = Arcade.cosmetic('theme'); } catch (e) { }
 
+    document.addEventListener('DOMContentLoaded', () => {
+        // wide canvas games suggest turning the phone
+        if (document.body.dataset.wide !== undefined) {
+            const stage = document.querySelector('.stage');
+            if (stage) stage.insertAdjacentHTML('afterbegin', '<div class="rotate-hint">Turn your phone sideways for a bigger view</div>');
+        }
+    });
+    // going back to the hub steps back through history when that's where we came from, so the
+    // phone's own back button leaves the app from the hub instead of walking through old games
+    document.addEventListener('click', (e) => {
+        const a = e.target.closest && e.target.closest('a[href$="GameIndex.html"]');
+        if (!a || history.length < 2) return;
+        let ref = '';
+        try { ref = new URL(document.referrer).pathname; } catch (err) { return; }
+        if (ref.endsWith('/GameIndex.html')) { e.preventDefault(); history.back(); }
+    });
+
     window.Arcade = Arcade;
 })();
