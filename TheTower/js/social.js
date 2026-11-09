@@ -19,7 +19,7 @@
     G.ensureDaily = () => {
         const d = S().daily;
         const wk = G.weekKey();
-        if (d.week !== wk) { if (d.week && G.apOn('claim')) G.claimAllBoxes(); d.week = wk; d.done = 0; d.boxes = 0; }
+        if (d.week !== wk) { d.week = wk; d.done = 0; d.boxes = 0; }
         if (!G.dailyUnlocked()) return;
         const batch = Math.floor(Date.now() / (8 * HOUR));
         if (!d.lastBatch) { d.lastBatch = batch; while (d.board.length < 4) { const m = makeMission(d.board); if (!m) break; d.board.push(m); } return; }

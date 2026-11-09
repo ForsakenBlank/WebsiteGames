@@ -74,7 +74,8 @@
         .hud { position: absolute; inset: 0; pointer-events: none; }
         .hud .money { position: absolute; left: 14px; top: 10px; display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
         .hud .cash { font-size: 1.75rem; font-weight: 600; line-height: 1.05; color: #fff; }
-        .hud .rate { font-size: 0.82rem; font-weight: 600; color: #fff; opacity: 0.9; padding-left: 2px; }
+        .hud .rate { font-size: 0.82rem; font-weight: 600; color: #fff; opacity: 0.9; padding: 0 0 0 2px; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; pointer-events: auto; align-self: flex-start; }
+        .hud .rate:hover { opacity: 1; text-decoration: underline dotted; }
         .hud .rate small { color: var(--muted); font-weight: 500; margin-left: 4px; }
         .hud .tot { font-size: 1.35rem; font-weight: 600; color: #fff; line-height: 1.2; }
         .hud .tot svg.gi { width: 1.05em; height: 1.05em; }

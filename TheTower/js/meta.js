@@ -174,7 +174,8 @@
     };
     G.labCost = (lab, L) => Math.ceil(lab.rows[L].c * (1 - G.labV('Labs_Coin_Discount')));
     G.labTime = (lab, L) => lab.rows[L].t;
-    G.labSpeed = (forLabSpeed) => (forLabSpeed ? 1 : G.labV('Lab_Speed', 1) || 1) * (1 + G.relic('labSpeed')) * D.OVERCLOCK[S().labs.overclock || 0].m;
+    G.gemLabSpeed = () => D.GEM_LAB_SPEED.reduce((m, b) => m * ((S().labs.gemSpeed || {})[b.id] ? b.m : 1), 1);
+    G.labSpeed = (forLabSpeed) => (forLabSpeed ? 1 : G.labV('Lab_Speed', 1) || 1) * (1 + G.relic('labSpeed')) * D.OVERCLOCK[S().labs.overclock || 0].m * G.gemLabSpeed();
     G.slotBoost = (slot) => { const b = S().labs.boosts[slot]; return b && b.until > Date.now() ? b.m : 1; };
     G.labRate = (a) => G.labSpeed(a.id === 'Lab_Speed') * G.slotBoost(a.slot);
     G.labRemainingSec = (a) => Math.max(0, (a.work - a.done) / G.labRate(a));
@@ -237,13 +238,8 @@
         G.count('lab_time', (to - a.last) / 1000);
         a.last = to;
     }
-    function assistantPick() {
-        const s = S();
-        return D.LABS.filter(l => G.labAvailable(l) && G.labLv(l.id) < l.max && !G.labBusy(l.id) && G.labCost(l, G.labLv(l.id)) <= s.coins)
-            .sort((a, b) => G.labCost(a, G.labLv(a.id)) - G.labCost(b, G.labLv(b.id)))[0];
-    }
     // Labs finish in the order they would have in real time, so after a long time away an auto lab keeps
-    // researching level after level, and the lab assistant keeps refilling slots that aren't on auto.
+    // researching level after level.
     G.labTick = () => {
         const now = Date.now();
         const s = S();
@@ -262,15 +258,8 @@
             const lab = D.LAB_BY[first.id] || G.masteryLab(first.id);
             // auto research the next level in the same slot, starting the moment this one finished
             if (s.labs.auto[first.id] && s.labs.lv[first.id] < lab.max && G.labStart(first.id, true, first.slot, firstT)) continue;
-            if (G.apOn('lab')) { const pick = assistantPick(); if (pick) G.labStart(pick.id, true, first.slot, firstT); }
         }
         for (const a of s.labs.active) labAdvance(a, now);
-        // autopilot: lab assistant fills any other idle slots
-        if (G.apOn('lab')) while (G.freeSlot() >= 0) {
-            const pick = assistantPick();
-            if (!pick || !G.labStart(pick.id, true)) break;
-            G.toast(`🧪 Lab assistant started ${pick.name}`, 'good', 2000);
-        }
         const ids = Object.keys(gained);
         const name = (id) => (D.LAB_BY[id] || G.masteryLab(id)).name;
         if (ids.length > 3) G.toast(`🧪 ${ids.reduce((n, id) => n + gained[id], 0)} researches finished: ${ids.map(id => `${name(id)} → ${s.labs.lv[id]}`).join(', ')}`, 'gold', 7000);
@@ -293,6 +282,15 @@
         if (!G.spend('coins', D.OVERCLOCK[L + 1].c)) return;
         S().labs.overclock = L + 1;
         G.sfx('power');
+        G.saveSoon();
+    };
+    G.buyGemLabSpeed = (id) => {
+        const b = D.GEM_LAB_SPEED.find(x => x.id === id), own = S().labs.gemSpeed = S().labs.gemSpeed || {};
+        if (!b || own[id] || !G.spend('gems', b.gems)) return;
+        G.labTick(); // research so far keeps the old speed
+        own[id] = true;
+        G.sfx('power');
+        G.toast(`🧪 Labs research ×${b.m} faster`, 'gold');
         G.saveSoon();
     };
     G.buyCellBoost = (slot, idx, hours) => {
@@ -521,9 +519,9 @@
     G.claimDailyGems = () => {
         if (!G.dailyGemsReady()) return;
         S().free.dailyGemDay = G.dayKey();
-        G.add('gems', 20, 'daily');
+        G.add('gems', D.DAILY_GEMS, 'daily');
         G.count('free_gems', 1);
-        G.toast('💎 +20 free daily gems', 'good');
+        G.toast(`💎 +${D.DAILY_GEMS} free daily gems`, 'good');
         G.saveSoon();
     };
     G.adGemMax = () => 1 + G.vaultLv('adStack');
@@ -547,8 +545,8 @@
     };
     G.addCoinBoost = () => {
         const f = S().free;
-        if (f.coinBoost >= 7200 - 1) return;
-        f.coinBoost = Math.min(7200, f.coinBoost + 1200);
+        if (f.coinBoost >= D.COIN_BOOST_MAX - 1) return;
+        f.coinBoost = Math.min(D.COIN_BOOST_MAX, f.coinBoost + 1200);
         G.toast('🪙 ×1.5 coins for 20 more minutes of play', 'good');
         if (G.B && G.run()) G.B.recalc();
         G.saveSoon();
@@ -558,7 +556,8 @@
        AUTOPILOT (from the earlier version of this game)
        ====================================================================== */
     G.apOwn = (id) => !!S().ap.own[id];
-    G.apOn = (id) => G.apOwn(id) && S().ap.on[id] !== false;
+    // modules that were removed stay off even in saves that bought them
+    G.apOn = (id) => G.apOwn(id) && S().ap.on[id] !== false && D.AUTOS.some(a => a.id === id);
     G.apBuy = (id) => {
         const a = D.AUTOS.find(x => x.id === id);
         if (G.apOwn(id)) return;

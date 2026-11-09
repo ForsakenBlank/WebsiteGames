@@ -63,12 +63,13 @@
         el.hidden = false;
         $('homeOv').hidden = true;
         const s = S(), f = s.free;
-        // coin rates over the real time this run has been played
-        const min = Math.max(1 / 6, (r.stats.realT || 0) / 60);
-        const cpm = r.coins / min;
+        // coin rates per minute of game time (x1 speed); click them to scale by the current game speed for real-world amounts
+        const min = Math.max(1 / 6, (r.stats.gameT ?? r.stats.realT ?? 0) / 60), sp = G.main.gameSpeed();
+        const real = !!s.settings.rateReal, cpm = r.coins / min * (real ? sp : 1);
+        const tag = real ? ` · real x${sp.toFixed(1)}` : '';
         let h = `<div class="money"><div class="cash">$ ${F(r.cash)}</div>
-            <div class="rate">🪙 ${F(cpm)}<small>coins/min</small></div>
-            <div class="rate">🪙 ${F(cpm * 60)}<small>coins/hour</small></div>
+            <button class="rate" data-act="rateMode" title="Click to ${real ? 'show per game minute (x1 speed)' : 'multiply by game speed (real-world amounts)'}">🪙 ${F(cpm)}<small>coins/min${tag}</small></button>
+            <button class="rate" data-act="rateMode" title="Click to ${real ? 'show per game hour (x1 speed)' : 'multiply by game speed (real-world amounts)'}">🪙 ${F(cpm * 60)}<small>coins/hour${tag}</small></button>
             <div class="tot first">🪙 ${F(s.coins)}</div><div class="tot">💎 ${F(s.gems)}</div></div>`;
         // the game's outlined square buttons, top right
         const fb = (ic, act, data, title, n, cls = '') => `<button class="fbtn ${cls}" data-act="${act}" ${Object.entries(data).map(([k, v]) => `data-${k}="${v}"`).join(' ')} title="${title}">${ic}${n ? `<span class="dotn">${n}</span>` : ''}</button>`;
@@ -149,7 +150,7 @@
             h += `<div class="sp-title" style="background:#2fa84f;margin-top:10px">Missions ${s.daily.board.filter(m => m.p >= m.goal).length}/${s.daily.board.length}</div>`;
             for (const m of s.daily.board) h += `<div class="labrow"><b>${esc(m.text)}</b>${m.p >= m.goal ? btn('Claim', 'claimDaily', { id: m.id }, 'primary') : `<span class="muted-s">${F(m.p)}/${F(m.goal)}</span>`}${prog(m.p / m.goal)}</div>`;
         }
-        if ((f.adStack > 0 && f.adGemsToday < 60) || G.dailyGemsReady()) h += `<div class="row-s" style="margin-top:8px">${G.dailyGemsReady() ? btn('💎 Claim 20 daily gems', 'dailyGems', {}, 'primary') : ''}${f.adStack > 0 ? btn(`📺 Claim ${6 * f.adStack} gems`, 'adGems', {}, 'primary') : ''}</div>`;
+        if ((f.adStack > 0 && f.adGemsToday < 60) || G.dailyGemsReady()) h += `<div class="row-s" style="margin-top:8px">${G.dailyGemsReady() ? btn(`💎 Claim ${D.DAILY_GEMS} daily gems`, 'dailyGems', {}, 'primary') : ''}${f.adStack > 0 ? btn(`📺 Claim ${6 * f.adStack} gems`, 'adGems', {}, 'primary') : ''}</div>`;
         if (f.coinBoost > 0) h += `<p class="note">🪙 Coin boost ×1.5 banked: ${G.dur(f.coinBoost)} (runs down while you battle)</p>`;
         if (!h) h = '<p class="note">Play battles to earn coins, then spend them in the Workshop. Labs, cards and more unlock as you reach new waves.</p>';
         return { head: '', body: h, foot: '' };
@@ -215,7 +216,7 @@
         const be = D.bossEvery(r.tier, r.tour ? r.league : null), toBoss = be - (r.wave % be);
         const right = `<div class="stp"><div class="stp-wave"><div><small>${L ? L.id + ' league' : 'Tier ' + r.tier}</small><b>Wave ${F(r.wave)}</b></div>
             <div class="stp-en">${F(D.enemyDmg(t, r.atkWave, r.tour))} 🗡️<br>${F(D.enemyHp(t, r.hpWave, r.tour))} ${G.ic('hp')}</div></div>
-            <div class="wbar"><i style="width:${(B.waveProgress() * 100).toFixed(1)}%"></i></div><div class="boss">${toBoss === be ? 'Boss wave!' : 'Boss in ' + toBoss}${r.shield ? ' · 🔰 ' + r.shield : ''}${r.diss ? ' · 🎭 ' + r.diss : ''}</div></div>`;
+            <div class="wbar"><i id="wbarFill"></i></div><div class="boss">${toBoss === be ? 'Boss wave!' : 'Boss in ' + toBoss}${r.shield ? ' · 🔰 ' + r.shield : ''}${r.diss ? ' · 🎭 ' + r.diss : ''}</div></div>`;
         return `<div class="status">${left}${right}</div>`;
     }
     function runPanel(r) {
@@ -259,7 +260,7 @@
         } else if (runTab === 'info') {
             h += waveInfo(r);
         } else if (runTab === 'cards') {
-            h += `<p class="muted-s">Equipped ${s.cards.eq.length}/${G.cardSlots()} · 🔒 cards can't be swapped mid-run.</p>`;
+            h += '<p class="muted-s">🔒 cards can\'t be swapped mid-run.</p>';
             h += cardGrid(true);
         }
         const foot = catTabs(CAT_TABS, runTab, 'runTab') + `<div class="subtabs">${SUB_TABS.map(([id, n]) => btn(n + (id === 'perks' && r.offers.length ? '<span class="dotn">!</span>' : ''), 'runTab', { t: id }, runTab === id ? 'active' : '')).join('')}</div>`;
@@ -285,7 +286,7 @@
             <div><small>Damage taken</small><b>${F(r.dmgTaken)}</b></div><div><small>Packages</small><b>${r.stats.pkg}</b></div><div><small>Waves skipped</small><b>${r.stats.skips}</b></div></div>`;
         if (G.labDone('More_Round_Stats')) h += `<p class="muted-s">Kills by source: ${Object.entries(r.stats.killsBy).map(([k, v]) => `${k} ${F(v)}`).join(' · ')}</p>`;
         else h += '<p class="note">The More Round Stats lab (milestone Tier 1 wave 250) adds a breakdown of kills by source.</p>';
-        h += '<p class="note">Wave info stats use game time; the coins/min on the field uses real time.</p>';
+        h += '<p class="note">Wave info stats use game time. The coins/min on the field is per game minute; click it to multiply by game speed for real-time amounts.</p>';
         return h;
     }
     function patchRun(r) {
@@ -435,9 +436,10 @@
 
     /* ---------- cards: the game's card faces (name strip, white art on a coloured panel, stars; magenta stars when maxed) ---------- */
     const CARD_COL = ['', 'c1', 'c2'];
+    // equipped cards get their own grid at the top, in the order they were equipped
     function cardGrid(inRun) {
-        const s = S();
-        let h = '<div class="cgrid">';
+        const s = S(), eqHtml = {};
+        let h = '';
         D.CARDS.forEach((c, i) => {
             const lv = G.cardLevel(c.id), n = s.cards.have[c.id] || 0, col = CARD_COL[i % 3];
             const stars = (k) => `<div class="gs">${'★'.repeat(k)}<i>${'★'.repeat(7 - k)}</i></div>`;
@@ -445,12 +447,14 @@
             if (!lv) { h += `<div class="gcard miss ${col}" title="${esc(c.desc)}"><div class="gn">${c.name}</div><div class="ga">${G.icFor(c.ic, '#ffffff')}</div>${stars(0)}<div class="gf">not found yet</div></div>`; return; }
             const eq = s.cards.eq.includes(c.id), max = lv >= 7;
             const nextAt = D.CARD_LEVEL_COPIES[lv + 1];
-            h += `<button class="gcard ${col} ${max ? 'lv7' : ''} ${eq ? 'eq' : ''}" data-act="toggleCard" data-id="${c.id}" title="${esc(c.desc)}${eq ? ' (equipped)' : ''}">
+            const card = `<button class="gcard ${col} ${max ? 'lv7' : ''} ${eq ? 'eq' : ''}" data-act="toggleCard" data-id="${c.id}" title="${esc(c.desc)}${eq ? ' (equipped)' : ''}">
                 <div class="gn">${c.name}</div><div class="ga">${G.icFor(c.ic, '#ffffff')}</div>${stars(lv)}
                 <div class="gf">${max ? '<b>Max</b> · ' : ''}${UI.show(c.f, c.vals[lv - 1])}${s.cards.mastery[c.id] !== undefined ? ' · 🌟' : ''}${!inRun && nextAt ? ` · ${n}/${nextAt}` : ''}</div>
                 ${eq ? '<span class="eqk">✅</span>' : ''}${c.locked ? '<span class="lk">🔒</span>' : ''}</button>`;
+            if (eq) eqHtml[c.id] = card; else h += card;
         });
-        return h + '</div>';
+        const top = s.cards.eq.map(id => eqHtml[id] || '').join('');
+        return (top ? `<h4 class="sec">Equipped ${s.cards.eq.length}/${G.cardSlots()}</h4><div class="cgrid">${top}</div><h4 class="sec">All cards</h4>` : '') + `<div class="cgrid">${h}</div>`;
     }
     TABS.cards = () => {
         const s = S();
@@ -786,9 +790,12 @@
     TABS.store = () => {
         const s = S(), f = s.free;
         let h = '<p class="muted-s">The real game sells gems and shows ads. Here those are free rewards on the same timers, so gem income stays close to a free-to-play player\'s.</p><div class="grid">';
-        h += `<div class="tile ${G.dailyGemsReady() ? 'gold' : ''}"><b>💎 Free daily gems</b><small>20 gems once per day (resets 00:00 UTC, in ${timeLeft(G.untilNextDay())})</small>${btn('Claim 20', 'dailyGems', {}, 'primary', !G.dailyGemsReady())}</div>`;
+        h += `<div class="tile ${G.dailyGemsReady() ? 'gold' : ''}"><b>💎 Free daily gems</b><small>${D.DAILY_GEMS} gems once per day (resets 00:00 UTC, in ${timeLeft(G.untilNextDay())})</small>${btn('Claim ' + D.DAILY_GEMS, 'dailyGems', {}, 'primary', !G.dailyGemsReady())}</div>`;
         h += `<div class="tile ${f.adStack ? 'gold' : ''}"><b>📺 Ad gems</b><small>6 gems each, one every 10 minutes of play, stack up to ${G.adGemMax()}. ${f.adGemsToday || 0}/60 today.</small>${btn(`Claim ${6 * (f.adStack || 0)}`, 'adGems', {}, 'primary', !f.adStack)}</div>`;
-        h += `<div class="tile"><b>🪙 Coin boost ×1.5</b><small>Each "ad" adds 20 minutes of ×1.5 coins while you play, up to 2 hours banked. Banked: ${G.dur(f.coinBoost || 0)}</small>${btn('+20 minutes', 'coinBoost', {}, '', (f.coinBoost || 0) >= 7200 - 1)}</div>`;
+        h += `<div class="tile"><b>🪙 Coin boost ×1.5</b><small>Each "ad" adds 20 minutes of ×1.5 coins while you play, up to ${D.COIN_BOOST_MAX / 3600} hours banked. Banked: ${G.dur(f.coinBoost || 0)}</small>${btn('+20 minutes', 'coinBoost', {}, '', (f.coinBoost || 0) >= D.COIN_BOOST_MAX - 1)}</div>`;
+        h += '</div><h4 class="sec">Spend gems</h4><div class="grid">';
+        const own = s.labs.gemSpeed || {};
+        for (const b of D.GEM_LAB_SPEED) h += `<div class="tile ${own[b.id] ? 'hl' : ''}"><div class="h"><span class="ic">🧪</span><b>×${b.m} lab speed</b>${own[b.id] ? '<span class="pill gold">OWNED</span>' : btn(`💎 ${F(b.gems)}`, 'gemLabSpeed', { id: b.id }, 'primary', s.gems < b.gems)}</div><small>Permanent: every lab researches ${b.m}× faster. Stacks with the other boost and Lab Overclock.</small></div>`;
         return h + '</div>';
     };
 
@@ -844,7 +851,8 @@
     TABS.settings = () => {
         const s = S();
         let h = `<div class="grid"><div class="tile"><b>Player name</b><small>Shown on tournament boards.</small><div class="row-s"><input id="nameIn" value="${esc(s.name)}" maxlength="16" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--text)">${btn('Save', 'saveName')}</div></div>
-            <div class="tile"><b>Damage numbers</b>${btn(s.settings.numbers ? 'On' : 'Off', 'toggleSet', { k: 'numbers' }, s.settings.numbers ? 'active' : '')}</div>`;
+            <div class="tile"><b>Damage numbers</b>${btn(s.settings.numbers ? 'On' : 'Off', 'toggleSet', { k: 'numbers' }, s.settings.numbers ? 'active' : '')}</div>
+            <div class="tile"><b>Keep playing when unfocused</b><small>Don't pause when you switch tabs or minimise; the run catches up while you're away.</small>${btn(s.settings.bgPlay ? 'On' : 'Off', 'toggleSet', { k: 'bgPlay' }, s.settings.bgPlay ? 'active' : '')}</div>`;
         if (G.labDone('Target_Priority')) h += `<div class="tile"><b>Target priority</b><div class="row-s">${['closest', 'boss', 'fast', 'tank', 'ranged', 'protector', 'vampire', 'ray', 'scatter'].map(t => btn(t, 'target', { t }, (s.settings.target || 'closest') === t ? 'active' : '')).join('')}</div></div>`;
         h += `<div class="tile"><b>Save</b><small>Your progress is saved in this browser.</small><div class="row-s">${btn('Export', 'exportSave')}${btn('Import', 'importSave')}${btn('Reset everything', 'resetSave', {}, 'danger')}</div></div></div>
             <h4 class="sec">About this version</h4><p class="note">Workshop, labs, cards, ultimate weapons, perks, milestones, tournaments, events, bots, the guardian and relics use the numbers from the fan wiki (the-tower-idle-tower-defense.fandom.com) and the community enemy formulas. The wiki doesn't list battle (cash) prices, the enemy type mix per wave or module main effects; those are close stand-ins. Lab timers are the real ones; use Lab Overclock to speed them up.</p>`;
@@ -942,7 +950,7 @@
         relicShow: (d) => { relicShow = d.v; },
         equipSkin: (d) => { S().skins.eq = d.id; G.saveSoon(); }, vaultSec: (d) => { const sec = D.VAULT.find(x => x.sec === d.s); if (sec) G.vaultOpenSec(sec); }, vaultBuy: (d) => G.vaultBuy(d.id),
         // free gems
-        dailyGems: () => G.claimDailyGems(), adGems: () => G.claimAdGems(), coinBoost: () => G.addCoinBoost(),
+        dailyGems: () => G.claimDailyGems(), adGems: () => G.claimAdGems(), coinBoost: () => G.addCoinBoost(), gemLabSpeed: (d) => G.buyGemLabSpeed(d.id),
         // autopilot & perks
         apBuy: (d) => G.apBuy(d.id), apToggle: (d) => { S().ap.on[d.id] = !G.apOn(d.id); G.saveSoon(); UI.renderSide(true); },
         apCat: (d) => { S().ap.cats[d.c] = !S().ap.cats[d.c]; }, apSkip: (d) => { S().ap.skip[d.id] = !S().ap.skip[d.id]; },
@@ -951,6 +959,7 @@
         banPerk: (d) => { if (G.run()) { G.toast('Bans can\'t change during a run', 'bad'); return; } const b = S().perks.bans, i = b.indexOf(d.id); if (i >= 0) b.splice(i, 1); else if (b.length < G.labV('Ban_Perks')) b.push(d.id); },
         // settings
         saveName: () => { const v = $('nameIn').value.trim().slice(0, 16); if (v) { S().name = v; G.saveSoon(); G.toast('Saved', 'good'); } },
+        rateMode: () => { S().settings.rateReal = !S().settings.rateReal; G.saveSoon(); },
         toggleSet: (d) => { S().settings[d.k] = !S().settings[d.k]; G.saveSoon(); }, target: (d) => { S().settings.target = d.t; G.saveSoon(); },
         exportSave: () => { const txt = btoa(unescape(encodeURIComponent(JSON.stringify(S())))); navigator.clipboard && navigator.clipboard.writeText(txt); prompt('Your save (copied to the clipboard if allowed):', txt); },
         importSave: () => { const txt = prompt('Paste a save:'); if (!txt) return; try { const o = JSON.parse(decodeURIComponent(escape(atob(txt.trim())))); localStorage.setItem(G.KEY, JSON.stringify(o)); location.reload(); } catch (e) { G.toast('That save could not be read', 'bad'); } },
@@ -993,6 +1002,11 @@
        TICK
        ====================================================================== */
     let lastMenuT = 0;
+    // the wave bar moves every frame (the panel around it only refreshes a few times a second)
+    UI.frame = () => {
+        const el = $('wbarFill');
+        if (el) el.style.width = (B.waveProgress() * 100).toFixed(2) + '%';
+    };
     UI.tick = (force) => {
         topStats();
         rail();

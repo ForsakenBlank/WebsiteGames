@@ -1210,7 +1210,7 @@
                 break;
             }
             case 'bh': {
-                const a = Math.random() * 6.28, d = s.range * 0.95, r = UWS('bh', 0, run) / 2, dur = UWS('bh', 1, run) * bcUw();
+                const a = Math.random() * 6.28, d = s.range * 0.95, r = UWS('bh', 0, run), dur = UWS('bh', 1, run) * bcUw();
                 run.holes.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, r, t: dur, max: dur });
                 if (G.labDone('Extra_Black_Hole') || U('Primordial Collapse')) run.holes.push({ x: -Math.cos(a) * d, y: -Math.sin(a) * d, r, t: dur, max: dur });
                 break;

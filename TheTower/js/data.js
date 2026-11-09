@@ -190,12 +190,16 @@
     D.MASTERY_LAB = [[20 * 86400 + 20 * 3600, 1.1e15], [31 * 86400 + 6 * 3600, 1.3e15], [41 * 86400 + 16 * 3600, 2e15], [52 * 86400 + 2 * 3600, 3.4e15],
         [62 * 86400 + 12 * 3600, 5.6e15], [72 * 86400 + 22 * 3600, 7.7e15], [83 * 86400 + 8 * 3600, 9.1e15], [93 * 86400 + 18 * 3600, 9.8e15], [104 * 86400 + 4 * 3600, 1e16]];
     D.LAB_SLOT_GEMS = [0, 100, 400, 1400, 3000];
+    // Not in the real game: permanent lab speed multipliers sold for gems in the store (they stack)
+    D.GEM_LAB_SPEED = [{ id: 'x2', m: 2, gems: 500 }, { id: 'x10', m: 10, gems: 2500 }];
+    D.DAILY_GEMS = 100;
+    D.COIN_BOOST_MAX = 3 * 3600;
     // Gem rush prices: [seconds, gems] (base prices from the wiki's Lab Upgrades page)
     D.RUSH = [[0, 0], [60, 1], [3600, 8], [86400, 163], [604800, 1000], [2592000, 3550], [7776000, 8000], [31104000, 25000]];
     // Elite cell lab boosts: [speed, cells per hour]
     D.CELL_BOOSTS = [[1.5, 15], [2, 100], [3, 840], [4, 3360], [5, 11900], [6, 60000], [7, 250000], [8, 1000000]];
     // Not in the real game: the lab speed upgrade asked for in this version. [speed multiplier, coin price]
-    D.OVERCLOCK = [1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 65, 80, 100, 125, 150].map((m, i) => ({ m, c: i ? Math.round(1000 * Math.pow(3.2, i - 1)) : 0 }));
+    D.OVERCLOCK = [1, 2, 3, 4, 5, 6.5, 8, 10, 13, 16, 20, 25, 32, 40, 50, 65, 80, 100, 125, 160, 200].map((m, i) => ({ m, c: i ? Math.round(800 * Math.pow(3.2, i - 1)) : 0 }));
 
     /* =====================================================================
        CARDS
@@ -701,11 +705,7 @@
        ===================================================================== */
     D.AUTOS = [
         { id: 'buy', ic: '🛒', n: 'Auto-buyer', price: 2500, desc: 'Buys battle upgrades for you, cheapest first. Pick categories and skip upgrades you don\'t want.' },
-        { id: 'perk', ic: '🎴', n: 'Perk autopick', price: 1500, desc: 'Picks wave perks for you, even before the Auto Pick Perks lab.' },
         { id: 'restart', ic: '🔁', n: 'Auto-restart', price: 4000, desc: 'When the tower falls, a fresh run starts on the same tier.' },
-        { id: 'bg', ic: '🌙', n: 'Night shift', price: 2000, desc: 'Keeps fighting while the tab is hidden, catching up on the time you were away (up to 30s at a time).' },
-        { id: 'lab', ic: '🧪', n: 'Lab assistant', price: 6000, desc: 'Starts the cheapest research you can afford whenever a lab is free.' },
-        { id: 'claim', ic: '📬', n: 'Mailroom', price: 1000, desc: 'Claims finished missions, milestones and chests automatically.' },
         { id: 'gems', ic: '💎', n: 'Gem magnet', price: 25000, desc: 'Collects floating gems and free ad gems for you.' },
     ];
 })();

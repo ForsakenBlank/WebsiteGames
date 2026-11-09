@@ -52,7 +52,7 @@
         host.title = list.length === 1 ? 'Research Game Speed in the Labs for faster speeds' : '';
     }
     $('speeds').addEventListener('click', (e) => { const b = e.target.closest('[data-speed]'); if (!b) return; S().settings.speed = +b.dataset.speed; G.saveSoon(); buildSpeeds(); });
-    const gameSpeed = () => { const l = speeds(); const v = S().settings.speed || 1; return l.includes(v) ? v : l[l.length - 1]; };
+    const gameSpeed = main.gameSpeed = () => { const l = speeds(); const v = S().settings.speed || 1; return l.includes(v) ? v : l[l.length - 1]; };
 
     /* ---------- run lifecycle ---------- */
     main.startRun = (opts) => {
@@ -96,6 +96,8 @@
         // Not in the real game: everything runs three times as fast, so "1×" is the old 3×
         let left = realDt * gameSpeed() * 3;
         r.stats.realT = (r.stats.realT || 0) + realDt;
+        // play time at x1 speed, so coin rates can be shown per game minute or scaled to the current speed
+        r.stats.gameT = (r.stats.gameT ?? r.stats.realT) + realDt * gameSpeed();
         let n = 0;
         while (left > 0 && n++ < 80 && !r.over) {
             const d = Math.min(STEP, left);
@@ -103,7 +105,7 @@
             left -= d;
         }
         // perks wait for you unless auto pick is on
-        if (r.offers.length && ((G.labDone('Auto_Perk_Pick') && S().perks.auto) || G.apOn('perk'))) while (r.offers.length) B.autoPick();
+        if (r.offers.length && G.labDone('Auto_Perk_Pick') && S().perks.auto) while (r.offers.length) B.autoPick();
         // play-time timers
         S().free.coinBoost = Math.max(0, (S().free.coinBoost || 0) - realDt);
         if (S().free.coinBoost === 0 && r.s.coinMult && r._boostWas) B.recalc();
@@ -117,13 +119,14 @@
         lastFrame = performance.now();
         simulate(dt);
         G.R.draw(dt);
+        UI.frame();
     });
 
-    // Night shift autopilot: browsers stop animation frames in hidden tabs, so catch up from a timer
+    // The background play setting: browsers stop animation frames in hidden tabs, so catch up from a timer
     setInterval(() => {
         const r = G.run();
         if (!document.hidden || !r || r.over) return;
-        if (!G.apOn('bg')) return;
+        if (!S().settings.bgPlay) return;
         const now = performance.now();
         const away = Math.min(30, (now - lastFrame) / 1000);
         lastFrame = now;
@@ -131,7 +134,7 @@
     }, 1000);
     document.addEventListener('visibilitychange', () => {
         lastFrame = performance.now();
-        if (document.hidden && G.run() && !G.run().over && !G.apOn('bg')) main.setPaused(true);
+        if (document.hidden && G.run() && !G.run().over && !S().settings.bgPlay) main.setPaused(true);
     });
 
     /* ---------- timers ---------- */
@@ -142,14 +145,6 @@
         G.ensureTournament();
         G.ensureGuild();
         G.checkYearRelics();
-        // mailroom autopilot
-        if (G.apOn('claim')) {
-            for (const m of S().daily.board.slice()) if (m.p >= m.goal) G.claimDaily(m.id);
-            G.claimAllBoxes();
-            G.claimAllMilestones();
-            if (S().guild) G.GUILD_CHESTS.forEach((c, i) => G.claimChest(i));
-            if (S().event) for (const m of G.eventMissions()) for (let i = 0; i < 3; i++) G.claimEventTier(m, i);
-        }
         if (G.apOn('gems')) { if (S().free.adStack) G.claimAdGems(); if (G.dailyGemsReady()) G.claimDailyGems(); }
     }
     setInterval(minute, 1000);
